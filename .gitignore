@@ -1,0 +1,32 @@
+# Node / Vite / Electron
+node_modules/
+dist/
+dist-electron/
+.vite/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/
+
+# Env / secrets
+.env
+.env.*
+
+# Build artifacts / caches
+coverage/
+*.log
+
+# Electron runtime data (keep local)
+*.sqlite
+*.sqlite3
+*.db
+

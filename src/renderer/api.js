@@ -1,0 +1,37 @@
+const API_BASE = 'http://127.0.0.1:5174/api'
+
+async function apiFetch(path, init) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) },
+    ...init
+  })
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    throw new Error(text || `HTTP ${res.status}`)
+  }
+  return res.status === 204 ? null : res.json()
+}
+
+export async function listEntries({ month } = {}) {
+  const qs = month ? `?month=${encodeURIComponent(month)}` : ''
+  return apiFetch(`/entries${qs}`)
+}
+
+export async function getEntry(date) {
+  return apiFetch(`/entries/${encodeURIComponent(date)}`)
+}
+
+export async function upsertEntry(date, payload) {
+  return apiFetch(`/entries/${encodeURIComponent(date)}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  })
+}
+
+export async function regenerateCornie(date) {
+  return apiFetch(`/entries/${encodeURIComponent(date)}/regenerate-cornie`, {
+    method: 'POST'
+  })
+}
+
