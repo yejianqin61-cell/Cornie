@@ -128,6 +128,117 @@ function migrate(db) {
           }
         )
       }
+    },
+    // v4: todo and schedule tables
+    (db) => {
+      db.run(`
+        create table if not exists todo_categories (
+          id text primary key,
+          name text not null,
+          is_active integer not null default 1,
+          sort_order integer not null default 0,
+          created_at integer not null,
+          updated_at integer not null
+        );
+      `)
+
+      db.run(`
+        create table if not exists todo_entries (
+          id text primary key,
+          title text not null,
+          description text,
+          category_id text,
+          category_name text,
+          due_at text,
+          status text not null,
+          source_text text,
+          created_at integer not null,
+          updated_at integer not null
+        );
+      `)
+
+      db.run(`
+        create table if not exists schedule_categories (
+          id text primary key,
+          name text not null,
+          is_active integer not null default 1,
+          sort_order integer not null default 0,
+          created_at integer not null,
+          updated_at integer not null
+        );
+      `)
+
+      db.run(`
+        create table if not exists schedule_entries (
+          id text primary key,
+          title text not null,
+          description text,
+          category_id text,
+          category_name text,
+          start_at text not null,
+          end_at text,
+          status text not null,
+          location text,
+          source_text text,
+          created_at integer not null,
+          updated_at integer not null
+        );
+      `)
+
+      db.run(`create index if not exists idx_todo_entries_status_due on todo_entries(status, due_at);`)
+      db.run(`create index if not exists idx_todo_entries_due_at on todo_entries(due_at);`)
+      db.run(
+        `create index if not exists idx_todo_categories_active on todo_categories(is_active, sort_order);`
+      )
+      db.run(`create index if not exists idx_schedule_entries_start_at on schedule_entries(start_at);`)
+      db.run(
+        `create index if not exists idx_schedule_categories_active on schedule_categories(is_active, sort_order);`
+      )
+
+      const now = Date.now()
+      const todoSeeds = [
+        ['待办', 'todo_general', 10],
+        ['学习', 'todo_study', 20],
+        ['生活', 'todo_life', 30]
+      ]
+      for (const [name, id, sortOrder] of todoSeeds) {
+        db.run(
+          `
+          insert into todo_categories(id, name, is_active, sort_order, created_at, updated_at)
+          values ($id, $name, 1, $sort_order, $created_at, $updated_at)
+          on conflict(id) do nothing
+        `,
+          {
+            $id: id,
+            $name: name,
+            $sort_order: sortOrder,
+            $created_at: now,
+            $updated_at: now
+          }
+        )
+      }
+
+      const scheduleSeeds = [
+        ['日程', 'schedule_general', 10],
+        ['会议', 'schedule_meeting', 20],
+        ['提醒', 'schedule_reminder', 30]
+      ]
+      for (const [name, id, sortOrder] of scheduleSeeds) {
+        db.run(
+          `
+          insert into schedule_categories(id, name, is_active, sort_order, created_at, updated_at)
+          values ($id, $name, 1, $sort_order, $created_at, $updated_at)
+          on conflict(id) do nothing
+        `,
+          {
+            $id: id,
+            $name: name,
+            $sort_order: sortOrder,
+            $created_at: now,
+            $updated_at: now
+          }
+        )
+      }
     }
   ]
 
@@ -314,6 +425,388 @@ export function listOnThisDay(store, { date, limit = 20 }) {
       date: String(r.date),
       userText: String(r.userText ?? ''),
       cornieText: String(r.cornieText ?? '')
+    })
+  }
+  stmt.free()
+  return rows
+}
+
+// ─── todo ──────────────────────────────────────────────────────────────────
+
+export function listTodoCategories(store, { activeOnly = true } = {}) {
+  const sql = `
+    select id, name, is_active as isActive, sort_order as sortOrder, created_at as createdAt, updated_at as updatedAt
+    from todo_categories
+    ${activeOnly ? 'where is_active = 1' : ''}
+    order by sort_order asc, created_at asc
+  `
+  const stmt = store.db.prepare(sql)
+  const rows = []
+  while (stmt.step()) {
+    const r = stmt.getAsObject()
+    rows.push({
+      id: String(r.id),
+      name: String(r.name),
+      isActive: Boolean(r.isActive),
+      sortOrder: Number(r.sortOrder),
+      createdAt: Number(r.createdAt),
+      updatedAt: Number(r.updatedAt)
+    })
+  }
+  stmt.free()
+  return rows
+}
+
+export function upsertTodoCategory(store, { id, name, isActive = true, sortOrder = 0 }) {
+  const now = Date.now()
+  const finalId = id || randomUUID()
+  store.db.run(
+    `
+    insert into todo_categories(id, name, is_active, sort_order, created_at, updated_at)
+    values ($id, $name, $is_active, $sort_order, $created_at, $updated_at)
+    on conflict(id) do update set
+      name=excluded.name,
+      is_active=excluded.is_active,
+      sort_order=excluded.sort_order,
+      updated_at=excluded.updated_at
+  `,
+    {
+      $id: finalId,
+      $name: name,
+      $is_active: isActive ? 1 : 0,
+      $sort_order: sortOrder,
+      $created_at: now,
+      $updated_at: now
+    }
+  )
+  store.persist()
+  return getTodoCategory(store, finalId)
+}
+
+export function getTodoCategory(store, id) {
+  const stmt = store.db.prepare(
+    'select id, name, is_active as isActive, sort_order as sortOrder, created_at as createdAt, updated_at as updatedAt from todo_categories where id = $id'
+  )
+  stmt.bind({ $id: id })
+  const row = stmt.step() ? stmt.getAsObject() : null
+  stmt.free()
+  if (!row) return null
+  return {
+    id: String(row.id),
+    name: String(row.name),
+    isActive: Boolean(row.isActive),
+    sortOrder: Number(row.sortOrder),
+    createdAt: Number(row.createdAt),
+    updatedAt: Number(row.updatedAt)
+  }
+}
+
+export function saveTodoEntry(store, entry) {
+  const now = Date.now()
+  const finalId = entry.id || randomUUID()
+  store.db.run(
+    `
+    insert into todo_entries(
+      id, title, description, category_id, category_name, due_at, status, source_text, created_at, updated_at
+    ) values (
+      $id, $title, $description, $category_id, $category_name, $due_at, $status, $source_text, $created_at, $updated_at
+    )
+    on conflict(id) do update set
+      title=excluded.title,
+      description=excluded.description,
+      category_id=excluded.category_id,
+      category_name=excluded.category_name,
+      due_at=excluded.due_at,
+      status=excluded.status,
+      source_text=excluded.source_text,
+      updated_at=excluded.updated_at
+  `,
+    {
+      $id: finalId,
+      $title: entry.title,
+      $description: entry.description ?? null,
+      $category_id: entry.categoryId ?? null,
+      $category_name: entry.categoryName ?? null,
+      $due_at: entry.dueAt ?? null,
+      $status: entry.status,
+      $source_text: entry.sourceText ?? null,
+      $created_at: now,
+      $updated_at: now
+    }
+  )
+  store.persist()
+  return getTodoEntry(store, finalId)
+}
+
+export function updateTodoEntryStatus(store, { id, status }) {
+  const now = Date.now()
+  store.db.run(
+    `
+    update todo_entries
+    set status = $status,
+        updated_at = $updated_at
+    where id = $id
+  `,
+    { $id: id, $status: status, $updated_at: now }
+  )
+  store.persist()
+  return getTodoEntry(store, id)
+}
+
+export function getTodoEntry(store, id) {
+  const stmt = store.db.prepare(
+    `select id, title, description, category_id as categoryId, category_name as categoryName, due_at as dueAt, status, source_text as sourceText, created_at as createdAt, updated_at as updatedAt from todo_entries where id = $id`
+  )
+  stmt.bind({ $id: id })
+  const row = stmt.step() ? stmt.getAsObject() : null
+  stmt.free()
+  if (!row) return null
+  return {
+    id: String(row.id),
+    title: String(row.title),
+    description: row.description == null ? null : String(row.description),
+    categoryId: row.categoryId == null ? null : String(row.categoryId),
+    categoryName: row.categoryName == null ? null : String(row.categoryName),
+    dueAt: row.dueAt == null ? null : String(row.dueAt),
+    status: String(row.status),
+    sourceText: row.sourceText == null ? null : String(row.sourceText),
+    createdAt: Number(row.createdAt),
+    updatedAt: Number(row.updatedAt)
+  }
+}
+
+export function listTodoEntries(store, { status, from, to } = {}) {
+  const where = []
+  const params = {}
+  if (status) {
+    where.push('status = $status')
+    params.$status = status
+  }
+  if (from) {
+    where.push('coalesce(due_at, created_at) >= $from')
+    params.$from = from
+  }
+  if (to) {
+    where.push('coalesce(due_at, created_at) <= $to')
+    params.$to = to
+  }
+  const sql = `
+    select id, title, description, category_id as categoryId, category_name as categoryName, due_at as dueAt, status, source_text as sourceText, created_at as createdAt, updated_at as updatedAt
+    from todo_entries
+    ${where.length ? `where ${where.join(' and ')}` : ''}
+    order by coalesce(due_at, created_at) asc, created_at asc
+  `
+  const stmt = store.db.prepare(sql)
+  stmt.bind(params)
+  const rows = []
+  while (stmt.step()) {
+    const r = stmt.getAsObject()
+    rows.push({
+      id: String(r.id),
+      title: String(r.title),
+      description: r.description == null ? null : String(r.description),
+      categoryId: r.categoryId == null ? null : String(r.categoryId),
+      categoryName: r.categoryName == null ? null : String(r.categoryName),
+      dueAt: r.dueAt == null ? null : String(r.dueAt),
+      status: String(r.status),
+      sourceText: r.sourceText == null ? null : String(r.sourceText),
+      createdAt: Number(r.createdAt),
+      updatedAt: Number(r.updatedAt)
+    })
+  }
+  stmt.free()
+  return rows
+}
+
+// ─── schedule ─────────────────────────────────────────────────────────────
+
+export function listScheduleCategories(store, { activeOnly = true } = {}) {
+  const sql = `
+    select id, name, is_active as isActive, sort_order as sortOrder, created_at as createdAt, updated_at as updatedAt
+    from schedule_categories
+    ${activeOnly ? 'where is_active = 1' : ''}
+    order by sort_order asc, created_at asc
+  `
+  const stmt = store.db.prepare(sql)
+  const rows = []
+  while (stmt.step()) {
+    const r = stmt.getAsObject()
+    rows.push({
+      id: String(r.id),
+      name: String(r.name),
+      isActive: Boolean(r.isActive),
+      sortOrder: Number(r.sortOrder),
+      createdAt: Number(r.createdAt),
+      updatedAt: Number(r.updatedAt)
+    })
+  }
+  stmt.free()
+  return rows
+}
+
+export function upsertScheduleCategory(store, { id, name, isActive = true, sortOrder = 0 }) {
+  const now = Date.now()
+  const finalId = id || randomUUID()
+  store.db.run(
+    `
+    insert into schedule_categories(id, name, is_active, sort_order, created_at, updated_at)
+    values ($id, $name, $is_active, $sort_order, $created_at, $updated_at)
+    on conflict(id) do update set
+      name=excluded.name,
+      is_active=excluded.is_active,
+      sort_order=excluded.sort_order,
+      updated_at=excluded.updated_at
+  `,
+    {
+      $id: finalId,
+      $name: name,
+      $is_active: isActive ? 1 : 0,
+      $sort_order: sortOrder,
+      $created_at: now,
+      $updated_at: now
+    }
+  )
+  store.persist()
+  return getScheduleCategory(store, finalId)
+}
+
+export function getScheduleCategory(store, id) {
+  const stmt = store.db.prepare(
+    'select id, name, is_active as isActive, sort_order as sortOrder, created_at as createdAt, updated_at as updatedAt from schedule_categories where id = $id'
+  )
+  stmt.bind({ $id: id })
+  const row = stmt.step() ? stmt.getAsObject() : null
+  stmt.free()
+  if (!row) return null
+  return {
+    id: String(row.id),
+    name: String(row.name),
+    isActive: Boolean(row.isActive),
+    sortOrder: Number(row.sortOrder),
+    createdAt: Number(row.createdAt),
+    updatedAt: Number(row.updatedAt)
+  }
+}
+
+export function saveScheduleEntry(store, entry) {
+  const now = Date.now()
+  const finalId = entry.id || randomUUID()
+  store.db.run(
+    `
+    insert into schedule_entries(
+      id, title, description, category_id, category_name, start_at, end_at, status, location, source_text, created_at, updated_at
+    ) values (
+      $id, $title, $description, $category_id, $category_name, $start_at, $end_at, $status, $location, $source_text, $created_at, $updated_at
+    )
+    on conflict(id) do update set
+      title=excluded.title,
+      description=excluded.description,
+      category_id=excluded.category_id,
+      category_name=excluded.category_name,
+      start_at=excluded.start_at,
+      end_at=excluded.end_at,
+      status=excluded.status,
+      location=excluded.location,
+      source_text=excluded.source_text,
+      updated_at=excluded.updated_at
+  `,
+    {
+      $id: finalId,
+      $title: entry.title,
+      $description: entry.description ?? null,
+      $category_id: entry.categoryId ?? null,
+      $category_name: entry.categoryName ?? null,
+      $start_at: entry.startAt,
+      $end_at: entry.endAt ?? null,
+      $status: entry.status,
+      $location: entry.location ?? null,
+      $source_text: entry.sourceText ?? null,
+      $created_at: now,
+      $updated_at: now
+    }
+  )
+  store.persist()
+  return getScheduleEntry(store, finalId)
+}
+
+export function updateScheduleEntryStatus(store, { id, status }) {
+  const now = Date.now()
+  store.db.run(
+    `
+    update schedule_entries
+    set status = $status,
+        updated_at = $updated_at
+    where id = $id
+  `,
+    { $id: id, $status: status, $updated_at: now }
+  )
+  store.persist()
+  return getScheduleEntry(store, id)
+}
+
+export function getScheduleEntry(store, id) {
+  const stmt = store.db.prepare(
+    `select id, title, description, category_id as categoryId, category_name as categoryName, start_at as startAt, end_at as endAt, status, location, source_text as sourceText, created_at as createdAt, updated_at as updatedAt from schedule_entries where id = $id`
+  )
+  stmt.bind({ $id: id })
+  const row = stmt.step() ? stmt.getAsObject() : null
+  stmt.free()
+  if (!row) return null
+  return {
+    id: String(row.id),
+    title: String(row.title),
+    description: row.description == null ? null : String(row.description),
+    categoryId: row.categoryId == null ? null : String(row.categoryId),
+    categoryName: row.categoryName == null ? null : String(row.categoryName),
+    startAt: String(row.startAt),
+    endAt: row.endAt == null ? null : String(row.endAt),
+    status: String(row.status),
+    location: row.location == null ? null : String(row.location),
+    sourceText: row.sourceText == null ? null : String(row.sourceText),
+    createdAt: Number(row.createdAt),
+    updatedAt: Number(row.updatedAt)
+  }
+}
+
+export function listScheduleEntries(store, { status, from, to } = {}) {
+  const where = []
+  const params = {}
+  if (status) {
+    where.push('status = $status')
+    params.$status = status
+  }
+  if (from) {
+    where.push('start_at >= $from')
+    params.$from = from
+  }
+  if (to) {
+    where.push('start_at <= $to')
+    params.$to = to
+  }
+  const sql = `
+    select id, title, description, category_id as categoryId, category_name as categoryName, start_at as startAt, end_at as endAt, status, location, source_text as sourceText, created_at as createdAt, updated_at as updatedAt
+    from schedule_entries
+    ${where.length ? `where ${where.join(' and ')}` : ''}
+    order by start_at asc, created_at asc
+  `
+  const stmt = store.db.prepare(sql)
+  stmt.bind(params)
+  const rows = []
+  while (stmt.step()) {
+    const r = stmt.getAsObject()
+    rows.push({
+      id: String(r.id),
+      title: String(r.title),
+      description: r.description == null ? null : String(r.description),
+      categoryId: r.categoryId == null ? null : String(r.categoryId),
+      categoryName: r.categoryName == null ? null : String(r.categoryName),
+      startAt: String(r.startAt),
+      endAt: r.endAt == null ? null : String(r.endAt),
+      status: String(r.status),
+      location: r.location == null ? null : String(r.location),
+      sourceText: r.sourceText == null ? null : String(r.sourceText),
+      createdAt: Number(r.createdAt),
+      updatedAt: Number(r.updatedAt)
     })
   }
   stmt.free()
