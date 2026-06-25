@@ -3,6 +3,7 @@ import { getMessagesByDate, saveMessage } from '../../db.js'
 import { buildJsonRepairPrompt, parseModelJson } from './jsonProtocol.js'
 import { buildConversationContext } from './contextBuilder.js'
 import { buildConversationPrompt, buildToolFollowupPrompt } from './promptBuilder.js'
+import { evaluateToolCalls } from '../policy/toolPolicy.js'
 import { chat } from '../model/deepseek/client.js'
 import { executeToolCalls } from '../tools/gateway.js'
 
@@ -95,6 +96,7 @@ export function createConversationOrchestrator(store) {
 
       let finalReply = buildProtocolFallbackReply()
       let toolExecution = { used: false, results: [] }
+      let policyDecision = { decision: 'allow' }
 
       try {
         const firstEnvelope = await requestProtocolEnvelope(baseMessages)
@@ -103,27 +105,39 @@ export function createConversationOrchestrator(store) {
           if (MAX_TOOL_ROUNDS < 1) {
             finalReply = firstEnvelope.assistant_reply
           } else {
-            const toolResult = await executeToolCalls(firstEnvelope.tool_calls, {
-              date,
-              store,
-              source: 'conversation'
+            policyDecision = evaluateToolCalls(firstEnvelope.tool_calls, {
+              sourceText: firstEnvelope.assistant_reply
             })
 
-            toolExecution = {
-              used: true,
-              results: toolResult.results
-            }
+            if (policyDecision.decision === 'allow') {
+              const toolResult = await executeToolCalls(policyDecision.toolCalls, {
+                date,
+                store,
+                source: 'conversation'
+              })
 
-            const followupMessages = buildToolFollowupMessages(
-              baseMessages,
-              firstEnvelope.assistant_reply,
-              toolResult
-            )
-            const secondEnvelope = await requestProtocolEnvelope(followupMessages)
-            finalReply =
-              secondEnvelope.type === 'reply'
-                ? secondEnvelope.assistant_reply
-                : firstEnvelope.assistant_reply
+              toolExecution = {
+                used: true,
+                results: toolResult.results
+              }
+
+              const followupMessages = buildToolFollowupMessages(
+                baseMessages,
+                firstEnvelope.assistant_reply,
+                toolResult
+              )
+              const secondEnvelope = await requestProtocolEnvelope(followupMessages)
+              finalReply =
+                secondEnvelope.type === 'reply'
+                  ? secondEnvelope.assistant_reply
+                  : firstEnvelope.assistant_reply
+            } else if (policyDecision.decision === 'confirm') {
+              finalReply = `${firstEnvelope.assistant_reply}\n\n${policyDecision.confirmRequest.reason}`
+            } else if (policyDecision.decision === 'ask_back') {
+              finalReply = policyDecision.question
+            } else {
+              finalReply = `${firstEnvelope.assistant_reply}\n\n${policyDecision.reason}`
+            }
           }
         } else {
           finalReply = firstEnvelope.assistant_reply
@@ -142,7 +156,8 @@ export function createConversationOrchestrator(store) {
       return {
         userMessage,
         cornieMessage,
-        toolExecution
+        toolExecution,
+        policyDecision
       }
     }
   }
