@@ -5,6 +5,8 @@ import { conversationRoutes } from './backend/conversation/routes.js'
 import { conversationService } from './backend/conversation/service.js'
 import { checkHealth as checkModelHealth } from './backend/model/deepseek/client.js'
 import { jsonErrorHandler } from './backend/http/middleware.js'
+import { registerTool } from './backend/tools/registry.js'
+import { registerLedgerTools } from './backend/ledger/tools.js'
 
 export function createServer({ store }) {
   const app = express()
@@ -34,6 +36,8 @@ export function createServer({ store }) {
 
   const diary = diaryService(store)
   app.use('/api', diaryRoutes({ diary }))
+
+  registerLedgerTools(store, { registerTool })
 
   const conversation = conversationService(store)
   app.use('/api', conversationRoutes({ conversation }))
