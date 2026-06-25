@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
-import { getEntry, getOllamaStatus, listEntries, listOnThisDay, regenerateCornie, upsertEntry } from './api'
+import { getEntry, getModelStatus, listEntries, listOnThisDay, regenerateCornie, upsertEntry } from './api'
 import CornieComposer from './CornieComposer.vue'
 
 function pad2(n) {
@@ -37,13 +37,13 @@ const selectedLabel = computed(() => selectedDate.value)
 
 const mode = ref('diary') // diary | cornie-composer
 
-const ollamaStatus = ref({ ok: false, hasModel: false, hint: '', models: [] })
-async function checkOllama() {
+const modelStatus = ref({ ok: false, configured: false, provider: 'deepseek', model: '', reason: '' })
+async function checkModel() {
   try {
-    const data = await getOllamaStatus()
-    ollamaStatus.value = data
+    const data = await getModelStatus()
+    modelStatus.value = data
   } catch {
-    ollamaStatus.value = { ok: false, hasModel: false, hint: '', models: [] }
+    modelStatus.value = { ok: false, configured: false, provider: 'deepseek', model: '', reason: 'request_failed' }
   }
 }
 
@@ -137,7 +137,7 @@ watch(
 )
 
 onMounted(async () => {
-  checkOllama()
+  checkModel()
   await refreshList()
   await loadEntry(selectedDate.value)
   await loadOnThisDay(selectedDate.value)
@@ -187,16 +187,16 @@ onMounted(async () => {
       </div>
     </header>
 
-    <div v-if="!ollamaStatus.ok || !ollamaStatus.hasModel" class="ollamaBanner">
-      <template v-if="!ollamaStatus.ok">
-        <span>Cornie需要Ollama提供AI能力。请先安装并启动Ollama。</span>
-        <a href="https://ollama.com" target="_blank" class="ollamaLink">下载 Ollama</a>
+    <div v-if="!modelStatus.ok" class="modelBanner">
+      <template v-if="!modelStatus.configured">
+        <span>Cornie需要配置 DeepSeek API Key 才能提供 AI 能力。</span>
+        <code class="modelCmd">DEEPSEEK_API_KEY=你的密钥</code>
       </template>
-      <template v-else-if="!ollamaStatus.hasModel">
-        <span>Ollama已就绪，但qwen3.5模型未下载。请在终端运行：</span>
-        <code class="ollamaCmd">ollama pull qwen3.5</code>
+      <template v-else>
+        <span>DeepSeek 当前不可用，请检查网络、API Key 或模型配置。</span>
+        <code class="modelCmd">{{ modelStatus.reason || 'request_failed' }}</code>
       </template>
-      <button class="ollamaRetry" @click="checkOllama">重新检测</button>
+      <button class="modelRetry" @click="checkModel">重新检测</button>
     </div>
 
     <main v-if="mode === 'diary'" class="main">
@@ -483,7 +483,7 @@ onMounted(async () => {
   color: rgba(254,226,226,.95);
 }
 
-.ollamaBanner{
+.modelBanner{
   display: flex;
   align-items: center;
   gap: 12px;
@@ -496,13 +496,7 @@ onMounted(async () => {
   font-size: 13px;
   flex-wrap: wrap;
 }
-.ollamaLink{
-  color: rgba(125,211,252,.95);
-  font-weight: 600;
-  text-decoration: underline;
-  white-space: nowrap;
-}
-.ollamaCmd{
+.modelCmd{
   padding: 2px 8px;
   border-radius: 6px;
   background: rgba(0,0,0,.25);
@@ -510,7 +504,7 @@ onMounted(async () => {
   font-size: 12px;
   white-space: nowrap;
 }
-.ollamaRetry{
+.modelRetry{
   margin-left: auto;
   padding: 6px 12px;
   font-size: 12px;
@@ -521,7 +515,7 @@ onMounted(async () => {
   cursor: pointer;
   white-space: nowrap;
 }
-.ollamaRetry:hover{ background: rgba(251,191,36,.20); }
+.modelRetry:hover{ background: rgba(251,191,36,.20); }
 
 @media (max-width: 980px){
   .main{ grid-template-columns: 1fr; }

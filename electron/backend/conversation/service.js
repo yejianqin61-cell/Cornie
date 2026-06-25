@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { deleteMessagesByDate, getMessagesByDate, saveMessage } from '../../db.js'
-import { chat } from '../ollama/client.js'
+import { chat } from '../model/deepseek/client.js'
 
 const CORNIE_SYSTEM_PROMPT = `你是 Cornie（铃湾），一只只有一只角的小山羊，正趴在主人的电脑屏幕右下角。
 你的性格温柔、童真、带一点调皮。
@@ -39,10 +39,11 @@ export function conversationService(store) {
       // 3. 调用Ollama
       let reply
       try {
-        reply = await chat({ messages })
+        const result = await chat({ messages, maxTokens: 256 })
+        reply = result.content
       } catch (e) {
         reply = '唔...我好像走神了，能再说一遍吗？'
-        console.error('Ollama chat error:', e)
+        console.error('DeepSeek chat error:', e)
       }
 
       // 4. 保存Cornie回复

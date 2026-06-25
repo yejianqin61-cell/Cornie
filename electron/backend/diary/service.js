@@ -1,5 +1,5 @@
 import { getEntry, getMessagesByDate, listEntries, listOnThisDay, setCornieText, upsertUserText } from '../../db.js'
-import { generate } from '../ollama/client.js'
+import { generate } from '../model/deepseek/client.js'
 
 const DIARY_SYSTEM_PROMPT = `你是一只叫Cornie（铃湾）的独角山羊，正在写今天的日记。
 以下是主人今天和你的所有对话记录，请以Cornie的第一人称视角，写一篇今天的日记。
@@ -41,13 +41,13 @@ Cornie的日记：`
 
       let diary
       try {
-        diary = await generate({ prompt, temperature: 0.7, maxTokens: 300 })
-        diary = diary.trim()
+        const result = await generate({ prompt, temperature: 0.7, maxTokens: 300 })
+        diary = result.content.trim()
         if (!diary || diary.length < 6) {
           diary = '今天主人很安静呢，我就一直趴在屏幕角落陪着。希望主人明天开心。'
         }
       } catch (e) {
-        console.error('Cornie diary generation error:', e)
+        console.error('DeepSeek diary generation error:', e)
         diary = '今天我也在角落里陪着你。等你愿意说点什么，我就能把这一天好好记下来。'
       }
 

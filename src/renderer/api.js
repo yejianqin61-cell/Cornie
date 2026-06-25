@@ -57,9 +57,9 @@ export async function deleteConversation(date) {
   return apiFetch(`/conversations/${encodeURIComponent(date)}`, { method: 'DELETE' })
 }
 
-// ─── ollama ───────────────────────────────────────────────────
+// ─── model ───────────────────────────────────────────────────
 
-export async function getOllamaStatus() {
-  return apiFetch('/ollama/status')
+export async function getModelStatus() {
+  return apiFetch('/model/status')
 }
 
