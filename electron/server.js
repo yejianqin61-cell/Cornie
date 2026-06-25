@@ -1,6 +1,9 @@
 import express from 'express'
 import { diaryRoutes } from './backend/diary/routes.js'
 import { diaryService } from './backend/diary/service.js'
+import { conversationRoutes } from './backend/conversation/routes.js'
+import { conversationService } from './backend/conversation/service.js'
+import { checkHealth, checkModelAvailable, listModels } from './backend/ollama/client.js'
 import { jsonErrorHandler } from './backend/http/middleware.js'
 
 export function createServer({ store }) {
@@ -31,6 +34,28 @@ export function createServer({ store }) {
 
   const diary = diaryService(store)
   app.use('/api', diaryRoutes({ diary }))
+
+  const conversation = conversationService(store)
+  app.use('/api', conversationRoutes({ conversation }))
+
+  app.get('/api/ollama/status', async (_req, res) => {
+    const healthy = await checkHealth()
+    if (!healthy) {
+      return res.json({
+        ok: false,
+        hasModel: false,
+        hint: 'Ollama服务未运行。请确保已安装Ollama并启动。下载地址：https://ollama.com'
+      })
+    }
+    const models = await listModels().catch(() => [])
+    const hasModel = await checkModelAvailable().catch(() => false)
+    res.json({
+      ok: true,
+      hasModel,
+      models,
+      hint: hasModel ? null : '请在终端运行：ollama pull qwen3.5'
+    })
+  })
 
   app.use(jsonErrorHandler)
 

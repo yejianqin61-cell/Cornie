@@ -35,3 +35,31 @@ export async function regenerateCornie(date) {
   })
 }
 
+export async function listOnThisDay(date, { limit } = {}) {
+  const qs = limit ? `?limit=${encodeURIComponent(String(limit))}` : ''
+  return apiFetch(`/entries/${encodeURIComponent(date)}/on-this-day${qs}`)
+}
+
+// ─── conversations ────────────────────────────────────────────
+
+export async function sendMessage(message, date) {
+  return apiFetch('/conversations', {
+    method: 'POST',
+    body: JSON.stringify({ message, date })
+  })
+}
+
+export async function getConversation(date) {
+  return apiFetch(`/conversations/${encodeURIComponent(date)}`)
+}
+
+export async function deleteConversation(date) {
+  return apiFetch(`/conversations/${encodeURIComponent(date)}`, { method: 'DELETE' })
+}
+
+// ─── ollama ───────────────────────────────────────────────────
+
+export async function getOllamaStatus() {
+  return apiFetch('/ollama/status')
+}
+

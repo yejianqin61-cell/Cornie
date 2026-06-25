@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
-  "main": "electron/main.js",
+  "main": "electron/main.cjs",
   "scripts": {
     "predev": "kill-port 5173 5174 || exit 0",
     "dev": "concurrently -k \"vite --port 5173 --strictPort\" \"wait-on http://127.0.0.1:5173 && electron .\"",

@@ -27,7 +27,10 @@ export function diaryRoutes({ diary }) {
     asyncHandler(async (req, res) => {
       const date = requireISODate(req.params.date)
       const userText = requireString(req.body?.userText ?? '', 'userText', { maxLen: 50_000 })
-      res.json({ entry: diary.upsertUserText({ date, userText }) })
+      const cornieText = req.body?.cornieText !== undefined
+        ? requireString(req.body.cornieText, 'cornieText', { maxLen: 50_000 })
+        : undefined
+      res.json({ entry: diary.upsertUserText({ date, userText, cornieText }) })
     })
   )
 
@@ -35,7 +38,17 @@ export function diaryRoutes({ diary }) {
     '/entries/:date/regenerate-cornie',
     asyncHandler(async (req, res) => {
       const date = requireISODate(req.params.date)
-      res.json({ entry: diary.regenerateCornie({ date }) })
+      res.json({ entry: await diary.regenerateCornie({ date }) })
+    })
+  )
+
+  r.get(
+    '/entries/:date/on-this-day',
+    asyncHandler(async (req, res) => {
+      const date = requireISODate(req.params.date)
+      const limitRaw = req.query.limit
+      const limit = limitRaw === undefined ? undefined : Number.parseInt(String(limitRaw), 10)
+      res.json({ items: diary.listOnThisDay({ date, limit }) })
     })
   )
 

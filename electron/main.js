@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, ipcMain } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -14,6 +14,7 @@ const isDev = !app.isPackaged
 // 需要保留引用，避免窗口被 GC 回收
 let mainWindow = null
 let cornieWindow = null
+let cornieDragState = null
 
 function createMainWindow() {
   const win = new BrowserWindow({
@@ -21,7 +22,7 @@ function createMainWindow() {
     height: 720,
     backgroundColor: '#0b1020',
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'preload.cjs')
     }
   })
 
@@ -38,19 +39,20 @@ function createMainWindow() {
 
 function createCornieWindow() {
   const win = new BrowserWindow({
-    width: 260,
-    height: 260,
+    width: 280,
+    height: 520,
     transparent: true,
     frame: false,
     resizable: false,
     hasShadow: false,
     alwaysOnTop: false,
-    focusable: false,
+    // 需要支持拖动（-webkit-app-region: drag）。在 Windows 上 focusable=false 会导致无法拖拽/交互。
+    focusable: true,
     skipTaskbar: true,
     backgroundColor: '#00000000',
     show: false,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js')
+      preload: path.join(__dirname, 'preload.cjs')
     }
   })
 
@@ -62,9 +64,11 @@ function createCornieWindow() {
 
   // 不抢焦点显示，更接近“桌面挂件”的观感
   win.once('ready-to-show', () => {
-    // Windows：挂到桌面层（WorkerW）下
+    // Windows：挂到桌面层（WorkerW）下。
+    // 注意：SetParent 到 WorkerW 后窗口会变成 WS_CHILD，常见副作用是无法可靠接收鼠标交互/拖动与 setPosition 失效。
+    // 为了先把 MVP 功能“拖动可用”跑通：仅在打包后启用桌面层挂载；开发期不挂载。
     try {
-      if (process.platform === 'win32') {
+      if (process.platform === 'win32' && !isDev) {
         attachToDesktopViaWorkerW(win.getNativeWindowHandle())
       }
     } catch {}
@@ -94,6 +98,30 @@ app.whenReady().then(async () => {
   await startLocalApi()
   mainWindow = createMainWindow()
   cornieWindow = createCornieWindow()
+
+  ipcMain.on('cornie:drag-start', (_evt, payload) => {
+    if (!cornieWindow || cornieWindow.isDestroyed()) return
+    const { screenX, screenY } = payload || {}
+    if (typeof screenX !== 'number' || typeof screenY !== 'number') return
+    const [winX, winY] = cornieWindow.getPosition()
+    cornieDragState = { startScreenX: screenX, startScreenY: screenY, startWinX: winX, startWinY: winY }
+  })
+  ipcMain.on('cornie:drag-move', (_evt, payload) => {
+    if (!cornieWindow || cornieWindow.isDestroyed()) return
+    if (!cornieDragState) return
+    const { screenX, screenY } = payload || {}
+    if (typeof screenX !== 'number' || typeof screenY !== 'number') return
+    const dx = screenX - cornieDragState.startScreenX
+    const dy = screenY - cornieDragState.startScreenY
+    const x = Math.round(cornieDragState.startWinX + dx)
+    const y = Math.round(cornieDragState.startWinY + dy)
+    try {
+      cornieWindow.setPosition(x, y, false)
+    } catch {}
+  })
+  ipcMain.on('cornie:drag-end', () => {
+    cornieDragState = null
+  })
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

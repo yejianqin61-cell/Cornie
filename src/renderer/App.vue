@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
-import { getEntry, listEntries, regenerateCornie, upsertEntry } from './api'
+import { getEntry, getOllamaStatus, listEntries, listOnThisDay, regenerateCornie, upsertEntry } from './api'
 import CornieComposer from './CornieComposer.vue'
 
 function pad2(n) {
@@ -20,6 +20,7 @@ const selectedMonth = ref(toISOMonth(today))
 const entries = ref([])
 const loadingList = ref(false)
 const loadingEntry = ref(false)
+const loadingOnThisDay = ref(false)
 const saving = ref(false)
 const regenerating = ref(false)
 const errorMsg = ref('')
@@ -30,10 +31,21 @@ const entry = ref({
   cornieText: ''
 })
 const dirty = ref(false)
+const onThisDayItems = ref([])
 
 const selectedLabel = computed(() => selectedDate.value)
 
 const mode = ref('diary') // diary | cornie-composer
+
+const ollamaStatus = ref({ ok: false, hasModel: false, hint: '', models: [] })
+async function checkOllama() {
+  try {
+    const data = await getOllamaStatus()
+    ollamaStatus.value = data
+  } catch {
+    ollamaStatus.value = { ok: false, hasModel: false, hint: '', models: [] }
+  }
+}
 
 async function refreshList() {
   loadingList.value = true
@@ -62,12 +74,26 @@ async function loadEntry(date) {
   }
 }
 
+async function loadOnThisDay(date) {
+  loadingOnThisDay.value = true
+  try {
+    const data = await listOnThisDay(date, { limit: 10 })
+    onThisDayItems.value = data.items || []
+  } catch (e) {
+    // 往年今日属于增强信息：失败时不打断主流程，只在 UI 上给提示
+    onThisDayItems.value = [{ date: '', userText: '', cornieText: '', __error: e?.message || String(e) }]
+  } finally {
+    loadingOnThisDay.value = false
+  }
+}
+
 async function save() {
   saving.value = true
   errorMsg.value = ''
   try {
     const data = await upsertEntry(selectedDate.value, {
-      userText: entry.value.userText
+      userText: entry.value.userText,
+      cornieText: entry.value.cornieText
     })
     entry.value = data.entry
     dirty.value = false
@@ -99,6 +125,7 @@ function pickDate(date) {
 
 watch(selectedDate, async (d) => {
   await loadEntry(d)
+  await loadOnThisDay(d)
 })
 
 watch(
@@ -110,8 +137,10 @@ watch(
 )
 
 onMounted(async () => {
+  checkOllama()
   await refreshList()
   await loadEntry(selectedDate.value)
+  await loadOnThisDay(selectedDate.value)
 })
 </script>
 
@@ -158,6 +187,18 @@ onMounted(async () => {
       </div>
     </header>
 
+    <div v-if="!ollamaStatus.ok || !ollamaStatus.hasModel" class="ollamaBanner">
+      <template v-if="!ollamaStatus.ok">
+        <span>Cornie需要Ollama提供AI能力。请先安装并启动Ollama。</span>
+        <a href="https://ollama.com" target="_blank" class="ollamaLink">下载 Ollama</a>
+      </template>
+      <template v-else-if="!ollamaStatus.hasModel">
+        <span>Ollama已就绪，但qwen3.5模型未下载。请在终端运行：</span>
+        <code class="ollamaCmd">ollama pull qwen3.5</code>
+      </template>
+      <button class="ollamaRetry" @click="checkOllama">重新检测</button>
+    </div>
+
     <main v-if="mode === 'diary'" class="main">
       <aside class="sidebar card">
         <div class="sidebarHead">
@@ -196,7 +237,7 @@ onMounted(async () => {
               {{ saving ? '保存中…' : '保存' }}
             </button>
             <button :disabled="regenerating" @click="regenCornie">
-              {{ regenerating ? '生成中…' : '生成 Cornie 日记（占位）' }}
+              {{ regenerating ? '生成中…' : '生成 Cornie 日记' }}
             </button>
           </div>
         </div>
@@ -218,10 +259,40 @@ onMounted(async () => {
           <div class="panel">
             <div class="panelTitle">Cornie 的日记（暂时先占位）</div>
             <textarea
-              :value="entry.cornieText"
-              placeholder="后续接入本地模型后，由对话/日记生成。"
-              readonly
+              v-model="entry.cornieText"
+              placeholder="点击「生成 Cornie 日记」让Cornie帮你写一篇。"
+              @input="dirty = true"
             />
+          </div>
+
+          <div class="panel span2">
+            <div class="panelTitle">
+              往年今日
+              <span class="panelHint">{{ loadingOnThisDay ? '加载中…' : '' }}</span>
+            </div>
+
+            <div v-if="onThisDayItems.length === 0 && !loadingOnThisDay" class="empty">
+              那时候我还没出生呢，不过现在我在了。
+            </div>
+
+            <div v-else class="otdList">
+              <div v-for="it in onThisDayItems" :key="it.date || 'err'" class="otdItem">
+                <div v-if="it.__error" class="otdError">加载失败：{{ it.__error }}</div>
+                <template v-else>
+                  <div class="otdDate">{{ it.date }}</div>
+                  <div class="otdGrid">
+                    <div class="otdCol">
+                      <div class="otdLabel">我的</div>
+                      <div class="otdText">{{ it.userText || '（空）' }}</div>
+                    </div>
+                    <div class="otdCol">
+                      <div class="otdLabel">Cornie</div>
+                      <div class="otdText">{{ it.cornieText || '（空）' }}</div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -360,6 +431,49 @@ onMounted(async () => {
   min-width: 0;
 }
 .panelTitle{ font-weight: 700; }
+.panelHint{ font-weight: 500; font-size: 12px; color: var(--muted); margin-left: 8px; }
+.span2{ grid-column: 1 / -1; }
+.empty{
+  padding: 10px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  color: var(--muted);
+  background: rgba(255,255,255,.02);
+}
+.otdList{
+  display:flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.otdItem{
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(255,255,255,.02);
+}
+.otdDate{ font-weight: 700; font-variant-numeric: tabular-nums; margin-bottom: 8px; }
+.otdGrid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  min-width: 0;
+}
+.otdCol{ min-width: 0; }
+.otdLabel{ font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.otdText{
+  white-space: pre-wrap;
+  line-height: 1.45;
+  max-height: 180px;
+  overflow: auto;
+  padding-right: 6px;
+}
+.otdError{
+  border: 1px solid rgba(248,113,113,.35);
+  background: rgba(248,113,113,.08);
+  color: rgba(254,226,226,.95);
+  padding: 10px 12px;
+  border-radius: 12px;
+}
 .error{
   margin: 12px 16px 0;
   padding: 10px 12px;
@@ -368,6 +482,46 @@ onMounted(async () => {
   background: rgba(248,113,113,.08);
   color: rgba(254,226,226,.95);
 }
+
+.ollamaBanner{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  margin: 0 0 -4px;
+  border-radius: 14px;
+  border: 1px solid rgba(251,191,36,.35);
+  background: rgba(251,191,36,.08);
+  color: rgba(254,243,199,.95);
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+.ollamaLink{
+  color: rgba(125,211,252,.95);
+  font-weight: 600;
+  text-decoration: underline;
+  white-space: nowrap;
+}
+.ollamaCmd{
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(0,0,0,.25);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.ollamaRetry{
+  margin-left: auto;
+  padding: 6px 12px;
+  font-size: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(251,191,36,.35);
+  background: rgba(251,191,36,.12);
+  color: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ollamaRetry:hover{ background: rgba(251,191,36,.20); }
 
 @media (max-width: 980px){
   .main{ grid-template-columns: 1fr; }

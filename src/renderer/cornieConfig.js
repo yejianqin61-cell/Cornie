@@ -6,8 +6,8 @@ export const corniePetTransform = {
   scale: 0.25,
   // 由于部件边界与窗口裁切的视觉差异，做一个轻微的左移/下移让完整主体落在框内
   offsetX: -120,
-  // 腿部显示不全：整体上移一点
-  offsetY: -10
+  // 小窗内整体平移（在上一版基础上再下移 30px：-210 + 30 = -180）
+  offsetY: -180
 }
 
 // 由拼装编辑器导出并固化（version: 1）

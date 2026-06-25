@@ -1,7 +1,8 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { cornieCssVars, cornieEyeOverlay, corniePetTransform, cornieStage } from './cornieConfig'
 import { createCornieBlinkController } from './cornieBlink'
+import { sendMessage } from './api'
 
 const parts = [
   { id: 'tail1', label: '尾巴', src: '/pic/tail1-removebg-preview.png' },
@@ -28,6 +29,21 @@ const eyeLayer = ref('none') // none | half | closed
 
 const editing = ref(false)
 const overlay = reactive({ ...cornieEyeOverlay })
+const hover = ref(false)
+const pinned = ref(false)
+const message = ref('')
+const dragReady = ref(false)
+/** 显示可拖动/可悬浮的 hitbox 范围（调试用，按 H 切换；URL ?hitbox=0 关闭、?hitbox=1 开启） */
+const showHitbox = ref(true)
+
+// 对话状态
+const messages = ref([]) // { role: 'user'|'cornie', content, id }
+const sending = ref(false)
+const chatListRef = ref(null)
+
+function today() {
+  return new Date().toISOString().slice(0, 10)
+}
 
 const overlayStyle = computed(() => ({
   left: `${overlay.x}px`,
@@ -56,8 +72,23 @@ function parseEditingFromUrl() {
 
 let blink = null
 
+function parseHitboxFromUrl() {
+  try {
+    const u = new URL(window.location.href)
+    const v = u.searchParams.get('hitbox')
+    if (v === '0' || v === 'false') return false
+    if (v === '1' || v === 'true') return true
+  } catch {
+    // ignore
+  }
+  return null
+}
+
 onMounted(() => {
   editing.value = parseEditingFromUrl()
+  const hb = parseHitboxFromUrl()
+  if (hb !== null) showHitbox.value = hb
+  dragReady.value = typeof window !== 'undefined' && Boolean(window.cornieDesktop)
 
   blink = createCornieBlinkController({
     showLayer,
@@ -77,12 +108,16 @@ onBeforeUnmount(() => {
 
 function onKeyDown(e) {
   const k = e.key?.toLowerCase?.()
+  const t = e.target
+  if (t instanceof HTMLTextAreaElement || t instanceof HTMLInputElement) return
   if (k === 'e') {
     editing.value = !editing.value
   } else if (k === 'b') {
     blink?.blinkNow?.()
   } else if (k === 'c') {
     copyConfig()
+  } else if (k === 'h') {
+    showHitbox.value = !showHitbox.value
   }
 }
 
@@ -100,6 +135,7 @@ async function copyConfig() {
 
 let drag = null
 let resize = null
+let windowDrag = null
 
 function stagePoint(e) {
   const el = e.currentTarget?.closest?.('.stage')
@@ -155,47 +191,184 @@ function onHandleMove(e) {
   overlay.w = Math.max(10, Math.round(resize.baseW + dx))
   overlay.h = Math.max(10, Math.round(resize.baseH + dy))
 }
+
+function canWindowDrag() {
+  return !editing.value && typeof window !== 'undefined' && window.cornieDesktop
+}
+
+function onDragPointerDown(e) {
+  if (!canWindowDrag()) return
+  // 左键/主指针
+  if (e.button !== undefined && e.button !== 0) return
+  windowDrag = { pointerId: e.pointerId }
+  try {
+    e.currentTarget.setPointerCapture?.(e.pointerId)
+  } catch {}
+  window.cornieDesktop.dragStart({ screenX: e.screenX, screenY: e.screenY })
+}
+
+function onDragPointerMove(e) {
+  if (!windowDrag) return
+  if (!canWindowDrag()) return
+  window.cornieDesktop.dragMove({ screenX: e.screenX, screenY: e.screenY })
+}
+
+function onDragPointerUp() {
+  if (!windowDrag) return
+  windowDrag = null
+  try {
+    window.cornieDesktop.dragEnd()
+  } catch {}
+}
+
+function shouldShowChat() {
+  // 输入条常驻显示在浅粉背景内（编辑眨眼层时隐藏，避免挡操作）
+  if (editing.value) return false
+  return true
+}
+
+function onEnter() {
+  if (editing.value) return
+  hover.value = true
+}
+function onLeave() {
+  if (editing.value) return
+  hover.value = false
+}
+
+function togglePinned() {
+  pinned.value = !pinned.value
+}
+
+async function send() {
+  const text = message.value.trim()
+  if (!text || sending.value) return
+  message.value = ''
+
+  messages.value.push({ role: 'user', content: text, id: Date.now().toString() })
+  scrollChatToBottom()
+
+  sending.value = true
+  try {
+    const data = await sendMessage(text, today())
+    messages.value.push({
+      role: 'cornie',
+      content: data.cornieMessage.content,
+      id: data.cornieMessage.id
+    })
+  } catch (e) {
+    messages.value.push({
+      role: 'cornie',
+      content: '唔...我好像走神了，能再说一遍吗？',
+      id: 'err-' + Date.now(),
+      error: true
+    })
+  } finally {
+    sending.value = false
+    scrollChatToBottom()
+  }
+}
+
+async function scrollChatToBottom() {
+  await nextTick()
+  if (chatListRef.value) {
+    chatListRef.value.scrollTop = chatListRef.value.scrollHeight
+  }
+}
 </script>
 
 <template>
   <div class="petRoot">
-    <div class="stageWrap" :style="stageTransformStyle">
-      <div class="stage" :style="stageStyle">
-        <div
-          v-for="p in parts"
-          :key="p.id"
-          class="part"
-          :class="[`p-${p.id}`, { headPart: p.id === 'head' }]"
-          :aria-label="p.label"
-          :style="
-            p.id === 'head'
-              ? {
-                  transform: `translate(var(--head-x), var(--head-y)) rotate(var(--head-r)) scale(var(--head-s)) translateY(${headDipPx}px)`
-                }
-              : null
-          "
-        >
-          <img :src="p.src" :alt="p.label" draggable="false" />
+    <div
+      class="hitbox"
+      :class="{ ready: dragReady, editing, 'hitbox--debug': showHitbox }"
+      @pointerdown="onDragPointerDown"
+      @pointermove="onDragPointerMove"
+      @pointerup="onDragPointerUp"
+      @pointercancel="onDragPointerUp"
+      @mouseenter="onEnter"
+      @mouseleave="onLeave"
+    >
+      <!-- 角色区：在浅粉 hitbox 内水平居中、靠上（中上） -->
+      <div class="hitboxPetArea">
+        <div class="stageWrap" :style="stageTransformStyle">
+          <div class="stage" :style="stageStyle">
+            <div
+              v-for="p in parts"
+              :key="p.id"
+              class="part"
+              :class="[`p-${p.id}`, { headPart: p.id === 'head' }]"
+              :aria-label="p.label"
+              :style="
+                p.id === 'head'
+                  ? {
+                      transform: `translate(var(--head-x), var(--head-y)) rotate(var(--head-r)) scale(var(--head-s)) translateY(${headDipPx}px)`
+                    }
+                  : null
+              "
+            >
+              <img :src="p.src" :alt="p.label" draggable="false" />
 
-          <!-- 眨眼覆盖层：只挂在 head 上 -->
-          <div
-            v-if="p.id === 'head'"
-            class="eyeGroup"
-            :class="{ editing }"
-            :style="overlayStyle"
-            @pointerdown="onOverlayPointerDown"
-            @pointermove="onOverlayPointerMove"
-            @pointerup="onOverlayPointerUp"
-            @pointercancel="onOverlayPointerUp"
-            @pointerleave="onOverlayPointerUp"
-          >
-            <div v-if="editing" class="outline"></div>
-            <div v-if="editing" class="handle" @pointerdown="onHandleDown" @pointermove="onHandleMove" />
+              <!-- 眨眼覆盖层：只挂在 head 上 -->
+              <div
+                v-if="p.id === 'head'"
+                class="eyeGroup"
+                :class="{ editing }"
+                :style="overlayStyle"
+                @pointerdown="onOverlayPointerDown"
+                @pointermove="onOverlayPointerMove"
+                @pointerup="onOverlayPointerUp"
+                @pointercancel="onOverlayPointerUp"
+                @pointerleave="onOverlayPointerUp"
+              >
+                <div v-if="editing" class="outline"></div>
+                <div v-if="editing" class="handle" @pointerdown="onHandleDown" @pointermove="onHandleMove" />
 
-            <img v-show="eyeLayer === 'half'" class="eyeLayer" :src="eyeHalfSrc" alt="eye half" />
-            <img v-show="eyeLayer === 'closed'" class="eyeLayer" :src="eyeClosedSrc" alt="eye closed" />
+                <img v-show="eyeLayer === 'half'" class="eyeLayer" :src="eyeHalfSrc" alt="eye half" />
+                <img v-show="eyeLayer === 'closed'" class="eyeLayer" :src="eyeClosedSrc" alt="eye closed" />
+              </div>
+            </div>
           </div>
         </div>
+      </div>
+
+      <!-- 对话气泡区 -->
+      <div
+        v-if="shouldShowChat() && messages.length > 0"
+        ref="chatListRef"
+        class="chatBubbles"
+        @pointerdown.stop
+        @pointermove.stop
+        @pointerup.stop
+      >
+        <div
+          v-for="m in messages"
+          :key="m.id"
+          class="bubble"
+          :class="m.role === 'user' ? 'bubbleUser' : 'bubbleCornie'"
+        >
+          <div class="bubbleRole">{{ m.role === 'user' ? '主人' : 'Cornie' }}</div>
+          <div class="bubbleText">{{ m.content }}</div>
+        </div>
+        <div v-if="sending" class="bubble bubbleCornie">
+          <div class="bubbleRole">Cornie</div>
+          <div class="bubbleText thinking">正在思考...</div>
+        </div>
+      </div>
+
+      <!-- 紧挨 Cornie 下方、叠在浅粉背景上的扁输入栏 -->
+      <div v-if="shouldShowChat()" class="chatBar" @pointerdown.stop @pointermove.stop @pointerup.stop>
+        <input
+          v-model="message"
+          type="text"
+          class="chatInputFlat"
+          placeholder="和 Cornie 说句话…"
+          @keydown.enter.prevent="send"
+        />
+        <button type="button" class="pinBtnSm" :class="{ on: pinned }" title="固定/解除" @click="togglePinned">
+          {{ pinned ? '固' : '钉' }}
+        </button>
+        <button type="button" class="sendBtnSm" :disabled="!message.trim()" @click="send">发</button>
       </div>
     </div>
   </div>
@@ -205,16 +378,56 @@ function onHandleMove(e) {
 .petRoot{
   width: 100vw;
   height: 100vh;
-  display:grid;
-  place-items:center;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  padding-top: 6px;
+  padding-bottom: 10px;
+  box-sizing: border-box;
   background: transparent;
-  overflow:hidden;
-  -webkit-app-region: drag;
+  overflow: hidden;
+  -webkit-app-region: no-drag;
 }
+.hitbox{
+  position: relative;
+  z-index: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 8px;
+  width: 100%;
+  max-width: 268px;
+  padding: 12px;
+  padding-top: 10px;
+  padding-bottom: 12px;
+  border-radius: 18px;
+  -webkit-app-region: no-drag;
+  cursor: grab;
+}
+.hitboxPetArea{
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  width: 100%;
+  flex: 0 0 auto;
+  /* 中上：水平居中、靠上 */
+  padding-top: 2px;
+}
+/* 调试用：浅粉底 + 虚线；输入栏同为 hitbox 子元素，同在背景范围内 */
+.hitbox--debug{
+  background: rgba(244, 114, 182, 0.14);
+  outline: 1px dashed rgba(244, 114, 182, 0.75);
+  outline-offset: 0;
+  box-shadow: inset 0 0 0 1px rgba(244, 114, 182, 0.25);
+}
+.hitbox:active{ cursor: grabbing; }
+.hitbox.editing{ cursor: default; }
 .stageWrap{
   position: relative;
   overflow: visible;
-  -webkit-app-region: drag;
+  -webkit-app-region: no-drag;
 }
 .stage{
   position: relative;
@@ -261,6 +474,8 @@ function onHandleMove(e) {
 .eyeGroup{
   position:absolute;
   pointer-events: none;
+  /* 避免拖拽区域吞掉交互（编辑/未来点击） */
+  -webkit-app-region: no-drag;
 }
 .eyeGroup.editing{
   pointer-events: auto;
@@ -295,6 +510,116 @@ function onHandleMove(e) {
   background: rgba(125,211,252,.95);
   border: 1px solid rgba(0,0,0,.35);
   cursor: nwse-resize;
+}
+
+.chatBubbles{
+  width: 100%;
+  max-height: 220px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 2px;
+  -webkit-app-region: no-drag;
+  scroll-behavior: smooth;
+}
+.chatBubbles::-webkit-scrollbar{ width: 4px; }
+.chatBubbles::-webkit-scrollbar-thumb{ background: rgba(255,255,255,.15); border-radius: 999px; }
+
+.bubble{
+  max-width: 90%;
+  padding: 8px 12px;
+  border-radius: 14px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.bubbleUser{
+  align-self: flex-end;
+  background: rgba(125,211,252,.20);
+  border: 1px solid rgba(125,211,252,.30);
+  color: rgba(224,242,254,.96);
+}
+.bubbleCornie{
+  align-self: flex-start;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.12);
+  color: rgba(243,244,246,.92);
+}
+.bubbleRole{
+  font-size: 10px;
+  color: rgba(255,255,255,.45);
+  margin-bottom: 3px;
+}
+.bubbleText{
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.bubbleText.thinking{
+  color: rgba(255,255,255,.45);
+  font-style: italic;
+}
+
+.chatBar{
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+  width: 100%;
+  padding: 4px 6px;
+  margin-top: 2px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.2);
+  background: rgba(17,24,39,.92);
+  box-shadow: 0 4px 14px rgba(0,0,0,.22);
+  -webkit-app-region: no-drag;
+  position: relative;
+  z-index: 2;
+}
+.chatInputFlat{
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 28px;
+  padding: 0 10px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255,255,255,.07);
+  color: rgba(243,244,246,.96);
+  font-size: 12px;
+  outline: none;
+}
+.chatInputFlat::placeholder{
+  color: rgba(156,163,175,.95);
+}
+.pinBtnSm{
+  flex: 0 0 auto;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.08);
+  color: rgba(226,232,240,.9);
+  font-size: 11px;
+  cursor: pointer;
+}
+.pinBtnSm.on{
+  border-color: rgba(125,211,252,.45);
+  background: rgba(125,211,252,.18);
+}
+.sendBtnSm{
+  flex: 0 0 auto;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(125,211,252,.35);
+  background: rgba(125,211,252,.14);
+  color: rgba(226,232,240,.98);
+  font-size: 12px;
+  cursor: pointer;
+}
+.sendBtnSm:disabled{
+  opacity: .45;
+  cursor: not-allowed;
 }
 </style>
 
