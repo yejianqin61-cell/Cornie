@@ -57,6 +57,15 @@ export async function deleteConversation(date) {
   return apiFetch(`/conversations/${encodeURIComponent(date)}`, { method: 'DELETE' })
 }
 
+export async function listChatlogDates({ month } = {}) {
+  const qs = month ? `?month=${encodeURIComponent(month)}` : ''
+  return apiFetch(`/chatlogs${qs}`)
+}
+
+export async function getChatlog(date) {
+  return apiFetch(`/chatlogs/${encodeURIComponent(date)}`)
+}
+
 // ─── model ───────────────────────────────────────────────────
 
 export async function getModelStatus() {

@@ -443,6 +443,40 @@ export function deleteMessagesByDate(store, date) {
   store.persist()
 }
 
+export function listConversationDates(store, { month } = {}) {
+  const like = month ? `${month}-%` : null
+  const stmt = store.db.prepare(
+    like
+      ? `
+        select date, count(*) as messageCount
+        from conversations
+        where date like $like
+        group by date
+        order by date desc
+      `
+      : `
+        select date, count(*) as messageCount
+        from conversations
+        group by date
+        order by date desc
+      `
+  )
+  if (like) {
+    stmt.bind({ $like: like })
+  }
+
+  const rows = []
+  while (stmt.step()) {
+    const row = stmt.getAsObject()
+    rows.push({
+      date: String(row.date),
+      messageCount: Number(row.messageCount)
+    })
+  }
+  stmt.free()
+  return rows
+}
+
 // ─── on this day ──────────────────────────────────────────────
 
 export function listOnThisDay(store, { date, limit = 20 }) {

@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { getEntry, getModelStatus, listEntries, listOnThisDay, regenerateCornie, upsertEntry } from './api'
 import CornieComposer from './CornieComposer.vue'
+import ChatHistory from './ChatHistory.vue'
 
 function pad2(n) {
   return String(n).padStart(2, '0')
@@ -35,7 +36,7 @@ const onThisDayItems = ref([])
 
 const selectedLabel = computed(() => selectedDate.value)
 
-const mode = ref('diary') // diary | cornie-composer
+const mode = ref('diary') // diary | history | cornie-composer
 
 const modelStatus = ref({ ok: false, configured: false, provider: 'deepseek', model: '', reason: '' })
 async function checkModel() {
@@ -157,6 +158,8 @@ onMounted(async () => {
             {{
               mode === 'diary'
                 ? '本地优先 · 轻量优雅 · 先把“记录”跑通'
+                : mode === 'history'
+                  ? '按天翻阅聊天记录，不打断实时陪伴感'
                 : '拖动部件拼装 Cornie，然后复制配置给我固化到 CSS'
             }}
           </div>
@@ -166,6 +169,7 @@ onMounted(async () => {
       <div class="actions">
         <div class="modeTabs">
           <button class="tab" :class="{ active: mode === 'diary' }" @click="mode = 'diary'">日记本</button>
+          <button class="tab" :class="{ active: mode === 'history' }" @click="mode = 'history'">聊天记录</button>
           <button
             class="tab"
             :class="{ active: mode === 'cornie-composer' }"
@@ -296,6 +300,10 @@ onMounted(async () => {
           </div>
         </div>
       </section>
+    </main>
+
+    <main v-else-if="mode === 'history'" class="composerMain">
+      <ChatHistory />
     </main>
 
     <main v-else class="composerMain">

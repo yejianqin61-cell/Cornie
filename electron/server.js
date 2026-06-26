@@ -1,8 +1,10 @@
 import express from 'express'
 import { diaryRoutes } from './backend/diary/routes.js'
 import { diaryService } from './backend/diary/service.js'
+import { chatlogRoutes } from './backend/chatlog/routes.js'
 import { conversationRoutes } from './backend/conversation/routes.js'
 import { conversationService } from './backend/conversation/service.js'
+import { createChatlogService } from './backend/chatlog/service.js'
 import { checkHealth as checkModelHealth } from './backend/model/deepseek/client.js'
 import { jsonErrorHandler } from './backend/http/middleware.js'
 import { registerTool } from './backend/tools/registry.js'
@@ -40,6 +42,9 @@ export function createServer({ store }) {
 
   const diary = diaryService(store)
   app.use('/api', diaryRoutes({ diary }))
+
+  const chatlog = createChatlogService(store)
+  app.use('/api', chatlogRoutes({ chatlog }))
 
   registerLedgerTools(store, { registerTool })
   registerTodoTools(store, { registerTool })
