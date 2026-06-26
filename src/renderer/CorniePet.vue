@@ -3,6 +3,9 @@ import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'v
 import { cornieCssVars, cornieEyeOverlay, corniePetTransform, cornieStage } from './cornieConfig'
 import { createCornieBlinkController } from './cornieBlink'
 import { sendMessage } from './api'
+import ToolResultPanel from './components/ToolResultPanel.vue'
+import ConfirmCard from './components/ConfirmCard.vue'
+import AskBackBubble from './components/AskBackBubble.vue'
 
 const parts = [
   { id: 'tail1', label: '尾巴', src: '/pic/tail1-removebg-preview.png' },
@@ -37,7 +40,7 @@ const dragReady = ref(false)
 const showHitbox = ref(true)
 
 // 对话状态
-const messages = ref([]) // { role: 'user'|'cornie', content, id }
+const messages = ref([])
 const sending = ref(false)
 const chatListRef = ref(null)
 
@@ -240,24 +243,84 @@ function togglePinned() {
   pinned.value = !pinned.value
 }
 
+function pushChatItem(item) {
+  messages.value.push({
+    id: item.id || `${item.kind}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    ...item
+  })
+}
+
+function appendResponse(data) {
+  if (data?.cornieMessage?.content) {
+    pushChatItem({
+      kind: 'message',
+      role: 'cornie',
+      content: data.cornieMessage.content,
+      id: data.cornieMessage.id
+    })
+  }
+
+  if (data?.toolExecution?.used && Array.isArray(data.toolExecution.results) && data.toolExecution.results.length > 0) {
+    pushChatItem({
+      kind: 'tool_result',
+      results: data.toolExecution.results
+    })
+  }
+
+  const decision = data?.policyDecision?.decision
+  if (decision === 'confirm') {
+    pushChatItem({
+      kind: 'confirm',
+      request: data.policyDecision.confirmRequest || {}
+    })
+  } else if (decision === 'ask_back') {
+    pushChatItem({
+      kind: 'ask_back',
+      question: data.policyDecision.question || '',
+      reason: data.policyDecision.reason || ''
+    })
+  } else if (decision === 'deny') {
+    pushChatItem({
+      kind: 'error',
+      content: data.policyDecision.reason || '这个动作现在不能执行。'
+    })
+  }
+}
+
+function handleConfirmAction(action, request) {
+  const text =
+    action === 'confirm'
+      ? '我先把你的同意记下来了。确认回传接口我会在下一步接上。'
+      : '我先把你的拒绝记下来了。确认回传接口我会在下一步接上。'
+
+  pushChatItem({
+    kind: 'message',
+    role: 'user',
+    content: action === 'confirm' ? '同意这次操作' : '拒绝这次操作'
+  })
+  pushChatItem({
+    kind: 'message',
+    role: 'cornie',
+    content: request?.title ? `${request.title}\n\n${text}` : text
+  })
+  scrollChatToBottom()
+}
+
 async function send() {
   const text = message.value.trim()
   if (!text || sending.value) return
   message.value = ''
 
-  messages.value.push({ role: 'user', content: text, id: Date.now().toString() })
+  pushChatItem({ kind: 'message', role: 'user', content: text, id: Date.now().toString() })
   scrollChatToBottom()
 
   sending.value = true
   try {
     const data = await sendMessage(text, today())
-    messages.value.push({
-      role: 'cornie',
-      content: data.cornieMessage.content,
-      id: data.cornieMessage.id
-    })
+    appendResponse(data)
   } catch (e) {
-    messages.value.push({
+    pushChatItem({
+      kind: 'message',
       role: 'cornie',
       content: '唔...我好像走神了，能再说一遍吗？',
       id: 'err-' + Date.now(),
@@ -344,11 +407,40 @@ async function scrollChatToBottom() {
         <div
           v-for="m in messages"
           :key="m.id"
-          class="bubble"
-          :class="m.role === 'user' ? 'bubbleUser' : 'bubbleCornie'"
+          class="chatItem"
+          :class="[
+            m.kind === 'message' && m.role === 'user' ? 'chatItemUser' : 'chatItemCornie'
+          ]"
         >
-          <div class="bubbleRole">{{ m.role === 'user' ? '主人' : 'Cornie' }}</div>
-          <div class="bubbleText">{{ m.content }}</div>
+          <template v-if="m.kind === 'message'">
+            <div class="bubble" :class="m.role === 'user' ? 'bubbleUser' : 'bubbleCornie'">
+              <div class="bubbleRole">{{ m.role === 'user' ? '主人' : 'Cornie' }}</div>
+              <div class="bubbleText">{{ m.content }}</div>
+            </div>
+          </template>
+
+          <template v-else-if="m.kind === 'tool_result'">
+            <ToolResultPanel :results="m.results" />
+          </template>
+
+          <template v-else-if="m.kind === 'confirm'">
+            <ConfirmCard
+              :request="m.request"
+              @confirm="handleConfirmAction('confirm', $event)"
+              @reject="handleConfirmAction('reject', $event)"
+            />
+          </template>
+
+          <template v-else-if="m.kind === 'ask_back'">
+            <AskBackBubble :question="m.question" :reason="m.reason" />
+          </template>
+
+          <template v-else-if="m.kind === 'error'">
+            <div class="bubble bubbleError">
+              <div class="bubbleRole">系统提示</div>
+              <div class="bubbleText">{{ m.content }}</div>
+            </div>
+          </template>
         </div>
         <div v-if="sending" class="bubble bubbleCornie">
           <div class="bubbleRole">Cornie</div>
@@ -526,6 +618,19 @@ async function scrollChatToBottom() {
 .chatBubbles::-webkit-scrollbar{ width: 4px; }
 .chatBubbles::-webkit-scrollbar-thumb{ background: rgba(255,255,255,.15); border-radius: 999px; }
 
+.chatItem{
+  width: 100%;
+  display: flex;
+}
+
+.chatItemUser{
+  justify-content: flex-end;
+}
+
+.chatItemCornie{
+  justify-content: flex-start;
+}
+
 .bubble{
   max-width: 90%;
   padding: 8px 12px;
@@ -544,6 +649,12 @@ async function scrollChatToBottom() {
   background: rgba(255,255,255,.08);
   border: 1px solid rgba(255,255,255,.12);
   color: rgba(243,244,246,.92);
+}
+.bubbleError{
+  max-width: 100%;
+  background: rgba(127,29,29,.28);
+  border: 1px solid rgba(248,113,113,.28);
+  color: rgba(254,226,226,.96);
 }
 .bubbleRole{
   font-size: 10px;
