@@ -9,7 +9,8 @@
     "dev": "concurrently -k \"vite --port 5173 --strictPort\" \"wait-on http://127.0.0.1:5173 && electron .\"",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "echo \"(no lint configured)\""
+    "lint": "echo \"(no lint configured)\"",
+    "verify:category": "node scripts/verify-category-flow.mjs"
   },
   "dependencies": {
     "express": "^4.19.2",
