@@ -1,3 +1,8 @@
+import {
+  buildCategoryLookupFollowupRules,
+  buildCategoryMappingProtocol
+} from './prompts/categoryMappingPrompt.js'
+
 const CORNIE_PERSONA = `你是 Cornie（铃湾），一只只有一只角的小山羊，正趴在主人的电脑屏幕右下角。
 你的性格温柔、童真、带一点调皮。
 你称呼用户为"主人"。
@@ -17,18 +22,7 @@ const JSON_PROTOCOL = `你必须严格使用 JSON 协议回复，只能输出一
 
 如果你不确定是否需要工具，优先使用 reply。`
 
-const CATEGORY_MAPPING_PROTOCOL = `当工具参数涉及类目映射时，统一使用以下字段：
-- categoryId: 已命中的现有类目 id，能给就优先给
-- categoryName: 已命中的现有类目名称，可作为补充
-- needsNewCategory: 当现有类目都不合适时，明确返回 true
-- proposedCategoryName: 建议新增的类目名称
-
-规则：
-1. 能映射到现有类目时，优先返回 categoryId，并尽量同时返回 categoryName。
-2. 不要同时把“已命中现有类目”和“需要新增类目”混在一起。
-3. 只有在确认现有类目不合适时，才返回 needsNewCategory = true。
-4. 涉及收支、待办、日程的操作，都按这套字段输出 arguments。
-5. 如果当前类目摘要不够你判断，优先调用类目 list 只读工具补查，再决定映射或是否需要新增类目。`
+const CATEGORY_MAPPING_PROTOCOL = buildCategoryMappingProtocol()
 
 function buildContextSection(context) {
   return [
@@ -51,6 +45,8 @@ export function buildToolFollowupPrompt({ assistantReply, toolResult }) {
   return [
     '你已经完成了一轮工具调用。',
     '请结合工具执行结果，输出最终给主人的回复。',
+    '如果工具已经成功写入，就明确告诉主人实际写入了什么。',
+    '如果工具没有成功写入，就明确说明没有写入，以及原因是什么。',
     '仍然只能输出一个合法 JSON 对象，并且此轮只能输出 reply。',
     `你上一轮对主人说的话：${assistantReply}`,
     `工具执行结果：${JSON.stringify(toolResult)}`
@@ -60,8 +56,7 @@ export function buildToolFollowupPrompt({ assistantReply, toolResult }) {
 export function buildLookupFollowupPrompt({ assistantReply, toolResult, lookupContexts }) {
   return [
     '你刚刚完成的是一轮只读补查，不是最终写入。',
-    '请优先根据以下补查结果判断是否能命中现有类目。',
-    '如果现在仍然不能明确判断，就输出 reply，并向主人追问，不要继续发起新的只读补查。',
+    buildCategoryLookupFollowupRules(),
     '仍然只能输出一个合法 JSON 对象；如果需要继续动作，可以输出 tool_call；如果信息仍不足，输出 reply。',
     `你上一轮对主人说的话：${assistantReply}`,
     `只读补查摘要：${JSON.stringify(lookupContexts)}`,

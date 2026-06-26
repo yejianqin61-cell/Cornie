@@ -70,9 +70,66 @@ function normalizeToolCall(item, index) {
     throw protocolError('tool arguments must be an object', { index, toolName: item.tool_name })
   }
 
+  validateCategoryArguments(item.tool_name, item.arguments, index)
+
   return {
     tool_name: item.tool_name.trim(),
     arguments: item.arguments
+  }
+}
+
+function isCategoryDomainTool(toolName) {
+  return [
+    'ledger.add_expense',
+    'ledger.add_income',
+    'todo.create',
+    'todo.update',
+    'schedule.create',
+    'schedule.update'
+  ].includes(toolName)
+}
+
+function normalizeCategoryString(value) {
+  if (value == null) {
+    return null
+  }
+  const normalized = String(value).trim()
+  return normalized ? normalized : null
+}
+
+function validateCategoryArguments(toolName, argumentsPayload, index) {
+  if (!isCategoryDomainTool(toolName)) {
+    return
+  }
+
+  const categoryId = normalizeCategoryString(argumentsPayload.categoryId ?? argumentsPayload.category_id)
+  const categoryName = normalizeCategoryString(argumentsPayload.categoryName ?? argumentsPayload.category_name)
+  const proposedCategoryName = normalizeCategoryString(
+    argumentsPayload.proposedCategoryName ??
+      argumentsPayload.proposed_category_name ??
+      argumentsPayload.categoryProposalName
+  )
+  const needsNewCategory = argumentsPayload.needsNewCategory === true
+
+  if ((categoryId || categoryName) && needsNewCategory) {
+    throw protocolError('category mapping must not mix existing category with needsNewCategory=true', {
+      index,
+      toolName
+    })
+  }
+
+  if (needsNewCategory && !proposedCategoryName) {
+    throw protocolError('proposedCategoryName is required when needsNewCategory=true', {
+      index,
+      toolName
+    })
+  }
+
+  if (!needsNewCategory && proposedCategoryName) {
+    throw protocolError('proposedCategoryName must not be set without needsNewCategory=true', {
+      index,
+      toolName
+    })
   }
 }
 
@@ -177,6 +234,7 @@ export function buildJsonRepairPrompt(rawText) {
     '允许的 type 只有 reply 或 tool_call。',
     'reply 结构: {"type":"reply","assistant_reply":"..."}',
     'tool_call 结构: {"type":"tool_call","assistant_reply":"...","tool_calls":[{"tool_name":"tool.name","arguments":{}}]}',
+    '若 arguments 涉及类目映射，不要同时输出 categoryId/categoryName 和 needsNewCategory=true；needsNewCategory=true 时必须带 proposedCategoryName。',
     '以下是你上一条原始回复，请修复成合法 JSON：',
     rawText
   ].join('\n')
