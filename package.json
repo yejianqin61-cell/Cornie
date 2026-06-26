@@ -15,6 +15,7 @@
     "verify:task048-tools": "node scripts/verify-task048-tools.mjs",
     "verify:task049-tools": "node scripts/verify-task049-tools.mjs",
     "verify:task050-policy": "node scripts/verify-task050-policy.mjs",
+    "verify:7.3": "node scripts/verify-7.3.mjs",
     "profile:category": "node scripts/profile-category-flow.mjs",
     "export:category-samples": "node scripts/export-category-samples.mjs",
     "audit:category-data": "node scripts/audit-category-data.mjs",
