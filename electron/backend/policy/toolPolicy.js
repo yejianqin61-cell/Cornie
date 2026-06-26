@@ -36,7 +36,7 @@ function buildPolicySummary(decisions) {
   }
 }
 
-export function evaluateToolCalls(toolCalls, { sourceText } = {}) {
-  const decisions = toolCalls.map((toolCall) => evaluateToolRule(toolCall, sourceText))
+export function evaluateToolCalls(toolCalls, { sourceText, store } = {}) {
+  const decisions = toolCalls.map((toolCall) => evaluateToolRule(toolCall, sourceText, { store }))
   return buildPolicySummary(decisions)
 }

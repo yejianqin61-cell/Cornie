@@ -123,7 +123,8 @@ export function createConversationOrchestrator(store) {
 
             for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
               policyDecision = evaluateToolCalls(currentEnvelope.tool_calls, {
-                sourceText: currentEnvelope.assistant_reply
+                sourceText: currentEnvelope.assistant_reply,
+                store
               })
 
               if (policyDecision.decision === 'confirm') {

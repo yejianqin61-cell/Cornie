@@ -81,6 +81,10 @@ function isCategoryCreationConfirmation(confirmation) {
   return confirmation?.confirmRequest?.kind === 'category_creation_confirmation'
 }
 
+function isCategoryMappingConfirmation(confirmation) {
+  return confirmation?.confirmRequest?.kind === 'category_mapping_confirmation'
+}
+
 function getPendingActionToolCall(confirmation) {
   const pendingAction = confirmation?.confirmRequest?.pendingAction
   if (pendingAction?.toolName) {
@@ -239,6 +243,40 @@ async function executeConfirmedCategoryCreation(store, confirmation) {
   }
 }
 
+async function executeConfirmedCategoryMapping(store, confirmation) {
+  const pendingActionToolCall = getPendingActionToolCall(confirmation)
+  const recommendedCategory = confirmation?.confirmRequest?.recommendedCategory
+
+  if (!recommendedCategory?.id || !recommendedCategory?.name) {
+    throw new Error('recommended category is missing')
+  }
+
+  const resumedActionToolCall = buildResumedActionToolCall(pendingActionToolCall, recommendedCategory)
+  const resumedActionResult = await executeToolCalls([resumedActionToolCall], {
+    date: confirmation.date,
+    store,
+    source: 'confirmation'
+  })
+
+  const resumedResult = resumedActionResult.results[0]
+  logCategoryAudit({
+    eventType: 'category_action_resumed',
+    domain: confirmation.confirmRequest?.domain,
+    confirmRequestId: confirmation.id,
+    toolName: resumedActionToolCall.tool_name,
+    sourceText: confirmation.sourceText,
+    categoryId: recommendedCategory.id,
+    categoryName: recommendedCategory.name,
+    decision: resumedResult?.ok === false ? 'failed' : 'mapped',
+    reason: resumedResult?.ok === false ? resumedResult?.error?.message || 'resume failed' : 'resume_success'
+  })
+
+  return {
+    type: 'tool_result',
+    results: resumedActionResult.results
+  }
+}
+
 function buildCategoryValidationReply(error) {
   if (error?.code === 'category_name_similar') {
     const candidates = Array.isArray(error?.details?.similarCandidates)
@@ -265,6 +303,11 @@ export function createConfirmExecutor(store) {
             confirmation,
             toolResult.results[0]?.result
           )
+        } else if (isCategoryMappingConfirmation(confirmation)) {
+          toolResult = await executeConfirmedCategoryMapping(store, confirmation)
+          assistantReply =
+            confirmation.assistantReply ||
+            '小铃湾已经按主人确认的类目继续完成这次操作啦。'
         } else {
           toolResult = await executeToolCalls(confirmation.toolCalls, {
             date: confirmation.date,
