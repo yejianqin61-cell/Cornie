@@ -3,6 +3,7 @@ import { getMessagesByDate, saveMessage } from '../../db.js'
 import { buildJsonRepairPrompt, parseModelJson } from '../agent/jsonProtocol.js'
 import { buildConversationContext } from '../agent/contextBuilder.js'
 import { buildConversationPrompt, buildToolFollowupPrompt } from '../agent/promptBuilder.js'
+import { logCategoryAudit } from '../category/audit.js'
 import { chat } from '../model/deepseek/client.js'
 import { executeToolCalls } from '../tools/gateway.js'
 
@@ -180,8 +181,33 @@ async function executeConfirmedCategoryCreation(store, confirmation) {
 
   const createdCategoryResult = categoryCreationResult.results[0]
   if (!createdCategoryResult?.ok) {
+    logCategoryAudit({
+      eventType: 'category_creation_failed',
+      domain: confirmation.confirmRequest?.domain,
+      confirmRequestId: confirmation.id,
+      toolName: categoryCreateToolCall.tool_name,
+      sourceText: confirmation.sourceText,
+      proposedCategoryName: confirmation.confirmRequest?.proposedCategoryName,
+      decision: 'failed',
+      reason: createdCategoryResult?.error?.message || 'failed to create category'
+    })
     throw new Error(createdCategoryResult?.error?.message || 'failed to create category')
   }
+
+  logCategoryAudit({
+    eventType:
+      createdCategoryResult.result?.resolution === 'reused_existing'
+        ? 'category_creation_reused_existing'
+        : 'category_creation_approved',
+    domain: confirmation.confirmRequest?.domain,
+    confirmRequestId: confirmation.id,
+    toolName: categoryCreateToolCall.tool_name,
+    sourceText: confirmation.sourceText,
+    categoryId: createdCategoryResult.result?.id ?? null,
+    categoryName: createdCategoryResult.result?.name ?? null,
+    proposedCategoryName: confirmation.confirmRequest?.proposedCategoryName,
+    decision: createdCategoryResult.result?.resolution === 'reused_existing' ? 'reused' : 'created'
+  })
 
   const resumedActionToolCall = buildResumedActionToolCall(
     pendingActionToolCall,
@@ -191,6 +217,20 @@ async function executeConfirmedCategoryCreation(store, confirmation) {
     date: confirmation.date,
     store,
     source: 'confirmation'
+  })
+
+  const resumedResult = resumedActionResult.results[0]
+  logCategoryAudit({
+    eventType: 'category_action_resumed',
+    domain: confirmation.confirmRequest?.domain,
+    confirmRequestId: confirmation.id,
+    toolName: resumedActionToolCall.tool_name,
+    sourceText: confirmation.sourceText,
+    categoryId: createdCategoryResult.result?.id ?? null,
+    categoryName: createdCategoryResult.result?.name ?? null,
+    proposedCategoryName: confirmation.confirmRequest?.proposedCategoryName,
+    decision: resumedResult?.ok === false ? 'failed' : 'mapped',
+    reason: resumedResult?.ok === false ? resumedResult?.error?.message || 'resume failed' : 'resume_success'
   })
 
   return {

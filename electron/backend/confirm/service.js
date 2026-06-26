@@ -4,6 +4,7 @@ import {
   listPendingConfirmationsByDate,
   updatePendingConfirmationStatus
 } from '../../db.js'
+import { logCategoryAudit } from '../category/audit.js'
 import { badRequest, HttpError } from '../http/errors.js'
 import { createConfirmExecutor } from './executor.js'
 
@@ -132,6 +133,18 @@ export function createConfirmService(store) {
         status: 'rejected',
         resolvedAt: Date.now()
       })
+      if (updatedConfirmation.confirmRequest?.kind === 'category_creation_confirmation') {
+        logCategoryAudit({
+          eventType: 'category_creation_rejected',
+          domain: updatedConfirmation.confirmRequest.domain,
+          confirmRequestId: updatedConfirmation.id,
+          toolName: updatedConfirmation.confirmRequest.toolName,
+          sourceText: updatedConfirmation.sourceText,
+          proposedCategoryName: updatedConfirmation.confirmRequest.proposedCategoryName,
+          decision: 'rejected',
+          reason: updatedConfirmation.confirmRequest.reason
+        })
+      }
       const rejectionResult = executor.reject(updatedConfirmation)
       return {
         confirmation: updatedConfirmation,

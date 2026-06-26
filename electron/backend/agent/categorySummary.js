@@ -1,6 +1,7 @@
 import { createLedgerService } from '../ledger/service.js'
 import { createTodoService } from '../todo/service.js'
 import { createScheduleService } from '../schedule/service.js'
+import { logCategoryAudit } from '../category/audit.js'
 
 function formatCategoryItems(items) {
   if (!Array.isArray(items) || items.length === 0) {
@@ -27,6 +28,11 @@ function buildCategorySnapshot(store) {
 
 export function buildCategorySummary(store) {
   const snapshot = buildCategorySnapshot(store)
+  logCategoryAudit({
+    eventType: 'category_snapshot_built',
+    decision: 'mapped',
+    reason: `ledger_income=${snapshot.ledger.income.length}, ledger_expense=${snapshot.ledger.expense.length}, todo=${snapshot.todo.length}, schedule=${snapshot.schedule.length}`
+  })
 
   return [
     '收支类目：',

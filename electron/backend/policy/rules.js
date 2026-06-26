@@ -1,5 +1,6 @@
 import { getTool } from '../tools/registry.js'
 import { getToolRiskLevel } from './riskLevels.js'
+import { logCategoryAudit } from '../category/audit.js'
 
 const VAGUE_CATEGORY_NAMES = new Set([
   '其他',
@@ -86,6 +87,24 @@ function getCategoryMapping(toolCall) {
 }
 
 function buildCategoryAskBack(toolCall, question, reason) {
+  const domain = toolCall.tool_name.startsWith('ledger.')
+    ? 'ledger'
+    : toolCall.tool_name.startsWith('todo.')
+      ? 'todo'
+      : toolCall.tool_name.startsWith('schedule.')
+        ? 'schedule'
+        : null
+
+  logCategoryAudit({
+    eventType: 'category_mapping_ask_back',
+    domain,
+    toolName: toolCall.tool_name,
+    sourceText: toolCall.arguments?.sourceText,
+    proposedCategoryName: toolCall.arguments?.proposedCategoryName ?? null,
+    decision: 'ask_back',
+    reason
+  })
+
   return {
     decision: 'ask_back',
     question,
@@ -95,6 +114,16 @@ function buildCategoryAskBack(toolCall, question, reason) {
 }
 
 function buildCategoryConfirm(toolCall, sourceText, domain, reason, proposedCategoryName) {
+  logCategoryAudit({
+    eventType: 'category_mapping_needs_confirmation',
+    domain,
+    toolName: toolCall.tool_name,
+    sourceText,
+    proposedCategoryName,
+    decision: 'confirm',
+    reason
+  })
+
   return {
     decision: 'confirm',
     confirmRequest: buildCategoryCreationConfirmRequest({
@@ -162,6 +191,18 @@ function applyLedgerRule(toolCall, sourceText) {
     )
   }
 
+  if (categoryId || categoryName) {
+    logCategoryAudit({
+      eventType: 'category_mapping_resolved',
+      domain: 'ledger',
+      toolName: toolCall.tool_name,
+      sourceText,
+      categoryId,
+      categoryName,
+      decision: 'mapped'
+    })
+  }
+
   return null
 }
 
@@ -197,6 +238,18 @@ function applyTodoRule(toolCall, sourceText) {
     )
   }
 
+  if (categoryId || categoryName) {
+    logCategoryAudit({
+      eventType: 'category_mapping_resolved',
+      domain: 'todo',
+      toolName: toolCall.tool_name,
+      sourceText,
+      categoryId,
+      categoryName,
+      decision: 'mapped'
+    })
+  }
+
   return null
 }
 
@@ -230,6 +283,18 @@ function applyScheduleRule(toolCall, sourceText) {
       '当前日程找不到合适分类，建议先新增日程类目，等待主人确认。',
       proposedCategoryName
     )
+  }
+
+  if (categoryId || categoryName) {
+    logCategoryAudit({
+      eventType: 'category_mapping_resolved',
+      domain: 'schedule',
+      toolName: toolCall.tool_name,
+      sourceText,
+      categoryId,
+      categoryName,
+      decision: 'mapped'
+    })
   }
 
   return null
