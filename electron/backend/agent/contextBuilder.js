@@ -1,6 +1,7 @@
 import { getMessagesByDate, listObservationLogs, listScheduleEntries, listTodoEntries } from '../../db.js'
-import { listTools } from '../tools/registry.js'
+import { buildCategorySummary } from './categorySummary.js'
 import { buildMemorySearchSummary } from '../memory/search.js'
+import { listTools } from '../tools/registry.js'
 
 function summarizeRecentConversation(messages, limit = 8) {
   if (!Array.isArray(messages) || messages.length === 0) {
@@ -19,26 +20,33 @@ function summarizeTools() {
     return '当前没有已注册的工具。'
   }
 
-  return tools
-    .map((tool) => `- ${tool.name} [${tool.riskLevel}]：${tool.description}`)
-    .join('\n')
+  return tools.map((tool) => `- ${tool.name} [${tool.riskLevel}]：${tool.description}`).join('\n')
 }
 
 function summarizeTodos(store) {
   const items = listTodoEntries(store, { status: 'pending' }).slice(0, 5)
-  if (items.length === 0) return '当前没有未完成待办。'
+  if (items.length === 0) {
+    return '当前没有未完成待办。'
+  }
+
   return items.map((item) => `- ${item.title}${item.dueAt ? `（${item.dueAt}）` : ''}`).join('\n')
 }
 
 function summarizeSchedules(store) {
   const items = listScheduleEntries(store, { status: 'scheduled' }).slice(0, 5)
-  if (items.length === 0) return '当前没有近期日程。'
+  if (items.length === 0) {
+    return '当前没有近期日程。'
+  }
+
   return items.map((item) => `- ${item.title} @ ${item.startAt}`).join('\n')
 }
 
 function summarizeObservations(store, date) {
   const items = listObservationLogs(store, { date, limit: 5 })
-  if (items.length === 0) return '当前没有观察日志。'
+  if (items.length === 0) {
+    return '当前没有观察日志。'
+  }
+
   return items.map((item) => `- [${item.type}] ${item.title}`).join('\n')
 }
 
@@ -52,7 +60,7 @@ export function buildConversationContext(store, { date }) {
   return {
     date,
     recentConversationSummary: summarizeRecentConversation(messages),
-    categorySummary: '当前类目摘要暂未接入，后续由收支与类目模块提供。',
+    categorySummary: buildCategorySummary(store),
     todoSummary: summarizeTodos(store),
     scheduleSummary: summarizeSchedules(store),
     observationSummary: summarizeObservations(store, date),
