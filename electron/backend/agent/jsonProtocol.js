@@ -82,6 +82,7 @@ function isCategoryDomainTool(toolName) {
   return [
     'ledger.add_expense',
     'ledger.add_income',
+    'ledger.update_entry',
     'todo.create',
     'todo.update',
     'schedule.create',

@@ -455,6 +455,19 @@ function applyMemoryRule(toolCall, sourceText) {
   }
 }
 
+function applySystemReadRule(toolCall) {
+  if (
+    toolCall.tool_name === 'settings.get_runtime_context' ||
+    toolCall.tool_name === 'health.get_model_status'
+  ) {
+    return {
+      decision: 'allow',
+      toolCall
+    }
+  }
+  return null
+}
+
 function applyHighRiskRule(toolCall, sourceText) {
   if (getToolRiskLevel(toolCall.tool_name) !== 'high') {
     return null
@@ -477,6 +490,7 @@ export function evaluateToolRule(toolCall, sourceText, options = {}) {
     applyLedgerRule(toolCall, sourceText, options) ??
     applyTodoRule(toolCall, sourceText, options) ??
     applyScheduleRule(toolCall, sourceText, options) ??
+    applySystemReadRule(toolCall) ??
     applyMemoryRule(toolCall, sourceText) ??
     applyHighRiskRule(toolCall, sourceText) ?? {
       decision: 'allow',
