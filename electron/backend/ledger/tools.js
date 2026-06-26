@@ -1,3 +1,4 @@
+import { toCategoryListResult } from '../category/readModel.js'
 import { createLedgerService } from './service.js'
 
 export function registerLedgerTools(store, { registerTool }) {
@@ -19,16 +20,22 @@ export function registerLedgerTools(store, { registerTool }) {
 
   registerTool({
     name: 'ledger_category.list_expense',
-    description: '列出支出类目',
+    description: '只读查询当前全部支出类目，适合类目补查，无需确认',
     riskLevel: 'low',
-    handler: async () => ({ ok: true, result: ledger.listExpenseCategories() })
+    handler: async () => ({
+      ok: true,
+      result: toCategoryListResult(ledger.listExpenseCategories(), { includeType: true })
+    })
   })
 
   registerTool({
     name: 'ledger_category.list_income',
-    description: '列出收入类目',
+    description: '只读查询当前全部收入类目，适合类目补查，无需确认',
     riskLevel: 'low',
-    handler: async () => ({ ok: true, result: ledger.listIncomeCategories() })
+    handler: async () => ({
+      ok: true,
+      result: toCategoryListResult(ledger.listIncomeCategories(), { includeType: true })
+    })
   })
 
   registerTool({

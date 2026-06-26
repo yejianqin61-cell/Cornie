@@ -27,7 +27,8 @@ const CATEGORY_MAPPING_PROTOCOL = `当工具参数涉及类目映射时，统一
 1. 能映射到现有类目时，优先返回 categoryId，并尽量同时返回 categoryName。
 2. 不要同时把“已命中现有类目”和“需要新增类目”混在一起。
 3. 只有在确认现有类目不合适时，才返回 needsNewCategory = true。
-4. 涉及收支、待办、日程的操作，都按这套字段输出 arguments。`
+4. 涉及收支、待办、日程的操作，都按这套字段输出 arguments。
+5. 如果当前类目摘要不够你判断，优先调用类目 list 只读工具补查，再决定映射或是否需要新增类目。`
 
 function buildContextSection(context) {
   return [

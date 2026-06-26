@@ -1,3 +1,4 @@
+import { toCategoryListResult } from '../category/readModel.js'
 import { createTodoService } from './service.js'
 
 export function registerTodoTools(store, { registerTool }) {
@@ -47,9 +48,9 @@ export function registerTodoTools(store, { registerTool }) {
   })
   registerTool({
     name: 'todo_category.list',
-    description: '列出待办类目',
+    description: '只读查询当前全部待办类目，适合类目补查，无需确认',
     riskLevel: 'low',
-    handler: async () => ({ ok: true, result: todo.listCategories() })
+    handler: async () => ({ ok: true, result: toCategoryListResult(todo.listCategories()) })
   })
   registerTool({
     name: 'todo_category.create',

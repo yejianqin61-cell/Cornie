@@ -12,7 +12,7 @@ import { createConfirmService } from '../confirm/service.js'
 
 const MAX_HISTORY_MESSAGES = 40
 const MAX_PROTOCOL_REPAIR_RETRIES = 1
-const MAX_TOOL_ROUNDS = 1
+const MAX_TOOL_ROUNDS = 2
 
 function trimMessages(messages) {
   if (messages.length <= MAX_HISTORY_MESSAGES + 1) {
@@ -49,7 +49,7 @@ async function requestProtocolEnvelope(messages) {
 }
 
 function buildProtocolFallbackReply() {
-  return '唔……小铃湾这次没有把话说清楚，主人可以再说一遍吗？'
+  return '唔……小铃湾这次没有把话说明白，主人可以再说一遍吗？'
 }
 
 function buildBaseMessages(history, context) {
@@ -62,9 +62,9 @@ function buildBaseMessages(history, context) {
   ])
 }
 
-function buildToolFollowupMessages(baseMessages, assistantReply, toolResult) {
+function appendToolRoundMessages(messages, assistantReply, toolResult) {
   return trimMessages([
-    ...baseMessages,
+    ...messages,
     {
       role: 'assistant',
       content: JSON.stringify({
@@ -118,11 +118,30 @@ export function createConversationOrchestrator(store) {
           if (MAX_TOOL_ROUNDS < 1) {
             finalReply = firstEnvelope.assistant_reply
           } else {
-            policyDecision = evaluateToolCalls(requestedToolCalls, {
-              sourceText: firstEnvelope.assistant_reply
-            })
+            let currentEnvelope = firstEnvelope
+            let currentMessages = baseMessages
 
-            if (policyDecision.decision === 'allow') {
+            for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
+              policyDecision = evaluateToolCalls(currentEnvelope.tool_calls, {
+                sourceText: currentEnvelope.assistant_reply
+              })
+
+              if (policyDecision.decision === 'confirm') {
+                requestedToolCalls = currentEnvelope.tool_calls
+                finalReply = `${currentEnvelope.assistant_reply}\n\n${policyDecision.confirmRequest.reason}`
+                break
+              }
+
+              if (policyDecision.decision === 'ask_back') {
+                finalReply = policyDecision.question
+                break
+              }
+
+              if (policyDecision.decision === 'deny') {
+                finalReply = `${currentEnvelope.assistant_reply}\n\n${policyDecision.reason}`
+                break
+              }
+
               const toolResult = await executeToolCalls(policyDecision.toolCalls, {
                 date,
                 store,
@@ -131,25 +150,27 @@ export function createConversationOrchestrator(store) {
 
               toolExecution = {
                 used: true,
-                results: toolResult.results
+                results: [...toolExecution.results, ...toolResult.results]
               }
 
-              const followupMessages = buildToolFollowupMessages(
-                baseMessages,
-                firstEnvelope.assistant_reply,
+              currentMessages = appendToolRoundMessages(
+                currentMessages,
+                currentEnvelope.assistant_reply,
                 toolResult
               )
-              const secondEnvelope = await requestProtocolEnvelope(followupMessages)
-              finalReply =
-                secondEnvelope.type === 'reply'
-                  ? secondEnvelope.assistant_reply
-                  : firstEnvelope.assistant_reply
-            } else if (policyDecision.decision === 'confirm') {
-              finalReply = `${firstEnvelope.assistant_reply}\n\n${policyDecision.confirmRequest.reason}`
-            } else if (policyDecision.decision === 'ask_back') {
-              finalReply = policyDecision.question
-            } else {
-              finalReply = `${firstEnvelope.assistant_reply}\n\n${policyDecision.reason}`
+
+              const nextEnvelope = await requestProtocolEnvelope(currentMessages)
+              if (nextEnvelope.type === 'reply') {
+                finalReply = nextEnvelope.assistant_reply
+                break
+              }
+
+              currentEnvelope = nextEnvelope
+              requestedToolCalls = nextEnvelope.tool_calls
+
+              if (round === MAX_TOOL_ROUNDS - 1) {
+                finalReply = currentEnvelope.assistant_reply
+              }
             }
           }
         } else {

@@ -1,3 +1,4 @@
+import { toCategoryListResult } from '../category/readModel.js'
 import { createScheduleService } from './service.js'
 
 export function registerScheduleTools(store, { registerTool }) {
@@ -47,9 +48,9 @@ export function registerScheduleTools(store, { registerTool }) {
   })
   registerTool({
     name: 'schedule_category.list',
-    description: '列出日程类目',
+    description: '只读查询当前全部日程类目，适合类目补查，无需确认',
     riskLevel: 'low',
-    handler: async () => ({ ok: true, result: schedule.listCategories() })
+    handler: async () => ({ ok: true, result: toCategoryListResult(schedule.listCategories()) })
   })
   registerTool({
     name: 'schedule_category.create',
