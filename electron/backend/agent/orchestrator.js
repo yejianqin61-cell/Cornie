@@ -8,6 +8,7 @@ import { chat } from '../model/deepseek/client.js'
 import { executeToolCalls } from '../tools/gateway.js'
 import { createObservationService } from '../observation/service.js'
 import { createMemoryService } from '../memory/service.js'
+import { createConfirmService } from '../confirm/service.js'
 
 const MAX_HISTORY_MESSAGES = 40
 const MAX_PROTOCOL_REPAIR_RETRIES = 1
@@ -85,6 +86,7 @@ function buildToolFollowupMessages(baseMessages, assistantReply, toolResult) {
 export function createConversationOrchestrator(store) {
   const observation = createObservationService(store)
   const memory = createMemoryService(store)
+  const confirm = createConfirmService(store)
 
   return {
     async runTurn({ date, message }) {
@@ -102,15 +104,21 @@ export function createConversationOrchestrator(store) {
       let finalReply = buildProtocolFallbackReply()
       let toolExecution = { used: false, results: [] }
       let policyDecision = { decision: 'allow' }
+      let pendingConfirmation = null
+      let requestedToolCalls = []
+      let initialAssistantReply = ''
 
       try {
         const firstEnvelope = await requestProtocolEnvelope(baseMessages)
 
         if (firstEnvelope.type === 'tool_call') {
+          requestedToolCalls = Array.isArray(firstEnvelope.tool_calls) ? firstEnvelope.tool_calls : []
+          initialAssistantReply = firstEnvelope.assistant_reply
+
           if (MAX_TOOL_ROUNDS < 1) {
             finalReply = firstEnvelope.assistant_reply
           } else {
-            policyDecision = evaluateToolCalls(firstEnvelope.tool_calls, {
+            policyDecision = evaluateToolCalls(requestedToolCalls, {
               sourceText: firstEnvelope.assistant_reply
             })
 
@@ -158,6 +166,21 @@ export function createConversationOrchestrator(store) {
         content: finalReply
       })
 
+      if (policyDecision.decision === 'confirm' && requestedToolCalls.length > 0) {
+        try {
+          pendingConfirmation = confirm.createPending({
+            date,
+            conversationMessageId: cornieMessage.id,
+            sourceText: message,
+            assistantReply: initialAssistantReply || finalReply,
+            toolCalls: requestedToolCalls,
+            confirmRequest: policyDecision.confirmRequest
+          })
+        } catch (error) {
+          console.error('Pending confirmation create error:', error)
+        }
+      }
+
       try {
         observation.recordConversationTurn({
           date,
@@ -180,7 +203,8 @@ export function createConversationOrchestrator(store) {
         userMessage,
         cornieMessage,
         toolExecution,
-        policyDecision
+        policyDecision,
+        pendingConfirmation
       }
     }
   }

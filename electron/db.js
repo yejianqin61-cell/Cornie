@@ -283,6 +283,32 @@ function migrate(db) {
       db.run(`create index if not exists idx_memory_entries_active_weight on memory_entries(is_active, weight);`)
       db.run(`create index if not exists idx_memory_entries_kind_active on memory_entries(kind, is_active);`)
       db.run(`create index if not exists idx_memory_entries_summary_group on memory_entries(summary_group);`)
+    },
+    // v7: pending confirmations
+    (db) => {
+      db.run(`
+        create table if not exists pending_confirmations (
+          id text primary key,
+          date text not null,
+          conversation_message_id text not null,
+          status text not null,
+          source_text text,
+          assistant_reply text,
+          confirm_type text not null,
+          tool_calls_json text not null,
+          confirm_request_json text not null,
+          created_at integer not null,
+          updated_at integer not null,
+          resolved_at integer
+        );
+      `)
+
+      db.run(
+        `create index if not exists idx_pending_confirmations_date_created_at on pending_confirmations(date, created_at);`
+      )
+      db.run(
+        `create index if not exists idx_pending_confirmations_status_created_at on pending_confirmations(status, created_at);`
+      )
     }
   ]
 
@@ -478,6 +504,147 @@ export function listConversationDates(store, { month } = {}) {
 }
 
 // ─── on this day ──────────────────────────────────────────────
+
+function parseJsonValue(text, fallback) {
+  if (!text) return fallback
+  try {
+    return JSON.parse(text)
+  } catch {
+    return fallback
+  }
+}
+
+export function createPendingConfirmation(store, entry) {
+  const now = Date.now()
+  const finalId = entry.id || randomUUID()
+  store.db.run(
+    `
+    insert into pending_confirmations(
+      id, date, conversation_message_id, status, source_text, assistant_reply,
+      confirm_type, tool_calls_json, confirm_request_json, created_at, updated_at, resolved_at
+    ) values (
+      $id, $date, $conversation_message_id, $status, $source_text, $assistant_reply,
+      $confirm_type, $tool_calls_json, $confirm_request_json, $created_at, $updated_at, $resolved_at
+    )
+  `,
+    {
+      $id: finalId,
+      $date: entry.date,
+      $conversation_message_id: entry.conversationMessageId,
+      $status: entry.status ?? 'pending',
+      $source_text: entry.sourceText ?? null,
+      $assistant_reply: entry.assistantReply ?? null,
+      $confirm_type: entry.confirmType,
+      $tool_calls_json: JSON.stringify(Array.isArray(entry.toolCalls) ? entry.toolCalls : []),
+      $confirm_request_json: JSON.stringify(entry.confirmRequest ?? {}),
+      $created_at: now,
+      $updated_at: now,
+      $resolved_at: entry.resolvedAt ?? null
+    }
+  )
+  store.persist()
+  return getPendingConfirmation(store, finalId)
+}
+
+export function getPendingConfirmation(store, id) {
+  const stmt = store.db.prepare(
+    `
+    select id, date, conversation_message_id as conversationMessageId, status,
+           source_text as sourceText, assistant_reply as assistantReply,
+           confirm_type as confirmType, tool_calls_json as toolCallsJson,
+           confirm_request_json as confirmRequestJson, created_at as createdAt,
+           updated_at as updatedAt, resolved_at as resolvedAt
+    from pending_confirmations
+    where id = $id
+  `
+  )
+  stmt.bind({ $id: id })
+  const row = stmt.step() ? stmt.getAsObject() : null
+  stmt.free()
+  if (!row) return null
+  return {
+    id: String(row.id),
+    date: String(row.date),
+    conversationMessageId: String(row.conversationMessageId),
+    status: String(row.status),
+    sourceText: row.sourceText == null ? null : String(row.sourceText),
+    assistantReply: row.assistantReply == null ? null : String(row.assistantReply),
+    confirmType: String(row.confirmType),
+    toolCalls: parseJsonValue(row.toolCallsJson, []),
+    confirmRequest: parseJsonValue(row.confirmRequestJson, {}),
+    createdAt: Number(row.createdAt),
+    updatedAt: Number(row.updatedAt),
+    resolvedAt: row.resolvedAt == null ? null : Number(row.resolvedAt)
+  }
+}
+
+export function updatePendingConfirmationStatus(store, { id, status, resolvedAt }) {
+  const now = Date.now()
+  store.db.run(
+    `
+    update pending_confirmations
+    set status = $status,
+        updated_at = $updated_at,
+        resolved_at = coalesce($resolved_at, resolved_at)
+    where id = $id
+  `,
+    {
+      $id: id,
+      $status: status,
+      $updated_at: now,
+      $resolved_at: resolvedAt ?? null
+    }
+  )
+  store.persist()
+  return getPendingConfirmation(store, id)
+}
+
+export function listPendingConfirmationsByDate(store, { date, status } = {}) {
+  const where = []
+  const params = {}
+  if (date) {
+    where.push('date = $date')
+    params.$date = date
+  }
+  if (status) {
+    where.push('status = $status')
+    params.$status = status
+  }
+
+  const stmt = store.db.prepare(
+    `
+    select id, date, conversation_message_id as conversationMessageId, status,
+           source_text as sourceText, assistant_reply as assistantReply,
+           confirm_type as confirmType, tool_calls_json as toolCallsJson,
+           confirm_request_json as confirmRequestJson, created_at as createdAt,
+           updated_at as updatedAt, resolved_at as resolvedAt
+    from pending_confirmations
+    ${where.length ? `where ${where.join(' and ')}` : ''}
+    order by created_at asc
+  `
+  )
+  stmt.bind(params)
+  const rows = []
+  while (stmt.step()) {
+    const row = stmt.getAsObject()
+    rows.push({
+      id: String(row.id),
+      date: String(row.date),
+      conversationMessageId: String(row.conversationMessageId),
+      status: String(row.status),
+      sourceText: row.sourceText == null ? null : String(row.sourceText),
+      assistantReply: row.assistantReply == null ? null : String(row.assistantReply),
+      confirmType: String(row.confirmType),
+      toolCalls: parseJsonValue(row.toolCallsJson, []),
+      confirmRequest: parseJsonValue(row.confirmRequestJson, {}),
+      createdAt: Number(row.createdAt),
+      updatedAt: Number(row.updatedAt),
+      resolvedAt: row.resolvedAt == null ? null : Number(row.resolvedAt)
+    })
+  }
+  stmt.free()
+  return rows
+}
 
 export function listOnThisDay(store, { date, limit = 20 }) {
   const safeLimit = Math.max(1, Math.min(200, Number.parseInt(String(limit), 10) || 20))
