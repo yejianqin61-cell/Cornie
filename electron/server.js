@@ -15,6 +15,7 @@ import { registerTodoTools } from './backend/todo/tools.js'
 import { registerScheduleTools } from './backend/schedule/tools.js'
 import { registerObservationTools } from './backend/observation/tools.js'
 import { registerMemoryTools } from './backend/memory/tools.js'
+import { registerSystemTools } from './backend/system/tools.js'
 
 export function createServer({ store }) {
   const app = express()
@@ -53,6 +54,7 @@ export function createServer({ store }) {
   registerScheduleTools(store, { registerTool })
   registerObservationTools(store, { registerTool })
   registerMemoryTools(store, { registerTool })
+  registerSystemTools(store, { registerTool })
 
   const confirm = createConfirmService(store)
   app.use('/api', confirmRoutes({ confirm }))
