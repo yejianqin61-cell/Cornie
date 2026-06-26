@@ -1,4 +1,5 @@
 import {
+  deleteScheduleEntry,
   getScheduleCategory,
   getScheduleEntry,
   listScheduleCategories,
@@ -89,6 +90,13 @@ export function createScheduleService(store) {
       })
     },
     cancel: ({ id }) => updateScheduleEntryStatus(store, { id, status: 'cancelled' }),
+    delete: ({ id }) => {
+      if (!id) throw new Error('schedule id is required')
+      const existing = getScheduleEntry(store, id)
+      if (!existing) throw new Error('schedule entry not found')
+      deleteScheduleEntry(store, id)
+      return existing
+    },
     get: (id) => getScheduleEntry(store, id),
     listToday: () => listScheduleEntries(store, { status: 'scheduled' }),
     listByRange: ({ from, to }) => listScheduleEntries(store, { from, to }),
@@ -111,6 +119,17 @@ export function createScheduleService(store) {
       }
 
       return upsertScheduleCategory(store, { name: validation.normalizedName, id, sortOrder })
+    },
+    deleteCategory: ({ id, name, sortOrder }) => {
+      if (!id) throw new Error('schedule category id is required')
+      const existing = getScheduleCategory(store, id)
+      if (!existing) throw new Error('schedule category not found')
+      return upsertScheduleCategory(store, {
+        id,
+        name: name ?? existing.name,
+        sortOrder: sortOrder ?? existing.sortOrder,
+        isActive: false
+      })
     },
     updateCategory: ({ id, name, isActive, sortOrder }) =>
       upsertScheduleCategory(store, { id, name, isActive, sortOrder })

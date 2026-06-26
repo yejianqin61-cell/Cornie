@@ -69,4 +69,10 @@ export function registerTodoTools(store, { registerTool }) {
     riskLevel: 'high',
     handler: async (args) => ({ ok: true, result: todo.updateCategory(args) })
   })
+  registerTool({
+    name: 'todo_category.delete',
+    description: '停用待办类目',
+    riskLevel: 'high',
+    handler: async (args) => ({ ok: true, result: todo.deleteCategory(args) })
+  })
 }

@@ -104,6 +104,17 @@ export function createTodoService(store) {
 
       return upsertTodoCategory(store, { name: validation.normalizedName, id, sortOrder })
     },
+    deleteCategory: ({ id, name, sortOrder }) => {
+      if (!id) throw new Error('todo category id is required')
+      const existing = getTodoCategory(store, id)
+      if (!existing) throw new Error('todo category not found')
+      return upsertTodoCategory(store, {
+        id,
+        name: name ?? existing.name,
+        sortOrder: sortOrder ?? existing.sortOrder,
+        isActive: false
+      })
+    },
     updateCategory: ({ id, name, isActive, sortOrder }) =>
       upsertTodoCategory(store, { id, name, isActive, sortOrder })
   }

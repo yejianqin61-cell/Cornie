@@ -989,6 +989,11 @@ export function updateScheduleEntryStatus(store, { id, status }) {
   return getScheduleEntry(store, id)
 }
 
+export function deleteScheduleEntry(store, id) {
+  store.db.run('delete from schedule_entries where id = $id', { $id: id })
+  store.persist()
+}
+
 export function getScheduleEntry(store, id) {
   const stmt = store.db.prepare(
     `select id, title, description, category_id as categoryId, category_name as categoryName, start_at as startAt, end_at as endAt, status, location, source_text as sourceText, created_at as createdAt, updated_at as updatedAt from schedule_entries where id = $id`

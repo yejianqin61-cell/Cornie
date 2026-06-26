@@ -26,7 +26,7 @@ export function registerScheduleTools(store, { registerTool }) {
     name: 'schedule.delete',
     description: '删除日程',
     riskLevel: 'high',
-    handler: async (args) => ({ ok: true, result: schedule.cancel(args) })
+    handler: async (args) => ({ ok: true, result: schedule.delete(args) })
   })
   registerTool({
     name: 'schedule.get',
@@ -68,5 +68,11 @@ export function registerScheduleTools(store, { registerTool }) {
     description: '更新日程类目',
     riskLevel: 'high',
     handler: async (args) => ({ ok: true, result: schedule.updateCategory(args) })
+  })
+  registerTool({
+    name: 'schedule_category.delete',
+    description: '停用日程类目',
+    riskLevel: 'high',
+    handler: async (args) => ({ ok: true, result: schedule.deleteCategory(args) })
   })
 }
