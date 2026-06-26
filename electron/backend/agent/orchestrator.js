@@ -14,8 +14,9 @@ import { createObservationService } from '../observation/service.js'
 import { createMemoryService } from '../memory/service.js'
 import { createConfirmService } from '../confirm/service.js'
 import {
+  canExecuteReadOnlyLookupRound,
   createToolRoundState,
-  isReadOnlyLookupTool,
+  isReadOnlyLookupRound,
   recordToolRoundState
 } from './toolRoundState.js'
 import { logCategoryAudit } from '../category/audit.js'
@@ -102,6 +103,28 @@ function appendToolRoundMessages(messages, assistantReply, toolResult, options =
   ])
 }
 
+function logLookupAudit(message, lookupContexts) {
+  for (const lookup of lookupContexts) {
+    const lookupReasonParts = [`触发只读补查：${lookup.domain}/${lookup.lookupType}`]
+    if (lookup.categoryType) {
+      lookupReasonParts.push(`type=${lookup.categoryType}`)
+    }
+    lookupReasonParts.push(`返回 ${lookup.total} 条结果`)
+
+    logCategoryAudit({
+      eventType: 'category_mapping_resolved',
+      domain: lookup.domain,
+      toolName: lookup.toolName,
+      sourceText: message,
+      similarCandidates: Array.isArray(lookup.items)
+        ? lookup.items.map((item) => item.name).filter(Boolean).slice(0, 5)
+        : [],
+      decision: 'mapped',
+      reason: lookupReasonParts.join('，')
+    })
+  }
+}
+
 export function createConversationOrchestrator(store) {
   const observation = createObservationService(store)
   const memory = createMemoryService(store)
@@ -163,19 +186,17 @@ export function createConversationOrchestrator(store) {
                 break
               }
 
-              const isLookupOnlyRound =
-                policyDecision.toolCalls.length > 0 &&
-                policyDecision.toolCalls.every((item) => isReadOnlyLookupTool(item.tool_name))
+              const isLookupOnlyRound = isReadOnlyLookupRound(policyDecision.toolCalls)
 
-              if (isLookupOnlyRound && toolRoundState.readOnlyLookupUsed) {
+              if (isLookupOnlyRound && !canExecuteReadOnlyLookupRound(toolRoundState, policyDecision.toolCalls)) {
                 logCategoryAudit({
                   eventType: 'category_mapping_ask_back',
                   toolName: policyDecision.toolCalls[0]?.tool_name ?? null,
                   sourceText: message,
                   decision: 'ask_back',
-                  reason: '只读补查轮次已用尽，停止继续补查'
+                  reason: '当前业务域的只读补查轮次已用尽，停止继续补查'
                 })
-                finalReply = '小铃湾刚刚已经补查过一次了，但还是没法稳稳判断。主人可以再告诉我更具体一点吗？'
+                finalReply = '小铃湾在这个类目上已经补查过一次了，但还是没法稳稳判断。主人可以再告诉我更具体一点吗？'
                 break
               }
 
@@ -193,17 +214,7 @@ export function createConversationOrchestrator(store) {
               recordToolRoundState(toolRoundState, toolResult)
 
               if (toolRoundState.lastReadOnlyLookups.length > 0) {
-                const lookup = toolRoundState.lastReadOnlyLookups[toolRoundState.lastReadOnlyLookups.length - 1]
-                logCategoryAudit({
-                  eventType: 'category_mapping_resolved',
-                  toolName: lookup.toolName,
-                  sourceText: message,
-                  similarCandidates: Array.isArray(lookup.items)
-                    ? lookup.items.map((item) => item.name).filter(Boolean).slice(0, 5)
-                    : [],
-                  decision: 'mapped',
-                  reason: `触发只读补查：${lookup.lookupType}，返回 ${lookup.total} 条结果`
-                })
+                logLookupAudit(message, toolRoundState.lastReadOnlyLookups)
               }
 
               currentMessages = appendToolRoundMessages(

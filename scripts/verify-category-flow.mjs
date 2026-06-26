@@ -13,6 +13,13 @@ import {
   openDb
 } from '../electron/db.js'
 import { createConfirmService } from '../electron/backend/confirm/service.js'
+import {
+  canExecuteReadOnlyLookupRound,
+  createToolRoundState,
+  extractReadOnlyLookupContext,
+  isReadOnlyLookupRound,
+  recordToolRoundState
+} from '../electron/backend/agent/toolRoundState.js'
 import { registerLedgerTools } from '../electron/backend/ledger/tools.js'
 import { createLedgerService } from '../electron/backend/ledger/service.js'
 import { evaluateToolCalls } from '../electron/backend/policy/toolPolicy.js'
@@ -558,13 +565,128 @@ async function caseLookupContextExtraction() {
       'expected lookup result includes 餐饮',
       result.result
     )
+    const lookupContexts = extractReadOnlyLookupContext({
+      results: [
+        {
+          ok: true,
+          tool_name: 'ledger_category.list_expense',
+          result: result.result
+        }
+      ]
+    })
+
+    assert(lookupContexts.length === 1, 'expected one normalized lookup context', lookupContexts)
+    assert(lookupContexts[0].domain === 'ledger', 'expected lookup context domain ledger', lookupContexts[0])
+    assert(lookupContexts[0].lookupType === 'category', 'expected normalized lookupType category', lookupContexts[0])
+    assert(lookupContexts[0].categoryType === 'expense', 'expected ledger expense categoryType', lookupContexts[0])
 
     return {
       total: result.result.total,
-      firstNames: result.result.items.slice(0, 3).map((item) => item.name)
+      firstNames: result.result.items.slice(0, 3).map((item) => item.name),
+      normalizedDomain: lookupContexts[0].domain,
+      normalizedCategoryType: lookupContexts[0].categoryType
     }
   } finally {
     harness.restore()
+  }
+}
+
+async function caseTodoLookupRoundLimit() {
+  const todoLookupCall = {
+    tool_name: 'todo_category.list',
+    arguments: {}
+  }
+  const roundState = createToolRoundState()
+
+  assert(isReadOnlyLookupRound([todoLookupCall]) === true, 'expected todo lookup recognized as lookup-only round')
+  assert(
+    canExecuteReadOnlyLookupRound(roundState, [todoLookupCall]) === true,
+    'expected first todo lookup round allowed',
+    roundState
+  )
+
+  recordToolRoundState(roundState, {
+    results: [
+      {
+        ok: true,
+        tool_name: 'todo_category.list',
+        result: {
+          total: 3,
+          items: [
+            { id: 'todo_general', name: '待办', status: 'active' },
+            { id: 'todo_study', name: '学习', status: 'active' }
+          ]
+        }
+      }
+    ]
+  })
+
+  assert(roundState.lookupUsageByDomain.todo === 1, 'expected todo lookup usage counted once', roundState)
+  assert(
+    canExecuteReadOnlyLookupRound(roundState, [todoLookupCall]) === false,
+    'expected second todo lookup round blocked',
+    roundState
+  )
+  assert(
+    canExecuteReadOnlyLookupRound(roundState, [{ tool_name: 'schedule_category.list', arguments: {} }]) === true,
+    'expected schedule lookup remains allowed after todo lookup',
+    roundState
+  )
+
+  return {
+    todoLookupCount: roundState.lookupUsageByDomain.todo,
+    scheduleLookupAvailable: canExecuteReadOnlyLookupRound(roundState, [
+      { tool_name: 'schedule_category.list', arguments: {} }
+    ])
+  }
+}
+
+async function caseScheduleLookupRoundLimit() {
+  const scheduleLookupCall = {
+    tool_name: 'schedule_category.list',
+    arguments: {}
+  }
+  const roundState = createToolRoundState()
+
+  assert(
+    canExecuteReadOnlyLookupRound(roundState, [scheduleLookupCall]) === true,
+    'expected first schedule lookup round allowed',
+    roundState
+  )
+
+  recordToolRoundState(roundState, {
+    results: [
+      {
+        ok: true,
+        tool_name: 'schedule_category.list',
+        result: {
+          total: 3,
+          items: [
+            { id: 'schedule_general', name: '日程', status: 'active' },
+            { id: 'schedule_meeting', name: '会议', status: 'active' }
+          ]
+        }
+      }
+    ]
+  })
+
+  assert(roundState.lookupUsageByDomain.schedule === 1, 'expected schedule lookup usage counted once', roundState)
+  assert(
+    canExecuteReadOnlyLookupRound(roundState, [scheduleLookupCall]) === false,
+    'expected second schedule lookup round blocked',
+    roundState
+  )
+  assert(
+    canExecuteReadOnlyLookupRound(roundState, [{ tool_name: 'ledger_category.list_expense', arguments: {} }]) === true,
+    'expected ledger lookup still allowed after schedule lookup',
+    roundState
+  )
+
+  return {
+    scheduleLookupCount: roundState.lookupUsageByDomain.schedule,
+    ledgerLookupAvailable: canExecuteReadOnlyLookupRound(roundState, [
+      { tool_name: 'ledger_category.list_expense', arguments: {} }
+    ])
   }
 }
 
@@ -1182,6 +1304,8 @@ const cases = [
   ['TC-008 reject without write', caseRejectNoWrite],
   ['TC-010 ask_back downgrade', caseAskBackDowngrade],
   ['TC-012 lookup tool smoke', caseLookupContextExtraction],
+  ['TC-032 todo lookup round limit', caseTodoLookupRoundLimit],
+  ['TC-032 schedule lookup round limit', caseScheduleLookupRoundLimit],
   ['TC-003 todo direct hit allow', caseTodoDirectHit],
   ['TC-029 todo update category remap', caseTodoUpdateCategoryRemap],
   ['TC-004 schedule direct hit allow', caseScheduleDirectHit],

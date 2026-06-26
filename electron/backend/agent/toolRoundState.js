@@ -1,43 +1,94 @@
-const READ_ONLY_CATEGORY_LOOKUP_TOOLS = new Set([
-  'ledger_category.list_expense',
-  'ledger_category.list_income',
-  'todo_category.list',
-  'schedule_category.list'
-])
+const READ_ONLY_CATEGORY_LOOKUP_TOOL_CONFIG = {
+  'ledger_category.list_expense': {
+    domain: 'ledger',
+    lookupType: 'category',
+    categoryType: 'expense'
+  },
+  'ledger_category.list_income': {
+    domain: 'ledger',
+    lookupType: 'category',
+    categoryType: 'income'
+  },
+  'todo_category.list': {
+    domain: 'todo',
+    lookupType: 'category',
+    categoryType: null
+  },
+  'schedule_category.list': {
+    domain: 'schedule',
+    lookupType: 'category',
+    categoryType: null
+  }
+}
 
-function toLookupType(toolName) {
-  if (toolName === 'ledger_category.list_expense' || toolName === 'ledger_category.list_income') {
-    return 'ledger_category'
+const READ_ONLY_CATEGORY_LOOKUP_TOOLS = new Set(Object.keys(READ_ONLY_CATEGORY_LOOKUP_TOOL_CONFIG))
+
+function toLookupContextConfig(toolName) {
+  const categoryLookupConfig = READ_ONLY_CATEGORY_LOOKUP_TOOL_CONFIG[toolName]
+  if (categoryLookupConfig) {
+    return categoryLookupConfig
   }
-  if (toolName === 'todo_category.list') {
-    return 'todo_category'
-  }
-  if (toolName === 'schedule_category.list') {
-    return 'schedule_category'
-  }
+
   if (toolName === 'todo.list_today' || toolName === 'todo.list_by_range' || toolName === 'todo.get') {
-    return 'todo_items'
+    return {
+      domain: 'todo',
+      lookupType: 'todo_items',
+      categoryType: null
+    }
   }
   if (
     toolName === 'schedule.list_today' ||
     toolName === 'schedule.list_by_range' ||
     toolName === 'schedule.get'
   ) {
-    return 'schedule_items'
+    return {
+      domain: 'schedule',
+      lookupType: 'schedule_items',
+      categoryType: null
+    }
   }
   return null
 }
 
 export function createToolRoundState() {
   return {
-    readOnlyLookupUsed: false,
     readOnlyLookupCount: 0,
-    lastReadOnlyLookups: []
+    lastReadOnlyLookups: [],
+    lookupUsageByDomain: {
+      ledger: 0,
+      todo: 0,
+      schedule: 0
+    }
   }
 }
 
 export function isReadOnlyLookupTool(toolName) {
   return READ_ONLY_CATEGORY_LOOKUP_TOOLS.has(toolName)
+}
+
+export function getReadOnlyLookupDomain(toolName) {
+  return READ_ONLY_CATEGORY_LOOKUP_TOOL_CONFIG[toolName]?.domain ?? null
+}
+
+export function isReadOnlyLookupRound(toolCalls = []) {
+  return (
+    Array.isArray(toolCalls) &&
+    toolCalls.length > 0 &&
+    toolCalls.every((item) => isReadOnlyLookupTool(item?.tool_name))
+  )
+}
+
+export function canExecuteReadOnlyLookupRound(state, toolCalls = []) {
+  if (!isReadOnlyLookupRound(toolCalls)) {
+    return true
+  }
+
+  const domains = [...new Set(toolCalls.map((item) => getReadOnlyLookupDomain(item?.tool_name)).filter(Boolean))]
+  if (domains.length === 0) {
+    return false
+  }
+
+  return domains.every((domain) => (state.lookupUsageByDomain?.[domain] ?? 0) < 1)
 }
 
 export function extractReadOnlyLookupContext(toolResult) {
@@ -48,13 +99,15 @@ export function extractReadOnlyLookupContext(toolResult) {
   return toolResult.results
     .filter((item) => item?.ok && item?.tool_name)
     .map((item) => {
-      const lookupType = toLookupType(item.tool_name)
-      if (!lookupType) {
+      const lookupContextConfig = toLookupContextConfig(item.tool_name)
+      if (!lookupContextConfig) {
         return null
       }
 
       return {
-        lookupType,
+        domain: lookupContextConfig.domain,
+        lookupType: lookupContextConfig.lookupType,
+        categoryType: lookupContextConfig.categoryType,
         toolName: item.tool_name,
         query: item?.result?.query ?? null,
         items: Array.isArray(item?.result?.items) ? item.result.items : [],
@@ -70,8 +123,12 @@ export function recordToolRoundState(state, toolResult) {
     return state
   }
 
-  state.readOnlyLookupUsed = true
   state.readOnlyLookupCount += lookupContexts.length
   state.lastReadOnlyLookups = lookupContexts
+  for (const lookupContext of lookupContexts) {
+    if (lookupContext.domain && Object.prototype.hasOwnProperty.call(state.lookupUsageByDomain, lookupContext.domain)) {
+      state.lookupUsageByDomain[lookupContext.domain] += 1
+    }
+  }
   return state
 }
