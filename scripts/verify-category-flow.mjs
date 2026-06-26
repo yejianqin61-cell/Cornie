@@ -1145,6 +1145,42 @@ async function caseCategoryDataAuditAndRepair() {
   }
 }
 
+async function caseConversationTelemetryShape() {
+  const harness = await createHarness('task039-telemetry-shape')
+  try {
+    const { conversationService } = await import('../electron/backend/conversation/service.js')
+    const conversation = conversationService(harness.store)
+    const result = await conversation.sendMessage({
+      date: verifyDate,
+      message: '今天中午吃饭花了32块'
+    })
+
+    assert(result?.telemetry, 'expected telemetry payload on conversation result', result)
+    assert(result.telemetry.source === 'conversation', 'expected telemetry source conversation', result.telemetry)
+    assert(result.telemetry.model?.callCount >= 1, 'expected telemetry model call count', result.telemetry)
+    assert(
+      typeof result.telemetry.prompts?.initialPromptChars === 'number' &&
+        result.telemetry.prompts.initialPromptChars > 0,
+      'expected initial prompt chars metric',
+      result.telemetry
+    )
+    assert(
+      result.telemetry.context?.categoryCounts?.ledger >= 1,
+      'expected category count metrics to include ledger snapshot count',
+      result.telemetry
+    )
+
+    return buildCaseDetail('registry', 'conversation_telemetry_shape', {
+      source: result.telemetry.source,
+      modelCallCount: result.telemetry.model.callCount,
+      ledgerCategoryCount: result.telemetry.context.categoryCounts.ledger,
+      initialPromptChars: result.telemetry.prompts.initialPromptChars
+    })
+  } finally {
+    harness.restore()
+  }
+}
+
 async function caseScheduleDirectHit() {
   const harness = await createHarness('task030-schedule-direct-hit')
   try {
@@ -1671,6 +1707,7 @@ const cases = [
   ['TC-036 category domain registry validation', caseCategoryDomainRegistryValidation],
   ['TC-037 category audit samples export', caseCategoryAuditSamplesExport],
   ['TC-038 category data audit and repair', caseCategoryDataAuditAndRepair],
+  ['TC-039 conversation telemetry shape', caseConversationTelemetryShape],
   ['TC-032 todo lookup round limit', caseTodoLookupRoundLimit],
   ['TC-032 schedule lookup round limit', caseScheduleLookupRoundLimit],
   ['TC-003 todo direct hit allow', caseTodoDirectHit],

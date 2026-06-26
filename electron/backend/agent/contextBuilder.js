@@ -1,5 +1,5 @@
 import { getMessagesByDate, listObservationLogs, listScheduleEntries, listTodoEntries } from '../../db.js'
-import { buildCategorySummary } from './categorySummary.js'
+import { buildCategorySummaryPayload } from './categorySummary.js'
 import { buildMemorySearchSummary } from '../memory/search.js'
 import { listTools } from '../tools/registry.js'
 
@@ -52,19 +52,48 @@ function summarizeObservations(store, date) {
 
 export function buildConversationContext(store, { date }) {
   const messages = getMessagesByDate(store, date)
+  const recentConversationSummary = summarizeRecentConversation(messages)
   const memorySummary = buildMemorySearchSummary(store, {
     query: messages.slice(-3).map((item) => item.content).join(' '),
     limit: 5
   })
+  const categorySummary = buildCategorySummaryPayload(store)
+  const todoItems = listTodoEntries(store, { status: 'pending' })
+  const scheduleItems = listScheduleEntries(store, { status: 'scheduled' })
+  const observationItems = listObservationLogs(store, { date, limit: 5 })
+  const todoSummary = todoItems.length === 0
+    ? '当前没有未完成待办。'
+    : todoItems.slice(0, 5).map((item) => `- ${item.title}${item.dueAt ? `（${item.dueAt}）` : ''}`).join('\n')
+  const scheduleSummary = scheduleItems.length === 0
+    ? '当前没有近期日程。'
+    : scheduleItems.slice(0, 5).map((item) => `- ${item.title} @ ${item.startAt}`).join('\n')
+  const observationSummary = observationItems.length === 0
+    ? '当前没有观察日志。'
+    : observationItems.map((item) => `- [${item.type}] ${item.title}`).join('\n')
+  const toolSummary = summarizeTools()
 
   return {
     date,
-    recentConversationSummary: summarizeRecentConversation(messages),
-    categorySummary: buildCategorySummary(store),
-    todoSummary: summarizeTodos(store),
-    scheduleSummary: summarizeSchedules(store),
-    observationSummary: summarizeObservations(store, date),
+    recentConversationSummary,
+    categorySummary: categorySummary.text,
+    todoSummary,
+    scheduleSummary,
+    observationSummary,
     memorySummary,
-    toolSummary: summarizeTools()
+    toolSummary,
+    contextMeta: {
+      recentConversationChars: recentConversationSummary.length,
+      categorySummaryChars: categorySummary.text.length,
+      todoSummaryChars: todoSummary.length,
+      scheduleSummaryChars: scheduleSummary.length,
+      observationSummaryChars: observationSummary.length,
+      memorySummaryChars: memorySummary.length,
+      toolSummaryChars: toolSummary.length,
+      categoryCounts: categorySummary.counts,
+      todoCount: todoItems.length,
+      scheduleCount: scheduleItems.length,
+      observationCount: observationItems.length,
+      memoryHitCount: memorySummary === '暂无长期记忆。' ? 0 : memorySummary.split('\n').filter(Boolean).length
+    }
   }
 }

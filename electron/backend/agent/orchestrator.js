@@ -7,12 +7,22 @@ import {
   buildLookupFollowupPrompt,
   buildToolFollowupPrompt
 } from './promptBuilder.js'
+import { estimateLegacyLookupFollowupPromptLength } from './promptBuilder.js'
 import { evaluateToolCalls } from '../policy/toolPolicy.js'
 import { chat } from '../model/deepseek/client.js'
 import { executeToolCalls } from '../tools/gateway.js'
 import { createObservationService } from '../observation/service.js'
 import { createMemoryService } from '../memory/service.js'
 import { createConfirmService } from '../confirm/service.js'
+import {
+  attachContextTelemetry,
+  captureInitialPromptTelemetry,
+  createTurnTelemetry,
+  finalizeTurnTelemetry,
+  recordFollowupPromptTelemetry,
+  recordModelCallTelemetry,
+  recordToolRoundTelemetry
+} from './metrics.js'
 import {
   canExecuteReadOnlyLookupRound,
   cacheReadOnlyLookupResult,
@@ -34,12 +44,25 @@ function trimMessages(messages) {
   return [messages[0], ...messages.slice(-MAX_HISTORY_MESSAGES)]
 }
 
-async function requestProtocolEnvelope(messages) {
+function sumPromptChars(messages) {
+  return messages.reduce((total, item) => total + String(item?.content ?? '').length, 0)
+}
+
+async function requestProtocolEnvelope(messages, telemetry, phase = 'conversation') {
   let attempts = 0
   let workingMessages = messages
 
   while (attempts <= MAX_PROTOCOL_REPAIR_RETRIES) {
+    const promptChars = sumPromptChars(workingMessages)
+    const startedAt = Date.now()
     const response = await chat({ messages: workingMessages, maxTokens: 256 })
+    recordModelCallTelemetry(telemetry, {
+      phase,
+      attempt: attempts + 1,
+      promptChars,
+      responseChars: String(response?.content ?? '').length,
+      durationMs: Date.now() - startedAt
+    })
 
     try {
       return parseModelJson(response.content)
@@ -85,7 +108,7 @@ function appendToolRoundMessages(messages, assistantReply, toolResult, options =
         })
       : buildToolFollowupPrompt({ assistantReply, toolResult })
 
-  return trimMessages([
+  const nextMessages = trimMessages([
     ...messages,
     {
       role: 'assistant',
@@ -103,6 +126,25 @@ function appendToolRoundMessages(messages, assistantReply, toolResult, options =
       content: followupPrompt
     }
   ])
+
+  return {
+    messages: nextMessages,
+    promptMetrics: {
+      phase:
+        Array.isArray(options.lookupContexts) && options.lookupContexts.length > 0
+          ? 'lookup_followup'
+          : 'tool_followup',
+      promptChars: followupPrompt.length,
+      legacyPromptCharsEstimate:
+        Array.isArray(options.lookupContexts) && options.lookupContexts.length > 0
+          ? estimateLegacyLookupFollowupPromptLength({
+              assistantReply,
+              toolResult,
+              lookupContexts: options.lookupContexts
+            })
+          : followupPrompt.length
+    }
+  }
 }
 
 function logLookupAudit(message, lookupContexts) {
@@ -141,6 +183,11 @@ export function createConversationOrchestrator(store) {
 
   return {
     async runTurn({ date, message }) {
+      const telemetry = createTurnTelemetry({
+        source: 'conversation',
+        date,
+        message
+      })
       const userMessage = saveMessage(store, {
         id: randomUUID(),
         date,
@@ -151,6 +198,8 @@ export function createConversationOrchestrator(store) {
       const history = getMessagesByDate(store, date)
       const context = buildConversationContext(store, { date })
       const baseMessages = buildBaseMessages(history, context)
+      attachContextTelemetry(telemetry, context)
+      captureInitialPromptTelemetry(telemetry, baseMessages)
 
       let finalReply = buildProtocolFallbackReply()
       let toolExecution = { used: false, results: [] }
@@ -161,7 +210,7 @@ export function createConversationOrchestrator(store) {
       const toolRoundState = createToolRoundState()
 
       try {
-        const firstEnvelope = await requestProtocolEnvelope(baseMessages)
+        const firstEnvelope = await requestProtocolEnvelope(baseMessages, telemetry, 'conversation_initial')
 
         if (firstEnvelope.type === 'tool_call') {
           requestedToolCalls = Array.isArray(firstEnvelope.tool_calls) ? firstEnvelope.tool_calls : []
@@ -210,6 +259,7 @@ export function createConversationOrchestrator(store) {
               }
 
               let toolResult
+              let toolDurationMs = 0
               if (isLookupOnlyRound) {
                 const cachedResults = policyDecision.toolCalls.map((toolCall) =>
                   getCachedReadOnlyLookupResult(toolRoundState, toolCall)
@@ -224,11 +274,13 @@ export function createConversationOrchestrator(store) {
               }
 
               if (!toolResult) {
+                const toolStartedAt = Date.now()
                 toolResult = await executeToolCalls(policyDecision.toolCalls, {
                   date,
                   store,
                   source: 'conversation'
                 })
+                toolDurationMs = Date.now() - toolStartedAt
 
                 if (isLookupOnlyRound) {
                   policyDecision.toolCalls.forEach((toolCall, index) => {
@@ -243,12 +295,19 @@ export function createConversationOrchestrator(store) {
               }
 
               recordToolRoundState(toolRoundState, toolResult)
+              recordToolRoundTelemetry(telemetry, {
+                round: round + 1,
+                isLookupOnly: isLookupOnlyRound,
+                toolCalls: policyDecision.toolCalls,
+                lookupContexts: toolRoundState.lastReadOnlyLookups,
+                durationMs: toolDurationMs
+              })
 
               if (toolRoundState.lastReadOnlyLookups.length > 0) {
                 logLookupAudit(message, toolRoundState.lastReadOnlyLookups)
               }
 
-              currentMessages = appendToolRoundMessages(
+              const nextMessages = appendToolRoundMessages(
                 currentMessages,
                 currentEnvelope.assistant_reply,
                 toolResult,
@@ -256,8 +315,14 @@ export function createConversationOrchestrator(store) {
                   lookupContexts: toolRoundState.lastReadOnlyLookups
                 }
               )
+              currentMessages = nextMessages.messages
+              recordFollowupPromptTelemetry(telemetry, nextMessages.promptMetrics)
 
-              const nextEnvelope = await requestProtocolEnvelope(currentMessages)
+              const nextEnvelope = await requestProtocolEnvelope(
+                currentMessages,
+                telemetry,
+                isLookupOnlyRound ? 'conversation_lookup_followup' : 'conversation_tool_followup'
+              )
               if (nextEnvelope.type === 'reply') {
                 finalReply = nextEnvelope.assistant_reply
                 break
@@ -323,7 +388,13 @@ export function createConversationOrchestrator(store) {
         cornieMessage,
         toolExecution,
         policyDecision,
-        pendingConfirmation
+        pendingConfirmation,
+        telemetry: finalizeTurnTelemetry(telemetry, {
+          policyDecision: policyDecision.decision,
+          pendingConfirmation: Boolean(pendingConfirmation),
+          toolExecutionUsed: toolExecution.used,
+          finalReply
+        })
       }
     }
   }

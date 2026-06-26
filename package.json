@@ -11,6 +11,7 @@
     "preview": "vite preview",
     "lint": "echo \"(no lint configured)\"",
     "verify:category": "node scripts/verify-category-flow.mjs",
+    "profile:category": "node scripts/profile-category-flow.mjs",
     "export:category-samples": "node scripts/export-category-samples.mjs",
     "audit:category-data": "node scripts/audit-category-data.mjs",
     "repair:category-data": "node scripts/repair-category-data.mjs"

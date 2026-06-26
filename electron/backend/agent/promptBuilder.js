@@ -37,6 +37,20 @@ function buildContextSection(context) {
   ].join('\n\n')
 }
 
+function summarizeLookupToolResult(toolResult) {
+  const results = Array.isArray(toolResult?.results) ? toolResult.results : []
+  return results.map((item) => ({
+    tool_name: item?.tool_name ?? null,
+    ok: item?.ok !== false,
+    query: item?.result?.query ?? null,
+    total: Number.isFinite(item?.result?.total) ? item.result.total : 0,
+    hitSource: item?.result?.hitSource ?? null,
+    topNames: Array.isArray(item?.result?.items)
+      ? item.result.items.map((candidate) => candidate?.name).filter(Boolean).slice(0, 5)
+      : []
+  }))
+}
+
 export function buildConversationPrompt({ context }) {
   return [CORNIE_PERSONA, JSON_PROTOCOL, CATEGORY_MAPPING_PROTOCOL, buildContextSection(context)].join('\n\n')
 }
@@ -60,6 +74,17 @@ export function buildLookupFollowupPrompt({ assistantReply, toolResult, lookupCo
     '仍然只能输出一个合法 JSON 对象；如果需要继续动作，可以输出 tool_call；如果信息仍不足，输出 reply。',
     `你上一轮对主人说的话：${assistantReply}`,
     `只读补查摘要：${JSON.stringify(lookupContexts)}`,
-    `原始工具结果：${JSON.stringify(toolResult)}`
+    `补查工具结果摘要：${JSON.stringify(summarizeLookupToolResult(toolResult))}`
   ].join('\n')
+}
+
+export function estimateLegacyLookupFollowupPromptLength({ assistantReply, toolResult, lookupContexts }) {
+  return [
+    '你刚刚完成的是一轮只读补查，不是最终写入。',
+    buildCategoryLookupFollowupRules(),
+    '仍然只能输出一个合法 JSON 对象；如果需要继续动作，可以输出 tool_call；如果信息仍不足，输出 reply。',
+    `你上一轮对主人说的话：${assistantReply}`,
+    `只读补查摘要：${JSON.stringify(lookupContexts)}`,
+    `原始工具结果：${JSON.stringify(toolResult)}`
+  ].join('\n').length
 }

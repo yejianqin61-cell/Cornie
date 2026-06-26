@@ -3,6 +3,15 @@ import { getMessagesByDate, saveMessage } from '../../db.js'
 import { buildJsonRepairPrompt, parseModelJson } from '../agent/jsonProtocol.js'
 import { buildConversationContext } from '../agent/contextBuilder.js'
 import { buildConversationPrompt, buildToolFollowupPrompt } from '../agent/promptBuilder.js'
+import {
+  attachContextTelemetry,
+  captureInitialPromptTelemetry,
+  createTurnTelemetry,
+  finalizeTurnTelemetry,
+  recordFollowupPromptTelemetry,
+  recordModelCallTelemetry,
+  recordToolRoundTelemetry
+} from '../agent/metrics.js'
 import { logCategoryAudit } from '../category/audit.js'
 import { categoryDomainRegistry } from '../category/domainRegistry.js'
 import { chat } from '../model/deepseek/client.js'
@@ -18,12 +27,25 @@ function trimMessages(messages) {
   return [messages[0], ...messages.slice(-MAX_HISTORY_MESSAGES)]
 }
 
-async function requestProtocolEnvelope(messages) {
+function sumPromptChars(messages) {
+  return messages.reduce((total, item) => total + String(item?.content ?? '').length, 0)
+}
+
+async function requestProtocolEnvelope(messages, telemetry, phase = 'confirmation') {
   let attempts = 0
   let workingMessages = messages
 
   while (attempts <= MAX_PROTOCOL_REPAIR_RETRIES) {
+    const promptChars = sumPromptChars(workingMessages)
+    const startedAt = Date.now()
     const response = await chat({ messages: workingMessages, maxTokens: 256 })
+    recordModelCallTelemetry(telemetry, {
+      phase,
+      attempt: attempts + 1,
+      promptChars,
+      responseChars: String(response?.content ?? '').length,
+      durationMs: Date.now() - startedAt
+    })
 
     try {
       return parseModelJson(response.content)
@@ -48,34 +70,45 @@ async function requestProtocolEnvelope(messages) {
 function buildBaseMessages(store, date) {
   const history = getMessagesByDate(store, date)
   const context = buildConversationContext(store, { date })
-  return trimMessages([
-    { role: 'system', content: buildConversationPrompt({ context }) },
-    ...history.map((item) => ({
-      role: item.role === 'cornie' ? 'assistant' : 'user',
-      content: item.content
-    }))
-  ])
+  return {
+    context,
+    messages: trimMessages([
+      { role: 'system', content: buildConversationPrompt({ context }) },
+      ...history.map((item) => ({
+        role: item.role === 'cornie' ? 'assistant' : 'user',
+        content: item.content
+      }))
+    ])
+  }
 }
 
 function buildToolFollowupMessages(baseMessages, assistantReply, toolResult) {
-  return trimMessages([
-    ...baseMessages,
-    {
-      role: 'assistant',
-      content: JSON.stringify({
-        type: 'tool_call',
-        assistant_reply: assistantReply,
-        tool_calls: toolResult.results.map((item) => ({
-          tool_name: item.tool_name,
-          arguments: item.result ?? {}
-        }))
-      })
-    },
-    {
-      role: 'user',
-      content: buildToolFollowupPrompt({ assistantReply, toolResult })
+  const prompt = buildToolFollowupPrompt({ assistantReply, toolResult })
+  return {
+    messages: trimMessages([
+      ...baseMessages,
+      {
+        role: 'assistant',
+        content: JSON.stringify({
+          type: 'tool_call',
+          assistant_reply: assistantReply,
+          tool_calls: toolResult.results.map((item) => ({
+            tool_name: item.tool_name,
+            arguments: item.result ?? {}
+          }))
+        })
+      },
+      {
+        role: 'user',
+        content: prompt
+      }
+    ]),
+    promptMetrics: {
+      phase: 'confirmation_tool_followup',
+      promptChars: prompt.length,
+      legacyPromptCharsEstimate: prompt.length
     }
-  ])
+  }
 }
 
 function isCategoryCreationConfirmation(confirmation) {
@@ -272,26 +305,55 @@ function buildCategoryValidationReply(error) {
 export function createConfirmExecutor(store) {
   return {
     async execute(confirmation) {
+      const telemetry = createTurnTelemetry({
+        source: 'confirmation',
+        date: confirmation.date,
+        message: confirmation.sourceText ?? confirmation.assistantReply ?? ''
+      })
       let toolResult
       let assistantReply = confirmation.assistantReply || '小铃湾已经照着主人的确认继续做啦。'
 
       try {
         if (isCategoryCreationConfirmation(confirmation)) {
+          const startedAt = Date.now()
           toolResult = await executeConfirmedCategoryCreation(store, confirmation)
+          recordToolRoundTelemetry(telemetry, {
+            round: 1,
+            isLookupOnly: false,
+            toolCalls: confirmation.toolCalls,
+            lookupContexts: [],
+            durationMs: Date.now() - startedAt
+          })
           assistantReply = buildCategoryExecutionAssistantReply(
             confirmation,
             toolResult.results[0]?.result
           )
         } else if (isCategoryMappingConfirmation(confirmation)) {
+          const startedAt = Date.now()
           toolResult = await executeConfirmedCategoryMapping(store, confirmation)
+          recordToolRoundTelemetry(telemetry, {
+            round: 1,
+            isLookupOnly: false,
+            toolCalls: confirmation.toolCalls,
+            lookupContexts: [],
+            durationMs: Date.now() - startedAt
+          })
           assistantReply =
             confirmation.assistantReply ||
             '小铃湾已经按主人确认的类目继续完成这次操作啦。'
         } else {
+          const startedAt = Date.now()
           toolResult = await executeToolCalls(confirmation.toolCalls, {
             date: confirmation.date,
             store,
             source: 'confirmation'
+          })
+          recordToolRoundTelemetry(telemetry, {
+            round: 1,
+            isLookupOnly: false,
+            toolCalls: confirmation.toolCalls,
+            lookupContexts: [],
+            durationMs: Date.now() - startedAt
           })
         }
       } catch (error) {
@@ -308,7 +370,13 @@ export function createConfirmExecutor(store) {
               used: false,
               results: []
             },
-            cornieMessage
+            cornieMessage,
+            telemetry: finalizeTurnTelemetry(telemetry, {
+              policyDecision: 'ask_back',
+              pendingConfirmation: false,
+              toolExecutionUsed: false,
+              finalReply: cornieMessage.content
+            })
           }
         }
 
@@ -316,13 +384,20 @@ export function createConfirmExecutor(store) {
       }
 
       const baseMessages = buildBaseMessages(store, confirmation.date)
+      attachContextTelemetry(telemetry, baseMessages.context)
+      captureInitialPromptTelemetry(telemetry, baseMessages.messages)
       const followupMessages = buildToolFollowupMessages(
-        baseMessages,
+        baseMessages.messages,
         assistantReply,
         toolResult
       )
+      recordFollowupPromptTelemetry(telemetry, followupMessages.promptMetrics)
 
-      const envelope = await requestProtocolEnvelope(followupMessages)
+      const envelope = await requestProtocolEnvelope(
+        followupMessages.messages,
+        telemetry,
+        'confirmation_followup'
+      )
       const finalReply =
         envelope.type === 'reply'
           ? envelope.assistant_reply
@@ -340,7 +415,13 @@ export function createConfirmExecutor(store) {
           used: true,
           results: toolResult.results
         },
-        cornieMessage
+        cornieMessage,
+        telemetry: finalizeTurnTelemetry(telemetry, {
+          policyDecision: 'allow',
+          pendingConfirmation: false,
+          toolExecutionUsed: true,
+          finalReply
+        })
       }
     },
 
