@@ -1,5 +1,6 @@
 import { getLedgerCategory, listLedgerCategories, saveLedgerEntry, upsertLedgerCategory } from '../../db.js'
 import { normalizeCategoryMapping } from '../category/mapping.js'
+import { validateCategoryName } from '../category/validation.js'
 
 function normalizeLedgerInput(type, input) {
   const categoryMapping = normalizeCategoryMapping(input)
@@ -29,10 +30,27 @@ function listCategoriesByType(store, type) {
 }
 
 function createCategory(store, { type, name, id, sortOrder }) {
+  const existingCategories = listCategoriesByType(store, type)
+  const validation = validateCategoryName(name, existingCategories)
+
+  if (validation.duplicateCategoryId) {
+    return {
+      ...getLedgerCategory(store, validation.duplicateCategoryId),
+      resolution: 'reused_existing'
+    }
+  }
+
+  if (!validation.ok) {
+    const error = new Error(validation.reason || 'invalid category name')
+    error.code = validation.similarCandidates?.length > 0 ? 'category_name_similar' : 'invalid_category_name'
+    error.details = validation
+    throw error
+  }
+
   return upsertLedgerCategory(store, {
     id,
     type,
-    name,
+    name: validation.normalizedName,
     sortOrder
   })
 }

@@ -7,6 +7,7 @@ import {
   upsertTodoCategory
 } from '../../db.js'
 import { normalizeCategoryMapping } from '../category/mapping.js'
+import { validateCategoryName } from '../category/validation.js'
 
 function normalizeTodoInput(input) {
   const categoryMapping = normalizeCategoryMapping(input)
@@ -48,8 +49,25 @@ export function createTodoService(store) {
     listToday: () => listTodoEntries(store, { status: 'pending' }),
     listByRange: ({ from, to }) => listTodoEntries(store, { from, to }),
     listCategories: () => listTodoCategories(store),
-    createCategory: ({ name, id, sortOrder = 0 }) =>
-      upsertTodoCategory(store, { name, id, sortOrder }),
+    createCategory: ({ name, id, sortOrder = 0 }) => {
+      const validation = validateCategoryName(name, listTodoCategories(store))
+
+      if (validation.duplicateCategoryId) {
+        return {
+          ...getTodoCategory(store, validation.duplicateCategoryId),
+          resolution: 'reused_existing'
+        }
+      }
+
+      if (!validation.ok) {
+        const error = new Error(validation.reason || 'invalid category name')
+        error.code = validation.similarCandidates?.length > 0 ? 'category_name_similar' : 'invalid_category_name'
+        error.details = validation
+        throw error
+      }
+
+      return upsertTodoCategory(store, { name: validation.normalizedName, id, sortOrder })
+    },
     updateCategory: ({ id, name, isActive, sortOrder }) =>
       upsertTodoCategory(store, { id, name, isActive, sortOrder })
   }

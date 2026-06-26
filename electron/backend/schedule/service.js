@@ -1,4 +1,5 @@
 import {
+  getScheduleCategory,
   listScheduleCategories,
   listScheduleEntries,
   updateScheduleEntryStatus,
@@ -6,6 +7,7 @@ import {
   upsertScheduleCategory
 } from '../../db.js'
 import { normalizeCategoryMapping } from '../category/mapping.js'
+import { validateCategoryName } from '../category/validation.js'
 
 function normalizeScheduleInput(input) {
   const categoryMapping = normalizeCategoryMapping(input)
@@ -44,8 +46,25 @@ export function createScheduleService(store) {
     listToday: () => listScheduleEntries(store, { status: 'scheduled' }),
     listByRange: ({ from, to }) => listScheduleEntries(store, { from, to }),
     listCategories: () => listScheduleCategories(store),
-    createCategory: ({ name, id, sortOrder = 0 }) =>
-      upsertScheduleCategory(store, { name, id, sortOrder }),
+    createCategory: ({ name, id, sortOrder = 0 }) => {
+      const validation = validateCategoryName(name, listScheduleCategories(store))
+
+      if (validation.duplicateCategoryId) {
+        return {
+          ...getScheduleCategory(store, validation.duplicateCategoryId),
+          resolution: 'reused_existing'
+        }
+      }
+
+      if (!validation.ok) {
+        const error = new Error(validation.reason || 'invalid category name')
+        error.code = validation.similarCandidates?.length > 0 ? 'category_name_similar' : 'invalid_category_name'
+        error.details = validation
+        throw error
+      }
+
+      return upsertScheduleCategory(store, { name: validation.normalizedName, id, sortOrder })
+    },
     updateCategory: ({ id, name, isActive, sortOrder }) =>
       upsertScheduleCategory(store, { id, name, isActive, sortOrder })
   }

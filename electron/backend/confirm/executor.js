@@ -157,6 +157,17 @@ function buildResumedActionToolCall(pendingActionToolCall, createdCategory) {
   }
 }
 
+function buildCategoryExecutionAssistantReply(confirmation, createdCategory) {
+  const proposedName = confirmation?.confirmRequest?.proposedCategoryName
+  const actualName = createdCategory?.name || proposedName || '这个类目'
+
+  if (createdCategory?.resolution === 'reused_existing') {
+    return `小铃湾发现“${actualName}”已经有现成类目了，这次就不重复新建，直接帮主人继续原来的操作啦。`
+  }
+
+  return confirmation.assistantReply || '小铃湾已经照着主人的确认继续做啦。'
+}
+
 async function executeConfirmedCategoryCreation(store, confirmation) {
   const pendingActionToolCall = getPendingActionToolCall(confirmation)
   const categoryCreateToolCall = buildCategoryCreationToolCall(confirmation, pendingActionToolCall)
@@ -188,21 +199,64 @@ async function executeConfirmedCategoryCreation(store, confirmation) {
   }
 }
 
+function buildCategoryValidationReply(error) {
+  if (error?.code === 'category_name_similar') {
+    const candidates = Array.isArray(error?.details?.similarCandidates)
+      ? error.details.similarCandidates.map((item) => item.name).filter(Boolean)
+      : []
+    if (candidates.length > 0) {
+      return `小铃湾发现已经有很接近的类目了，比如 ${candidates.join('、')}。这次我先不乱建，主人可以告诉我想复用哪一个。`
+    }
+  }
+
+  return error?.message || '这个类目名现在还不太适合直接创建，小铃湾想再确认一下。'
+}
+
 export function createConfirmExecutor(store) {
   return {
     async execute(confirmation) {
-      const toolResult = isCategoryCreationConfirmation(confirmation)
-        ? await executeConfirmedCategoryCreation(store, confirmation)
-        : await executeToolCalls(confirmation.toolCalls, {
+      let toolResult
+      let assistantReply = confirmation.assistantReply || '小铃湾已经照着主人的确认继续做啦。'
+
+      try {
+        if (isCategoryCreationConfirmation(confirmation)) {
+          toolResult = await executeConfirmedCategoryCreation(store, confirmation)
+          assistantReply = buildCategoryExecutionAssistantReply(
+            confirmation,
+            toolResult.results[0]?.result
+          )
+        } else {
+          toolResult = await executeToolCalls(confirmation.toolCalls, {
             date: confirmation.date,
             store,
             source: 'confirmation'
           })
+        }
+      } catch (error) {
+        if (isCategoryCreationConfirmation(confirmation) && ['invalid_category_name', 'category_name_similar'].includes(error?.code)) {
+          const cornieMessage = saveMessage(store, {
+            id: randomUUID(),
+            date: confirmation.date,
+            role: 'cornie',
+            content: buildCategoryValidationReply(error)
+          })
+
+          return {
+            toolExecution: {
+              used: false,
+              results: []
+            },
+            cornieMessage
+          }
+        }
+
+        throw error
+      }
 
       const baseMessages = buildBaseMessages(store, confirmation.date)
       const followupMessages = buildToolFollowupMessages(
         baseMessages,
-        confirmation.assistantReply || '小铃湾已经照着主人的确认继续做啦。',
+        assistantReply,
         toolResult
       )
 
@@ -210,7 +264,7 @@ export function createConfirmExecutor(store) {
       const finalReply =
         envelope.type === 'reply'
           ? envelope.assistant_reply
-          : confirmation.assistantReply || '小铃湾已经处理好啦。'
+          : assistantReply || '小铃湾已经处理好啦。'
 
       const cornieMessage = saveMessage(store, {
         id: randomUUID(),
