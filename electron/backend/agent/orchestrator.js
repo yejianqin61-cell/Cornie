@@ -2,13 +2,23 @@ import { randomUUID } from 'node:crypto'
 import { getMessagesByDate, saveMessage } from '../../db.js'
 import { buildJsonRepairPrompt, parseModelJson } from './jsonProtocol.js'
 import { buildConversationContext } from './contextBuilder.js'
-import { buildConversationPrompt, buildToolFollowupPrompt } from './promptBuilder.js'
+import {
+  buildConversationPrompt,
+  buildLookupFollowupPrompt,
+  buildToolFollowupPrompt
+} from './promptBuilder.js'
 import { evaluateToolCalls } from '../policy/toolPolicy.js'
 import { chat } from '../model/deepseek/client.js'
 import { executeToolCalls } from '../tools/gateway.js'
 import { createObservationService } from '../observation/service.js'
 import { createMemoryService } from '../memory/service.js'
 import { createConfirmService } from '../confirm/service.js'
+import {
+  createToolRoundState,
+  isReadOnlyLookupTool,
+  recordToolRoundState
+} from './toolRoundState.js'
+import { logCategoryAudit } from '../category/audit.js'
 
 const MAX_HISTORY_MESSAGES = 40
 const MAX_PROTOCOL_REPAIR_RETRIES = 1
@@ -62,7 +72,16 @@ function buildBaseMessages(history, context) {
   ])
 }
 
-function appendToolRoundMessages(messages, assistantReply, toolResult) {
+function appendToolRoundMessages(messages, assistantReply, toolResult, options = {}) {
+  const followupPrompt =
+    Array.isArray(options.lookupContexts) && options.lookupContexts.length > 0
+      ? buildLookupFollowupPrompt({
+          assistantReply,
+          toolResult,
+          lookupContexts: options.lookupContexts
+        })
+      : buildToolFollowupPrompt({ assistantReply, toolResult })
+
   return trimMessages([
     ...messages,
     {
@@ -78,7 +97,7 @@ function appendToolRoundMessages(messages, assistantReply, toolResult) {
     },
     {
       role: 'user',
-      content: buildToolFollowupPrompt({ assistantReply, toolResult })
+      content: followupPrompt
     }
   ])
 }
@@ -107,6 +126,7 @@ export function createConversationOrchestrator(store) {
       let pendingConfirmation = null
       let requestedToolCalls = []
       let initialAssistantReply = ''
+      const toolRoundState = createToolRoundState()
 
       try {
         const firstEnvelope = await requestProtocolEnvelope(baseMessages)
@@ -143,6 +163,22 @@ export function createConversationOrchestrator(store) {
                 break
               }
 
+              const isLookupOnlyRound =
+                policyDecision.toolCalls.length > 0 &&
+                policyDecision.toolCalls.every((item) => isReadOnlyLookupTool(item.tool_name))
+
+              if (isLookupOnlyRound && toolRoundState.readOnlyLookupUsed) {
+                logCategoryAudit({
+                  eventType: 'category_mapping_ask_back',
+                  toolName: policyDecision.toolCalls[0]?.tool_name ?? null,
+                  sourceText: message,
+                  decision: 'ask_back',
+                  reason: '只读补查轮次已用尽，停止继续补查'
+                })
+                finalReply = '小铃湾刚刚已经补查过一次了，但还是没法稳稳判断。主人可以再告诉我更具体一点吗？'
+                break
+              }
+
               const toolResult = await executeToolCalls(policyDecision.toolCalls, {
                 date,
                 store,
@@ -154,10 +190,29 @@ export function createConversationOrchestrator(store) {
                 results: [...toolExecution.results, ...toolResult.results]
               }
 
+              recordToolRoundState(toolRoundState, toolResult)
+
+              if (toolRoundState.lastReadOnlyLookups.length > 0) {
+                const lookup = toolRoundState.lastReadOnlyLookups[toolRoundState.lastReadOnlyLookups.length - 1]
+                logCategoryAudit({
+                  eventType: 'category_mapping_resolved',
+                  toolName: lookup.toolName,
+                  sourceText: message,
+                  similarCandidates: Array.isArray(lookup.items)
+                    ? lookup.items.map((item) => item.name).filter(Boolean).slice(0, 5)
+                    : [],
+                  decision: 'mapped',
+                  reason: `触发只读补查：${lookup.lookupType}，返回 ${lookup.total} 条结果`
+                })
+              }
+
               currentMessages = appendToolRoundMessages(
                 currentMessages,
                 currentEnvelope.assistant_reply,
-                toolResult
+                toolResult,
+                {
+                  lookupContexts: toolRoundState.lastReadOnlyLookups
+                }
               )
 
               const nextEnvelope = await requestProtocolEnvelope(currentMessages)

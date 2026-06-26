@@ -56,3 +56,15 @@ export function buildToolFollowupPrompt({ assistantReply, toolResult }) {
     `工具执行结果：${JSON.stringify(toolResult)}`
   ].join('\n')
 }
+
+export function buildLookupFollowupPrompt({ assistantReply, toolResult, lookupContexts }) {
+  return [
+    '你刚刚完成的是一轮只读补查，不是最终写入。',
+    '请优先根据以下补查结果判断是否能命中现有类目。',
+    '如果现在仍然不能明确判断，就输出 reply，并向主人追问，不要继续发起新的只读补查。',
+    '仍然只能输出一个合法 JSON 对象；如果需要继续动作，可以输出 tool_call；如果信息仍不足，输出 reply。',
+    `你上一轮对主人说的话：${assistantReply}`,
+    `只读补查摘要：${JSON.stringify(lookupContexts)}`,
+    `原始工具结果：${JSON.stringify(toolResult)}`
+  ].join('\n')
+}
