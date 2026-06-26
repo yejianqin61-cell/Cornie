@@ -41,17 +41,15 @@ export function confirmRoutes({ confirm }) {
       const id = String(req.params.id)
       const decision = requireDecision(req.body?.decision)
 
-      const confirmation =
-        decision === 'approve'
-          ? confirm.approve(id)
-          : confirm.reject(id)
+      if (decision === 'approve') {
+        confirm.approve(id)
+        const result = await confirm.executeApprovedConfirmation(id)
+        res.json(result)
+        return
+      }
 
-      res.json({
-        confirmation,
-        execution: {
-          next: decision === 'approve' ? 'resume_execution' : 'stop'
-        }
-      })
+      const result = confirm.rejectConfirmation(id)
+      res.json(result)
     })
   )
 
