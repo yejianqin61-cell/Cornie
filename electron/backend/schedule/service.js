@@ -1,5 +1,6 @@
 import {
   getScheduleCategory,
+  getScheduleEntry,
   listScheduleCategories,
   listScheduleEntries,
   updateScheduleEntryStatus,
@@ -9,20 +10,57 @@ import {
 import { normalizeCategoryMapping } from '../category/mapping.js'
 import { validateCategoryName } from '../category/validation.js'
 
-function normalizeScheduleInput(input) {
+function hasOwn(input, key) {
+  return Object.prototype.hasOwnProperty.call(input, key)
+}
+
+function hasCategoryFields(input) {
+  return [
+    'categoryId',
+    'category_id',
+    'categoryName',
+    'category_name',
+    'needsNewCategory',
+    'proposedCategoryName',
+    'proposed_category_name',
+    'categoryProposalName'
+  ].some((key) => hasOwn(input, key))
+}
+
+function normalizeScheduleInput(input, { existing = null } = {}) {
   const categoryMapping = normalizeCategoryMapping(input)
+  const title = hasOwn(input, 'title')
+    ? String(input.title ?? '').trim()
+    : existing?.title ?? ''
+  const description = hasOwn(input, 'description')
+    ? input.description ?? null
+    : existing?.description ?? null
+  const startAt =
+    hasOwn(input, 'startAt') || hasOwn(input, 'start_at')
+      ? input.start_at ?? input.startAt ?? null
+      : existing?.startAt ?? null
+  const endAt =
+    hasOwn(input, 'endAt') || hasOwn(input, 'end_at')
+      ? input.end_at ?? input.endAt ?? null
+      : existing?.endAt ?? null
+  const location = hasOwn(input, 'location') ? input.location ?? null : existing?.location ?? null
+  const sourceText =
+    hasOwn(input, 'sourceText') || hasOwn(input, 'source_text')
+      ? input.source_text ?? input.sourceText ?? null
+      : existing?.sourceText ?? null
+  const useExistingCategory = !hasCategoryFields(input) && existing
 
   return {
-    title: String(input.title ?? '').trim(),
-    description: input.description ?? null,
-    categoryId: categoryMapping.categoryId,
-    categoryName: categoryMapping.categoryName,
+    title,
+    description,
+    categoryId: useExistingCategory ? existing.categoryId ?? null : categoryMapping.categoryId,
+    categoryName: useExistingCategory ? existing.categoryName ?? null : categoryMapping.categoryName,
     needsNewCategory: categoryMapping.needsNewCategory,
     proposedCategoryName: categoryMapping.proposedCategoryName,
-    startAt: input.start_at ?? input.startAt ?? null,
-    endAt: input.end_at ?? input.endAt ?? null,
-    location: input.location ?? null,
-    sourceText: input.source_text ?? input.sourceText ?? null
+    startAt,
+    endAt,
+    location,
+    sourceText
   }
 }
 
@@ -39,10 +77,19 @@ export function createScheduleService(store) {
     },
     update: (input) => {
       if (!input.id) throw new Error('schedule id is required')
-      return saveScheduleEntry(store, { id: input.id, ...normalizeScheduleInput(input), status: input.status ?? 'scheduled' })
+      const existing = getScheduleEntry(store, input.id)
+      if (!existing) throw new Error('schedule entry not found')
+      const schedule = normalizeScheduleInput(input, { existing })
+      if (!schedule.title) throw new Error('schedule title is required')
+      if (!schedule.startAt) throw new Error('schedule start_at is required')
+      return saveScheduleEntry(store, {
+        id: input.id,
+        ...schedule,
+        status: input.status ?? existing.status ?? 'scheduled'
+      })
     },
     cancel: ({ id }) => updateScheduleEntryStatus(store, { id, status: 'cancelled' }),
-    get: (id) => listScheduleEntries(store, {}).find((item) => item.id === id) ?? null,
+    get: (id) => getScheduleEntry(store, id),
     listToday: () => listScheduleEntries(store, { status: 'scheduled' }),
     listByRange: ({ from, to }) => listScheduleEntries(store, { from, to }),
     listCategories: () => listScheduleCategories(store),

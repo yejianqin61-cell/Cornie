@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import {
   getPendingConfirmation,
   getLedgerEntry,
+  getScheduleEntry,
   listLedgerCategories,
   listPendingConfirmationsByDate,
   getTodoEntry,
@@ -15,6 +16,7 @@ import { createConfirmService } from '../electron/backend/confirm/service.js'
 import { registerLedgerTools } from '../electron/backend/ledger/tools.js'
 import { createLedgerService } from '../electron/backend/ledger/service.js'
 import { evaluateToolCalls } from '../electron/backend/policy/toolPolicy.js'
+import { createScheduleService } from '../electron/backend/schedule/service.js'
 import { registerScheduleTools } from '../electron/backend/schedule/tools.js'
 import { createTodoService } from '../electron/backend/todo/service.js'
 import { registerTodoTools } from '../electron/backend/todo/tools.js'
@@ -660,6 +662,105 @@ async function caseTodoUpdateCategoryRemap() {
   }
 }
 
+async function caseScheduleDirectHit() {
+  const harness = await createHarness('task030-schedule-direct-hit')
+  try {
+    const toolCall = {
+      tool_name: 'schedule.create',
+      arguments: {
+        title: '产品评审会',
+        startAt: '2026-07-01T15:00:00.000Z',
+        categoryName: '会议',
+        sourceText: '下周二下午三点开产品评审会'
+      }
+    }
+
+    const policy = evaluateToolCalls([toolCall], {
+      sourceText: '下周二下午三点开产品评审会',
+      store: harness.store
+    })
+
+    assert(policy.decision === 'allow', 'expected schedule.create allow decision', policy)
+    assert(policy.toolCalls[0].arguments.categoryId, 'expected resolved schedule categoryId', policy.toolCalls[0])
+
+    const schedule = createScheduleService(harness.store)
+    const entry = schedule.create(policy.toolCalls[0].arguments)
+    const savedEntry = getScheduleEntry(harness.store, entry.id)
+
+    assert(savedEntry?.categoryName === '会议', 'expected schedule entry category to be 会议', savedEntry)
+    assert(
+      harness.categoryAuditLogs.some(
+        (item) => item.eventType === 'category_mapping_resolved' && item.domain === 'schedule'
+      ),
+      'expected schedule category_mapping_resolved audit log',
+      harness.categoryAuditLogs
+    )
+
+    return {
+      decision: policy.decision,
+      entryId: entry.id,
+      categoryName: savedEntry.categoryName
+    }
+  } finally {
+    harness.restore()
+  }
+}
+
+async function caseScheduleUpdateCategoryRemap() {
+  const harness = await createHarness('task030-schedule-update-remap')
+  try {
+    const schedule = createScheduleService(harness.store)
+    const original = schedule.create({
+      title: '给猫复查',
+      startAt: '2026-07-02T10:00:00.000Z',
+      location: '宠物医院',
+      categoryName: '日程',
+      categoryId: 'schedule_general',
+      sourceText: '周四上午十点带猫复查'
+    })
+
+    const toolCall = {
+      tool_name: 'schedule.update',
+      arguments: {
+        id: original.id,
+        categoryName: '提醒',
+        sourceText: '帮我把这个日程改到提醒类'
+      }
+    }
+
+    const policy = evaluateToolCalls([toolCall], {
+      sourceText: '帮我把这个日程改到提醒类',
+      store: harness.store
+    })
+
+    assert(policy.decision === 'allow', 'expected schedule.update allow decision', policy)
+    assert(policy.toolCalls[0].arguments.categoryId, 'expected resolved schedule.update categoryId', policy.toolCalls[0])
+
+    const updated = schedule.update(policy.toolCalls[0].arguments)
+    const savedEntry = getScheduleEntry(harness.store, updated.id)
+
+    assert(savedEntry?.title === '给猫复查', 'expected schedule.update to preserve original title', savedEntry)
+    assert(savedEntry?.location === '宠物医院', 'expected schedule.update to preserve original location', savedEntry)
+    assert(savedEntry?.categoryName === '提醒', 'expected schedule.update category remapped to 提醒', savedEntry)
+    assert(
+      harness.categoryAuditLogs.filter(
+        (item) => item.eventType === 'category_mapping_resolved' && item.domain === 'schedule'
+      ).length >= 1,
+      'expected schedule category_mapping_resolved audit log during update',
+      harness.categoryAuditLogs
+    )
+
+    return {
+      entryId: updated.id,
+      title: savedEntry.title,
+      categoryName: savedEntry.categoryName,
+      location: savedEntry.location
+    }
+  } finally {
+    harness.restore()
+  }
+}
+
 const cases = [
   ['TC-001 direct hit allow', caseDirectHit],
   ['TC-005 create category and resume action', caseCreateAndResume],
@@ -668,7 +769,9 @@ const cases = [
   ['TC-010 ask_back downgrade', caseAskBackDowngrade],
   ['TC-012 lookup tool smoke', caseLookupContextExtraction],
   ['TC-003 todo direct hit allow', caseTodoDirectHit],
-  ['TC-029 todo update category remap', caseTodoUpdateCategoryRemap]
+  ['TC-029 todo update category remap', caseTodoUpdateCategoryRemap],
+  ['TC-004 schedule direct hit allow', caseScheduleDirectHit],
+  ['TC-030 schedule update category remap', caseScheduleUpdateCategoryRemap]
 ]
 
 const results = []
