@@ -1519,6 +1519,18 @@ export function saveLedgerEntry(store, entry) {
       $id, $type, $occurred_at, $amount, $currency, $category_id, $category_name, $merchant, $item,
       $source_text, $confidence, $created_at, $updated_at
     )
+    on conflict(id) do update set
+      type=excluded.type,
+      occurred_at=excluded.occurred_at,
+      amount=excluded.amount,
+      currency=excluded.currency,
+      category_id=excluded.category_id,
+      category_name=excluded.category_name,
+      merchant=excluded.merchant,
+      item=excluded.item,
+      source_text=excluded.source_text,
+      confidence=excluded.confidence,
+      updated_at=excluded.updated_at
   `,
     {
       $id: finalId,
@@ -1563,5 +1575,54 @@ export function getLedgerEntry(store, id) {
     createdAt: Number(row.createdAt),
     updatedAt: Number(row.updatedAt)
   }
+}
+
+export function listLedgerEntries(store, { type, from, to } = {}) {
+  const where = []
+  const params = {}
+
+  if (type) {
+    where.push('type = $type')
+    params.$type = type
+  }
+  if (from) {
+    where.push('occurred_at >= $from')
+    params.$from = from
+  }
+  if (to) {
+    where.push('occurred_at <= $to')
+    params.$to = to
+  }
+
+  const sql = `
+    select id, type, occurred_at as occurredAt, amount, currency, category_id as categoryId, category_name as categoryName, merchant, item, source_text as sourceText, confidence, created_at as createdAt, updated_at as updatedAt
+    from ledger_entries
+    ${where.length ? `where ${where.join(' and ')}` : ''}
+    order by occurred_at desc, created_at desc
+  `
+  const stmt = store.db.prepare(sql)
+  stmt.bind(params)
+
+  const rows = []
+  while (stmt.step()) {
+    const r = stmt.getAsObject()
+    rows.push({
+      id: String(r.id),
+      type: String(r.type),
+      occurredAt: String(r.occurredAt),
+      amount: Number(r.amount),
+      currency: String(r.currency),
+      categoryId: r.categoryId == null ? null : String(r.categoryId),
+      categoryName: r.categoryName == null ? null : String(r.categoryName),
+      merchant: r.merchant == null ? null : String(r.merchant),
+      item: r.item == null ? null : String(r.item),
+      sourceText: r.sourceText == null ? null : String(r.sourceText),
+      confidence: r.confidence == null ? null : Number(r.confidence),
+      createdAt: Number(r.createdAt),
+      updatedAt: Number(r.updatedAt)
+    })
+  }
+  stmt.free()
+  return rows
 }
 

@@ -1,5 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { execFile as execFileCallback } from 'node:child_process'
+import { promisify } from 'node:util'
 import { fileURLToPath } from 'node:url'
 
 import {
@@ -41,6 +43,7 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const repoRoot = path.resolve(__dirname, '..')
 const verifyDate = '2026-06-26'
+const execFile = promisify(execFileCallback)
 
 process.env.DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || 'verify-key'
 process.env.DEEPSEEK_BASE_URL = process.env.DEEPSEEK_BASE_URL || 'https://verify.local'
@@ -1047,6 +1050,101 @@ async function caseCategoryAuditSamplesExport() {
   })
 }
 
+async function caseCategoryDataAuditAndRepair() {
+  const tempDbPath = path.join(repoRoot, 'tmp-task038-verify.sqlite')
+  cleanupDbFile(tempDbPath)
+
+  const seedScript = `
+    import { openDb, saveTodoEntry, upsertTodoCategory, saveScheduleEntry, saveLedgerEntry } from './electron/db.js'
+    const store = await openDb('./tmp-task038-verify.sqlite')
+    upsertTodoCategory(store, { id: 'todo_dup_a', name: '宠物护理', sortOrder: 40 })
+    upsertTodoCategory(store, { id: 'todo_dup_b', name: '宠物护理', sortOrder: 41 })
+    saveTodoEntry(store, {
+      id: 'todo_bad_name',
+      title: '给猫梳毛',
+      categoryId: 'todo_life',
+      categoryName: '生活类',
+      dueAt: '2026-06-30T20:00:00.000Z',
+      status: 'pending',
+      sourceText: '给猫梳毛'
+    })
+    saveScheduleEntry(store, {
+      id: 'schedule_missing_category',
+      title: '带猫体检',
+      categoryId: 'schedule_missing',
+      categoryName: '宠物体检',
+      startAt: '2026-07-01T09:00:00.000Z',
+      endAt: null,
+      status: 'scheduled',
+      location: '宠物医院',
+      sourceText: '带猫体检'
+    })
+    saveLedgerEntry(store, {
+      id: 'ledger_ok',
+      type: 'expense',
+      amount: 88,
+      currency: 'CNY',
+      categoryId: 'exp_food',
+      categoryName: '餐饮旧名',
+      merchant: '猫超',
+      item: '猫罐头',
+      occurredAt: '2026-06-27T12:00:00.000Z',
+      sourceText: '买猫罐头'
+    })
+    store.close()
+  `
+
+  try {
+    await execFile('node', ['-e', seedScript], { cwd: repoRoot })
+
+    const auditBefore = JSON.parse(
+      (
+        await execFile('node', ['scripts/audit-category-data.mjs', '--db', '.\\tmp-task038-verify.sqlite'], {
+          cwd: repoRoot
+        })
+      ).stdout
+    )
+    const dryRun = JSON.parse(
+      (
+        await execFile(
+          'node',
+          ['scripts/repair-category-data.mjs', '--db', '.\\tmp-task038-verify.sqlite', '--dry-run'],
+          { cwd: repoRoot }
+        )
+      ).stdout
+    )
+    const applyRun = JSON.parse(
+      (
+        await execFile(
+          'node',
+          ['scripts/repair-category-data.mjs', '--db', '.\\tmp-task038-verify.sqlite', '--apply'],
+          { cwd: repoRoot }
+        )
+      ).stdout
+    )
+    const auditAfter = JSON.parse(
+      (
+        await execFile('node', ['scripts/audit-category-data.mjs', '--db', '.\\tmp-task038-verify.sqlite'], {
+          cwd: repoRoot
+        })
+      ).stdout
+    )
+
+    assert(auditBefore.summary.totals.issues === 4, 'expected 4 issues before repair', auditBefore)
+    assert(dryRun.summary['dry-run'] === 2, 'expected 2 dry-run repairs previewed', dryRun)
+    assert(applyRun.summary.repaired === 2, 'expected 2 issues repaired', applyRun)
+    assert(auditAfter.summary.totals.issues === 2, 'expected 2 issues remaining after repair', auditAfter)
+
+    return buildCaseDetail('registry', 'category_data_audit_and_repair', {
+      issuesBefore: auditBefore.summary.totals.issues,
+      repaired: applyRun.summary.repaired,
+      issuesAfter: auditAfter.summary.totals.issues
+    })
+  } finally {
+    cleanupDbFile(tempDbPath)
+  }
+}
+
 async function caseScheduleDirectHit() {
   const harness = await createHarness('task030-schedule-direct-hit')
   try {
@@ -1572,6 +1670,7 @@ const cases = [
   ['TC-035 schedule lookup cache reuse', caseScheduleLookupCacheReuse],
   ['TC-036 category domain registry validation', caseCategoryDomainRegistryValidation],
   ['TC-037 category audit samples export', caseCategoryAuditSamplesExport],
+  ['TC-038 category data audit and repair', caseCategoryDataAuditAndRepair],
   ['TC-032 todo lookup round limit', caseTodoLookupRoundLimit],
   ['TC-032 schedule lookup round limit', caseScheduleLookupRoundLimit],
   ['TC-003 todo direct hit allow', caseTodoDirectHit],

@@ -11,7 +11,9 @@
     "preview": "vite preview",
     "lint": "echo \"(no lint configured)\"",
     "verify:category": "node scripts/verify-category-flow.mjs",
-    "export:category-samples": "node scripts/export-category-samples.mjs"
+    "export:category-samples": "node scripts/export-category-samples.mjs",
+    "audit:category-data": "node scripts/audit-category-data.mjs",
+    "repair:category-data": "node scripts/repair-category-data.mjs"
   },
   "dependencies": {
     "express": "^4.19.2",
