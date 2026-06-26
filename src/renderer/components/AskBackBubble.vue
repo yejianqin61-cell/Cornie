@@ -15,7 +15,9 @@ const props = defineProps({
   <div class="askBackBubble">
     <div class="askBackRole">Cornie 还想确认一下</div>
     <div class="askBackQuestion">{{ props.question }}</div>
-    <div v-if="props.reason" class="askBackReason">{{ props.reason }}</div>
+    <div v-if="props.reason" class="askBackReason">
+      <span class="askBackReasonLabel">原因：</span>{{ props.reason }}
+    </div>
   </div>
 </template>
 
@@ -49,5 +51,9 @@ const props = defineProps({
   color: rgba(186,230,253,.72);
   white-space: pre-wrap;
   word-break: break-word;
+}
+
+.askBackReasonLabel{
+  color: rgba(224,242,254,.82);
 }
 </style>

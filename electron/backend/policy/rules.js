@@ -1,6 +1,18 @@
 import { getTool } from '../tools/registry.js'
 import { getToolRiskLevel } from './riskLevels.js'
 
+const VAGUE_CATEGORY_NAMES = new Set([
+  '其他',
+  '其它',
+  '别的',
+  '默认',
+  '杂项',
+  '暂定',
+  '这个',
+  '那个',
+  '新类目'
+])
+
 function normalizeString(value) {
   if (value == null) {
     return null
@@ -8,6 +20,23 @@ function normalizeString(value) {
 
   const normalized = String(value).trim()
   return normalized ? normalized : null
+}
+
+function isVagueCategoryName(name) {
+  const normalized = normalizeString(name)
+  if (!normalized) {
+    return true
+  }
+
+  if (normalized.length < 2) {
+    return true
+  }
+
+  if (VAGUE_CATEGORY_NAMES.has(normalized)) {
+    return true
+  }
+
+  return normalized.length > 12
 }
 
 function buildConfirmRequest(toolCall, reason, sourceText) {
@@ -101,7 +130,7 @@ function applyLedgerRule(toolCall, sourceText) {
     return {
       decision: 'ask_back',
       question: '这笔收支的金额是多少呀？小铃湾需要确认后才能记下。',
-      reason: 'missing_amount',
+      reason: '还缺少这笔收支的金额信息。',
       toolCall
     }
   }
@@ -110,8 +139,16 @@ function applyLedgerRule(toolCall, sourceText) {
   if (!categoryId && !categoryName && !needsNewCategory) {
     return buildCategoryAskBack(
       toolCall,
-      '这笔收支想归到哪个类目呢？如果没有合适类目，小铃湾可以先帮你提请新增。',
-      'missing_category_mapping'
+      '这笔收支更像哪一类呀？如果现有类目都不合适，小铃湾也可以先帮你申请新增。',
+      '还缺少这笔收支应归属的类目信息。'
+    )
+  }
+
+  if (needsNewCategory && isVagueCategoryName(proposedCategoryName)) {
+    return buildCategoryAskBack(
+      toolCall,
+      '如果要新增类目，这笔收支你想起一个更明确的类目名吗？比如“猫咪用品”这种，小铃湾才好帮你申请。',
+      '建议新增的类目名还不够明确。'
     )
   }
 
@@ -137,8 +174,16 @@ function applyTodoRule(toolCall, sourceText) {
   if (!categoryId && !categoryName && !needsNewCategory) {
     return buildCategoryAskBack(
       toolCall,
-      '这个待办想放到哪个分类里呢？如果没有合适的，小铃湾可以先帮你提请新增。',
-      'missing_todo_category_mapping'
+      '这个待办你希望放到哪个分类里呢？如果没有合适的，我也可以先帮你提请新增。',
+      '还缺少这个待办应归属的分类信息。'
+    )
+  }
+
+  if (needsNewCategory && isVagueCategoryName(proposedCategoryName)) {
+    return buildCategoryAskBack(
+      toolCall,
+      '如果要新增待办分类，你想给它起个更明确的名字吗？这样小铃湾才能更稳地帮你创建。',
+      '建议新增的待办类目名还不够明确。'
     )
   }
 
@@ -164,8 +209,16 @@ function applyScheduleRule(toolCall, sourceText) {
   if (!categoryId && !categoryName && !needsNewCategory) {
     return buildCategoryAskBack(
       toolCall,
-      '这个日程想归到哪个分类呀？如果没有现成分类，小铃湾可以先帮你提请新增。',
-      'missing_schedule_category_mapping'
+      '这个日程想归到哪个分类呀？如果没有现成的分类，小铃湾可以先帮你申请新增。',
+      '还缺少这个日程应归属的分类信息。'
+    )
+  }
+
+  if (needsNewCategory && isVagueCategoryName(proposedCategoryName)) {
+    return buildCategoryAskBack(
+      toolCall,
+      '如果要新增日程分类，这个名字还可以再具体一点吗？小铃湾想先确认得更稳一些。',
+      '建议新增的日程类目名还不够明确。'
     )
   }
 
