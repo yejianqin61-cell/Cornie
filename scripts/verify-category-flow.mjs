@@ -761,6 +761,420 @@ async function caseScheduleUpdateCategoryRemap() {
   }
 }
 
+async function caseTodoCreateCategoryConfirmResume() {
+  const harness = await createHarness('task031-todo-create-confirm')
+  try {
+    const confirmService = createConfirmService(harness.store)
+    const todo = createTodoService(harness.store)
+
+    const pending = confirmService.createPending({
+      date: verifyDate,
+      conversationMessageId: 'msg-todo-create-confirm',
+      sourceText: '新增一个给猫买驱虫药的待办，类目没有就新建宠物护理',
+      assistantReply: '小铃湾想先确认是否新增宠物护理待办类目。',
+      toolCalls: [
+        {
+          tool_name: 'todo.create',
+          arguments: {
+            title: '给猫买驱虫药',
+            dueAt: '2026-06-30T20:00:00.000Z',
+            needsNewCategory: true,
+            proposedCategoryName: '宠物护理',
+            sourceText: '新增一个给猫买驱虫药的待办，类目没有就新建宠物护理'
+          }
+        }
+      ],
+      confirmRequest: {
+        kind: 'category_creation_confirmation',
+        toolName: 'todo.create',
+        domain: 'todo',
+        proposedCategoryName: '宠物护理',
+        reason: '当前待办找不到合适分类，建议先新增待办类目，等待主人确认。',
+        sourceText: '新增一个给猫买驱虫药的待办，类目没有就新建宠物护理',
+        pendingAction: {
+          toolName: 'todo.create',
+          arguments: {
+            title: '给猫买驱虫药',
+            dueAt: '2026-06-30T20:00:00.000Z',
+            needsNewCategory: true,
+            proposedCategoryName: '宠物护理',
+            sourceText: '新增一个给猫买驱虫药的待办，类目没有就新建宠物护理'
+          }
+        }
+      }
+    })
+
+    confirmService.approve(pending.id)
+    const result = await confirmService.executeApprovedConfirmation(pending.id)
+    const categories = todo.listCategories()
+    const createdCategory = categories.find((item) => item.name === '宠物护理')
+    const resumedResult = result.toolExecution.results.find((item) => item.tool_name === 'todo.create')
+    const savedEntry = getTodoEntry(harness.store, resumedResult?.result?.id)
+
+    assert(createdCategory, 'expected 宠物护理 todo category created', categories)
+    assert(savedEntry?.title === '给猫买驱虫药', 'expected todo entry created after confirmation', savedEntry)
+    assert(savedEntry?.categoryName === '宠物护理', 'expected todo entry mapped to 宠物护理', savedEntry)
+    assert(
+      harness.categoryAuditLogs.some(
+        (item) => item.eventType === 'category_action_resumed' && item.domain === 'todo'
+      ),
+      'expected todo category_action_resumed audit log',
+      harness.categoryAuditLogs
+    )
+
+    return {
+      categoryId: createdCategory.id,
+      entryId: savedEntry.id,
+      categoryName: savedEntry.categoryName
+    }
+  } finally {
+    harness.restore()
+  }
+}
+
+async function caseTodoUpdateCategoryConfirmResume() {
+  const harness = await createHarness('task031-todo-update-confirm')
+  try {
+    const confirmService = createConfirmService(harness.store)
+    const todo = createTodoService(harness.store)
+    const original = todo.create({
+      title: '给猫补货罐头',
+      categoryId: 'todo_life',
+      categoryName: '生活',
+      dueAt: '2026-06-30T18:00:00.000Z',
+      sourceText: '给猫补货罐头'
+    })
+
+    const pending = confirmService.createPending({
+      date: verifyDate,
+      conversationMessageId: 'msg-todo-update-confirm',
+      sourceText: '把这个待办改到宠物护理，没有就新建',
+      assistantReply: '小铃湾想先确认是否新增宠物护理待办类目。',
+      toolCalls: [
+        {
+          tool_name: 'todo.update',
+          arguments: {
+            id: original.id,
+            needsNewCategory: true,
+            proposedCategoryName: '宠物护理',
+            sourceText: '把这个待办改到宠物护理，没有就新建'
+          }
+        }
+      ],
+      confirmRequest: {
+        kind: 'category_creation_confirmation',
+        toolName: 'todo.update',
+        domain: 'todo',
+        proposedCategoryName: '宠物护理',
+        reason: '当前待办找不到合适分类，建议先新增待办类目，等待主人确认。',
+        sourceText: '把这个待办改到宠物护理，没有就新建',
+        pendingAction: {
+          toolName: 'todo.update',
+          arguments: {
+            id: original.id,
+            needsNewCategory: true,
+            proposedCategoryName: '宠物护理',
+            sourceText: '把这个待办改到宠物护理，没有就新建'
+          }
+        }
+      }
+    })
+
+    confirmService.approve(pending.id)
+    const result = await confirmService.executeApprovedConfirmation(pending.id)
+    const resumedResult = result.toolExecution.results.find((item) => item.tool_name === 'todo.update')
+    const savedEntry = getTodoEntry(harness.store, resumedResult?.result?.id ?? original.id)
+
+    assert(savedEntry?.title === '给猫补货罐头', 'expected todo.update to preserve original title after confirmation', savedEntry)
+    assert(savedEntry?.categoryName === '宠物护理', 'expected todo.update remapped to 宠物护理 after confirmation', savedEntry)
+    assert(
+      harness.categoryAuditLogs.some(
+        (item) => item.eventType === 'category_action_resumed' && item.domain === 'todo'
+      ),
+      'expected todo update resume audit log',
+      harness.categoryAuditLogs
+    )
+
+    return {
+      entryId: savedEntry.id,
+      title: savedEntry.title,
+      categoryName: savedEntry.categoryName
+    }
+  } finally {
+    harness.restore()
+  }
+}
+
+async function caseScheduleCreateCategoryConfirmResume() {
+  const harness = await createHarness('task031-schedule-create-confirm')
+  try {
+    const confirmService = createConfirmService(harness.store)
+    const schedule = createScheduleService(harness.store)
+
+    const pending = confirmService.createPending({
+      date: verifyDate,
+      conversationMessageId: 'msg-schedule-create-confirm',
+      sourceText: '下周带猫复查，类目没有就新建宠物医疗日程类目',
+      assistantReply: '小铃湾想先确认是否新增宠物医疗日程类目。',
+      toolCalls: [
+        {
+          tool_name: 'schedule.create',
+          arguments: {
+            title: '带猫复查',
+            startAt: '2026-07-03T09:30:00.000Z',
+            location: '宠物医院',
+            needsNewCategory: true,
+            proposedCategoryName: '宠物医疗',
+            sourceText: '下周带猫复查，类目没有就新建宠物医疗日程类目'
+          }
+        }
+      ],
+      confirmRequest: {
+        kind: 'category_creation_confirmation',
+        toolName: 'schedule.create',
+        domain: 'schedule',
+        proposedCategoryName: '宠物医疗',
+        reason: '当前日程找不到合适分类，建议先新增日程类目，等待主人确认。',
+        sourceText: '下周带猫复查，类目没有就新建宠物医疗日程类目',
+        pendingAction: {
+          toolName: 'schedule.create',
+          arguments: {
+            title: '带猫复查',
+            startAt: '2026-07-03T09:30:00.000Z',
+            location: '宠物医院',
+            needsNewCategory: true,
+            proposedCategoryName: '宠物医疗',
+            sourceText: '下周带猫复查，类目没有就新建宠物医疗日程类目'
+          }
+        }
+      }
+    })
+
+    confirmService.approve(pending.id)
+    const result = await confirmService.executeApprovedConfirmation(pending.id)
+    const categories = schedule.listCategories()
+    const createdCategory = categories.find((item) => item.name === '宠物医疗')
+    const resumedResult = result.toolExecution.results.find((item) => item.tool_name === 'schedule.create')
+    const savedEntry = getScheduleEntry(harness.store, resumedResult?.result?.id)
+
+    assert(createdCategory, 'expected 宠物医疗 schedule category created', categories)
+    assert(savedEntry?.title === '带猫复查', 'expected schedule entry created after confirmation', savedEntry)
+    assert(savedEntry?.categoryName === '宠物医疗', 'expected schedule entry mapped to 宠物医疗', savedEntry)
+    assert(
+      harness.categoryAuditLogs.some(
+        (item) => item.eventType === 'category_action_resumed' && item.domain === 'schedule'
+      ),
+      'expected schedule category_action_resumed audit log',
+      harness.categoryAuditLogs
+    )
+
+    return {
+      categoryId: createdCategory.id,
+      entryId: savedEntry.id,
+      categoryName: savedEntry.categoryName
+    }
+  } finally {
+    harness.restore()
+  }
+}
+
+async function caseScheduleUpdateCategoryConfirmResume() {
+  const harness = await createHarness('task031-schedule-update-confirm')
+  try {
+    const confirmService = createConfirmService(harness.store)
+    const schedule = createScheduleService(harness.store)
+    const original = schedule.create({
+      title: '带猫打疫苗',
+      startAt: '2026-07-04T14:00:00.000Z',
+      location: '宠物医院',
+      categoryId: 'schedule_general',
+      categoryName: '日程',
+      sourceText: '带猫打疫苗'
+    })
+
+    const pending = confirmService.createPending({
+      date: verifyDate,
+      conversationMessageId: 'msg-schedule-update-confirm',
+      sourceText: '把这个日程改到宠物医疗，没有就新建',
+      assistantReply: '小铃湾想先确认是否新增宠物医疗日程类目。',
+      toolCalls: [
+        {
+          tool_name: 'schedule.update',
+          arguments: {
+            id: original.id,
+            needsNewCategory: true,
+            proposedCategoryName: '宠物医疗',
+            sourceText: '把这个日程改到宠物医疗，没有就新建'
+          }
+        }
+      ],
+      confirmRequest: {
+        kind: 'category_creation_confirmation',
+        toolName: 'schedule.update',
+        domain: 'schedule',
+        proposedCategoryName: '宠物医疗',
+        reason: '当前日程找不到合适分类，建议先新增日程类目，等待主人确认。',
+        sourceText: '把这个日程改到宠物医疗，没有就新建',
+        pendingAction: {
+          toolName: 'schedule.update',
+          arguments: {
+            id: original.id,
+            needsNewCategory: true,
+            proposedCategoryName: '宠物医疗',
+            sourceText: '把这个日程改到宠物医疗，没有就新建'
+          }
+        }
+      }
+    })
+
+    confirmService.approve(pending.id)
+    const result = await confirmService.executeApprovedConfirmation(pending.id)
+    const resumedResult = result.toolExecution.results.find((item) => item.tool_name === 'schedule.update')
+    const savedEntry = getScheduleEntry(harness.store, resumedResult?.result?.id ?? original.id)
+
+    assert(savedEntry?.title === '带猫打疫苗', 'expected schedule.update to preserve original title after confirmation', savedEntry)
+    assert(savedEntry?.location === '宠物医院', 'expected schedule.update to preserve original location after confirmation', savedEntry)
+    assert(savedEntry?.categoryName === '宠物医疗', 'expected schedule.update remapped to 宠物医疗 after confirmation', savedEntry)
+    assert(
+      harness.categoryAuditLogs.some(
+        (item) => item.eventType === 'category_action_resumed' && item.domain === 'schedule'
+      ),
+      'expected schedule update resume audit log',
+      harness.categoryAuditLogs
+    )
+
+    return {
+      entryId: savedEntry.id,
+      title: savedEntry.title,
+      categoryName: savedEntry.categoryName
+    }
+  } finally {
+    harness.restore()
+  }
+}
+
+async function caseTodoRejectNoWrite() {
+  const harness = await createHarness('task031-todo-reject')
+  try {
+    const confirmService = createConfirmService(harness.store)
+    const todo = createTodoService(harness.store)
+    const beforeCategories = todo.listCategories().length
+    const beforeEntries = listTodoEntries(harness.store, { status: 'pending' }).length
+
+    const pending = confirmService.createPending({
+      date: verifyDate,
+      conversationMessageId: 'msg-todo-reject',
+      sourceText: '新增一个给猫洗澡的待办，类目没有就新建宇宙远足',
+      assistantReply: '小铃湾想先确认是否新增宇宙远足待办类目。',
+      toolCalls: [
+        {
+          tool_name: 'todo.create',
+          arguments: {
+            title: '给猫洗澡',
+            needsNewCategory: true,
+            proposedCategoryName: '宇宙远足',
+            sourceText: '新增一个给猫洗澡的待办，类目没有就新建宇宙远足'
+          }
+        }
+      ],
+      confirmRequest: {
+        kind: 'category_creation_confirmation',
+        toolName: 'todo.create',
+        domain: 'todo',
+        proposedCategoryName: '宇宙远足',
+        reason: '当前待办找不到合适分类，建议先新增待办类目，等待主人确认。',
+        sourceText: '新增一个给猫洗澡的待办，类目没有就新建宇宙远足',
+        pendingAction: {
+          toolName: 'todo.create',
+          arguments: {
+            title: '给猫洗澡',
+            needsNewCategory: true,
+            proposedCategoryName: '宇宙远足',
+            sourceText: '新增一个给猫洗澡的待办，类目没有就新建宇宙远足'
+          }
+        }
+      }
+    })
+
+    const rejection = confirmService.rejectConfirmation(pending.id)
+    const afterCategories = todo.listCategories().length
+    const afterEntries = listTodoEntries(harness.store, { status: 'pending' }).length
+
+    assert(rejection.categoryRejectResolution?.mode === 'closed_without_write', 'expected todo rejection closed_without_write', rejection)
+    assert(beforeCategories === afterCategories, 'expected todo category count unchanged after rejection', { beforeCategories, afterCategories })
+    assert(beforeEntries === afterEntries, 'expected todo entry count unchanged after rejection', { beforeEntries, afterEntries })
+
+    return {
+      categoryCount: afterCategories,
+      entryCount: afterEntries
+    }
+  } finally {
+    harness.restore()
+  }
+}
+
+async function caseScheduleRejectNoWrite() {
+  const harness = await createHarness('task031-schedule-reject')
+  try {
+    const confirmService = createConfirmService(harness.store)
+    const schedule = createScheduleService(harness.store)
+    const beforeCategories = schedule.listCategories().length
+    const beforeEntries = schedule.listToday().length
+
+    const pending = confirmService.createPending({
+      date: verifyDate,
+      conversationMessageId: 'msg-schedule-reject',
+      sourceText: '下周安排给猫修胡子，类目没有就新建银河远征',
+      assistantReply: '小铃湾想先确认是否新增银河远征日程类目。',
+      toolCalls: [
+        {
+          tool_name: 'schedule.create',
+          arguments: {
+            title: '给猫修胡子',
+            startAt: '2026-07-05T11:00:00.000Z',
+            needsNewCategory: true,
+            proposedCategoryName: '银河远征',
+            sourceText: '下周安排给猫修胡子，类目没有就新建银河远征'
+          }
+        }
+      ],
+      confirmRequest: {
+        kind: 'category_creation_confirmation',
+        toolName: 'schedule.create',
+        domain: 'schedule',
+        proposedCategoryName: '银河远征',
+        reason: '当前日程找不到合适分类，建议先新增日程类目，等待主人确认。',
+        sourceText: '下周安排给猫修胡子，类目没有就新建银河远征',
+        pendingAction: {
+          toolName: 'schedule.create',
+          arguments: {
+            title: '给猫修胡子',
+            startAt: '2026-07-05T11:00:00.000Z',
+            needsNewCategory: true,
+            proposedCategoryName: '银河远征',
+            sourceText: '下周安排给猫修胡子，类目没有就新建银河远征'
+          }
+        }
+      }
+    })
+
+    const rejection = confirmService.rejectConfirmation(pending.id)
+    const afterCategories = schedule.listCategories().length
+    const afterEntries = schedule.listToday().length
+
+    assert(rejection.categoryRejectResolution?.mode === 'closed_without_write', 'expected schedule rejection closed_without_write', rejection)
+    assert(beforeCategories === afterCategories, 'expected schedule category count unchanged after rejection', { beforeCategories, afterCategories })
+    assert(beforeEntries === afterEntries, 'expected schedule entry count unchanged after rejection', { beforeEntries, afterEntries })
+
+    return {
+      categoryCount: afterCategories,
+      entryCount: afterEntries
+    }
+  } finally {
+    harness.restore()
+  }
+}
+
 const cases = [
   ['TC-001 direct hit allow', caseDirectHit],
   ['TC-005 create category and resume action', caseCreateAndResume],
@@ -771,7 +1185,13 @@ const cases = [
   ['TC-003 todo direct hit allow', caseTodoDirectHit],
   ['TC-029 todo update category remap', caseTodoUpdateCategoryRemap],
   ['TC-004 schedule direct hit allow', caseScheduleDirectHit],
-  ['TC-030 schedule update category remap', caseScheduleUpdateCategoryRemap]
+  ['TC-030 schedule update category remap', caseScheduleUpdateCategoryRemap],
+  ['TC-031 todo create category confirm resume', caseTodoCreateCategoryConfirmResume],
+  ['TC-031 todo update category confirm resume', caseTodoUpdateCategoryConfirmResume],
+  ['TC-031 schedule create category confirm resume', caseScheduleCreateCategoryConfirmResume],
+  ['TC-031 schedule update category confirm resume', caseScheduleUpdateCategoryConfirmResume],
+  ['TC-031 todo reject no write', caseTodoRejectNoWrite],
+  ['TC-031 schedule reject no write', caseScheduleRejectNoWrite]
 ]
 
 const results = []
