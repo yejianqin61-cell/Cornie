@@ -1,5 +1,6 @@
 import {
   getTodoCategory,
+  getTodoEntry,
   listTodoCategories,
   listTodoEntries,
   updateTodoEntryStatus,
@@ -9,18 +10,50 @@ import {
 import { normalizeCategoryMapping } from '../category/mapping.js'
 import { validateCategoryName } from '../category/validation.js'
 
-function normalizeTodoInput(input) {
+function hasOwn(input, key) {
+  return Object.prototype.hasOwnProperty.call(input, key)
+}
+
+function hasCategoryFields(input) {
+  return [
+    'categoryId',
+    'category_id',
+    'categoryName',
+    'category_name',
+    'needsNewCategory',
+    'proposedCategoryName',
+    'proposed_category_name',
+    'categoryProposalName'
+  ].some((key) => hasOwn(input, key))
+}
+
+function normalizeTodoInput(input, { existing = null } = {}) {
   const categoryMapping = normalizeCategoryMapping(input)
+  const title = hasOwn(input, 'title')
+    ? String(input.title ?? '').trim()
+    : existing?.title ?? ''
+  const description = hasOwn(input, 'description')
+    ? input.description ?? null
+    : existing?.description ?? null
+  const dueAt =
+    hasOwn(input, 'dueAt') || hasOwn(input, 'due_at')
+      ? input.due_at ?? input.dueAt ?? null
+      : existing?.dueAt ?? null
+  const sourceText =
+    hasOwn(input, 'sourceText') || hasOwn(input, 'source_text')
+      ? input.source_text ?? input.sourceText ?? null
+      : existing?.sourceText ?? null
+  const useExistingCategory = !hasCategoryFields(input) && existing
 
   return {
-    title: String(input.title ?? '').trim(),
-    description: input.description ?? null,
-    categoryId: categoryMapping.categoryId,
-    categoryName: categoryMapping.categoryName,
+    title,
+    description,
+    categoryId: useExistingCategory ? existing.categoryId ?? null : categoryMapping.categoryId,
+    categoryName: useExistingCategory ? existing.categoryName ?? null : categoryMapping.categoryName,
     needsNewCategory: categoryMapping.needsNewCategory,
     proposedCategoryName: categoryMapping.proposedCategoryName,
-    dueAt: input.due_at ?? input.dueAt ?? null,
-    sourceText: input.source_text ?? input.sourceText ?? null
+    dueAt,
+    sourceText
   }
 }
 
@@ -35,17 +68,20 @@ export function createTodoService(store) {
       })
     },
     update: (input) => {
-      const todo = normalizeTodoInput(input)
       if (!input.id) throw new Error('todo id is required')
+      const existing = getTodoEntry(store, input.id)
+      if (!existing) throw new Error('todo entry not found')
+      const todo = normalizeTodoInput(input, { existing })
+      if (!todo.title) throw new Error('todo title is required')
       return saveTodoEntry(store, {
         id: input.id,
         ...todo,
-        status: input.status ?? 'pending'
+        status: input.status ?? existing.status ?? 'pending'
       })
     },
     complete: ({ id }) => updateTodoEntryStatus(store, { id, status: 'done' }),
     delete: ({ id }) => updateTodoEntryStatus(store, { id, status: 'cancelled' }),
-    get: (id) => getTodoCategory(store, id),
+    get: (id) => getTodoEntry(store, id),
     listToday: () => listTodoEntries(store, { status: 'pending' }),
     listByRange: ({ from, to }) => listTodoEntries(store, { from, to }),
     listCategories: () => listTodoCategories(store),

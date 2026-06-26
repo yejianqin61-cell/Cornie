@@ -15,6 +15,13 @@ function normalizeCompareValue(value) {
     .trim()
 }
 
+const LOW_SIGNAL_CATEGORY_NAMES = new Set(['待办', '日程', '提醒', '默认', '其他', '其它'])
+
+function isLowSignalCategoryName(value) {
+  const normalized = normalizeString(value)
+  return normalized ? LOW_SIGNAL_CATEGORY_NAMES.has(normalized) : false
+}
+
 function tokenize(value) {
   const normalized = normalizeCompareValue(value)
   if (!normalized) {
@@ -62,6 +69,7 @@ function buildCandidate(category, mapping) {
 
   const normalizedCandidate = normalizeCompareValue(candidateName)
   const categoryTokens = tokenize(candidateName)
+  const lowSignalCategory = isLowSignalCategoryName(candidateName)
   const scoreReasons = []
   let score = 0
 
@@ -97,16 +105,25 @@ function buildCandidate(category, mapping) {
   if (mapping.sourceText) {
     const normalizedSource = normalizeCompareValue(mapping.sourceText)
     if (normalizedSource && normalizedSource.includes(normalizedCandidate)) {
-      score = Math.max(score, 0.92)
-      scoreReasons.push('原始文本直接包含类目名')
+      const directSourceHitScore = lowSignalCategory ? 0.42 : 0.92
+      score = Math.max(score, directSourceHitScore)
+      scoreReasons.push(
+        lowSignalCategory ? '原始文本包含通用类目词，降低置信度处理' : '原始文本直接包含类目名'
+      )
     } else if (categoryTokens.length > 0) {
       const matchedTokens = categoryTokens.filter(
         (token) => token.length >= 2 && normalizedSource.includes(token)
       )
       if (matchedTokens.length > 0) {
-        const tokenScore = Math.min(0.84, 0.45 + matchedTokens.length * 0.12)
+        const tokenScoreBase = lowSignalCategory ? 0.22 : 0.45
+        const tokenScoreCap = lowSignalCategory ? 0.48 : 0.84
+        const tokenScore = Math.min(tokenScoreCap, tokenScoreBase + matchedTokens.length * 0.12)
         score = Math.max(score, tokenScore)
-        scoreReasons.push(`原始文本命中关键词：${matchedTokens.join('、')}`)
+        scoreReasons.push(
+          lowSignalCategory
+            ? `原始文本命中通用类目词：${matchedTokens.join('、')}`
+            : `原始文本命中关键词：${matchedTokens.join('、')}`
+        )
       }
     }
   }

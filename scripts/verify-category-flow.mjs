@@ -7,6 +7,7 @@ import {
   getLedgerEntry,
   listLedgerCategories,
   listPendingConfirmationsByDate,
+  getTodoEntry,
   listTodoEntries,
   openDb
 } from '../electron/db.js'
@@ -15,6 +16,7 @@ import { registerLedgerTools } from '../electron/backend/ledger/tools.js'
 import { createLedgerService } from '../electron/backend/ledger/service.js'
 import { evaluateToolCalls } from '../electron/backend/policy/toolPolicy.js'
 import { registerScheduleTools } from '../electron/backend/schedule/tools.js'
+import { createTodoService } from '../electron/backend/todo/service.js'
 import { registerTodoTools } from '../electron/backend/todo/tools.js'
 import { getTool, registerTool } from '../electron/backend/tools/registry.js'
 
@@ -564,13 +566,109 @@ async function caseLookupContextExtraction() {
   }
 }
 
+async function caseTodoDirectHit() {
+  const harness = await createHarness('task029-todo-direct-hit')
+  try {
+    const toolCall = {
+      tool_name: 'todo.create',
+      arguments: {
+        title: '今晚复习英语',
+        categoryName: '学习',
+        sourceText: '帮我记个待办，今晚复习英语，放到学习类'
+      }
+    }
+
+    const policy = evaluateToolCalls([toolCall], {
+      sourceText: '帮我记个待办，今晚复习英语，放到学习类',
+      store: harness.store
+    })
+
+    assert(policy.decision === 'allow', 'expected todo.create allow decision', policy)
+    assert(policy.toolCalls[0].arguments.categoryId, 'expected resolved todo categoryId', policy.toolCalls[0])
+
+    const todo = createTodoService(harness.store)
+    const entry = todo.create(policy.toolCalls[0].arguments)
+    const savedEntry = getTodoEntry(harness.store, entry.id)
+
+    assert(savedEntry?.categoryName === '学习', 'expected todo entry category to be 学习', savedEntry)
+    assert(
+      harness.categoryAuditLogs.some(
+        (item) => item.eventType === 'category_mapping_resolved' && item.domain === 'todo'
+      ),
+      'expected todo category_mapping_resolved audit log',
+      harness.categoryAuditLogs
+    )
+
+    return {
+      decision: policy.decision,
+      entryId: entry.id,
+      categoryName: savedEntry.categoryName
+    }
+  } finally {
+    harness.restore()
+  }
+}
+
+async function caseTodoUpdateCategoryRemap() {
+  const harness = await createHarness('task029-todo-update-remap')
+  try {
+    const todo = createTodoService(harness.store)
+    const original = todo.create({
+      title: '周末采购猫粮',
+      categoryName: '生活',
+      categoryId: 'todo_life',
+      sourceText: '提醒我周末采购猫粮'
+    })
+
+    const toolCall = {
+      tool_name: 'todo.update',
+      arguments: {
+        id: original.id,
+        categoryName: '学习',
+        sourceText: '把这个待办改到学习类'
+      }
+    }
+
+    const policy = evaluateToolCalls([toolCall], {
+      sourceText: '把这个待办改到学习类',
+      store: harness.store
+    })
+
+    assert(policy.decision === 'allow', 'expected todo.update allow decision', policy)
+    assert(policy.toolCalls[0].arguments.categoryId, 'expected resolved todo.update categoryId', policy.toolCalls[0])
+
+    const updated = todo.update(policy.toolCalls[0].arguments)
+    const savedEntry = getTodoEntry(harness.store, updated.id)
+
+    assert(savedEntry?.title === '周末采购猫粮', 'expected todo.update to preserve original title', savedEntry)
+    assert(savedEntry?.categoryName === '学习', 'expected todo.update category remapped to 学习', savedEntry)
+    assert(
+      harness.categoryAuditLogs.filter(
+        (item) => item.eventType === 'category_mapping_resolved' && item.domain === 'todo'
+      ).length >= 1,
+      'expected todo category_mapping_resolved audit log during update',
+      harness.categoryAuditLogs
+    )
+
+    return {
+      entryId: updated.id,
+      title: savedEntry.title,
+      categoryName: savedEntry.categoryName
+    }
+  } finally {
+    harness.restore()
+  }
+}
+
 const cases = [
   ['TC-001 direct hit allow', caseDirectHit],
   ['TC-005 create category and resume action', caseCreateAndResume],
   ['TC-009 duplicate category reused', caseReuseDuplicateCategory],
   ['TC-008 reject without write', caseRejectNoWrite],
   ['TC-010 ask_back downgrade', caseAskBackDowngrade],
-  ['TC-012 lookup tool smoke', caseLookupContextExtraction]
+  ['TC-012 lookup tool smoke', caseLookupContextExtraction],
+  ['TC-003 todo direct hit allow', caseTodoDirectHit],
+  ['TC-029 todo update category remap', caseTodoUpdateCategoryRemap]
 ]
 
 const results = []
