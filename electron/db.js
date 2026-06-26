@@ -1626,3 +1626,8 @@ export function listLedgerEntries(store, { type, from, to } = {}) {
   return rows
 }
 
+export function deleteLedgerEntry(store, id) {
+  store.db.run('delete from ledger_entries where id = $id', { $id: id })
+  store.persist()
+}
+

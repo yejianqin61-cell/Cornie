@@ -1,27 +1,61 @@
-import { getLedgerCategory, listLedgerCategories, saveLedgerEntry, upsertLedgerCategory } from '../../db.js'
+import {
+  deleteLedgerEntry,
+  getLedgerCategory,
+  getLedgerEntry,
+  listLedgerCategories,
+  listLedgerEntries,
+  saveLedgerEntry,
+  upsertLedgerCategory
+} from '../../db.js'
 import { normalizeCategoryMapping } from '../category/mapping.js'
 import { validateCategoryName } from '../category/validation.js'
 
-function normalizeLedgerInput(type, input) {
-  const categoryMapping = normalizeCategoryMapping(input)
+function hasOwn(input, key) {
+  return Object.prototype.hasOwnProperty.call(input, key)
+}
 
-  if (typeof input.amount !== 'number' || !Number.isFinite(input.amount) || input.amount <= 0) {
+function hasCategoryFields(input) {
+  return [
+    'categoryId',
+    'category_id',
+    'categoryName',
+    'category_name',
+    'needsNewCategory',
+    'proposedCategoryName',
+    'proposed_category_name',
+    'categoryProposalName'
+  ].some((key) => hasOwn(input, key))
+}
+
+function normalizeLedgerInput(type, input, { existing = null } = {}) {
+  const categoryMapping = normalizeCategoryMapping(input)
+  const amount = hasOwn(input, 'amount') ? input.amount : existing?.amount
+
+  if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0) {
     throw new Error('amount is required')
   }
 
+  const useExistingCategory = !hasCategoryFields(input) && existing
+
   return {
     type,
-    amount: input.amount,
-    currency: input.currency ?? 'CNY',
-    categoryId: categoryMapping.categoryId,
-    categoryName: categoryMapping.categoryName,
+    amount,
+    currency: hasOwn(input, 'currency') ? input.currency ?? 'CNY' : existing?.currency ?? 'CNY',
+    categoryId: useExistingCategory ? existing.categoryId ?? null : categoryMapping.categoryId,
+    categoryName: useExistingCategory ? existing.categoryName ?? null : categoryMapping.categoryName,
     needsNewCategory: categoryMapping.needsNewCategory,
     proposedCategoryName: categoryMapping.proposedCategoryName,
-    merchant: input.merchant ?? null,
-    item: input.item ?? null,
-    sourceText: input.source_text ?? input.sourceText ?? null,
-    occurredAt: input.occurred_at ?? input.occurredAt ?? new Date().toISOString(),
-    confidence: input.confidence ?? null
+    merchant: hasOwn(input, 'merchant') ? input.merchant ?? null : existing?.merchant ?? null,
+    item: hasOwn(input, 'item') ? input.item ?? null : existing?.item ?? null,
+    sourceText:
+      hasOwn(input, 'source_text') || hasOwn(input, 'sourceText')
+        ? input.source_text ?? input.sourceText ?? null
+        : existing?.sourceText ?? null,
+    occurredAt:
+      hasOwn(input, 'occurred_at') || hasOwn(input, 'occurredAt')
+        ? input.occurred_at ?? input.occurredAt ?? new Date().toISOString()
+        : existing?.occurredAt ?? new Date().toISOString(),
+    confidence: hasOwn(input, 'confidence') ? input.confidence ?? null : existing?.confidence ?? null
   }
 }
 
@@ -60,10 +94,48 @@ function addEntry(store, type, input) {
   return saveLedgerEntry(store, ledger)
 }
 
+function buildDayRange(dateText) {
+  const day =
+    typeof dateText === 'string' && dateText.trim() ? dateText.trim() : new Date().toISOString().slice(0, 10)
+  return {
+    from: `${day}T00:00:00.000Z`,
+    to: `${day}T23:59:59.999Z`
+  }
+}
+
 export function createLedgerService(store) {
   return {
     addExpense: (input) => addEntry(store, 'expense', input),
     addIncome: (input) => addEntry(store, 'income', input),
+    updateEntry: (input) => {
+      if (!input?.id) throw new Error('ledger entry id is required')
+      const existing = getLedgerEntry(store, input.id)
+      if (!existing) throw new Error('ledger entry not found')
+
+      const nextType = hasOwn(input, 'type') ? String(input.type ?? '').trim() : existing.type
+      if (!['expense', 'income'].includes(nextType)) {
+        throw new Error('ledger entry type must be expense or income')
+      }
+
+      const ledger = normalizeLedgerInput(nextType, input, { existing })
+      return saveLedgerEntry(store, { id: input.id, ...ledger })
+    },
+    deleteEntry: ({ id }) => {
+      if (!id) throw new Error('ledger entry id is required')
+      const existing = getLedgerEntry(store, id)
+      if (!existing) throw new Error('ledger entry not found')
+      deleteLedgerEntry(store, id)
+      return existing
+    },
+    getEntry: (id) => {
+      if (!id) throw new Error('ledger entry id is required')
+      return getLedgerEntry(store, id)
+    },
+    listToday: ({ date, type } = {}) => {
+      const range = buildDayRange(date)
+      return listLedgerEntries(store, { type, from: range.from, to: range.to })
+    },
+    listByRange: ({ from, to, type } = {}) => listLedgerEntries(store, { from, to, type }),
     listExpenseCategories: () => listCategoriesByType(store, 'expense'),
     listIncomeCategories: () => listCategoriesByType(store, 'income'),
     createExpenseCategory: ({ name, id, sortOrder = 0 }) =>

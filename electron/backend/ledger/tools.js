@@ -19,6 +19,41 @@ export function registerLedgerTools(store, { registerTool }) {
   })
 
   registerTool({
+    name: 'ledger.get_entry',
+    description: '获取单条收支记录',
+    riskLevel: 'low',
+    handler: async ({ id }) => ({ ok: true, result: ledger.getEntry(id) })
+  })
+
+  registerTool({
+    name: 'ledger.list_today',
+    description: '列出今日收支记录',
+    riskLevel: 'low',
+    handler: async (args = {}) => ({ ok: true, result: ledger.listToday(args) })
+  })
+
+  registerTool({
+    name: 'ledger.list_by_range',
+    description: '按时间范围列出收支记录',
+    riskLevel: 'low',
+    handler: async (args = {}) => ({ ok: true, result: ledger.listByRange(args) })
+  })
+
+  registerTool({
+    name: 'ledger.update_entry',
+    description: '更新收支记录',
+    riskLevel: 'high',
+    handler: async (args) => ({ ok: true, result: ledger.updateEntry(args) })
+  })
+
+  registerTool({
+    name: 'ledger.delete_entry',
+    description: '删除收支记录',
+    riskLevel: 'high',
+    handler: async (args) => ({ ok: true, result: ledger.deleteEntry(args) })
+  })
+
+  registerTool({
     name: 'ledger_category.list_expense',
     description: '只读查询当前全部支出类目，适合类目补查，无需确认',
     riskLevel: 'low',
