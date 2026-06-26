@@ -1,4 +1,4 @@
-import { getMessagesByDate, listScheduleEntries, listTodoEntries } from '../../db.js'
+import { getMessagesByDate, listObservationLogs, listScheduleEntries, listTodoEntries } from '../../db.js'
 import { listTools } from '../tools/registry.js'
 
 function summarizeRecentConversation(messages, limit = 8) {
@@ -35,6 +35,12 @@ function summarizeSchedules(store) {
   return items.map((item) => `- ${item.title} @ ${item.startAt}`).join('\n')
 }
 
+function summarizeObservations(store, date) {
+  const items = listObservationLogs(store, { date, limit: 5 })
+  if (items.length === 0) return '当前没有观察日志。'
+  return items.map((item) => `- [${item.type}] ${item.title}`).join('\n')
+}
+
 export function buildConversationContext(store, { date }) {
   const messages = getMessagesByDate(store, date)
 
@@ -44,7 +50,7 @@ export function buildConversationContext(store, { date }) {
     categorySummary: '当前类目摘要暂未接入，后续由收支与类目模块提供。',
     todoSummary: summarizeTodos(store),
     scheduleSummary: summarizeSchedules(store),
-    observationSummary: '当前没有观察日志摘要可用。',
+    observationSummary: summarizeObservations(store, date),
     memorySummary: '当前没有长期记忆摘要可用。',
     toolSummary: summarizeTools()
   }

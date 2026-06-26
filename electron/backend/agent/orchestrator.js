@@ -6,6 +6,7 @@ import { buildConversationPrompt, buildToolFollowupPrompt } from './promptBuilde
 import { evaluateToolCalls } from '../policy/toolPolicy.js'
 import { chat } from '../model/deepseek/client.js'
 import { executeToolCalls } from '../tools/gateway.js'
+import { createObservationService } from '../observation/service.js'
 
 const MAX_HISTORY_MESSAGES = 40
 const MAX_PROTOCOL_REPAIR_RETRIES = 1
@@ -81,6 +82,8 @@ function buildToolFollowupMessages(baseMessages, assistantReply, toolResult) {
 }
 
 export function createConversationOrchestrator(store) {
+  const observation = createObservationService(store)
+
   return {
     async runTurn({ date, message }) {
       const userMessage = saveMessage(store, {
@@ -152,6 +155,16 @@ export function createConversationOrchestrator(store) {
         role: 'cornie',
         content: finalReply
       })
+
+      try {
+        observation.recordConversationTurn({
+          date,
+          userMessage: message,
+          cornieMessage: finalReply
+        })
+      } catch (error) {
+        console.error('Observation log write error:', error)
+      }
 
       return {
         userMessage,

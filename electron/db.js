@@ -239,6 +239,25 @@ function migrate(db) {
           }
         )
       }
+    },
+    // v5: observation logs
+    (db) => {
+      db.run(`
+        create table if not exists observation_logs (
+          id text primary key,
+          date text not null,
+          type text not null,
+          title text not null,
+          content text not null,
+          related_ref text,
+          source_text text,
+          created_at integer not null,
+          updated_at integer not null
+        );
+      `)
+
+      db.run(`create index if not exists idx_observation_logs_date_created_at on observation_logs(date, created_at);`)
+      db.run(`create index if not exists idx_observation_logs_date_type on observation_logs(date, type);`)
     }
   ]
 
@@ -804,6 +823,148 @@ export function listScheduleEntries(store, { status, from, to } = {}) {
       endAt: r.endAt == null ? null : String(r.endAt),
       status: String(r.status),
       location: r.location == null ? null : String(r.location),
+      sourceText: r.sourceText == null ? null : String(r.sourceText),
+      createdAt: Number(r.createdAt),
+      updatedAt: Number(r.updatedAt)
+    })
+  }
+  stmt.free()
+  return rows
+}
+
+// ─── observation ───────────────────────────────────────────────────────────
+
+export function saveObservationLog(store, entry) {
+  const now = Date.now()
+  const finalId = entry.id || randomUUID()
+  store.db.run(
+    `
+    insert into observation_logs(
+      id, date, type, title, content, related_ref, source_text, created_at, updated_at
+    ) values (
+      $id, $date, $type, $title, $content, $related_ref, $source_text, $created_at, $updated_at
+    )
+    on conflict(id) do update set
+      date=excluded.date,
+      type=excluded.type,
+      title=excluded.title,
+      content=excluded.content,
+      related_ref=excluded.related_ref,
+      source_text=excluded.source_text,
+      updated_at=excluded.updated_at
+  `,
+    {
+      $id: finalId,
+      $date: entry.date,
+      $type: entry.type,
+      $title: entry.title,
+      $content: entry.content,
+      $related_ref: entry.relatedRef ?? null,
+      $source_text: entry.sourceText ?? null,
+      $created_at: now,
+      $updated_at: now
+    }
+  )
+  store.persist()
+  return getObservationLog(store, finalId)
+}
+
+export function updateObservationLog(store, { id, date, type, title, content, relatedRef, sourceText }) {
+  const now = Date.now()
+  store.db.run(
+    `
+    update observation_logs
+    set date = coalesce($date, date),
+        type = coalesce($type, type),
+        title = coalesce($title, title),
+        content = coalesce($content, content),
+        related_ref = coalesce($related_ref, related_ref),
+        source_text = coalesce($source_text, source_text),
+        updated_at = $updated_at
+    where id = $id
+  `,
+    {
+      $id: id,
+      $date: date ?? null,
+      $type: type ?? null,
+      $title: title ?? null,
+      $content: content ?? null,
+      $related_ref: relatedRef ?? null,
+      $source_text: sourceText ?? null,
+      $updated_at: now
+    }
+  )
+  store.persist()
+  return getObservationLog(store, id)
+}
+
+export function deleteObservationLog(store, id) {
+  store.db.run('delete from observation_logs where id = $id', { $id: id })
+  store.persist()
+}
+
+export function getObservationLog(store, id) {
+  const stmt = store.db.prepare(
+    `select id, date, type, title, content, related_ref as relatedRef, source_text as sourceText, created_at as createdAt, updated_at as updatedAt from observation_logs where id = $id`
+  )
+  stmt.bind({ $id: id })
+  const row = stmt.step() ? stmt.getAsObject() : null
+  stmt.free()
+  if (!row) return null
+  return {
+    id: String(row.id),
+    date: String(row.date),
+    type: String(row.type),
+    title: String(row.title),
+    content: String(row.content),
+    relatedRef: row.relatedRef == null ? null : String(row.relatedRef),
+    sourceText: row.sourceText == null ? null : String(row.sourceText),
+    createdAt: Number(row.createdAt),
+    updatedAt: Number(row.updatedAt)
+  }
+}
+
+export function listObservationLogs(store, { date, from, to, type, limit = 50 } = {}) {
+  const where = []
+  const params = { $limit: Math.max(1, Math.min(200, Number.parseInt(String(limit), 10) || 50)) }
+
+  if (date) {
+    where.push('date = $date')
+    params.$date = date
+  }
+  if (from) {
+    where.push('date >= $from')
+    params.$from = from
+  }
+  if (to) {
+    where.push('date <= $to')
+    params.$to = to
+  }
+  if (type) {
+    where.push('type = $type')
+    params.$type = type
+  }
+
+  const sql = `
+    select id, date, type, title, content, related_ref as relatedRef, source_text as sourceText, created_at as createdAt, updated_at as updatedAt
+    from observation_logs
+    ${where.length ? `where ${where.join(' and ')}` : ''}
+    order by created_at desc
+    limit $limit
+  `
+  const stmt = store.db.prepare(sql)
+  stmt.bind(params)
+
+  const rows = []
+  while (stmt.step()) {
+    const r = stmt.getAsObject()
+    rows.push({
+      id: String(r.id),
+      date: String(r.date),
+      type: String(r.type),
+      title: String(r.title),
+      content: String(r.content),
+      relatedRef: r.relatedRef == null ? null : String(r.relatedRef),
       sourceText: r.sourceText == null ? null : String(r.sourceText),
       createdAt: Number(r.createdAt),
       updatedAt: Number(r.updatedAt)

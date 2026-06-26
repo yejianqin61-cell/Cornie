@@ -9,6 +9,7 @@ import { registerTool } from './backend/tools/registry.js'
 import { registerLedgerTools } from './backend/ledger/tools.js'
 import { registerTodoTools } from './backend/todo/tools.js'
 import { registerScheduleTools } from './backend/schedule/tools.js'
+import { registerObservationTools } from './backend/observation/tools.js'
 
 export function createServer({ store }) {
   const app = express()
@@ -42,6 +43,7 @@ export function createServer({ store }) {
   registerLedgerTools(store, { registerTool })
   registerTodoTools(store, { registerTool })
   registerScheduleTools(store, { registerTool })
+  registerObservationTools(store, { registerTool })
 
   const conversation = conversationService(store)
   app.use('/api', conversationRoutes({ conversation }))
