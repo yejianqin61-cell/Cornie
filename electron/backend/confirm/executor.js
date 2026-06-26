@@ -3,8 +3,8 @@ import { getMessagesByDate, saveMessage } from '../../db.js'
 import { buildJsonRepairPrompt, parseModelJson } from '../agent/jsonProtocol.js'
 import { buildConversationContext } from '../agent/contextBuilder.js'
 import { buildConversationPrompt, buildToolFollowupPrompt } from '../agent/promptBuilder.js'
-import { executeToolCalls } from '../tools/gateway.js'
 import { chat } from '../model/deepseek/client.js'
+import { executeToolCalls } from '../tools/gateway.js'
 
 const MAX_HISTORY_MESSAGES = 40
 const MAX_PROTOCOL_REPAIR_RETRIES = 1
@@ -76,14 +76,128 @@ function buildToolFollowupMessages(baseMessages, assistantReply, toolResult) {
   ])
 }
 
+function isCategoryCreationConfirmation(confirmation) {
+  return confirmation?.confirmRequest?.kind === 'category_creation_confirmation'
+}
+
+function getPendingActionToolCall(confirmation) {
+  const pendingAction = confirmation?.confirmRequest?.pendingAction
+  if (pendingAction?.toolName) {
+    return {
+      tool_name: pendingAction.toolName,
+      arguments: pendingAction.arguments ?? {}
+    }
+  }
+
+  if (Array.isArray(confirmation?.toolCalls) && confirmation.toolCalls.length > 0) {
+    return confirmation.toolCalls[0]
+  }
+
+  throw new Error('pending action tool call is missing')
+}
+
+function buildCategoryCreationToolCall(confirmation, pendingActionToolCall) {
+  const { domain, proposedCategoryName } = confirmation.confirmRequest ?? {}
+  if (!proposedCategoryName) {
+    throw new Error('proposed category name is required')
+  }
+
+  if (domain === 'ledger') {
+    return {
+      tool_name:
+        pendingActionToolCall.tool_name === 'ledger.add_income'
+          ? 'ledger_category.create_income'
+          : 'ledger_category.create_expense',
+      arguments: {
+        name: proposedCategoryName
+      }
+    }
+  }
+
+  if (domain === 'todo') {
+    return {
+      tool_name: 'todo_category.create',
+      arguments: {
+        name: proposedCategoryName
+      }
+    }
+  }
+
+  if (domain === 'schedule') {
+    return {
+      tool_name: 'schedule_category.create',
+      arguments: {
+        name: proposedCategoryName
+      }
+    }
+  }
+
+  throw new Error(`unsupported category confirmation domain: ${domain}`)
+}
+
+function buildResumedActionToolCall(pendingActionToolCall, createdCategory) {
+  if (!createdCategory?.id || !createdCategory?.name) {
+    throw new Error('created category payload is invalid')
+  }
+
+  const nextArguments = {
+    ...(pendingActionToolCall.arguments ?? {}),
+    categoryId: createdCategory.id,
+    categoryName: createdCategory.name
+  }
+
+  delete nextArguments.needsNewCategory
+  delete nextArguments.proposedCategoryName
+  delete nextArguments.proposed_category_name
+  delete nextArguments.categoryProposalName
+
+  return {
+    tool_name: pendingActionToolCall.tool_name,
+    arguments: nextArguments
+  }
+}
+
+async function executeConfirmedCategoryCreation(store, confirmation) {
+  const pendingActionToolCall = getPendingActionToolCall(confirmation)
+  const categoryCreateToolCall = buildCategoryCreationToolCall(confirmation, pendingActionToolCall)
+
+  const categoryCreationResult = await executeToolCalls([categoryCreateToolCall], {
+    date: confirmation.date,
+    store,
+    source: 'confirmation'
+  })
+
+  const createdCategoryResult = categoryCreationResult.results[0]
+  if (!createdCategoryResult?.ok) {
+    throw new Error(createdCategoryResult?.error?.message || 'failed to create category')
+  }
+
+  const resumedActionToolCall = buildResumedActionToolCall(
+    pendingActionToolCall,
+    createdCategoryResult.result
+  )
+  const resumedActionResult = await executeToolCalls([resumedActionToolCall], {
+    date: confirmation.date,
+    store,
+    source: 'confirmation'
+  })
+
+  return {
+    type: 'tool_result',
+    results: [...categoryCreationResult.results, ...resumedActionResult.results]
+  }
+}
+
 export function createConfirmExecutor(store) {
   return {
     async execute(confirmation) {
-      const toolResult = await executeToolCalls(confirmation.toolCalls, {
-        date: confirmation.date,
-        store,
-        source: 'confirmation'
-      })
+      const toolResult = isCategoryCreationConfirmation(confirmation)
+        ? await executeConfirmedCategoryCreation(store, confirmation)
+        : await executeToolCalls(confirmation.toolCalls, {
+            date: confirmation.date,
+            store,
+            source: 'confirmation'
+          })
 
       const baseMessages = buildBaseMessages(store, confirmation.date)
       const followupMessages = buildToolFollowupMessages(
@@ -96,7 +210,7 @@ export function createConfirmExecutor(store) {
       const finalReply =
         envelope.type === 'reply'
           ? envelope.assistant_reply
-          : confirmation.assistantReply || '小铃湾已经处理好了。'
+          : confirmation.assistantReply || '小铃湾已经处理好啦。'
 
       const cornieMessage = saveMessage(store, {
         id: randomUUID(),
@@ -115,7 +229,10 @@ export function createConfirmExecutor(store) {
     },
 
     reject(confirmation) {
-      const content = '好的，这次小铃湾先不动手啦。如果主人想改主意，随时再告诉我。'
+      const content = isCategoryCreationConfirmation(confirmation)
+        ? '好呀，那这次小铃湾先不新增这个类目，也先不继续原来的动作啦。'
+        : '好的，这次小铃湾先不动手啦。如果主人想改主意，随时再告诉我。'
+
       const cornieMessage = saveMessage(store, {
         id: randomUUID(),
         date: confirmation.date,
