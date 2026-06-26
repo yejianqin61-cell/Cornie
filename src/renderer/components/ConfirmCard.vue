@@ -3,6 +3,14 @@ const props = defineProps({
   request: {
     type: Object,
     default: () => ({})
+  },
+  status: {
+    type: String,
+    default: 'pending'
+  },
+  errorMessage: {
+    type: String,
+    default: ''
   }
 })
 
@@ -11,6 +19,7 @@ const emit = defineEmits(['confirm', 'reject'])
 function getTitle(request) {
   if (request?.title) return request.title
   if (request?.tool_name) return `需要确认：${request.tool_name}`
+  if (request?.toolName) return `需要确认：${request.toolName}`
   return '需要你确认一下'
 }
 
@@ -22,8 +31,9 @@ function getDetails(request) {
   if (Array.isArray(request?.details) && request.details.length > 0) {
     return request.details
   }
-  if (request?.payload && typeof request.payload === 'object') {
-    return Object.entries(request.payload).map(([key, value]) => `${key}：${String(value)}`)
+  const payload = request?.payload || request?.arguments
+  if (payload && typeof payload === 'object') {
+    return Object.entries(payload).map(([key, value]) => `${key}：${String(value)}`)
   }
   return []
 }
@@ -39,11 +49,27 @@ function getDetails(request) {
       <div v-for="item in getDetails(props.request)" :key="item" class="confirmDetail">{{ item }}</div>
     </div>
 
+    <div v-if="props.errorMessage" class="confirmError">{{ props.errorMessage }}</div>
+    <div v-if="props.status === 'approved'" class="confirmState">已同意，正在继续处理。</div>
+    <div v-else-if="props.status === 'rejected'" class="confirmState">已拒绝，本次不会执行。</div>
+    <div v-else-if="props.status === 'failed'" class="confirmState">处理失败，可以稍后重试。</div>
+    <div v-else-if="props.status === 'processing'" class="confirmState">小铃湾正在继续处理...</div>
+
     <div class="confirmActions">
-      <button type="button" class="confirmBtn confirmBtnPrimary" @click="emit('confirm', props.request)">
-        同意
+      <button
+        type="button"
+        class="confirmBtn confirmBtnPrimary"
+        :disabled="props.status !== 'pending'"
+        @click="emit('confirm', props.request)"
+      >
+        {{ props.status === 'processing' ? '处理中' : '同意' }}
       </button>
-      <button type="button" class="confirmBtn" @click="emit('reject', props.request)">
+      <button
+        type="button"
+        class="confirmBtn"
+        :disabled="props.status !== 'pending'"
+        @click="emit('reject', props.request)"
+      >
         拒绝
       </button>
     </div>
@@ -95,6 +121,18 @@ function getDetails(request) {
   word-break: break-word;
 }
 
+.confirmError{
+  margin-top: 8px;
+  font-size: 11px;
+  color: rgba(254,202,202,.92);
+}
+
+.confirmState{
+  margin-top: 8px;
+  font-size: 11px;
+  color: rgba(255,255,255,.72);
+}
+
 .confirmActions{
   margin-top: 10px;
   display: flex;
@@ -115,5 +153,10 @@ function getDetails(request) {
 .confirmBtnPrimary{
   border-color: rgba(253,224,71,.30);
   background: rgba(250,204,21,.18);
+}
+
+.confirmBtn:disabled{
+  opacity: .55;
+  cursor: not-allowed;
 }
 </style>

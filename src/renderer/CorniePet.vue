@@ -2,7 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
 import { cornieCssVars, cornieEyeOverlay, corniePetTransform, cornieStage } from './cornieConfig'
 import { createCornieBlinkController } from './cornieBlink'
-import { sendMessage } from './api'
+import { listConfirmations, sendMessage, submitConfirmationDecision } from './api'
 import ToolResultPanel from './components/ToolResultPanel.vue'
 import ConfirmCard from './components/ConfirmCard.vue'
 import AskBackBubble from './components/AskBackBubble.vue'
@@ -28,7 +28,7 @@ const stageTransformStyle = computed(() => ({
 }))
 
 const headDipPx = ref(0)
-const eyeLayer = ref('none') // none | half | closed
+const eyeLayer = ref('none')
 
 const editing = ref(false)
 const overlay = reactive({ ...cornieEyeOverlay })
@@ -36,10 +36,8 @@ const hover = ref(false)
 const pinned = ref(false)
 const message = ref('')
 const dragReady = ref(false)
-/** 显示可拖动/可悬浮的 hitbox 范围（调试用，按 H 切换；URL ?hitbox=0 关闭、?hitbox=1 开启） */
 const showHitbox = ref(true)
 
-// 对话状态
 const messages = ref([])
 const sending = ref(false)
 const chatListRef = ref(null)
@@ -60,6 +58,7 @@ const overlayStyle = computed(() => ({
 function hideLayers() {
   eyeLayer.value = 'none'
 }
+
 function showLayer(name) {
   eyeLayer.value = name
 }
@@ -100,8 +99,8 @@ onMounted(() => {
   })
   blink.start()
 
-  // 快捷键：E 切编辑、B 立刻眨眼、C 复制配置
   window.addEventListener('keydown', onKeyDown)
+  restorePendingConfirmations()
 })
 
 onBeforeUnmount(() => {
@@ -140,13 +139,6 @@ let drag = null
 let resize = null
 let windowDrag = null
 
-function stagePoint(e) {
-  const el = e.currentTarget?.closest?.('.stage')
-  const rect = el?.getBoundingClientRect?.()
-  if (!rect) return { x: 0, y: 0 }
-  return { x: e.clientX - rect.left, y: e.clientY - rect.top }
-}
-
 function onOverlayPointerDown(e) {
   if (!editing.value) return
   if (e.target?.classList?.contains?.('handle')) return
@@ -161,8 +153,7 @@ function onOverlayPointerDown(e) {
 }
 
 function onOverlayPointerMove(e) {
-  if (!editing.value) return
-  if (!drag) return
+  if (!editing.value || !drag) return
   const dx = e.clientX - drag.startX
   const dy = e.clientY - drag.startY
   overlay.x = Math.round(drag.baseX + dx)
@@ -187,8 +178,7 @@ function onHandleDown(e) {
 }
 
 function onHandleMove(e) {
-  if (!editing.value) return
-  if (!resize) return
+  if (!editing.value || !resize) return
   const dx = e.clientX - resize.startX
   const dy = e.clientY - resize.startY
   overlay.w = Math.max(10, Math.round(resize.baseW + dx))
@@ -201,7 +191,6 @@ function canWindowDrag() {
 
 function onDragPointerDown(e) {
   if (!canWindowDrag()) return
-  // 左键/主指针
   if (e.button !== undefined && e.button !== 0) return
   windowDrag = { pointerId: e.pointerId }
   try {
@@ -211,8 +200,7 @@ function onDragPointerDown(e) {
 }
 
 function onDragPointerMove(e) {
-  if (!windowDrag) return
-  if (!canWindowDrag()) return
+  if (!windowDrag || !canWindowDrag()) return
   window.cornieDesktop.dragMove({ screenX: e.screenX, screenY: e.screenY })
 }
 
@@ -225,7 +213,6 @@ function onDragPointerUp() {
 }
 
 function shouldShowChat() {
-  // 输入条常驻显示在浅粉背景内（编辑眨眼层时隐藏，避免挡操作）
   if (editing.value) return false
   return true
 }
@@ -234,6 +221,7 @@ function onEnter() {
   if (editing.value) return
   hover.value = true
 }
+
 function onLeave() {
   if (editing.value) return
   hover.value = false
@@ -248,6 +236,12 @@ function pushChatItem(item) {
     id: item.id || `${item.kind}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     ...item
   })
+}
+
+function setConfirmMessageState(id, patch) {
+  const target = messages.value.find((item) => item.id === id)
+  if (!target) return
+  Object.assign(target, patch)
 }
 
 function appendResponse(data) {
@@ -271,7 +265,10 @@ function appendResponse(data) {
   if (decision === 'confirm') {
     pushChatItem({
       kind: 'confirm',
-      request: data.policyDecision.confirmRequest || {}
+      request: data.policyDecision.confirmRequest || {},
+      pendingConfirmationId: data?.pendingConfirmation?.id || '',
+      status: data?.pendingConfirmation?.status || 'pending',
+      errorMessage: ''
     })
   } else if (decision === 'ask_back') {
     pushChatItem({
@@ -287,23 +284,75 @@ function appendResponse(data) {
   }
 }
 
-function handleConfirmAction(action, request) {
-  const text =
-    action === 'confirm'
-      ? '我先把你的同意记下来了。确认回传接口我会在下一步接上。'
-      : '我先把你的拒绝记下来了。确认回传接口我会在下一步接上。'
+async function restorePendingConfirmations() {
+  try {
+    const data = await listConfirmations({ date: today(), status: 'pending' })
+    for (const confirmation of data?.confirmations || []) {
+      const exists = messages.value.some(
+        (item) => item.kind === 'confirm' && item.pendingConfirmationId === confirmation.id
+      )
+      if (!exists) {
+        pushChatItem({
+          kind: 'confirm',
+          request: confirmation.confirmRequest || {},
+          pendingConfirmationId: confirmation.id,
+          status: confirmation.status || 'pending',
+          errorMessage: ''
+        })
+      }
+    }
+  } catch {
+    // ignore restore failure
+  }
+}
 
-  pushChatItem({
-    kind: 'message',
-    role: 'user',
-    content: action === 'confirm' ? '同意这次操作' : '拒绝这次操作'
-  })
-  pushChatItem({
-    kind: 'message',
-    role: 'cornie',
-    content: request?.title ? `${request.title}\n\n${text}` : text
+async function handleConfirmAction(action, item) {
+  if (!item?.pendingConfirmationId || item.status !== 'pending') return
+
+  setConfirmMessageState(item.id, {
+    status: 'processing',
+    errorMessage: ''
   })
   scrollChatToBottom()
+
+  try {
+    const result = await submitConfirmationDecision(
+      item.pendingConfirmationId,
+      action === 'confirm' ? 'approve' : 'reject'
+    )
+
+    setConfirmMessageState(item.id, {
+      status: result?.confirmation?.status || (action === 'confirm' ? 'approved' : 'rejected'),
+      errorMessage: ''
+    })
+
+    if (
+      result?.toolExecution?.used &&
+      Array.isArray(result.toolExecution.results) &&
+      result.toolExecution.results.length > 0
+    ) {
+      pushChatItem({
+        kind: 'tool_result',
+        results: result.toolExecution.results
+      })
+    }
+
+    if (result?.cornieMessage?.content) {
+      pushChatItem({
+        kind: 'message',
+        role: 'cornie',
+        content: result.cornieMessage.content,
+        id: result.cornieMessage.id
+      })
+    }
+  } catch (error) {
+    setConfirmMessageState(item.id, {
+      status: 'failed',
+      errorMessage: error?.message || '确认处理失败，请稍后再试。'
+    })
+  } finally {
+    scrollChatToBottom()
+  }
 }
 
 async function send() {
@@ -318,7 +367,7 @@ async function send() {
   try {
     const data = await sendMessage(text, today())
     appendResponse(data)
-  } catch (e) {
+  } catch {
     pushChatItem({
       kind: 'message',
       role: 'cornie',
@@ -352,7 +401,6 @@ async function scrollChatToBottom() {
       @mouseenter="onEnter"
       @mouseleave="onLeave"
     >
-      <!-- 角色区：在浅粉 hitbox 内水平居中、靠上（中上） -->
       <div class="hitboxPetArea">
         <div class="stageWrap" :style="stageTransformStyle">
           <div class="stage" :style="stageStyle">
@@ -372,7 +420,6 @@ async function scrollChatToBottom() {
             >
               <img :src="p.src" :alt="p.label" draggable="false" />
 
-              <!-- 眨眼覆盖层：只挂在 head 上 -->
               <div
                 v-if="p.id === 'head'"
                 class="eyeGroup"
@@ -395,7 +442,6 @@ async function scrollChatToBottom() {
         </div>
       </div>
 
-      <!-- 对话气泡区 -->
       <div
         v-if="shouldShowChat() && messages.length > 0"
         ref="chatListRef"
@@ -408,9 +454,7 @@ async function scrollChatToBottom() {
           v-for="m in messages"
           :key="m.id"
           class="chatItem"
-          :class="[
-            m.kind === 'message' && m.role === 'user' ? 'chatItemUser' : 'chatItemCornie'
-          ]"
+          :class="[m.kind === 'message' && m.role === 'user' ? 'chatItemUser' : 'chatItemCornie']"
         >
           <template v-if="m.kind === 'message'">
             <div class="bubble" :class="m.role === 'user' ? 'bubbleUser' : 'bubbleCornie'">
@@ -426,8 +470,10 @@ async function scrollChatToBottom() {
           <template v-else-if="m.kind === 'confirm'">
             <ConfirmCard
               :request="m.request"
-              @confirm="handleConfirmAction('confirm', $event)"
-              @reject="handleConfirmAction('reject', $event)"
+              :status="m.status || 'pending'"
+              :error-message="m.errorMessage || ''"
+              @confirm="handleConfirmAction('confirm', m)"
+              @reject="handleConfirmAction('reject', m)"
             />
           </template>
 
@@ -442,19 +488,19 @@ async function scrollChatToBottom() {
             </div>
           </template>
         </div>
+
         <div v-if="sending" class="bubble bubbleCornie">
           <div class="bubbleRole">Cornie</div>
           <div class="bubbleText thinking">正在思考...</div>
         </div>
       </div>
 
-      <!-- 紧挨 Cornie 下方、叠在浅粉背景上的扁输入栏 -->
       <div v-if="shouldShowChat()" class="chatBar" @pointerdown.stop @pointermove.stop @pointerup.stop>
         <input
           v-model="message"
           type="text"
           class="chatInputFlat"
-          placeholder="和 Cornie 说句话…"
+          placeholder="和 Cornie 说句话..."
           @keydown.enter.prevent="send"
         />
         <button type="button" class="pinBtnSm" :class="{ on: pinned }" title="固定/解除" @click="togglePinned">
@@ -504,10 +550,8 @@ async function scrollChatToBottom() {
   align-items: flex-start;
   width: 100%;
   flex: 0 0 auto;
-  /* 中上：水平居中、靠上 */
   padding-top: 2px;
 }
-/* 调试用：浅粉底 + 虚线；输入栏同为 hitbox 子元素，同在背景范围内 */
 .hitbox--debug{
   background: rgba(244, 114, 182, 0.14);
   outline: 1px dashed rgba(244, 114, 182, 0.75);
@@ -538,8 +582,6 @@ async function scrollChatToBottom() {
   pointer-events: none;
   user-select: none;
 }
-
-/* 固化配置：每个部件使用对应 CSS 变量 */
 .p-tail1{
   z-index: var(--tail1-z);
   opacity: var(--tail1-o);
@@ -560,13 +602,9 @@ async function scrollChatToBottom() {
   opacity: var(--ring-o);
   transform: translate(var(--ring-x), var(--ring-y)) rotate(var(--ring-r)) scale(var(--ring-s));
 }
-
-/* 眨眼覆盖层（在 head 内部定位，继承 head 的变换） */
-.headPart{ }
 .eyeGroup{
   position:absolute;
   pointer-events: none;
-  /* 避免拖拽区域吞掉交互（编辑/未来点击） */
   -webkit-app-region: no-drag;
 }
 .eyeGroup.editing{
@@ -603,7 +641,6 @@ async function scrollChatToBottom() {
   border: 1px solid rgba(0,0,0,.35);
   cursor: nwse-resize;
 }
-
 .chatBubbles{
   width: 100%;
   max-height: 220px;
@@ -617,20 +654,16 @@ async function scrollChatToBottom() {
 }
 .chatBubbles::-webkit-scrollbar{ width: 4px; }
 .chatBubbles::-webkit-scrollbar-thumb{ background: rgba(255,255,255,.15); border-radius: 999px; }
-
 .chatItem{
   width: 100%;
   display: flex;
 }
-
 .chatItemUser{
   justify-content: flex-end;
 }
-
 .chatItemCornie{
   justify-content: flex-start;
 }
-
 .bubble{
   max-width: 90%;
   padding: 8px 12px;
@@ -669,7 +702,6 @@ async function scrollChatToBottom() {
   color: rgba(255,255,255,.45);
   font-style: italic;
 }
-
 .chatBar{
   display: flex;
   align-items: center;
@@ -733,4 +765,3 @@ async function scrollChatToBottom() {
   cursor: not-allowed;
 }
 </style>
-
