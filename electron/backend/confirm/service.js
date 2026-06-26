@@ -4,6 +4,7 @@ import {
   listPendingConfirmationsByDate,
   updatePendingConfirmationStatus
 } from '../../db.js'
+import { badRequest, HttpError } from '../http/errors.js'
 
 function inferConfirmType(confirmRequest) {
   if (typeof confirmRequest?.kind === 'string' && confirmRequest.kind.trim()) {
@@ -16,6 +17,20 @@ function inferConfirmType(confirmRequest) {
 }
 
 export function createConfirmService(store) {
+  function requireExisting(id) {
+    const confirmation = getPendingConfirmation(store, id)
+    if (!confirmation) {
+      throw new HttpError(404, 'confirmation not found')
+    }
+    return confirmation
+  }
+
+  function ensurePending(confirmation) {
+    if (confirmation.status !== 'pending') {
+      throw new HttpError(409, `confirmation is already ${confirmation.status}`)
+    }
+  }
+
   return {
     createPending(input) {
       if (!input?.date) throw new Error('pending confirmation date is required')
@@ -53,6 +68,28 @@ export function createConfirmService(store) {
       if (!id) throw new Error('pending confirmation id is required')
       if (!status) throw new Error('pending confirmation status is required')
       return updatePendingConfirmationStatus(store, { id, status, resolvedAt })
+    },
+
+    approve(id) {
+      if (!id) throw badRequest('confirmation id is required')
+      const confirmation = requireExisting(id)
+      ensurePending(confirmation)
+      return updatePendingConfirmationStatus(store, {
+        id,
+        status: 'approved',
+        resolvedAt: Date.now()
+      })
+    },
+
+    reject(id) {
+      if (!id) throw badRequest('confirmation id is required')
+      const confirmation = requireExisting(id)
+      ensurePending(confirmation)
+      return updatePendingConfirmationStatus(store, {
+        id,
+        status: 'rejected',
+        resolvedAt: Date.now()
+      })
     }
   }
 }

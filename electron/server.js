@@ -5,6 +5,8 @@ import { chatlogRoutes } from './backend/chatlog/routes.js'
 import { conversationRoutes } from './backend/conversation/routes.js'
 import { conversationService } from './backend/conversation/service.js'
 import { createChatlogService } from './backend/chatlog/service.js'
+import { createConfirmService } from './backend/confirm/service.js'
+import { confirmRoutes } from './backend/confirm/routes.js'
 import { checkHealth as checkModelHealth } from './backend/model/deepseek/client.js'
 import { jsonErrorHandler } from './backend/http/middleware.js'
 import { registerTool } from './backend/tools/registry.js'
@@ -51,6 +53,9 @@ export function createServer({ store }) {
   registerScheduleTools(store, { registerTool })
   registerObservationTools(store, { registerTool })
   registerMemoryTools(store, { registerTool })
+
+  const confirm = createConfirmService(store)
+  app.use('/api', confirmRoutes({ confirm }))
 
   const conversation = conversationService(store)
   app.use('/api', conversationRoutes({ conversation }))
