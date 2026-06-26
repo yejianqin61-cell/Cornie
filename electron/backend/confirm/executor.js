@@ -365,10 +365,27 @@ export function createConfirmExecutor(store) {
       }
     },
 
-    reject(confirmation) {
-      const content = isCategoryCreationConfirmation(confirmation)
-        ? '好呀，那这次小铃湾先不新增这个类目，也先不继续原来的动作啦。'
-        : '好的，这次小铃湾先不动手啦。如果主人想改主意，随时再告诉我。'
+    reject(confirmation, options = {}) {
+      const resolution = options.categoryRejectResolution
+      let content
+
+      if (isCategoryCreationConfirmation(confirmation)) {
+        if (resolution?.mode === 'suggest_existing_category') {
+          content = `好呀，那这次小铃湾先不新增“${confirmation.confirmRequest?.proposedCategoryName || '这个类目'}”。不过如果主人愿意，我建议改用现有类目“${resolution.suggestedCategoryName}”，这样这次动作还是可以继续完成。`
+        } else if (resolution?.mode === 'ask_user_pick_existing') {
+          const names = Array.isArray(resolution.candidates)
+            ? resolution.candidates.map((item) => item.name).filter(Boolean).slice(0, 3)
+            : []
+          content =
+            names.length > 0
+              ? `好呀，那这次小铃湾先不新增这个类目。不过现在有几个接近的现有类目可以选：${names.join('、')}。如果主人愿意，我可以再按你选的那个继续。`
+              : '好呀，那这次小铃湾先不新增这个类目，也先不继续原来的动作啦。'
+        } else {
+          content = '好呀，那这次小铃湾先不新增这个类目，也先不继续原来的动作啦。'
+        }
+      } else {
+        content = '好的，这次小铃湾先不动手啦。如果主人想改主意，随时再告诉我。'
+      }
 
       const cornieMessage = saveMessage(store, {
         id: randomUUID(),
@@ -376,7 +393,10 @@ export function createConfirmExecutor(store) {
         role: 'cornie',
         content
       })
-      return { cornieMessage }
+      return {
+        cornieMessage,
+        categoryRejectResolution: resolution ?? null
+      }
     }
   }
 }

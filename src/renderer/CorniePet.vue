@@ -345,6 +345,16 @@ async function handleConfirmAction(action, item) {
         id: result.cornieMessage.id
       })
     }
+
+    if (result?.followupConfirmation?.id && result?.followupConfirmation?.confirmRequest) {
+      pushChatItem({
+        kind: 'confirm',
+        request: result.followupConfirmation.confirmRequest,
+        pendingConfirmationId: result.followupConfirmation.id,
+        status: result.followupConfirmation.status || 'pending',
+        errorMessage: ''
+      })
+    }
   } catch (error) {
     setConfirmMessageState(item.id, {
       status: 'failed',

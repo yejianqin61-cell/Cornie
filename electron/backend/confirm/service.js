@@ -6,6 +6,10 @@ import {
 } from '../../db.js'
 import { logCategoryAudit } from '../category/audit.js'
 import { badRequest, HttpError } from '../http/errors.js'
+import {
+  buildCategoryRejectFollowupConfirmRequest,
+  deriveCategoryRejectResolution
+} from './fallback.js'
 import { createConfirmExecutor } from './executor.js'
 
 function inferConfirmType(confirmRequest) {
@@ -145,9 +149,52 @@ export function createConfirmService(store) {
           reason: updatedConfirmation.confirmRequest.reason
         })
       }
-      const rejectionResult = executor.reject(updatedConfirmation)
+      const categoryRejectResolution = deriveCategoryRejectResolution(store, updatedConfirmation)
+      const followupConfirmRequest = buildCategoryRejectFollowupConfirmRequest(
+        updatedConfirmation,
+        categoryRejectResolution
+      )
+
+      if (followupConfirmRequest) {
+        logCategoryAudit({
+          eventType: 'category_mapping_needs_confirmation',
+          domain: updatedConfirmation.confirmRequest.domain,
+          confirmRequestId: updatedConfirmation.id,
+          toolName: followupConfirmRequest.toolName,
+          sourceText: updatedConfirmation.sourceText,
+          categoryId: followupConfirmRequest.recommendedCategory?.id ?? null,
+          categoryName: followupConfirmRequest.recommendedCategory?.name ?? null,
+          proposedCategoryName: updatedConfirmation.confirmRequest.proposedCategoryName,
+          similarCandidates: Array.isArray(followupConfirmRequest.similarCandidates)
+            ? followupConfirmRequest.similarCandidates.map((item) => item.name)
+            : [],
+          decision: 'confirm',
+          reason: followupConfirmRequest.reason
+        })
+      }
+
+      const rejectionResult = executor.reject(updatedConfirmation, {
+        categoryRejectResolution
+      })
+
+      let followupConfirmation = null
+      if (followupConfirmRequest) {
+        followupConfirmation = createPendingConfirmation(store, {
+          date: updatedConfirmation.date,
+          conversationMessageId: rejectionResult.cornieMessage?.id ?? updatedConfirmation.conversationMessageId,
+          status: 'pending',
+          sourceText: updatedConfirmation.sourceText,
+          assistantReply: rejectionResult.cornieMessage?.content ?? null,
+          confirmType: inferConfirmType(followupConfirmRequest),
+          toolCalls: updatedConfirmation.toolCalls,
+          confirmRequest: followupConfirmRequest
+        })
+      }
+
       return {
         confirmation: updatedConfirmation,
+        followupConfirmation,
+        categoryRejectResolution,
         ...rejectionResult
       }
     }
