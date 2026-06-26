@@ -1,5 +1,6 @@
 import { getMessagesByDate, listObservationLogs, listScheduleEntries, listTodoEntries } from '../../db.js'
 import { listTools } from '../tools/registry.js'
+import { buildMemorySearchSummary } from '../memory/search.js'
 
 function summarizeRecentConversation(messages, limit = 8) {
   if (!Array.isArray(messages) || messages.length === 0) {
@@ -43,6 +44,10 @@ function summarizeObservations(store, date) {
 
 export function buildConversationContext(store, { date }) {
   const messages = getMessagesByDate(store, date)
+  const memorySummary = buildMemorySearchSummary(store, {
+    query: messages.slice(-3).map((item) => item.content).join(' '),
+    limit: 5
+  })
 
   return {
     date,
@@ -51,7 +56,7 @@ export function buildConversationContext(store, { date }) {
     todoSummary: summarizeTodos(store),
     scheduleSummary: summarizeSchedules(store),
     observationSummary: summarizeObservations(store, date),
-    memorySummary: '当前没有长期记忆摘要可用。',
+    memorySummary,
     toolSummary: summarizeTools()
   }
 }

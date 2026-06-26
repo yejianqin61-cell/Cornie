@@ -258,6 +258,31 @@ function migrate(db) {
 
       db.run(`create index if not exists idx_observation_logs_date_created_at on observation_logs(date, created_at);`)
       db.run(`create index if not exists idx_observation_logs_date_type on observation_logs(date, type);`)
+    },
+    // v6: long-term memory
+    (db) => {
+      db.run(`
+        create table if not exists memory_entries (
+          id text primary key,
+          kind text not null,
+          title text not null,
+          content text not null,
+          tags_json text,
+          source_text text,
+          weight real default 1.0,
+          is_active integer not null default 1,
+          last_used_at integer,
+          archived_at integer,
+          superseded_by text,
+          summary_group text,
+          created_at integer not null,
+          updated_at integer not null
+        );
+      `)
+
+      db.run(`create index if not exists idx_memory_entries_active_weight on memory_entries(is_active, weight);`)
+      db.run(`create index if not exists idx_memory_entries_kind_active on memory_entries(kind, is_active);`)
+      db.run(`create index if not exists idx_memory_entries_summary_group on memory_entries(summary_group);`)
     }
   ]
 
@@ -972,6 +997,224 @@ export function listObservationLogs(store, { date, from, to, type, limit = 50 } 
   }
   stmt.free()
   return rows
+}
+
+// ─── memory ────────────────────────────────────────────────────────────────
+
+function parseJsonArray(text) {
+  if (!text) return []
+  try {
+    const value = JSON.parse(text)
+    return Array.isArray(value) ? value : []
+  } catch {
+    return []
+  }
+}
+
+export function saveMemoryEntry(store, entry) {
+  const now = Date.now()
+  const finalId = entry.id || randomUUID()
+  const tagsJson = JSON.stringify(Array.isArray(entry.tags) ? entry.tags : [])
+  store.db.run(
+    `
+    insert into memory_entries(
+      id, kind, title, content, tags_json, source_text, weight, is_active,
+      last_used_at, archived_at, superseded_by, summary_group, created_at, updated_at
+    ) values (
+      $id, $kind, $title, $content, $tags_json, $source_text, $weight, $is_active,
+      $last_used_at, $archived_at, $superseded_by, $summary_group, $created_at, $updated_at
+    )
+    on conflict(id) do update set
+      kind=excluded.kind,
+      title=excluded.title,
+      content=excluded.content,
+      tags_json=excluded.tags_json,
+      source_text=excluded.source_text,
+      weight=excluded.weight,
+      is_active=excluded.is_active,
+      last_used_at=excluded.last_used_at,
+      archived_at=excluded.archived_at,
+      superseded_by=excluded.superseded_by,
+      summary_group=excluded.summary_group,
+      updated_at=excluded.updated_at
+  `,
+    {
+      $id: finalId,
+      $kind: entry.kind,
+      $title: entry.title,
+      $content: entry.content,
+      $tags_json: tagsJson,
+      $source_text: entry.sourceText ?? null,
+      $weight: entry.weight ?? 1,
+      $is_active: entry.isActive === false ? 0 : 1,
+      $last_used_at: entry.lastUsedAt ?? null,
+      $archived_at: entry.archivedAt ?? null,
+      $superseded_by: entry.supersededBy ?? null,
+      $summary_group: entry.summaryGroup ?? null,
+      $created_at: now,
+      $updated_at: now
+    }
+  )
+  store.persist()
+  return getMemoryEntry(store, finalId)
+}
+
+export function updateMemoryEntry(store, { id, kind, title, content, tags, sourceText, weight, isActive, lastUsedAt, archivedAt, supersededBy, summaryGroup }) {
+  const now = Date.now()
+  store.db.run(
+    `
+    update memory_entries
+    set kind = coalesce($kind, kind),
+        title = coalesce($title, title),
+        content = coalesce($content, content),
+        tags_json = coalesce($tags_json, tags_json),
+        source_text = coalesce($source_text, source_text),
+        weight = coalesce($weight, weight),
+        is_active = coalesce($is_active, is_active),
+        last_used_at = coalesce($last_used_at, last_used_at),
+        archived_at = coalesce($archived_at, archived_at),
+        superseded_by = coalesce($superseded_by, superseded_by),
+        summary_group = coalesce($summary_group, summary_group),
+        updated_at = $updated_at
+    where id = $id
+  `,
+    {
+      $id: id,
+      $kind: kind ?? null,
+      $title: title ?? null,
+      $content: content ?? null,
+      $tags_json: tags ? JSON.stringify(tags) : null,
+      $source_text: sourceText ?? null,
+      $weight: weight ?? null,
+      $is_active: isActive === undefined ? null : isActive ? 1 : 0,
+      $last_used_at: lastUsedAt ?? null,
+      $archived_at: archivedAt ?? null,
+      $superseded_by: supersededBy ?? null,
+      $summary_group: summaryGroup ?? null,
+      $updated_at: now
+    }
+  )
+  store.persist()
+  return getMemoryEntry(store, id)
+}
+
+export function deleteMemoryEntry(store, id) {
+  store.db.run('delete from memory_entries where id = $id', { $id: id })
+  store.persist()
+}
+
+export function getMemoryEntry(store, id) {
+  const stmt = store.db.prepare(
+    `select id, kind, title, content, tags_json as tagsJson, source_text as sourceText, weight, is_active as isActive, last_used_at as lastUsedAt, archived_at as archivedAt, superseded_by as supersededBy, summary_group as summaryGroup, created_at as createdAt, updated_at as updatedAt from memory_entries where id = $id`
+  )
+  stmt.bind({ $id: id })
+  const row = stmt.step() ? stmt.getAsObject() : null
+  stmt.free()
+  if (!row) return null
+  return {
+    id: String(row.id),
+    kind: String(row.kind),
+    title: String(row.title),
+    content: String(row.content),
+    tags: parseJsonArray(row.tagsJson),
+    sourceText: row.sourceText == null ? null : String(row.sourceText),
+    weight: Number(row.weight ?? 1),
+    isActive: Boolean(row.isActive),
+    lastUsedAt: row.lastUsedAt == null ? null : Number(row.lastUsedAt),
+    archivedAt: row.archivedAt == null ? null : Number(row.archivedAt),
+    supersededBy: row.supersededBy == null ? null : String(row.supersededBy),
+    summaryGroup: row.summaryGroup == null ? null : String(row.summaryGroup),
+    createdAt: Number(row.createdAt),
+    updatedAt: Number(row.updatedAt)
+  }
+}
+
+export function listActiveMemoryEntries(store, { kind, limit = 50 } = {}) {
+  const where = ['is_active = 1']
+  const params = { $limit: Math.max(1, Math.min(200, Number.parseInt(String(limit), 10) || 50)) }
+  if (kind) {
+    where.push('kind = $kind')
+    params.$kind = kind
+  }
+
+  const stmt = store.db.prepare(
+    `
+    select id, kind, title, content, tags_json as tagsJson, source_text as sourceText, weight, is_active as isActive, last_used_at as lastUsedAt, archived_at as archivedAt, superseded_by as supersededBy, summary_group as summaryGroup, created_at as createdAt, updated_at as updatedAt
+    from memory_entries
+    where ${where.join(' and ')}
+    order by weight desc, coalesce(last_used_at, created_at) desc
+    limit $limit
+  `
+  )
+  stmt.bind(params)
+  const rows = []
+  while (stmt.step()) {
+    const row = stmt.getAsObject()
+    rows.push({
+      id: String(row.id),
+      kind: String(row.kind),
+      title: String(row.title),
+      content: String(row.content),
+      tags: parseJsonArray(row.tagsJson),
+      sourceText: row.sourceText == null ? null : String(row.sourceText),
+      weight: Number(row.weight ?? 1),
+      isActive: Boolean(row.isActive),
+      lastUsedAt: row.lastUsedAt == null ? null : Number(row.lastUsedAt),
+      archivedAt: row.archivedAt == null ? null : Number(row.archivedAt),
+      supersededBy: row.supersededBy == null ? null : String(row.supersededBy),
+      summaryGroup: row.summaryGroup == null ? null : String(row.summaryGroup),
+      createdAt: Number(row.createdAt),
+      updatedAt: Number(row.updatedAt)
+    })
+  }
+  stmt.free()
+  return rows
+}
+
+export function searchMemoryEntries(store, { query, tags = [], kind, limit = 5 } = {}) {
+  const q = String(query ?? '').trim().toLowerCase()
+  const normalizedTags = Array.isArray(tags)
+    ? tags.map((tag) => String(tag).trim().toLowerCase()).filter(Boolean)
+    : []
+  const entries = listActiveMemoryEntries(store, { kind, limit: 200 })
+
+  const scored = entries
+    .map((entry) => {
+      const haystack = `${entry.title}\n${entry.content}\n${entry.tags.join(' ')}`.toLowerCase()
+      let score = entry.weight || 1
+
+      if (q) {
+        const tokens = q.split(/\s+/).filter(Boolean)
+        for (const token of tokens) {
+          if (haystack.includes(token)) score += 2
+        }
+      }
+
+      for (const tag of normalizedTags) {
+        if (haystack.includes(tag)) score += 1.5
+      }
+
+      if (entry.lastUsedAt) {
+        const ageDays = Math.max(0, (Date.now() - entry.lastUsedAt) / 86_400_000)
+        score += Math.max(0, 1 - ageDays / 30) * 0.5
+      }
+
+      return { entry, score }
+    })
+    .filter(({ score }) => score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, Math.max(1, Math.min(10, Number.parseInt(String(limit), 10) || 5)))
+
+  return scored.map(({ entry, score }) => ({ ...entry, score }))
+}
+
+export function touchMemoryEntry(store, id) {
+  const now = Date.now()
+  store.db.run(
+    'update memory_entries set last_used_at = $last_used_at, updated_at = $updated_at where id = $id',
+    { $id: id, $last_used_at: now, $updated_at: now }
+  )
+  store.persist()
 }
 
 // ─── ledger ────────────────────────────────────────────────────────────────

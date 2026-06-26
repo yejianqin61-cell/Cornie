@@ -1,5 +1,6 @@
 import { getEntry, listEntries, listOnThisDay, setCornieText, upsertUserText } from '../../db.js'
 import { generateCornieDiary } from './generator.js'
+import { buildMemorySearchSummary } from '../memory/search.js'
 
 export function diaryService(store) {
   const svc = {
@@ -11,7 +12,10 @@ export function diaryService(store) {
     generateCornie: async ({ date }) => {
       const diary = await generateCornieDiary(store, {
         date,
-        memorySummary: '（长期记忆摘要暂未接入，先保留空位）'
+        memorySummary: buildMemorySearchSummary(store, {
+          query: getEntry(store, date).userText,
+          limit: 5
+        })
       })
 
       return setCornieText(store, { date, cornieText: diary })

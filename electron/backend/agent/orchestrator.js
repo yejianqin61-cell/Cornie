@@ -7,6 +7,7 @@ import { evaluateToolCalls } from '../policy/toolPolicy.js'
 import { chat } from '../model/deepseek/client.js'
 import { executeToolCalls } from '../tools/gateway.js'
 import { createObservationService } from '../observation/service.js'
+import { createMemoryService } from '../memory/service.js'
 
 const MAX_HISTORY_MESSAGES = 40
 const MAX_PROTOCOL_REPAIR_RETRIES = 1
@@ -83,6 +84,7 @@ function buildToolFollowupMessages(baseMessages, assistantReply, toolResult) {
 
 export function createConversationOrchestrator(store) {
   const observation = createObservationService(store)
+  const memory = createMemoryService(store)
 
   return {
     async runTurn({ date, message }) {
@@ -162,8 +164,16 @@ export function createConversationOrchestrator(store) {
           userMessage: message,
           cornieMessage: finalReply
         })
+        const memoryEntry = memory.deriveFromConversation({
+          date,
+          userMessage: message,
+          cornieMessage: finalReply
+        })
+        if (memoryEntry) {
+          memory.create(memoryEntry)
+        }
       } catch (error) {
-        console.error('Observation log write error:', error)
+        console.error('Observation/memory write error:', error)
       }
 
       return {
