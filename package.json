@@ -10,7 +10,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "echo \"(no lint configured)\"",
-    "verify:category": "node scripts/verify-category-flow.mjs"
+    "verify:category": "node scripts/verify-category-flow.mjs",
+    "export:category-samples": "node scripts/export-category-samples.mjs"
   },
   "dependencies": {
     "express": "^4.19.2",

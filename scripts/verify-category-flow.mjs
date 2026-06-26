@@ -23,6 +23,11 @@ import {
   recordToolRoundState
 } from '../electron/backend/agent/toolRoundState.js'
 import { createCategoryDomainRegistry } from '../electron/backend/category/domainRegistry.js'
+import {
+  buildCategorySampleLedgerMarkdown,
+  filterCategoryAuditSamples,
+  normalizeCategoryAuditSamples
+} from '../electron/backend/category/samples.js'
 import { registerLedgerTools } from '../electron/backend/ledger/tools.js'
 import { createLedgerService } from '../electron/backend/ledger/service.js'
 import { evaluateToolCalls } from '../electron/backend/policy/toolPolicy.js'
@@ -987,6 +992,61 @@ async function caseCategoryDomainRegistryValidation() {
   })
 }
 
+async function caseCategoryAuditSamplesExport() {
+  const events = [
+    {
+      eventType: 'category_mapping_needs_confirmation',
+      domain: 'ledger',
+      toolName: 'ledger.add_expense',
+      sourceText: '今天买猫砂，模型却想新增宠物消耗',
+      categoryName: '宠物用品',
+      proposedCategoryName: '宠物消耗',
+      decision: 'confirm',
+      reason: '当前收支找不到合适类目，建议先新增类目，等待主人确认。',
+      createdAt: '2026-06-27T10:00:00.000Z'
+    },
+    {
+      eventType: 'category_mapping_ask_back',
+      domain: 'schedule',
+      toolName: 'schedule.create',
+      sourceText: '帮我安排一下复查，结果模型追问了',
+      categoryName: '提醒',
+      decision: 'ask_back',
+      reason: '现有候选命中度偏低，不足以自动判断',
+      createdAt: '2026-06-27T10:05:00.000Z'
+    },
+    {
+      eventType: 'category_creation_reused_existing',
+      domain: 'todo',
+      toolName: 'todo_category.create',
+      sourceText: '新增宠物护理，但其实已有同名类目',
+      categoryName: '宠物护理',
+      proposedCategoryName: '宠物护理',
+      decision: 'reused',
+      reason: 'reused_existing',
+      createdAt: '2026-06-27T10:10:00.000Z'
+    }
+  ]
+
+  const samples = normalizeCategoryAuditSamples(events, {
+    sourceType: 'verify_case',
+    sourceRef: 'TC-037'
+  })
+  const filtered = filterCategoryAuditSamples(samples, { issueTag: 'should_map_but_new' })
+  const markdown = buildCategorySampleLedgerMarkdown(samples)
+
+  assert(samples.length === 3, 'expected three normalized category samples', samples)
+  assert(filtered.length === 1, 'expected one should_map_but_new sample', filtered)
+  assert(markdown.includes('类目映射失败样本草案'), 'expected markdown header generated', markdown)
+  assert(markdown.includes('duplicate_category_proposal'), 'expected duplicate category issue tag in markdown', markdown)
+
+  return buildCaseDetail('registry', 'category_audit_samples_export', {
+    sampleCount: samples.length,
+    filteredCount: filtered.length,
+    markdownPreview: markdown.split('\n').slice(0, 4).join('\n')
+  })
+}
+
 async function caseScheduleDirectHit() {
   const harness = await createHarness('task030-schedule-direct-hit')
   try {
@@ -1511,6 +1571,7 @@ const cases = [
   ['TC-035 todo lookup cache reuse', caseTodoLookupCacheReuse],
   ['TC-035 schedule lookup cache reuse', caseScheduleLookupCacheReuse],
   ['TC-036 category domain registry validation', caseCategoryDomainRegistryValidation],
+  ['TC-037 category audit samples export', caseCategoryAuditSamplesExport],
   ['TC-032 todo lookup round limit', caseTodoLookupRoundLimit],
   ['TC-032 schedule lookup round limit', caseScheduleLookupRoundLimit],
   ['TC-003 todo direct hit allow', caseTodoDirectHit],
