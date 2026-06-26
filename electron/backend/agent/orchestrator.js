@@ -15,7 +15,9 @@ import { createMemoryService } from '../memory/service.js'
 import { createConfirmService } from '../confirm/service.js'
 import {
   canExecuteReadOnlyLookupRound,
+  cacheReadOnlyLookupResult,
   createToolRoundState,
+  getCachedReadOnlyLookupResult,
   isReadOnlyLookupRound,
   recordToolRoundState
 } from './toolRoundState.js'
@@ -105,9 +107,16 @@ function appendToolRoundMessages(messages, assistantReply, toolResult, options =
 
 function logLookupAudit(message, lookupContexts) {
   for (const lookup of lookupContexts) {
-    const lookupReasonParts = [`触发只读补查：${lookup.domain}/${lookup.lookupType}`]
+    const lookupReasonParts = [
+      lookup.hitSource === 'cache'
+        ? `命中补查缓存：${lookup.domain}/${lookup.lookupType}`
+        : `触发只读补查：${lookup.domain}/${lookup.lookupType}`
+    ]
     if (lookup.categoryType) {
       lookupReasonParts.push(`type=${lookup.categoryType}`)
+    }
+    if (lookup.normalizedQuery) {
+      lookupReasonParts.push(`query=${lookup.normalizedQuery}`)
     }
     lookupReasonParts.push(`返回 ${lookup.total} 条结果`)
 
@@ -200,11 +209,33 @@ export function createConversationOrchestrator(store) {
                 break
               }
 
-              const toolResult = await executeToolCalls(policyDecision.toolCalls, {
-                date,
-                store,
-                source: 'conversation'
-              })
+              let toolResult
+              if (isLookupOnlyRound) {
+                const cachedResults = policyDecision.toolCalls.map((toolCall) =>
+                  getCachedReadOnlyLookupResult(toolRoundState, toolCall)
+                )
+
+                if (cachedResults.every(Boolean)) {
+                  toolResult = {
+                    type: 'tool_result',
+                    results: cachedResults
+                  }
+                }
+              }
+
+              if (!toolResult) {
+                toolResult = await executeToolCalls(policyDecision.toolCalls, {
+                  date,
+                  store,
+                  source: 'conversation'
+                })
+
+                if (isLookupOnlyRound) {
+                  policyDecision.toolCalls.forEach((toolCall, index) => {
+                    cacheReadOnlyLookupResult(toolRoundState, toolCall, toolResult.results[index])
+                  })
+                }
+              }
 
               toolExecution = {
                 used: true,

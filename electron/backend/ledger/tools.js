@@ -22,9 +22,12 @@ export function registerLedgerTools(store, { registerTool }) {
     name: 'ledger_category.list_expense',
     description: '只读查询当前全部支出类目，适合类目补查，无需确认',
     riskLevel: 'low',
-    handler: async () => ({
+    handler: async (args = {}) => ({
       ok: true,
-      result: toCategoryListResult(ledger.listExpenseCategories(), { includeType: true })
+      result: toCategoryListResult(ledger.listExpenseCategories(), {
+        includeType: true,
+        query: args.query ?? null
+      })
     })
   })
 
@@ -32,9 +35,12 @@ export function registerLedgerTools(store, { registerTool }) {
     name: 'ledger_category.list_income',
     description: '只读查询当前全部收入类目，适合类目补查，无需确认',
     riskLevel: 'low',
-    handler: async () => ({
+    handler: async (args = {}) => ({
       ok: true,
-      result: toCategoryListResult(ledger.listIncomeCategories(), { includeType: true })
+      result: toCategoryListResult(ledger.listIncomeCategories(), {
+        includeType: true,
+        query: args.query ?? null
+      })
     })
   })
 

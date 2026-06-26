@@ -14,9 +14,11 @@ import {
 } from '../electron/db.js'
 import { createConfirmService } from '../electron/backend/confirm/service.js'
 import {
+  cacheReadOnlyLookupResult,
   canExecuteReadOnlyLookupRound,
   createToolRoundState,
   extractReadOnlyLookupContext,
+  getCachedReadOnlyLookupResult,
   isReadOnlyLookupRound,
   recordToolRoundState
 } from '../electron/backend/agent/toolRoundState.js'
@@ -602,7 +604,7 @@ async function caseLookupContextExtraction() {
 async function caseTodoLookupRoundLimit() {
   const todoLookupCall = {
     tool_name: 'todo_category.list',
-    arguments: {}
+    arguments: { query: '学习' }
   }
   const roundState = createToolRoundState()
 
@@ -619,6 +621,7 @@ async function caseTodoLookupRoundLimit() {
         ok: true,
         tool_name: 'todo_category.list',
         result: {
+          query: '学习',
           total: 3,
           items: [
             { id: 'todo_general', name: '待办', status: 'active' },
@@ -652,7 +655,7 @@ async function caseTodoLookupRoundLimit() {
 async function caseScheduleLookupRoundLimit() {
   const scheduleLookupCall = {
     tool_name: 'schedule_category.list',
-    arguments: {}
+    arguments: { query: '会议' }
   }
   const roundState = createToolRoundState()
 
@@ -668,6 +671,7 @@ async function caseScheduleLookupRoundLimit() {
         ok: true,
         tool_name: 'schedule_category.list',
         result: {
+          query: '会议',
           total: 3,
           items: [
             { id: 'schedule_general', name: '日程', status: 'active' },
@@ -739,6 +743,148 @@ async function caseTodoDirectHit() {
   } finally {
     harness.restore()
   }
+}
+
+async function caseLedgerLookupCacheReuse() {
+  const roundState = createToolRoundState()
+  const ledgerLookupCall = {
+    tool_name: 'ledger_category.list_expense',
+    arguments: { query: '餐饮' }
+  }
+
+  const firstLookupResult = {
+    ok: true,
+    tool_name: 'ledger_category.list_expense',
+    result: {
+      query: '餐饮',
+      total: 2,
+      items: [
+        { id: 'expense_food', name: '餐饮', status: 'active', type: 'expense' },
+        { id: 'expense_snack', name: '零食', status: 'active', type: 'expense' }
+      ]
+    }
+  }
+
+  cacheReadOnlyLookupResult(roundState, ledgerLookupCall, firstLookupResult)
+  recordToolRoundState(roundState, { results: [firstLookupResult] })
+
+  const cachedResult = getCachedReadOnlyLookupResult(roundState, {
+    tool_name: 'ledger_category.list_expense',
+    arguments: { query: ' 餐 饮！ ' }
+  })
+
+  assert(cachedResult, 'expected cached ledger lookup result', roundState)
+  recordToolRoundState(roundState, { results: [cachedResult] })
+
+  assert(roundState.lookupUsageByDomain.ledger === 1, 'expected cache hit not to consume ledger lookup usage', roundState)
+  assert(
+    roundState.lastReadOnlyLookups[0]?.hitSource === 'cache',
+    'expected ledger cache hit marked as cache',
+    roundState.lastReadOnlyLookups
+  )
+
+  return buildCaseDetail('ledger', 'lookup_cache_reuse', {
+    lookupUsage: roundState.lookupUsageByDomain.ledger,
+    hitSource: roundState.lastReadOnlyLookups[0]?.hitSource,
+    normalizedQuery: roundState.lastReadOnlyLookups[0]?.normalizedQuery
+  })
+}
+
+async function caseTodoLookupCacheReuse() {
+  const roundState = createToolRoundState()
+  const todoLookupCall = {
+    tool_name: 'todo_category.list',
+    arguments: { query: '学习' }
+  }
+
+  const firstLookupResult = {
+    ok: true,
+    tool_name: 'todo_category.list',
+    result: {
+      query: '学习',
+      total: 2,
+      items: [
+        { id: 'todo_study', name: '学习', status: 'active' },
+        { id: 'todo_general', name: '待办', status: 'active' }
+      ]
+    }
+  }
+
+  cacheReadOnlyLookupResult(roundState, todoLookupCall, firstLookupResult)
+  recordToolRoundState(roundState, { results: [firstLookupResult] })
+
+  const cachedResult = getCachedReadOnlyLookupResult(roundState, {
+    tool_name: 'todo_category.list',
+    arguments: { query: ' 学 习。' }
+  })
+
+  assert(cachedResult, 'expected cached todo lookup result', roundState)
+  recordToolRoundState(roundState, { results: [cachedResult] })
+
+  assert(roundState.lookupUsageByDomain.todo === 1, 'expected cache hit not to consume todo lookup usage', roundState)
+  assert(
+    getCachedReadOnlyLookupResult(roundState, {
+      tool_name: 'schedule_category.list',
+      arguments: { query: '学习' }
+    }) === null,
+    'expected same query not to leak across domains',
+    roundState
+  )
+
+  return buildCaseDetail('todo', 'lookup_cache_reuse', {
+    lookupUsage: roundState.lookupUsageByDomain.todo,
+    hitSource: roundState.lastReadOnlyLookups[0]?.hitSource,
+    normalizedQuery: roundState.lastReadOnlyLookups[0]?.normalizedQuery
+  })
+}
+
+async function caseScheduleLookupCacheReuse() {
+  const roundState = createToolRoundState()
+  const scheduleLookupCall = {
+    tool_name: 'schedule_category.list',
+    arguments: { query: '复查' }
+  }
+
+  const firstLookupResult = {
+    ok: true,
+    tool_name: 'schedule_category.list',
+    result: {
+      query: '复查',
+      total: 2,
+      items: [
+        { id: 'schedule_medical', name: '复查', status: 'active' },
+        { id: 'schedule_general', name: '日程', status: 'active' }
+      ]
+    }
+  }
+
+  cacheReadOnlyLookupResult(roundState, scheduleLookupCall, firstLookupResult)
+  recordToolRoundState(roundState, { results: [firstLookupResult] })
+
+  const cachedResult = getCachedReadOnlyLookupResult(roundState, {
+    tool_name: 'schedule_category.list',
+    arguments: { query: '复 查！' }
+  })
+
+  assert(cachedResult, 'expected cached schedule lookup result', roundState)
+  recordToolRoundState(roundState, { results: [cachedResult] })
+
+  assert(
+    roundState.lookupUsageByDomain.schedule === 1,
+    'expected cache hit not to consume schedule lookup usage',
+    roundState
+  )
+  assert(
+    roundState.lastReadOnlyLookups[0]?.query === '复 查！',
+    'expected cached schedule lookup preserves current query',
+    roundState.lastReadOnlyLookups
+  )
+
+  return buildCaseDetail('schedule', 'lookup_cache_reuse', {
+    lookupUsage: roundState.lookupUsageByDomain.schedule,
+    hitSource: roundState.lastReadOnlyLookups[0]?.hitSource,
+    normalizedQuery: roundState.lastReadOnlyLookups[0]?.normalizedQuery
+  })
 }
 
 async function caseTodoUpdateCategoryRemap() {
@@ -1312,6 +1458,9 @@ const cases = [
   ['TC-008 reject without write', caseRejectNoWrite],
   ['TC-010 ask_back downgrade', caseAskBackDowngrade],
   ['TC-012 lookup tool smoke', caseLookupContextExtraction],
+  ['TC-035 ledger lookup cache reuse', caseLedgerLookupCacheReuse],
+  ['TC-035 todo lookup cache reuse', caseTodoLookupCacheReuse],
+  ['TC-035 schedule lookup cache reuse', caseScheduleLookupCacheReuse],
   ['TC-032 todo lookup round limit', caseTodoLookupRoundLimit],
   ['TC-032 schedule lookup round limit', caseScheduleLookupRoundLimit],
   ['TC-003 todo direct hit allow', caseTodoDirectHit],

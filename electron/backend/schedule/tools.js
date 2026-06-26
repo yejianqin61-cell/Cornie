@@ -50,7 +50,12 @@ export function registerScheduleTools(store, { registerTool }) {
     name: 'schedule_category.list',
     description: '只读查询当前全部日程类目，适合类目补查，无需确认',
     riskLevel: 'low',
-    handler: async () => ({ ok: true, result: toCategoryListResult(schedule.listCategories()) })
+    handler: async (args = {}) => ({
+      ok: true,
+      result: toCategoryListResult(schedule.listCategories(), {
+        query: args.query ?? null
+      })
+    })
   })
   registerTool({
     name: 'schedule_category.create',

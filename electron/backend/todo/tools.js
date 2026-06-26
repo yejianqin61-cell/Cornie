@@ -50,7 +50,12 @@ export function registerTodoTools(store, { registerTool }) {
     name: 'todo_category.list',
     description: '只读查询当前全部待办类目，适合类目补查，无需确认',
     riskLevel: 'low',
-    handler: async () => ({ ok: true, result: toCategoryListResult(todo.listCategories()) })
+    handler: async (args = {}) => ({
+      ok: true,
+      result: toCategoryListResult(todo.listCategories(), {
+        query: args.query ?? null
+      })
+    })
   })
   registerTool({
     name: 'todo_category.create',

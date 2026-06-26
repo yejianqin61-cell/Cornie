@@ -23,6 +23,19 @@ const READ_ONLY_CATEGORY_LOOKUP_TOOL_CONFIG = {
 
 const READ_ONLY_CATEGORY_LOOKUP_TOOLS = new Set(Object.keys(READ_ONLY_CATEGORY_LOOKUP_TOOL_CONFIG))
 
+function normalizeLookupQuery(value) {
+  if (value == null) {
+    return null
+  }
+
+  const normalized = String(value)
+    .trim()
+    .toLowerCase()
+    .replace(/[\s\p{P}\p{S}]+/gu, '')
+
+  return normalized || null
+}
+
 function toLookupContextConfig(toolName) {
   const categoryLookupConfig = READ_ONLY_CATEGORY_LOOKUP_TOOL_CONFIG[toolName]
   if (categoryLookupConfig) {
@@ -54,11 +67,13 @@ export function createToolRoundState() {
   return {
     readOnlyLookupCount: 0,
     lastReadOnlyLookups: [],
+    lastLookupCacheStats: [],
     lookupUsageByDomain: {
       ledger: 0,
       todo: 0,
       schedule: 0
-    }
+    },
+    readOnlyLookupCache: new Map()
   }
 }
 
@@ -91,6 +106,91 @@ export function canExecuteReadOnlyLookupRound(state, toolCalls = []) {
   return domains.every((domain) => (state.lookupUsageByDomain?.[domain] ?? 0) < 1)
 }
 
+function buildReadOnlyLookupCacheKey({ domain, lookupType, categoryType, query }) {
+  const normalizedQuery = normalizeLookupQuery(query)
+  if (!domain || !lookupType || !normalizedQuery) {
+    return null
+  }
+
+  return `${domain}:${lookupType}:${categoryType ?? 'all'}:${normalizedQuery}`
+}
+
+function normalizeCachedLookupResult(result, { toolName, query, domain, lookupType, categoryType }) {
+  return {
+    ok: true,
+    tool_name: toolName,
+    result: {
+      ...(result ?? {}),
+      query,
+      domain,
+      lookupType,
+      categoryType,
+      hitSource: 'cache'
+    }
+  }
+}
+
+export function getCachedReadOnlyLookupResult(state, toolCall) {
+  const lookupContextConfig = toLookupContextConfig(toolCall?.tool_name)
+  if (!lookupContextConfig) {
+    return null
+  }
+
+  const query = toolCall?.arguments?.query ?? null
+  const cacheKey = buildReadOnlyLookupCacheKey({
+    domain: lookupContextConfig.domain,
+    lookupType: lookupContextConfig.lookupType,
+    categoryType: lookupContextConfig.categoryType,
+    query
+  })
+
+  if (!cacheKey) {
+    return null
+  }
+
+  const cachedResult = state.readOnlyLookupCache?.get(cacheKey)
+  if (!cachedResult) {
+    return null
+  }
+
+  return normalizeCachedLookupResult(cachedResult, {
+    toolName: toolCall.tool_name,
+    query,
+    domain: lookupContextConfig.domain,
+    lookupType: lookupContextConfig.lookupType,
+    categoryType: lookupContextConfig.categoryType
+  })
+}
+
+export function cacheReadOnlyLookupResult(state, toolCall, toolResultItem) {
+  const lookupContextConfig = toLookupContextConfig(toolCall?.tool_name)
+  if (!lookupContextConfig || !toolResultItem?.ok) {
+    return state
+  }
+
+  const query = toolResultItem?.result?.query ?? toolCall?.arguments?.query ?? null
+  const cacheKey = buildReadOnlyLookupCacheKey({
+    domain: lookupContextConfig.domain,
+    lookupType: lookupContextConfig.lookupType,
+    categoryType: lookupContextConfig.categoryType,
+    query
+  })
+
+  if (!cacheKey) {
+    return state
+  }
+
+  state.readOnlyLookupCache.set(cacheKey, {
+    ...(toolResultItem.result ?? {}),
+    query,
+    hitSource: 'lookup',
+    lookupType: lookupContextConfig.lookupType,
+    categoryType: lookupContextConfig.categoryType
+  })
+
+  return state
+}
+
 export function extractReadOnlyLookupContext(toolResult) {
   if (!toolResult?.results || !Array.isArray(toolResult.results)) {
     return []
@@ -111,7 +211,9 @@ export function extractReadOnlyLookupContext(toolResult) {
         toolName: item.tool_name,
         query: item?.result?.query ?? null,
         items: Array.isArray(item?.result?.items) ? item.result.items : [],
-        total: Number.isFinite(item?.result?.total) ? item.result.total : 0
+        total: Number.isFinite(item?.result?.total) ? item.result.total : 0,
+        hitSource: item?.result?.hitSource ?? 'lookup',
+        normalizedQuery: normalizeLookupQuery(item?.result?.query ?? null)
       }
     })
     .filter(Boolean)
@@ -119,14 +221,27 @@ export function extractReadOnlyLookupContext(toolResult) {
 
 export function recordToolRoundState(state, toolResult) {
   const lookupContexts = extractReadOnlyLookupContext(toolResult)
+  state.lastReadOnlyLookups = lookupContexts
+  state.lastLookupCacheStats = lookupContexts.map((lookupContext) => ({
+    domain: lookupContext.domain,
+    lookupType: lookupContext.lookupType,
+    categoryType: lookupContext.categoryType,
+    query: lookupContext.query,
+    normalizedQuery: lookupContext.normalizedQuery,
+    hitSource: lookupContext.hitSource
+  }))
+
   if (lookupContexts.length === 0) {
     return state
   }
 
   state.readOnlyLookupCount += lookupContexts.length
-  state.lastReadOnlyLookups = lookupContexts
   for (const lookupContext of lookupContexts) {
-    if (lookupContext.domain && Object.prototype.hasOwnProperty.call(state.lookupUsageByDomain, lookupContext.domain)) {
+    if (
+      lookupContext.hitSource !== 'cache' &&
+      lookupContext.domain &&
+      Object.prototype.hasOwnProperty.call(state.lookupUsageByDomain, lookupContext.domain)
+    ) {
       state.lookupUsageByDomain[lookupContext.domain] += 1
     }
   }

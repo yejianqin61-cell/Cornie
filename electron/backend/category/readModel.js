@@ -1,4 +1,4 @@
-export function toCategoryListResult(items, { includeType = false } = {}) {
+export function toCategoryListResult(items, { includeType = false, query = null, hitSource = 'lookup' } = {}) {
   const normalizedItems = Array.isArray(items)
     ? items.map((item) => ({
         id: item.id,
@@ -10,6 +10,8 @@ export function toCategoryListResult(items, { includeType = false } = {}) {
 
   return {
     items: normalizedItems,
-    total: normalizedItems.length
+    total: normalizedItems.length,
+    query,
+    hitSource
   }
 }
