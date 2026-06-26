@@ -17,6 +17,8 @@
     "verify:task050-policy": "node scripts/verify-task050-policy.mjs",
     "verify:7.3": "node scripts/verify-7.3.mjs",
     "verify:task052": "node scripts/verify-task052-protocol-policy.mjs",
+    "verify:task053": "node scripts/verify-task053-orchestrator-confirm-services.mjs",
+    "verify:7.4": "npm.cmd run verify:task052 && npm.cmd run verify:task053",
     "profile:category": "node scripts/profile-category-flow.mjs",
     "export:category-samples": "node scripts/export-category-samples.mjs",
     "audit:category-data": "node scripts/audit-category-data.mjs",
