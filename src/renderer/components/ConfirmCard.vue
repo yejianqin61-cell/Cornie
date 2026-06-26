@@ -18,6 +18,7 @@ const emit = defineEmits(['confirm', 'reject'])
 
 function getTitle(request) {
   if (request?.title) return request.title
+  if (request?.kind === 'category_creation_confirmation') return '需要确认：新增类目'
   if (request?.tool_name) return `需要确认：${request.tool_name}`
   if (request?.toolName) return `需要确认：${request.toolName}`
   return '需要你确认一下'
@@ -31,6 +32,15 @@ function getDetails(request) {
   if (Array.isArray(request?.details) && request.details.length > 0) {
     return request.details
   }
+
+  if (request?.kind === 'category_creation_confirmation') {
+    return [
+      `所属域：${request.domain || '未提供'}`,
+      `建议类目：${request.proposedCategoryName || '未提供'}`,
+      `触发工具：${request.pendingAction?.toolName || request.toolName || '未提供'}`
+    ]
+  }
+
   const payload = request?.payload || request?.arguments
   if (payload && typeof payload === 'object') {
     return Object.entries(payload).map(([key, value]) => `${key}：${String(value)}`)
