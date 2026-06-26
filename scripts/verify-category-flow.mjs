@@ -214,6 +214,14 @@ async function runCase(name, fn) {
   }
 }
 
+function buildCaseDetail(domain, scenario, detail) {
+  return {
+    domain,
+    scenario,
+    ...detail
+  }
+}
+
 async function caseDirectHit() {
   const harness = await createHarness('task028-direct-hit')
   try {
@@ -250,11 +258,11 @@ async function caseDirectHit() {
       harness.categoryAuditLogs
     )
 
-    return {
+    return buildCaseDetail('ledger', 'direct_hit_allow', {
       decision: policy.decision,
       entryId: entry.id,
       categoryName: savedEntry.categoryName
-    }
+    })
   } finally {
     harness.restore()
   }
@@ -336,11 +344,11 @@ async function caseCreateAndResume() {
     const savedEntry = getLedgerEntry(harness.store, resumedEntryResult?.result?.id)
     assert(savedEntry?.categoryName === '宠物用品', 'expected resumed entry saved with 宠物用品', savedEntry)
 
-    return {
+    return buildCaseDetail('ledger', 'confirm_create_and_resume', {
       confirmationStatus: confirmation.status,
       categoryId: petCategory.id,
       resumedEntryId: savedEntry.id
-    }
+    })
   } finally {
     harness.restore()
   }
@@ -443,9 +451,9 @@ async function caseReuseDuplicateCategory() {
       harness.categoryAuditLogs
     )
 
-    return {
+    return buildCaseDetail('ledger', 'reuse_duplicate_category', {
       categoryCount: secondPetCategoryCount
-    }
+    })
   } finally {
     harness.restore()
   }
@@ -508,10 +516,10 @@ async function caseRejectNoWrite() {
       harness.categoryAuditLogs
     )
 
-    return {
+    return buildCaseDetail('ledger', 'reject_without_write', {
       pendingConfirmationCount: afterEntries,
       todoPendingCountSnapshot: beforeEntries
-    }
+    })
   } finally {
     harness.restore()
   }
@@ -542,10 +550,10 @@ async function caseAskBackDowngrade() {
       harness.categoryAuditLogs
     )
 
-    return {
+    return buildCaseDetail('ledger', 'ask_back_downgrade', {
       decision: policy.decision,
       question: policy.question
-    }
+    })
   } finally {
     harness.restore()
   }
@@ -580,12 +588,12 @@ async function caseLookupContextExtraction() {
     assert(lookupContexts[0].lookupType === 'category', 'expected normalized lookupType category', lookupContexts[0])
     assert(lookupContexts[0].categoryType === 'expense', 'expected ledger expense categoryType', lookupContexts[0])
 
-    return {
+    return buildCaseDetail('ledger', 'lookup_context_extraction', {
       total: result.result.total,
       firstNames: result.result.items.slice(0, 3).map((item) => item.name),
       normalizedDomain: lookupContexts[0].domain,
       normalizedCategoryType: lookupContexts[0].categoryType
-    }
+    })
   } finally {
     harness.restore()
   }
@@ -633,12 +641,12 @@ async function caseTodoLookupRoundLimit() {
     roundState
   )
 
-  return {
+  return buildCaseDetail('todo', 'lookup_round_limit', {
     todoLookupCount: roundState.lookupUsageByDomain.todo,
     scheduleLookupAvailable: canExecuteReadOnlyLookupRound(roundState, [
       { tool_name: 'schedule_category.list', arguments: {} }
     ])
-  }
+  })
 }
 
 async function caseScheduleLookupRoundLimit() {
@@ -682,12 +690,12 @@ async function caseScheduleLookupRoundLimit() {
     roundState
   )
 
-  return {
+  return buildCaseDetail('schedule', 'lookup_round_limit', {
     scheduleLookupCount: roundState.lookupUsageByDomain.schedule,
     ledgerLookupAvailable: canExecuteReadOnlyLookupRound(roundState, [
       { tool_name: 'ledger_category.list_expense', arguments: {} }
     ])
-  }
+  })
 }
 
 async function caseTodoDirectHit() {
@@ -723,11 +731,11 @@ async function caseTodoDirectHit() {
       harness.categoryAuditLogs
     )
 
-    return {
+    return buildCaseDetail('todo', 'direct_hit_allow', {
       decision: policy.decision,
       entryId: entry.id,
       categoryName: savedEntry.categoryName
-    }
+    })
   } finally {
     harness.restore()
   }
@@ -774,11 +782,11 @@ async function caseTodoUpdateCategoryRemap() {
       harness.categoryAuditLogs
     )
 
-    return {
+    return buildCaseDetail('todo', 'update_category_remap', {
       entryId: updated.id,
       title: savedEntry.title,
       categoryName: savedEntry.categoryName
-    }
+    })
   } finally {
     harness.restore()
   }
@@ -818,11 +826,11 @@ async function caseScheduleDirectHit() {
       harness.categoryAuditLogs
     )
 
-    return {
+    return buildCaseDetail('schedule', 'direct_hit_allow', {
       decision: policy.decision,
       entryId: entry.id,
       categoryName: savedEntry.categoryName
-    }
+    })
   } finally {
     harness.restore()
   }
@@ -872,12 +880,12 @@ async function caseScheduleUpdateCategoryRemap() {
       harness.categoryAuditLogs
     )
 
-    return {
+    return buildCaseDetail('schedule', 'update_category_remap', {
       entryId: updated.id,
       title: savedEntry.title,
       categoryName: savedEntry.categoryName,
       location: savedEntry.location
-    }
+    })
   } finally {
     harness.restore()
   }
@@ -944,11 +952,11 @@ async function caseTodoCreateCategoryConfirmResume() {
       harness.categoryAuditLogs
     )
 
-    return {
+    return buildCaseDetail('todo', 'confirm_create_and_resume', {
       categoryId: createdCategory.id,
       entryId: savedEntry.id,
       categoryName: savedEntry.categoryName
-    }
+    })
   } finally {
     harness.restore()
   }
@@ -1017,11 +1025,11 @@ async function caseTodoUpdateCategoryConfirmResume() {
       harness.categoryAuditLogs
     )
 
-    return {
+    return buildCaseDetail('todo', 'confirm_update_and_resume', {
       entryId: savedEntry.id,
       title: savedEntry.title,
       categoryName: savedEntry.categoryName
-    }
+    })
   } finally {
     harness.restore()
   }
@@ -1090,11 +1098,11 @@ async function caseScheduleCreateCategoryConfirmResume() {
       harness.categoryAuditLogs
     )
 
-    return {
+    return buildCaseDetail('schedule', 'confirm_create_and_resume', {
       categoryId: createdCategory.id,
       entryId: savedEntry.id,
       categoryName: savedEntry.categoryName
-    }
+    })
   } finally {
     harness.restore()
   }
@@ -1165,11 +1173,11 @@ async function caseScheduleUpdateCategoryConfirmResume() {
       harness.categoryAuditLogs
     )
 
-    return {
+    return buildCaseDetail('schedule', 'confirm_update_and_resume', {
       entryId: savedEntry.id,
       title: savedEntry.title,
       categoryName: savedEntry.categoryName
-    }
+    })
   } finally {
     harness.restore()
   }
@@ -1226,10 +1234,10 @@ async function caseTodoRejectNoWrite() {
     assert(beforeCategories === afterCategories, 'expected todo category count unchanged after rejection', { beforeCategories, afterCategories })
     assert(beforeEntries === afterEntries, 'expected todo entry count unchanged after rejection', { beforeEntries, afterEntries })
 
-    return {
+    return buildCaseDetail('todo', 'reject_without_write', {
       categoryCount: afterCategories,
       entryCount: afterEntries
-    }
+    })
   } finally {
     harness.restore()
   }
@@ -1288,10 +1296,10 @@ async function caseScheduleRejectNoWrite() {
     assert(beforeCategories === afterCategories, 'expected schedule category count unchanged after rejection', { beforeCategories, afterCategories })
     assert(beforeEntries === afterEntries, 'expected schedule entry count unchanged after rejection', { beforeEntries, afterEntries })
 
-    return {
+    return buildCaseDetail('schedule', 'reject_without_write', {
       categoryCount: afterCategories,
       entryCount: afterEntries
-    }
+    })
   } finally {
     harness.restore()
   }
