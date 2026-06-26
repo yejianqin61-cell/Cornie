@@ -17,6 +17,18 @@ const JSON_PROTOCOL = `你必须严格使用 JSON 协议回复，只能输出一
 
 如果你不确定是否需要工具，优先使用 reply。`
 
+const CATEGORY_MAPPING_PROTOCOL = `当工具参数涉及类目映射时，统一使用以下字段：
+- categoryId: 已命中的现有类目 id，能给就优先给
+- categoryName: 已命中的现有类目名称，可作为补充
+- needsNewCategory: 当现有类目都不合适时，明确返回 true
+- proposedCategoryName: 建议新增的类目名称
+
+规则：
+1. 能映射到现有类目时，优先返回 categoryId，并尽量同时返回 categoryName。
+2. 不要同时把“已命中现有类目”和“需要新增类目”混在一起。
+3. 只有在确认现有类目不合适时，才返回 needsNewCategory = true。
+4. 涉及收支、待办、日程的操作，都按这套字段输出 arguments。`
+
 function buildContextSection(context) {
   return [
     `今天日期：${context.date}`,
@@ -31,7 +43,7 @@ function buildContextSection(context) {
 }
 
 export function buildConversationPrompt({ context }) {
-  return [CORNIE_PERSONA, JSON_PROTOCOL, buildContextSection(context)].join('\n\n')
+  return [CORNIE_PERSONA, JSON_PROTOCOL, CATEGORY_MAPPING_PROTOCOL, buildContextSection(context)].join('\n\n')
 }
 
 export function buildToolFollowupPrompt({ assistantReply, toolResult }) {

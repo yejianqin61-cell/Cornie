@@ -5,13 +5,18 @@ import {
   saveScheduleEntry,
   upsertScheduleCategory
 } from '../../db.js'
+import { normalizeCategoryMapping } from '../category/mapping.js'
 
 function normalizeScheduleInput(input) {
+  const categoryMapping = normalizeCategoryMapping(input)
+
   return {
     title: String(input.title ?? '').trim(),
     description: input.description ?? null,
-    categoryId: input.category_id ?? input.categoryId ?? null,
-    categoryName: input.category_name ?? input.categoryName ?? null,
+    categoryId: categoryMapping.categoryId,
+    categoryName: categoryMapping.categoryName,
+    needsNewCategory: categoryMapping.needsNewCategory,
+    proposedCategoryName: categoryMapping.proposedCategoryName,
     startAt: input.start_at ?? input.startAt ?? null,
     endAt: input.end_at ?? input.endAt ?? null,
     location: input.location ?? null,

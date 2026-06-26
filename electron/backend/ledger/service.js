@@ -1,6 +1,9 @@
 import { getLedgerCategory, listLedgerCategories, saveLedgerEntry, upsertLedgerCategory } from '../../db.js'
+import { normalizeCategoryMapping } from '../category/mapping.js'
 
 function normalizeLedgerInput(type, input) {
+  const categoryMapping = normalizeCategoryMapping(input)
+
   if (typeof input.amount !== 'number' || !Number.isFinite(input.amount) || input.amount <= 0) {
     throw new Error('amount is required')
   }
@@ -9,8 +12,10 @@ function normalizeLedgerInput(type, input) {
     type,
     amount: input.amount,
     currency: input.currency ?? 'CNY',
-    categoryId: input.category_id ?? input.categoryId ?? null,
-    categoryName: input.category_name ?? input.categoryName ?? null,
+    categoryId: categoryMapping.categoryId,
+    categoryName: categoryMapping.categoryName,
+    needsNewCategory: categoryMapping.needsNewCategory,
+    proposedCategoryName: categoryMapping.proposedCategoryName,
     merchant: input.merchant ?? null,
     item: input.item ?? null,
     sourceText: input.source_text ?? input.sourceText ?? null,
