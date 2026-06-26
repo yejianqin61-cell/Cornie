@@ -22,6 +22,7 @@ import {
   isReadOnlyLookupRound,
   recordToolRoundState
 } from '../electron/backend/agent/toolRoundState.js'
+import { createCategoryDomainRegistry } from '../electron/backend/category/domainRegistry.js'
 import { registerLedgerTools } from '../electron/backend/ledger/tools.js'
 import { createLedgerService } from '../electron/backend/ledger/service.js'
 import { evaluateToolCalls } from '../electron/backend/policy/toolPolicy.js'
@@ -938,6 +939,54 @@ async function caseTodoUpdateCategoryRemap() {
   }
 }
 
+async function caseCategoryDomainRegistryValidation() {
+  let error = null
+
+  try {
+    createCategoryDomainRegistry([
+      {
+        domain: 'broken',
+        label: '损坏域',
+        actionToolNames: ['broken.create'],
+        readOnlyLookups: [
+          {
+            toolName: 'broken_category.list',
+            lookupType: 'category'
+          }
+        ],
+        getCategoryLists() {
+          return []
+        },
+        buildCategoryCreateToolCall() {
+          return { tool_name: 'broken_category.create', arguments: { name: '测试' } }
+        },
+        getCategorySnapshot() {
+          return []
+        },
+        formatSummaryLines() {
+          return ['损坏域：无']
+        },
+        summarizeSnapshotForAudit() {
+          return 'broken=0'
+        }
+      }
+    ])
+  } catch (caughtError) {
+    error = caughtError
+  }
+
+  assert(error, 'expected invalid category domain registration to throw')
+  assert(
+    error.message.includes('buildRejectResolutionReason'),
+    'expected missing capability error mentions buildRejectResolutionReason',
+    error
+  )
+
+  return buildCaseDetail('registry', 'missing_required_capability', {
+    errorMessage: error.message
+  })
+}
+
 async function caseScheduleDirectHit() {
   const harness = await createHarness('task030-schedule-direct-hit')
   try {
@@ -1461,6 +1510,7 @@ const cases = [
   ['TC-035 ledger lookup cache reuse', caseLedgerLookupCacheReuse],
   ['TC-035 todo lookup cache reuse', caseTodoLookupCacheReuse],
   ['TC-035 schedule lookup cache reuse', caseScheduleLookupCacheReuse],
+  ['TC-036 category domain registry validation', caseCategoryDomainRegistryValidation],
   ['TC-032 todo lookup round limit', caseTodoLookupRoundLimit],
   ['TC-032 schedule lookup round limit', caseScheduleLookupRoundLimit],
   ['TC-003 todo direct hit allow', caseTodoDirectHit],

@@ -1,27 +1,4 @@
-const READ_ONLY_CATEGORY_LOOKUP_TOOL_CONFIG = {
-  'ledger_category.list_expense': {
-    domain: 'ledger',
-    lookupType: 'category',
-    categoryType: 'expense'
-  },
-  'ledger_category.list_income': {
-    domain: 'ledger',
-    lookupType: 'category',
-    categoryType: 'income'
-  },
-  'todo_category.list': {
-    domain: 'todo',
-    lookupType: 'category',
-    categoryType: null
-  },
-  'schedule_category.list': {
-    domain: 'schedule',
-    lookupType: 'category',
-    categoryType: null
-  }
-}
-
-const READ_ONLY_CATEGORY_LOOKUP_TOOLS = new Set(Object.keys(READ_ONLY_CATEGORY_LOOKUP_TOOL_CONFIG))
+import { categoryDomainRegistry } from '../category/domainRegistry.js'
 
 function normalizeLookupQuery(value) {
   if (value == null) {
@@ -37,28 +14,9 @@ function normalizeLookupQuery(value) {
 }
 
 function toLookupContextConfig(toolName) {
-  const categoryLookupConfig = READ_ONLY_CATEGORY_LOOKUP_TOOL_CONFIG[toolName]
+  const categoryLookupConfig = categoryDomainRegistry.getLookupContext(toolName)
   if (categoryLookupConfig) {
     return categoryLookupConfig
-  }
-
-  if (toolName === 'todo.list_today' || toolName === 'todo.list_by_range' || toolName === 'todo.get') {
-    return {
-      domain: 'todo',
-      lookupType: 'todo_items',
-      categoryType: null
-    }
-  }
-  if (
-    toolName === 'schedule.list_today' ||
-    toolName === 'schedule.list_by_range' ||
-    toolName === 'schedule.get'
-  ) {
-    return {
-      domain: 'schedule',
-      lookupType: 'schedule_items',
-      categoryType: null
-    }
   }
   return null
 }
@@ -78,11 +36,11 @@ export function createToolRoundState() {
 }
 
 export function isReadOnlyLookupTool(toolName) {
-  return READ_ONLY_CATEGORY_LOOKUP_TOOLS.has(toolName)
+  return categoryDomainRegistry.isReadOnlyLookupTool(toolName)
 }
 
 export function getReadOnlyLookupDomain(toolName) {
-  return READ_ONLY_CATEGORY_LOOKUP_TOOL_CONFIG[toolName]?.domain ?? null
+  return categoryDomainRegistry.getReadOnlyLookupDomain(toolName)
 }
 
 export function isReadOnlyLookupRound(toolCalls = []) {

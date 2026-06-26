@@ -4,6 +4,7 @@ import { buildJsonRepairPrompt, parseModelJson } from '../agent/jsonProtocol.js'
 import { buildConversationContext } from '../agent/contextBuilder.js'
 import { buildConversationPrompt, buildToolFollowupPrompt } from '../agent/promptBuilder.js'
 import { logCategoryAudit } from '../category/audit.js'
+import { categoryDomainRegistry } from '../category/domainRegistry.js'
 import { chat } from '../model/deepseek/client.js'
 import { executeToolCalls } from '../tools/gateway.js'
 
@@ -107,37 +108,15 @@ function buildCategoryCreationToolCall(confirmation, pendingActionToolCall) {
     throw new Error('proposed category name is required')
   }
 
-  if (domain === 'ledger') {
-    return {
-      tool_name:
-        pendingActionToolCall.tool_name === 'ledger.add_income'
-          ? 'ledger_category.create_income'
-          : 'ledger_category.create_expense',
-      arguments: {
-        name: proposedCategoryName
-      }
-    }
+  const registration = categoryDomainRegistry.getDomain(domain)
+  if (!registration) {
+    throw new Error(`unsupported category confirmation domain: ${domain}`)
   }
 
-  if (domain === 'todo') {
-    return {
-      tool_name: 'todo_category.create',
-      arguments: {
-        name: proposedCategoryName
-      }
-    }
-  }
-
-  if (domain === 'schedule') {
-    return {
-      tool_name: 'schedule_category.create',
-      arguments: {
-        name: proposedCategoryName
-      }
-    }
-  }
-
-  throw new Error(`unsupported category confirmation domain: ${domain}`)
+  return registration.buildCategoryCreateToolCall({
+    pendingActionToolName: pendingActionToolCall.tool_name,
+    proposedCategoryName
+  })
 }
 
 function buildResumedActionToolCall(pendingActionToolCall, createdCategory) {

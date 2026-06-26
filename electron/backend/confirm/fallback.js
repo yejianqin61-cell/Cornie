@@ -1,45 +1,17 @@
 import { resolveCategoryCandidates } from '../category/mapping.js'
-import { createLedgerService } from '../ledger/service.js'
-import { createTodoService } from '../todo/service.js'
-import { createScheduleService } from '../schedule/service.js'
+import { categoryDomainRegistry } from '../category/domainRegistry.js'
 
 function getCategoryLists(store, domain, toolName) {
-  if (domain === 'ledger') {
-    const ledger = createLedgerService(store)
-    return toolName === 'ledger.add_income'
-      ? ledger.listIncomeCategories()
-      : ledger.listExpenseCategories()
+  const registration = categoryDomainRegistry.getDomain(domain)
+  if (!registration) {
+    return []
   }
-
-  if (domain === 'todo') {
-    return createTodoService(store).listCategories()
-  }
-
-  if (domain === 'schedule') {
-    return createScheduleService(store).listCategories()
-  }
-
-  return []
+  return registration.getCategoryLists(store, { toolName })
 }
 
 function buildResolutionReason(domain, mode) {
-  if (mode === 'suggest_existing_category') {
-    return domain === 'ledger'
-      ? '主人拒绝新增后，建议改用现有收支类目。'
-      : domain === 'todo'
-        ? '主人拒绝新增后，建议改用现有待办类目。'
-        : '主人拒绝新增后，建议改用现有日程类目。'
-  }
-
-  if (mode === 'ask_user_pick_existing') {
-    return domain === 'ledger'
-      ? '主人拒绝新增后，已有多个接近的收支类目，需要主人手动挑一个。'
-      : domain === 'todo'
-        ? '主人拒绝新增后，已有多个接近的待办类目，需要主人手动挑一个。'
-        : '主人拒绝新增后，已有多个接近的日程类目，需要主人手动挑一个。'
-  }
-
-  return '主人拒绝新增后，本次不继续写入。'
+  const registration = categoryDomainRegistry.getDomain(domain)
+  return registration?.buildRejectResolutionReason(mode) ?? '主人拒绝新增后，本次不继续写入。'
 }
 
 export function deriveCategoryRejectResolution(store, confirmation) {

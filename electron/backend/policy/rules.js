@@ -1,9 +1,7 @@
 import { getTool } from '../tools/registry.js'
 import { resolveCategoryCandidates } from '../category/mapping.js'
 import { logCategoryAudit } from '../category/audit.js'
-import { createLedgerService } from '../ledger/service.js'
-import { createTodoService } from '../todo/service.js'
-import { createScheduleService } from '../schedule/service.js'
+import { categoryDomainRegistry } from '../category/domainRegistry.js'
 import { getToolRiskLevel } from './riskLevels.js'
 
 const VAGUE_CATEGORY_NAMES = new Set([
@@ -62,26 +60,11 @@ function buildCategoryCandidateNames(candidates = []) {
 }
 
 function getCategoryLists(store, domain, toolName) {
-  if (!store) {
+  const registration = categoryDomainRegistry.getDomain(domain)
+  if (!store || !registration) {
     return []
   }
-
-  if (domain === 'ledger') {
-    const ledger = createLedgerService(store)
-    return toolName === 'ledger.add_income'
-      ? ledger.listIncomeCategories()
-      : ledger.listExpenseCategories()
-  }
-
-  if (domain === 'todo') {
-    return createTodoService(store).listCategories()
-  }
-
-  if (domain === 'schedule') {
-    return createScheduleService(store).listCategories()
-  }
-
-  return []
+  return registration.getCategoryLists(store, { toolName })
 }
 
 function buildCategoryCreationConfirmRequest({
@@ -308,13 +291,24 @@ function applyCandidateResolution({
   vagueNameReason,
   createConfirmReason
 }) {
+  const registration = categoryDomainRegistry.getDomain(domain)
+  if (!registration) {
+    return {
+      decision: 'deny',
+      reason: `类目域 "${domain}" 尚未注册`,
+      toolCall
+    }
+  }
+
   const { categoryId, categoryName, needsNewCategory, proposedCategoryName } = getCategoryMapping(toolCall)
+  const domainLabel = registration.label ?? domain
+  const domainCopy = registration.categoryRuleCopy ?? {}
 
   if (!categoryId && !categoryName && !needsNewCategory) {
     return buildCategoryAskBack(
       toolCall,
       missingQuestion,
-      `还缺少这个${domain === 'ledger' ? '收支' : domain === 'todo' ? '待办' : '日程'}应归属的类目信息。`,
+      domainCopy.missingReason ?? `还缺少这个${domainLabel}应归属的类目信息。`,
       { domain }
     )
   }
@@ -384,63 +378,64 @@ function toolNotRegistered(toolCall) {
 }
 
 function applyLedgerRule(toolCall, sourceText, options = {}) {
-  if (!toolCall.tool_name.startsWith('ledger.')) {
+  const registration = categoryDomainRegistry.getDomainByActionTool(toolCall.tool_name)
+  if (registration?.domain !== 'ledger') {
     return null
   }
 
-  const amount = toolCall.arguments?.amount
-  if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0) {
-    return {
-      decision: 'ask_back',
-      question: '这笔收支的金额是多少呀？小铃湾需要确认后才能记下。',
-      reason: '还缺少这笔收支的金额信息。',
-      toolCall
-    }
+  const validationDecision = registration.validateToolCall?.(toolCall, sourceText, options)
+  if (validationDecision) {
+    return validationDecision
   }
 
+  const copy = registration.categoryRuleCopy ?? {}
   return applyCandidateResolution({
     store: options.store,
     toolCall,
     sourceText,
-    domain: 'ledger',
-    missingQuestion: '这笔收支更像哪一类呀？如果现有类目都不合适，小铃湾也可以先帮你申请新增。',
-    vagueNameQuestion: '如果要新增类目，这笔收支你想起一个更明确的类目名吗？比如“猫咪用品”这种，小铃湾才好帮你申请。',
-    vagueNameReason: '建议新增的类目名还不够明确。',
-    createConfirmReason: '当前收支找不到合适类目，建议先新增类目，等待主人确认。'
+    domain: registration.domain,
+    missingQuestion: copy.missingQuestion,
+    vagueNameQuestion: copy.vagueNameQuestion,
+    vagueNameReason: copy.vagueNameReason,
+    createConfirmReason: copy.createConfirmReason
   })
 }
 
 function applyTodoRule(toolCall, sourceText, options = {}) {
-  if (!['todo.create', 'todo.update'].includes(toolCall.tool_name)) {
+  const registration = categoryDomainRegistry.getDomainByActionTool(toolCall.tool_name)
+  if (registration?.domain !== 'todo') {
     return null
   }
 
+  const copy = registration.categoryRuleCopy ?? {}
   return applyCandidateResolution({
     store: options.store,
     toolCall,
     sourceText,
-    domain: 'todo',
-    missingQuestion: '这个待办你希望放到哪个分类里呢？如果没有合适的，我也可以先帮你提请新增。',
-    vagueNameQuestion: '如果要新增待办分类，你想给它起个更明确的名字吗？这样小铃湾才能更稳地帮你创建。',
-    vagueNameReason: '建议新增的待办类目名还不够明确。',
-    createConfirmReason: '当前待办找不到合适分类，建议先新增待办类目，等待主人确认。'
+    domain: registration.domain,
+    missingQuestion: copy.missingQuestion,
+    vagueNameQuestion: copy.vagueNameQuestion,
+    vagueNameReason: copy.vagueNameReason,
+    createConfirmReason: copy.createConfirmReason
   })
 }
 
 function applyScheduleRule(toolCall, sourceText, options = {}) {
-  if (!['schedule.create', 'schedule.update'].includes(toolCall.tool_name)) {
+  const registration = categoryDomainRegistry.getDomainByActionTool(toolCall.tool_name)
+  if (registration?.domain !== 'schedule') {
     return null
   }
 
+  const copy = registration.categoryRuleCopy ?? {}
   return applyCandidateResolution({
     store: options.store,
     toolCall,
     sourceText,
-    domain: 'schedule',
-    missingQuestion: '这个日程想归到哪个分类呀？如果没有现成的分类，小铃湾可以先帮你申请新增。',
-    vagueNameQuestion: '如果要新增日程分类，这个名字还可以再具体一点吗？小铃湾想先确认得更稳一些。',
-    vagueNameReason: '建议新增的日程类目名还不够明确。',
-    createConfirmReason: '当前日程找不到合适分类，建议先新增日程类目，等待主人确认。'
+    domain: registration.domain,
+    missingQuestion: copy.missingQuestion,
+    vagueNameQuestion: copy.vagueNameQuestion,
+    vagueNameReason: copy.vagueNameReason,
+    createConfirmReason: copy.createConfirmReason
   })
 }
 
