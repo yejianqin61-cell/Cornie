@@ -56,6 +56,7 @@
     "verify:task096": "node scripts/verify-task096-memory-wiki-orphans.mjs",
     "verify:task097": "node scripts/verify-task097-m11-memory-wiki-ops.mjs",
     "verify:task098": "node scripts/verify-task098-ledger-read-tools.mjs",
+    "verify:task099": "node scripts/verify-task099-ledger-category-tools.mjs",
     "verify:m1-memory-wiki": "node scripts/verify-m1-memory-wiki.mjs",
     "verify:m2-memory-wiki-service": "node scripts/verify-m2-memory-wiki-service.mjs",
     "verify:m3-topic-index": "node scripts/verify-m3-topic-index.mjs",

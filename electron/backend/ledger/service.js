@@ -64,6 +64,10 @@ function listCategoriesByType(store, type) {
   return listLedgerCategories(store, { type })
 }
 
+function listAllCategories(store) {
+  return listLedgerCategories(store, { activeOnly: false })
+}
+
 function createCategory(store, { type, name, id, sortOrder }) {
   const existingCategories = listCategoriesByType(store, type)
   const validation = validateCategoryName(name, existingCategories)
@@ -152,12 +156,28 @@ export function createLedgerService(store) {
     listByRange: ({ from, to, type } = {}) => listLedgerEntries(store, { from, to, type }),
     listExpenseCategories: () => listCategoriesByType(store, 'expense'),
     listIncomeCategories: () => listCategoriesByType(store, 'income'),
+    listAllCategories: () => listAllCategories(store),
     createExpenseCategory: ({ name, id, sortOrder = 0 }) =>
       createCategory(store, { type: 'expense', name, id, sortOrder }),
     createIncomeCategory: ({ name, id, sortOrder = 0 }) =>
       createCategory(store, { type: 'income', name, id, sortOrder }),
+    restoreCategory: ({ id }) => {
+      if (!id) throw new Error('ledger category id is required')
+      const existing = getLedgerCategory(store, id)
+      if (!existing) throw new Error('ledger category not found')
+      return upsertLedgerCategory(store, {
+        id,
+        type: existing.type,
+        name: existing.name,
+        sortOrder: existing.sortOrder,
+        isActive: true
+      })
+    },
     updateCategory: ({ id, type, name, isActive, sortOrder }) =>
       upsertLedgerCategory(store, { id, type, name, isActive, sortOrder }),
-    getCategory: (id) => getLedgerCategory(store, id)
+    getCategory: (id) => {
+      if (!id) throw new Error('ledger category id is required')
+      return getLedgerCategory(store, id)
+    }
   }
 }

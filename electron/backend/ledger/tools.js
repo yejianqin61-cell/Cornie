@@ -101,6 +101,26 @@ export function registerLedgerTools(store, { registerTool }) {
   })
 
   registerTool({
+    name: 'ledger_category.get',
+    description: '读取单个收支类目详情',
+    riskLevel: 'low',
+    handler: async ({ id }) => ({ ok: true, result: ledger.getCategory(id) })
+  })
+
+  registerTool({
+    name: 'ledger_category.list_all',
+    description: '统一列出全部收入和支出类目',
+    riskLevel: 'low',
+    handler: async (args = {}) => ({
+      ok: true,
+      result: toCategoryListResult(ledger.listAllCategories(), {
+        includeType: true,
+        query: args.query ?? null
+      })
+    })
+  })
+
+  registerTool({
     name: 'ledger_category.create_expense',
     description: '新建支出类目',
     riskLevel: 'high',
@@ -129,5 +149,12 @@ export function registerLedgerTools(store, { registerTool }) {
       const result = ledger.updateCategory({ id, type, name, sortOrder, isActive: false })
       return { ok: true, result }
     }
+  })
+
+  registerTool({
+    name: 'ledger_category.restore',
+    description: '恢复已停用的收支类目',
+    riskLevel: 'high',
+    handler: async ({ id }) => ({ ok: true, result: ledger.restoreCategory({ id }) })
   })
 }
