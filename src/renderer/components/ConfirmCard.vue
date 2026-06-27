@@ -1,4 +1,6 @@
 <script setup>
+import { computed } from 'vue'
+
 const props = defineProps({
   request: {
     type: Object,
@@ -60,11 +62,22 @@ function getDetails(request) {
   }
   return []
 }
+
+const statusLabel = computed(() => {
+  if (props.status === 'approved') return '已同意'
+  if (props.status === 'rejected') return '已拒绝'
+  if (props.status === 'failed') return '处理失败'
+  if (props.status === 'processing') return '处理中'
+  return '等待你的决定'
+})
 </script>
 
 <template>
   <div class="confirmCard">
-    <div class="confirmEyebrow">待确认操作</div>
+    <div class="confirmTopline">
+      <div class="confirmEyebrow">高风险确认</div>
+      <div class="confirmStatusPill" :class="`is-${props.status || 'pending'}`">{{ statusLabel }}</div>
+    </div>
     <div class="confirmTitle">{{ getTitle(props.request) }}</div>
     <div class="confirmReason">{{ getReason(props.request) }}</div>
 
@@ -102,16 +115,53 @@ function getDetails(request) {
 <style scoped>
 .confirmCard{
   width: 100%;
-  padding: 12px;
-  border-radius: 16px;
+  padding: 14px;
+  border-radius: 18px;
   border: 1px solid rgba(251,191,36,.28);
   background: linear-gradient(180deg, rgba(120,53,15,.30), rgba(17,24,39,.78));
+}
+
+.confirmTopline{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .confirmEyebrow{
   font-size: 10px;
   letter-spacing: .08em;
   color: rgba(253,224,71,.76);
+}
+
+.confirmStatusPill{
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.06);
+  color: rgba(255,255,255,.80);
+  font-size: 10px;
+  white-space: nowrap;
+}
+.confirmStatusPill.is-approved{
+  border-color: rgba(74,222,128,.30);
+  background: rgba(74,222,128,.12);
+  color: rgba(220,252,231,.92);
+}
+.confirmStatusPill.is-rejected{
+  border-color: rgba(248,113,113,.30);
+  background: rgba(248,113,113,.12);
+  color: rgba(254,226,226,.92);
+}
+.confirmStatusPill.is-failed{
+  border-color: rgba(248,113,113,.30);
+  background: rgba(127,29,29,.28);
+  color: rgba(254,226,226,.92);
+}
+.confirmStatusPill.is-processing{
+  border-color: rgba(125,211,252,.30);
+  background: rgba(125,211,252,.12);
+  color: rgba(224,242,254,.92);
 }
 
 .confirmTitle{

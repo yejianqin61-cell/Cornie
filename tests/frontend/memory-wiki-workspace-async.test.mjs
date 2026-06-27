@@ -433,6 +433,10 @@ describe('MemoryWikiWorkspace async flow', () => {
     const governanceRow = wrapper.findAll('.workspaceCard .entryRow').find((row) => row.text().includes('建议合并龙虾相关页面'))
     await governanceRow.trigger('click')
     await flushPromises()
+    expect(wrapper.text()).toContain('这里放的是治理建议，不会直接改数据，先给主人过目再决定怎么处理。')
+    expect(wrapper.text()).toContain('当前待处理 2 项')
+    expect(wrapper.text()).toContain('建议')
+    expect(wrapper.text()).toContain('medium')
     expect(wrapper.text()).toContain('内容高度重复，建议合并。')
 
     const markApprovedButton = wrapper.findAll('.actionRow button').find((button) => button.text() === '标记已处理')
@@ -450,6 +454,7 @@ describe('MemoryWikiWorkspace async flow', () => {
     await flushPromises()
     await flushPromises()
     expect(wrapper.text()).toContain('已同意，正在继续处理。')
+    expect(wrapper.text()).toContain('已同意')
   })
 
   it('supports governance defer and reject actions plus confirmation reject flow', async () => {
@@ -671,6 +676,7 @@ describe('MemoryWikiWorkspace async flow', () => {
     expect(emptyWrapper.findAll('.workspaceCard .entryRow').length).toBe(0)
     expect(emptyWrapper.text()).toContain('这里暂时还没有记忆页面。')
     expect(emptyWrapper.text()).toContain('现在还没有可用的主题索引。')
+    expect(emptyWrapper.text()).toContain('现在没有新的治理建议。')
     expect(emptyWrapper.text()).toContain('现在没有排队等你点头的高风险动作，小铃湾先乖乖看着。')
 
     globalThis.fetch = createMemoryWikiFetchMock({

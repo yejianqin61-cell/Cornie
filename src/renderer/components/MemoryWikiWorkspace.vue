@@ -541,7 +541,7 @@ onMounted(refreshAll)
         <div class="cardHead">
           <div>
             <div class="cardTitle">治理待审核区</div>
-            <div class="cardSubhint">当前待处理 {{ pendingGovernanceCount }} 项</div>
+            <div class="cardSubhint">这里放的是治理建议，不会直接改数据，先给主人过目再决定怎么处理。</div>
           </div>
           <div class="cardFilters">
             <select v-model="governanceFilterStatus" @change="refreshGovernanceItems">
@@ -558,7 +558,15 @@ onMounted(refreshAll)
           </div>
         </div>
 
-        <div class="entryList">
+        <div class="queueSummary">
+          当前待处理 <strong>{{ pendingGovernanceCount }}</strong> 项
+        </div>
+
+        <div v-if="governanceItems.length === 0" class="emptyDetail compactEmpty">
+          现在没有新的治理建议。等巡检或整理过程发现问题，这里会再提醒你。
+        </div>
+
+        <div v-else class="entryList">
           <button
             v-for="item in governanceItems"
             :key="item.requestId"
@@ -576,12 +584,20 @@ onMounted(refreshAll)
 
       <section class="workspaceCard">
         <div class="cardHead">
-          <div class="cardTitle">治理详情</div>
+          <div>
+            <div class="cardTitle">治理详情</div>
+            <div class="cardSubhint">先看清楚为什么建议这样处理，再决定是接受、稍后再看，还是直接驳回。</div>
+          </div>
           <div class="cardHint">巡检入池的修复建议、归档候选，都会在这里等你慢慢看。</div>
         </div>
 
         <div v-if="governanceDetail" class="governanceDetail">
           <div class="detailTitle">{{ governanceDetail.title || governanceDetail.requestType }}</div>
+          <div class="detailBadgeRow">
+            <span class="detailBadge">建议</span>
+            <span class="detailBadge">{{ governanceDetail.status }}</span>
+            <span class="detailBadge">{{ governanceDetail.riskLevel || 'unknown risk' }}</span>
+          </div>
           <div class="detailMeta">状态：{{ governanceDetail.status }}</div>
           <div class="detailMeta">来源：{{ governanceDetail.triggerSource || 'unknown' }}</div>
           <div class="detailMeta">分区：{{ governanceDetail.queueSection || 'unknown' }}</div>
@@ -617,7 +633,7 @@ onMounted(refreshAll)
         <div class="cardHead">
           <div>
             <div class="cardTitle">高风险确认中心</div>
-            <div class="cardSubhint">当前待确认 {{ pendingConfirmationCount }} 项</div>
+            <div class="cardSubhint">这里放的是会真正触发动作的高风险请求，所以铃湾一定会先停下来问你。</div>
           </div>
           <div class="cardFilters">
             <select v-model="confirmationFilterStatus" @change="refreshConfirmations">
@@ -627,6 +643,10 @@ onMounted(refreshAll)
               <option value="rejected">rejected</option>
             </select>
           </div>
+        </div>
+
+        <div class="queueSummary">
+          当前待确认 <strong>{{ pendingConfirmationCount }}</strong> 项
         </div>
 
         <div v-if="confirmations.length > 0" class="confirmGrid">
@@ -752,6 +772,14 @@ onMounted(refreshAll)
   gap: 10px;
   flex-wrap: wrap;
 }
+.queueSummary{
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px dashed rgba(255,255,255,.14);
+  background: rgba(255,255,255,.03);
+  color: var(--muted);
+  font-size: 13px;
+}
 .topicGrid{
   display:grid;
   grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
@@ -773,6 +801,20 @@ onMounted(refreshAll)
   padding: 16px;
 }
 .detailTitle{ font-weight: 800; font-size: 18px; }
+.detailBadgeRow{
+  margin-top: 10px;
+  display:flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.detailBadge{
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.05);
+  color: rgba(255,255,255,.82);
+  font-size: 11px;
+}
 .detailMeta{ margin-top: 8px; color: var(--muted); font-size: 13px; line-height: 1.5; }
 .detailText{
   margin-top: 12px;
@@ -819,6 +861,9 @@ onMounted(refreshAll)
   min-height: 180px;
   text-align:center;
   line-height: 1.6;
+}
+.compactEmpty{
+  min-height: 120px;
 }
 @media (max-width: 1120px){
   .workspaceGrid,
