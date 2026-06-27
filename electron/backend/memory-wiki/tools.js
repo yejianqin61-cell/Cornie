@@ -205,4 +205,35 @@ export async function registerMemoryWikiTools({ baseDir, store }, { registerTool
       result: await topicIndex.unlinkPage(normalizedKey, pageId)
     })
   })
+
+  registerTool({
+    name: 'memory_governance.create_request',
+    description: '创建记忆治理待审核请求',
+    riskLevel: 'high',
+    handler: async (args) => ({ ok: true, result: await memoryWiki.createGovernanceRequest(args) })
+  })
+
+  registerTool({
+    name: 'memory_governance.get_request',
+    description: '读取单个记忆治理待审核请求',
+    riskLevel: 'low',
+    handler: async ({ requestId }) => ({ ok: true, result: await memoryWiki.getGovernanceRequest(requestId) })
+  })
+
+  registerTool({
+    name: 'memory_governance.list_requests',
+    description: '列出记忆治理待审核请求',
+    riskLevel: 'low',
+    handler: async (args = {}) => ({ ok: true, result: await memoryWiki.listGovernanceRequests(args) })
+  })
+
+  registerTool({
+    name: 'memory_governance.update_request_status',
+    description: '更新记忆治理待审核请求状态',
+    riskLevel: 'high',
+    handler: async ({ requestId, status }) => ({
+      ok: true,
+      result: await memoryWiki.updateGovernanceRequestStatus(requestId, status)
+    })
+  })
 }

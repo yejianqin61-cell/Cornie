@@ -3,6 +3,7 @@ import { createMemoryWikiVersionStore } from './versionStore.js'
 import { createMemoryWikiAuditStore } from './audit.js'
 import { createMemoryWikiInspector } from './inspector.js'
 import { createTopicIndexStore } from './topicIndex.js'
+import { createMemoryWikiGovernanceStore } from './governanceStore.js'
 
 function summarizePage(page) {
   return {
@@ -28,6 +29,7 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
   const versionStore = await createMemoryWikiVersionStore(baseDir)
   const auditStore = await createMemoryWikiAuditStore(baseDir)
   const topicIndex = await createTopicIndexStore(baseDir)
+  const governanceStore = await createMemoryWikiGovernanceStore(baseDir)
 
   async function writeAudit(event) {
     return auditStore.append(event)
@@ -341,6 +343,25 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
       return liveInspector.inspectOrphanPages()
     },
 
+    async createGovernanceRequest(input) {
+      return governanceStore.create(input)
+    },
+
+    async getGovernanceRequest(requestId) {
+      if (!requestId) throw new Error('memory governance requestId is required')
+      return governanceStore.get(requestId)
+    },
+
+    async listGovernanceRequests(filters = {}) {
+      return governanceStore.list(filters)
+    },
+
+    async updateGovernanceRequestStatus(requestId, status) {
+      if (!requestId) throw new Error('memory governance requestId is required')
+      if (!status) throw new Error('memory governance status is required')
+      return governanceStore.updateStatus(requestId, status)
+    },
+
     getStorage() {
       return storage
     },
@@ -355,6 +376,10 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
 
     getTopicIndex() {
       return topicIndex
+    },
+
+    getGovernanceStore() {
+      return governanceStore
     }
   }
 }
