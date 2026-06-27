@@ -90,6 +90,7 @@ export function createScheduleService(store) {
       })
     },
     cancel: ({ id }) => updateScheduleEntryStatus(store, { id, status: 'cancelled' }),
+    restore: ({ id }) => updateScheduleEntryStatus(store, { id, status: 'scheduled' }),
     delete: ({ id }) => {
       if (!id) throw new Error('schedule id is required')
       const existing = getScheduleEntry(store, id)
@@ -99,6 +100,8 @@ export function createScheduleService(store) {
     },
     get: (id) => getScheduleEntry(store, id),
     listToday: () => listScheduleEntries(store, { status: 'scheduled' }),
+    listUpcoming: () => listScheduleEntries(store, { status: 'scheduled', from: new Date().toISOString() }),
+    listCancelled: () => listScheduleEntries(store, { status: 'cancelled' }),
     listByRange: ({ from, to }) => listScheduleEntries(store, { from, to }),
     listCategories: () => listScheduleCategories(store),
     getCategory: (id) => {

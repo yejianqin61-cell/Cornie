@@ -23,6 +23,12 @@ export function registerScheduleTools(store, { registerTool }) {
     handler: async (args) => ({ ok: true, result: schedule.cancel(args) })
   })
   registerTool({
+    name: 'schedule.restore',
+    description: '恢复已取消的日程',
+    riskLevel: 'high',
+    handler: async (args) => ({ ok: true, result: schedule.restore(args) })
+  })
+  registerTool({
     name: 'schedule.delete',
     description: '删除日程',
     riskLevel: 'high',
@@ -45,6 +51,18 @@ export function registerScheduleTools(store, { registerTool }) {
     description: '按范围列出日程',
     riskLevel: 'low',
     handler: async (args) => ({ ok: true, result: schedule.listByRange(args) })
+  })
+  registerTool({
+    name: 'schedule.list_upcoming',
+    description: '列出未来有效日程',
+    riskLevel: 'low',
+    handler: async () => ({ ok: true, result: schedule.listUpcoming() })
+  })
+  registerTool({
+    name: 'schedule.list_cancelled',
+    description: '列出已取消日程',
+    riskLevel: 'low',
+    handler: async () => ({ ok: true, result: schedule.listCancelled() })
   })
   registerTool({
     name: 'schedule_category.list',
