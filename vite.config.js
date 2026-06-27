@@ -15,6 +15,17 @@ export default defineConfig({
         cornie: resolve(__dirname, 'cornie.html')
       }
     }
+  },
+  test: {
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: ['./tests/frontend/setup.mjs'],
+    include: ['tests/frontend/**/*.test.mjs'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json-summary', 'html'],
+      reportsDirectory: './coverage/frontend'
+    }
   }
 })
 
