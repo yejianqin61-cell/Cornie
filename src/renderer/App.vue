@@ -4,6 +4,7 @@ import { getEntry, getModelStatus, listEntries, listOnThisDay, regenerateCornie,
 import CornieComposer from './CornieComposer.vue'
 import ChatHistory from './ChatHistory.vue'
 import LedgerWorkspace from './components/LedgerWorkspace.vue'
+import MemoryWikiWorkspace from './components/MemoryWikiWorkspace.vue'
 import TodoWorkspace from './components/TodoWorkspace.vue'
 import ScheduleWorkspace from './components/ScheduleWorkspace.vue'
 
@@ -44,6 +45,7 @@ const sections = [
   { id: 'ledger', label: '收支', hint: '记录收入支出与类目' },
   { id: 'todo', label: '待办', hint: '整理待办与类目' },
   { id: 'schedule', label: '日程', hint: '管理未来安排与类目' },
+  { id: 'memory-wiki', label: 'Memory Wiki', hint: '查看长期记忆页面与主题索引' },
   { id: 'history', label: '聊天记录', hint: '按天翻阅聊天历史' },
   { id: 'cornie-composer', label: 'Cornie 拼装', hint: '编辑 Cornie 外观贴图' }
 ]
@@ -319,6 +321,10 @@ onMounted(async () => {
 
       <section v-else-if="mode === 'schedule'" class="contentFrame">
         <ScheduleWorkspace />
+      </section>
+
+      <section v-else-if="mode === 'memory-wiki'" class="contentFrame">
+        <MemoryWikiWorkspace />
       </section>
 
       <section v-else-if="mode === 'history'" class="contentFrame">

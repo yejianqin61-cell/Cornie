@@ -337,3 +337,114 @@ export async function reorderScheduleCategory(id, sortOrder) {
   })
 }
 
+// ─── memory wiki ─────────────────────────────────────────────
+
+export async function listMemoryWikiPages({ pageType, status } = {}) {
+  const params = new URLSearchParams()
+  if (pageType) params.set('pageType', pageType)
+  if (status) params.set('status', status)
+  const qs = params.toString()
+  return apiFetch(`/memory-wiki/pages${qs ? `?${qs}` : ''}`)
+}
+
+export async function getMemoryWikiPage(pageId) {
+  return apiFetch(`/memory-wiki/pages/${encodeURIComponent(pageId)}`)
+}
+
+export async function createMemoryWikiPage(payload) {
+  return apiFetch('/memory-wiki/pages', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  })
+}
+
+export async function updateMemoryWikiPage(pageId, payload) {
+  return apiFetch(`/memory-wiki/pages/${encodeURIComponent(pageId)}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  })
+}
+
+export async function updateMemoryWikiSummary(pageId, summary) {
+  return apiFetch(`/memory-wiki/pages/${encodeURIComponent(pageId)}/summary`, {
+    method: 'PUT',
+    body: JSON.stringify({ summary })
+  })
+}
+
+export async function updateMemoryWikiAliases(pageId, aliases) {
+  return apiFetch(`/memory-wiki/pages/${encodeURIComponent(pageId)}/aliases`, {
+    method: 'PUT',
+    body: JSON.stringify({ aliases })
+  })
+}
+
+export async function setMemoryWikiStatus(pageId, status) {
+  return apiFetch(`/memory-wiki/pages/${encodeURIComponent(pageId)}/status`, {
+    method: 'PUT',
+    body: JSON.stringify({ status })
+  })
+}
+
+export async function setMemoryWikiImportance(pageId, importance) {
+  return apiFetch(`/memory-wiki/pages/${encodeURIComponent(pageId)}/importance`, {
+    method: 'PUT',
+    body: JSON.stringify({ importance })
+  })
+}
+
+export async function archiveMemoryWikiPage(pageId) {
+  return apiFetch(`/memory-wiki/pages/${encodeURIComponent(pageId)}/archive`, {
+    method: 'POST'
+  })
+}
+
+export async function restoreMemoryWikiPage(pageId) {
+  return apiFetch(`/memory-wiki/pages/${encodeURIComponent(pageId)}/restore`, {
+    method: 'POST'
+  })
+}
+
+export async function rollbackMemoryWikiPage(pageId, versionId) {
+  return apiFetch(`/memory-wiki/pages/${encodeURIComponent(pageId)}/rollback`, {
+    method: 'POST',
+    body: JSON.stringify({ versionId })
+  })
+}
+
+export async function mergeMemoryWikiPages(payload) {
+  return apiFetch('/memory-wiki/pages/merge', {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  })
+}
+
+export async function linkMemoryWikiRelatedPages(pageId, relatedPageIds) {
+  return apiFetch(`/memory-wiki/pages/${encodeURIComponent(pageId)}/related-pages`, {
+    method: 'PUT',
+    body: JSON.stringify({ relatedPageIds })
+  })
+}
+
+export async function listTopicIndexItems() {
+  return apiFetch('/memory-wiki/topic-index')
+}
+
+export async function getTopicIndexItem(normalizedKey) {
+  return apiFetch(`/memory-wiki/topic-index/${encodeURIComponent(normalizedKey)}`)
+}
+
+export async function updateTopicIndexAliases(normalizedKey, aliases) {
+  return apiFetch(`/memory-wiki/topic-index/${encodeURIComponent(normalizedKey)}/aliases`, {
+    method: 'PUT',
+    body: JSON.stringify({ aliases })
+  })
+}
+
+export async function linkTopicIndexPage(normalizedKey, pageId) {
+  return apiFetch(`/memory-wiki/topic-index/${encodeURIComponent(normalizedKey)}/link-page`, {
+    method: 'POST',
+    body: JSON.stringify({ pageId })
+  })
+}
+
