@@ -3,7 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 
 import ScheduleWorkspace from '../../src/renderer/components/ScheduleWorkspace.vue'
 
-function createScheduleFetchMock({ failList = false } = {}) {
+function createScheduleFetchMock({ failList = false, failSave = false, failCategorySave = false } = {}) {
   const items = [
     {
       id: 'schedule-1',
@@ -15,6 +15,17 @@ function createScheduleFetchMock({ failList = false } = {}) {
       endAt: '2026-06-29T20:00:00.000Z',
       location: '滨海餐厅',
       status: 'scheduled'
+    },
+    {
+      id: 'schedule-2',
+      title: '取消的散步提醒',
+      description: '',
+      categoryId: '',
+      categoryName: '',
+      startAt: '',
+      endAt: '',
+      location: '',
+      status: 'cancelled'
     }
   ]
   const categories = [
@@ -24,6 +35,7 @@ function createScheduleFetchMock({ failList = false } = {}) {
   return vi.fn(async (input, init) => {
     const url = String(input)
     const method = init?.method || 'GET'
+    const parsedUrl = new URL(url, 'http://localhost')
 
     if (url.includes('/api/schedules')) {
       if (method === 'GET') {
@@ -35,15 +47,23 @@ function createScheduleFetchMock({ failList = false } = {}) {
             text: async () => '日程列表加载失败'
           }
         }
+        const view = parsedUrl.searchParams.get('view')
+        const filtered = items.filter((item) => {
+          if (view === 'cancelled') return item.status === 'cancelled'
+          return item.status !== 'cancelled'
+        })
         return {
           ok: true,
           status: 200,
-          json: async () => ({ items }),
+          json: async () => ({ items: filtered }),
           text: async () => ''
         }
       }
 
       if (method === 'POST' && url.endsWith('/api/schedules')) {
+        if (failSave) {
+          return { ok: false, status: 500, json: async () => ({}), text: async () => '保存日程失败' }
+        }
         const payload = JSON.parse(init.body)
         items.unshift({
           id: 'schedule-2',
@@ -104,6 +124,9 @@ function createScheduleFetchMock({ failList = false } = {}) {
       }
 
       if (method === 'POST') {
+        if (failCategorySave) {
+          return { ok: false, status: 500, json: async () => ({}), text: async () => '保存日程类目失败' }
+        }
         const payload = JSON.parse(init.body)
         categories.push({
           id: `schedule-cat-${categories.length + 1}`,
@@ -196,15 +219,16 @@ describe('ScheduleWorkspace async flow', () => {
     await actionButtons[1].trigger('click')
     await flushPromises()
     await flushPromises()
-    expect(wrapper.text()).toContain('cancelled')
+    expect(wrapper.text()).not.toContain('周日晚吃龙虾')
 
     await wrapper.findAll('.cardFilters button')[1].trigger('click')
     await flushPromises()
+    expect(wrapper.text()).toContain('周日晚吃龙虾')
     const restoreButtons = wrapper.findAll('.actionRow button')
     await restoreButtons[1].trigger('click')
     await flushPromises()
     await flushPromises()
-    expect(wrapper.text()).toContain('scheduled')
+    expect(wrapper.text()).not.toContain('周日晚吃龙虾')
 
     await wrapper.find('.entryRow').trigger('click')
     await flushPromises()
@@ -231,5 +255,70 @@ describe('ScheduleWorkspace async flow', () => {
     await flushPromises()
     await flushPromises()
     expect(wrapper.text()).toContain('已停用')
+
+    const restoreCategoryButton = wrapper.findAll('.miniActions button')[2]
+    await restoreCategoryButton.trigger('click')
+    await flushPromises()
+    await flushPromises()
+    expect(wrapper.text()).toContain('启用中')
+  })
+
+  it('supports view switching, empty fallback text, and reset to create mode', async () => {
+    const wrapper = mount(ScheduleWorkspace)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('周日晚吃龙虾')
+    expect(wrapper.text()).toContain('聚餐 · scheduled')
+
+    await wrapper.findAll('.cardFilters button')[1].trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('取消的散步提醒')
+    expect(wrapper.text()).toContain('未分类 · cancelled')
+    expect(wrapper.text()).toContain('未设时间')
+
+    const row = wrapper.find('.entryRow')
+    await row.trigger('click')
+    await flushPromises()
+    expect(wrapper.find('input[placeholder="可选"]').element.value).toBe('')
+
+    const resetButton = wrapper.findAll('button').find((button) => button.text() === '新建一条')
+    await resetButton.trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('新增日程')
+  })
+
+  it('submits category default sort order and shows readable save failures', async () => {
+    globalThis.fetch = createScheduleFetchMock({ failSave: true, failCategorySave: true })
+    const wrapper = mount(ScheduleWorkspace)
+    await flushPromises()
+
+    const inputs = wrapper.findAll('input')
+    await inputs[0].setValue('失败日程')
+    await wrapper.get('.actionRow button').trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('保存日程失败')
+
+    globalThis.fetch = createScheduleFetchMock()
+    const successWrapper = mount(ScheduleWorkspace)
+    await flushPromises()
+
+    const categoryInputs = successWrapper.findAll('.categoryCreator input')
+    await categoryInputs[0].setValue('学习')
+    await successWrapper.find('.categoryCreator button').trigger('click')
+    await flushPromises()
+    await flushPromises()
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/schedule-categories'),
+      expect.objectContaining({ method: 'POST', body: JSON.stringify({ name: '学习', sortOrder: 0 }) })
+    )
+
+    globalThis.fetch = createScheduleFetchMock({ failCategorySave: true })
+    const failCategoryWrapper = mount(ScheduleWorkspace)
+    await flushPromises()
+    const failCategoryInputs = failCategoryWrapper.findAll('.categoryCreator input')
+    await failCategoryInputs[0].setValue('失败类目')
+    await failCategoryWrapper.find('.categoryCreator button').trigger('click')
+    await flushPromises()
+    expect(failCategoryWrapper.text()).toContain('保存日程类目失败')
   })
 })

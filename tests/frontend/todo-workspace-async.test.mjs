@@ -3,7 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 
 import TodoWorkspace from '../../src/renderer/components/TodoWorkspace.vue'
 
-function createTodoFetchMock({ failList = false } = {}) {
+function createTodoFetchMock({ failList = false, failSave = false, failCategorySave = false } = {}) {
   const items = [
     {
       id: 'todo-1',
@@ -13,6 +13,15 @@ function createTodoFetchMock({ failList = false } = {}) {
       categoryName: '记账',
       dueAt: '2026-06-28T10:00:00.000Z',
       status: 'open'
+    },
+    {
+      id: 'todo-2',
+      title: '已经完成的观察整理',
+      description: '',
+      categoryId: '',
+      categoryName: '',
+      dueAt: '',
+      status: 'done'
     }
   ]
   const categories = [
@@ -22,6 +31,7 @@ function createTodoFetchMock({ failList = false } = {}) {
   return vi.fn(async (input, init) => {
     const url = String(input)
     const method = init?.method || 'GET'
+    const parsedUrl = new URL(url, 'http://localhost')
 
     if (url.includes('/api/todos')) {
       if (method === 'GET') {
@@ -33,15 +43,23 @@ function createTodoFetchMock({ failList = false } = {}) {
             text: async () => '待办列表加载失败'
           }
         }
+        const view = parsedUrl.searchParams.get('view')
+        const filtered = items.filter((item) => {
+          if (view === 'completed') return item.status === 'done'
+          return item.status !== 'done'
+        })
         return {
           ok: true,
           status: 200,
-          json: async () => ({ items }),
+          json: async () => ({ items: filtered }),
           text: async () => ''
         }
       }
 
       if (method === 'POST' && url.endsWith('/api/todos')) {
+        if (failSave) {
+          return { ok: false, status: 500, json: async () => ({}), text: async () => '保存待办失败' }
+        }
         const payload = JSON.parse(init.body)
         items.unshift({
           id: 'todo-2',
@@ -99,6 +117,9 @@ function createTodoFetchMock({ failList = false } = {}) {
       }
 
       if (method === 'POST') {
+        if (failCategorySave) {
+          return { ok: false, status: 500, json: async () => ({}), text: async () => '保存待办类目失败' }
+        }
         const payload = JSON.parse(init.body)
         categories.push({
           id: `todo-cat-${categories.length + 1}`,
@@ -189,16 +210,21 @@ describe('TodoWorkspace async flow', () => {
     await actionButtons[1].trigger('click')
     await flushPromises()
     await flushPromises()
-    expect(wrapper.text()).toContain('done')
+    expect(wrapper.text()).not.toContain('整理龙虾账单')
 
     await wrapper.findAll('.cardFilters button')[1].trigger('click')
     await flushPromises()
+    expect(wrapper.text()).toContain('整理龙虾账单')
     const reopenedButtons = wrapper.findAll('.actionRow button')
     await reopenedButtons[1].trigger('click')
     await flushPromises()
     await flushPromises()
-    expect(wrapper.text()).toContain('open')
+    expect(wrapper.text()).not.toContain('整理龙虾账单')
 
+    await wrapper.findAll('.cardFilters button')[0].trigger('click')
+    await flushPromises()
+    await wrapper.find('.entryRow').trigger('click')
+    await flushPromises()
     await wrapper.find('.dangerGhost').trigger('click')
     await flushPromises()
     await flushPromises()
@@ -222,5 +248,69 @@ describe('TodoWorkspace async flow', () => {
     await flushPromises()
     await flushPromises()
     expect(wrapper.text()).toContain('已停用')
+
+    const restoreCategoryButton = wrapper.findAll('.miniActions button')[2]
+    await restoreCategoryButton.trigger('click')
+    await flushPromises()
+    await flushPromises()
+    expect(wrapper.text()).toContain('启用中')
+  })
+
+  it('supports view switching, empty fallback text, and reset to create mode', async () => {
+    const wrapper = mount(TodoWorkspace)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('整理龙虾账单')
+    expect(wrapper.text()).toContain('记账 · open')
+
+    await wrapper.findAll('.cardFilters button')[1].trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('已经完成的观察整理')
+    expect(wrapper.text()).toContain('未分类 · done')
+    expect(wrapper.text()).toContain('未设日期')
+
+    const row = wrapper.find('.entryRow')
+    await row.trigger('click')
+    await flushPromises()
+
+    const resetButton = wrapper.findAll('button').find((button) => button.text() === '新建一条')
+    await resetButton.trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('新增待办')
+  })
+
+  it('submits category default sort order and shows readable save failures', async () => {
+    globalThis.fetch = createTodoFetchMock({ failSave: true, failCategorySave: true })
+    const wrapper = mount(TodoWorkspace)
+    await flushPromises()
+
+    const inputs = wrapper.findAll('input')
+    await inputs[0].setValue('失败待办')
+    await wrapper.get('.actionRow button').trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('保存待办失败')
+
+    globalThis.fetch = createTodoFetchMock()
+    const successWrapper = mount(TodoWorkspace)
+    await flushPromises()
+
+    const categoryInputs = successWrapper.findAll('.categoryCreator input')
+    await categoryInputs[0].setValue('学习')
+    await successWrapper.find('.categoryCreator button').trigger('click')
+    await flushPromises()
+    await flushPromises()
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/todo-categories'),
+      expect.objectContaining({ method: 'POST', body: JSON.stringify({ name: '学习', sortOrder: 0 }) })
+    )
+
+    globalThis.fetch = createTodoFetchMock({ failCategorySave: true })
+    const failCategoryWrapper = mount(TodoWorkspace)
+    await flushPromises()
+    const failCategoryInputs = failCategoryWrapper.findAll('.categoryCreator input')
+    await failCategoryInputs[0].setValue('失败类目')
+    await failCategoryWrapper.find('.categoryCreator button').trigger('click')
+    await flushPromises()
+    expect(failCategoryWrapper.text()).toContain('保存待办类目失败')
   })
 })
