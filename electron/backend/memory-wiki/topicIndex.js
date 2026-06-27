@@ -4,6 +4,8 @@ import { resolveMemoryWikiIndexRoot } from './constants.js'
 
 const KEYWORD_INDEX_FILENAME = 'keyword-index.json'
 
+const DAY_MS = 86_400_000
+
 function normalizeString(value) {
   return String(value ?? '').trim()
 }
@@ -21,10 +23,69 @@ function dedupe(items) {
   return Array.from(new Set(items))
 }
 
+function normalizeNumber(value, fallback = 0) {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : fallback
+}
+
+function parseDateSafe(value) {
+  const timestamp = Date.parse(normalizeString(value))
+  return Number.isFinite(timestamp) ? timestamp : null
+}
+
+function calcImportanceBonus(importance) {
+  const normalized = normalizeString(importance)
+  if (normalized === 'critical') return 4
+  if (normalized === 'high') return 2.5
+  if (normalized === 'medium') return 1.2
+  return 0.4
+}
+
+export function calculateTopicHeat(input = {}, { now = new Date() } = {}) {
+  const currentTime = now instanceof Date ? now.getTime() : Date.parse(String(now))
+  const dates = normalizeStringArray(input.dates)
+  const explicitImportance = normalizeString(input.importance)
+  const pinned = input.pinned === true
+  const lastMentionedAt = normalizeString(input.lastMentionedAt ?? input.last_mentioned_at)
+  const lastTouched =
+    parseDateSafe(lastMentionedAt) ??
+    dates
+      .map((item) => parseDateSafe(item))
+      .filter((item) => item != null)
+      .sort((a, b) => b - a)[0] ??
+    parseDateSafe(input.lastUpdatedAt ?? input.last_updated_at) ??
+    currentTime
+
+  const ageDays = Math.max(0, (currentTime - lastTouched) / DAY_MS)
+
+  let freshnessWeight = 0.2
+  if (ageDays <= 7) freshnessWeight = 1
+  else if (ageDays <= 30) freshnessWeight = 0.65
+  else if (ageDays <= 90) freshnessWeight = 0.35
+
+  const mentionScore = Math.min(6, dates.length * 0.8)
+  const linkScore =
+    normalizeStringArray(input.memoryPageIds ?? input.memory_page_ids).length * 0.5 +
+    normalizeStringArray(input.chatRefs ?? input.chat_refs).length * 0.25 +
+    normalizeStringArray(input.observationRefs ?? input.observation_refs).length * 0.25
+  const importanceBonus = calcImportanceBonus(explicitImportance)
+  const pinnedBonus = pinned ? 4 : 0
+
+  const heatScore = Number((freshnessWeight * 5 + mentionScore + linkScore + importanceBonus + pinnedBonus).toFixed(2))
+
+  return {
+    heatScore,
+    ageDays: Number(ageDays.toFixed(2)),
+    freshnessWeight,
+    lastMentionedAt: new Date(lastTouched).toISOString()
+  }
+}
+
 export function createTopicIndexEntry(input = {}) {
   const keyword = normalizeString(input.keyword)
   const normalizedKey = normalizeString(input.normalizedKey ?? input.normalized_key) || normalizeKey(keyword)
   const aliases = dedupe(normalizeStringArray(input.aliases))
+  const heat = calculateTopicHeat(input)
 
   return {
     keyword,
@@ -35,7 +96,12 @@ export function createTopicIndexEntry(input = {}) {
     observationRefs: dedupe(normalizeStringArray(input.observationRefs ?? input.observation_refs)),
     memoryPageIds: dedupe(normalizeStringArray(input.memoryPageIds ?? input.memory_page_ids)),
     importance: normalizeString(input.importance) || 'medium',
+    pinned: input.pinned === true,
     note: normalizeString(input.note),
+    heatScore: normalizeNumber(input.heatScore ?? input.heat_score, heat.heatScore),
+    freshnessWeight: normalizeNumber(input.freshnessWeight ?? input.freshness_weight, heat.freshnessWeight),
+    ageDays: normalizeNumber(input.ageDays ?? input.age_days, heat.ageDays),
+    lastMentionedAt: normalizeString(input.lastMentionedAt ?? input.last_mentioned_at) || heat.lastMentionedAt,
     lastUpdatedAt: normalizeString(input.lastUpdatedAt ?? input.last_updated_at) || new Date().toISOString()
   }
 }
@@ -165,7 +231,10 @@ export async function createTopicIndexStore(baseDir) {
       const indexMap = await readIndexMap()
       return Object.values(indexMap)
         .map((item) => createTopicIndexEntry(item))
-        .sort((a, b) => a.normalizedKey.localeCompare(b.normalizedKey, 'zh-CN'))
+        .sort((a, b) => {
+          if (b.heatScore !== a.heatScore) return b.heatScore - a.heatScore
+          return a.normalizedKey.localeCompare(b.normalizedKey, 'zh-CN')
+        })
     },
 
     async mergeTopics({ targetNormalizedKey, sourceNormalizedKey }) {

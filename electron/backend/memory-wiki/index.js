@@ -24,7 +24,7 @@ export {
 } from './storage.js'
 
 export { createMemoryWikiService } from './service.js'
-export { buildTopicCandidateKeys, createTopicIndexEntry, createTopicIndexStore } from './topicIndex.js'
+export { buildTopicCandidateKeys, calculateTopicHeat, createTopicIndexEntry, createTopicIndexStore } from './topicIndex.js'
 export { createMemoryWikiVersionStore } from './versionStore.js'
 export { createMemoryWikiAuditStore } from './audit.js'
 export { createMemoryWikiInspector } from './inspector.js'
