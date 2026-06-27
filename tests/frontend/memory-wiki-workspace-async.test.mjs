@@ -338,6 +338,8 @@ describe('MemoryWikiWorkspace async flow', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('Memory Wiki 工作台')
+    expect(wrapper.text()).toContain('记忆页面')
+    expect(wrapper.text()).toContain('Topic Index')
     expect(wrapper.text()).toContain('龙虾')
     expect(wrapper.text()).toContain('建议合并龙虾相关页面')
     expect(wrapper.text()).toContain('确认是否新建龙虾类目')
@@ -352,6 +354,7 @@ describe('MemoryWikiWorkspace async flow', () => {
     const resetButton = wrapper.findAll('button').find((button) => button.text() === '新建页面')
     await resetButton.trigger('click')
     await flushPromises()
+    expect(wrapper.text()).toContain('先写标题和摘要，再慢慢把这一页记忆补完整。')
 
     const titleInput = wrapper.find('input[placeholder="输入页面标题"]')
     await titleInput.setValue('记忆治理')
@@ -375,6 +378,8 @@ describe('MemoryWikiWorkspace async flow', () => {
     const topicRow = wrapper.findAll('.topicList .entryRow')[0]
     await topicRow.trigger('click')
     await flushPromises()
+    expect(wrapper.text()).toContain('索引键：lobster')
+    expect(wrapper.text()).toContain('主题热度：3')
 
     const topicAliasInput = wrapper.find('.topicAliases input')
     await topicAliasInput.setValue('澳龙, 小龙虾')
@@ -550,6 +555,7 @@ describe('MemoryWikiWorkspace async flow', () => {
     await flushPromises()
     expect(wrapper.text()).toContain('相关日期：无')
     expect(wrapper.text()).toContain('关联页面：无')
+    expect(wrapper.text()).toContain('索引键：lobster')
 
     const governanceRow = wrapper.findAll('.workspaceCard .entryRow').find((row) => row.text().includes('建议合并龙虾相关页面'))
     await governanceRow.trigger('click')
@@ -663,6 +669,8 @@ describe('MemoryWikiWorkspace async flow', () => {
     const emptyWrapper = mount(MemoryWikiWorkspace)
     await flushPromises()
     expect(emptyWrapper.findAll('.workspaceCard .entryRow').length).toBe(0)
+    expect(emptyWrapper.text()).toContain('这里暂时还没有记忆页面。')
+    expect(emptyWrapper.text()).toContain('现在还没有可用的主题索引。')
     expect(emptyWrapper.text()).toContain('现在没有排队等你点头的高风险动作，小铃湾先乖乖看着。')
 
     globalThis.fetch = createMemoryWikiFetchMock({

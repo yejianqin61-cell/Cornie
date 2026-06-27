@@ -383,7 +383,10 @@ onMounted(refreshAll)
     <div class="workspaceGrid">
       <section class="workspaceCard">
         <div class="cardHead">
-          <div class="cardTitle">记忆页面</div>
+          <div>
+            <div class="cardTitle">记忆页面</div>
+            <div class="cardSubhint">先从页面总览看清楚：哪些记忆正在使用，哪些只是暂存，哪些已经归档。</div>
+          </div>
           <div class="cardFilters">
             <select v-model="pageFilterType" @change="refreshPages">
               <option value="">全部类型</option>
@@ -401,7 +404,11 @@ onMounted(refreshAll)
           </div>
         </div>
 
-        <div class="entryList">
+        <div v-if="pages.length === 0" class="emptyState">
+          这里暂时还没有记忆页面。等铃湾和主人慢慢把重要的人、事、偏好记下来，这里就会热闹起来。
+        </div>
+
+        <div v-else class="entryList">
           <button
             v-for="page in pages"
             :key="page.pageId"
@@ -419,7 +426,12 @@ onMounted(refreshAll)
 
       <section class="workspaceCard">
         <div class="cardHead">
-          <div class="cardTitle">{{ selectedPage ? '编辑页面' : '新建页面' }}</div>
+          <div>
+            <div class="cardTitle">{{ selectedPage ? '编辑页面' : '新建页面' }}</div>
+            <div class="cardSubhint">
+              {{ selectedPage ? '正在整理这页长期记忆的标题、摘要、正文和重要性。' : '先写标题和摘要，再慢慢把这一页记忆补完整。' }}
+            </div>
+          </div>
           <button v-if="selectedPage" @click="resetPageForm">新建页面</button>
         </div>
 
@@ -482,12 +494,19 @@ onMounted(refreshAll)
 
       <section class="workspaceCard span2">
         <div class="cardHead">
-          <div class="cardTitle">Topic Index</div>
+          <div>
+            <div class="cardTitle">Topic Index</div>
+            <div class="cardSubhint">主题索引更像一张导航图，帮主人快速找到某个关键词都在哪几天、哪几页里出现过。</div>
+          </div>
           <div class="cardHint">这里能看到主题关键词、热度、日期，以及它们连到了哪些记忆页面。</div>
         </div>
 
         <div class="topicGrid">
-          <div class="topicList">
+          <div v-if="topicItems.length === 0" class="emptyDetail">
+            现在还没有可用的主题索引。等记忆页面和聊天慢慢积累起来，这里就会帮你把关键词串起来。
+          </div>
+
+          <div v-else class="topicList">
             <button
               v-for="item in topicItems"
               :key="item.normalizedKey"
@@ -504,7 +523,8 @@ onMounted(refreshAll)
 
           <div class="topicDetail" v-if="topicDetail">
             <div class="detailTitle">{{ topicDetail.keyword || topicDetail.normalizedKey }}</div>
-            <div class="detailMeta">normalizedKey: {{ topicDetail.normalizedKey }}</div>
+            <div class="detailMeta">索引键：{{ topicDetail.normalizedKey }}</div>
+            <div class="detailMeta">主题热度：{{ topicDetail.heatScore ?? 0 }}</div>
             <div class="detailMeta">相关日期：{{ (topicDetail.dates || []).join(', ') || '无' }}</div>
             <div class="detailMeta">关联页面：{{ (topicDetail.pageIds || topicDetail.memoryPageIds || []).join(', ') || '无' }}</div>
             <label class="topicAliases">
@@ -683,6 +703,14 @@ onMounted(refreshAll)
   display:flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+.emptyState{
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px dashed var(--border);
+  background: rgba(255,255,255,.03);
+  color: var(--muted);
+  line-height: 1.6;
 }
 .entryList{
   display:flex;
