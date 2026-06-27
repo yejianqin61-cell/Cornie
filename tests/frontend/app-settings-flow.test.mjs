@@ -11,6 +11,10 @@ function createSettingsFlowFetchMock(initialState = {}) {
     statusConfigured: undefined,
     statusOk: undefined,
     settingsConfigured: undefined,
+    failStatus: false,
+    failStatusMessage: 'network timeout',
+    failRefreshStatusOnce: false,
+    putErrorText: null,
     ...initialState
   }
 
@@ -19,6 +23,18 @@ function createSettingsFlowFetchMock(initialState = {}) {
     const method = init?.method || 'GET'
 
     if (url.includes('/api/model/status')) {
+      if (state.failStatus || state.failRefreshStatusOnce) {
+        if (state.failRefreshStatusOnce) {
+          state.failRefreshStatusOnce = false
+        }
+        return {
+          ok: false,
+          status: 503,
+          json: async () => ({}),
+          text: async () => state.failStatusMessage
+        }
+      }
+
       return {
         ok: true,
         status: 200,
@@ -55,6 +71,15 @@ function createSettingsFlowFetchMock(initialState = {}) {
 
     if (url.includes('/api/settings/model') && method === 'PUT') {
       const payload = JSON.parse(init.body)
+      if (state.putErrorText !== null) {
+        return {
+          ok: false,
+          status: 400,
+          json: async () => ({}),
+          text: async () => state.putErrorText
+        }
+      }
+
       if (!payload.apiKey) {
         return {
           ok: false,
@@ -216,7 +241,7 @@ describe('App settings async flow', () => {
     )
   })
 
-  it('shows friendly validation copy when save fails', async () => {
+  it('shows friendly validation copy when api key is missing', async () => {
     const wrapper = mount(App)
     await flushPromises()
 
@@ -224,5 +249,75 @@ describe('App settings async flow', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('API Key 这一栏还是空的，铃湾还没拿到钥匙呢。')
+  })
+
+  it('maps timeout and unknown save errors to friendly copy', async () => {
+    globalThis.fetch = createSettingsFlowFetchMock({
+      putErrorText: 'invalid timeout'
+    })
+
+    const timeoutWrapper = mount(App)
+    await flushPromises()
+    const timeoutInputs = timeoutWrapper.findAll('.guideForm input')
+    await timeoutInputs[0].setValue('sk-real-key')
+    await timeoutWrapper.get('.guideForm').trigger('submit.prevent')
+    await flushPromises()
+    expect(timeoutWrapper.text()).toContain('超时毫秒要填成正整数呀，比如 30000。')
+
+    globalThis.fetch = createSettingsFlowFetchMock({
+      putErrorText: 'strange backend copy'
+    })
+
+    const unknownWrapper = mount(App)
+    await flushPromises()
+    const unknownInputs = unknownWrapper.findAll('.guideForm input')
+    await unknownInputs[0].setValue('sk-real-key')
+    await unknownWrapper.get('.guideForm').trigger('submit.prevent')
+    await flushPromises()
+    expect(unknownWrapper.text()).toContain('这次保存没成功，不过别担心，我们检查一下输入内容再试一次就好。')
+  })
+
+  it('shows friendly request failure copy and supports recheck button', async () => {
+    const fetchMock = createSettingsFlowFetchMock({
+      failStatus: true,
+      failStatusMessage: 'network timeout'
+    })
+    globalThis.fetch = fetchMock
+
+    const wrapper = mount(App)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('铃湾刚刚去敲门时没收到顺利回应，可能是网络、地址或者钥匙状态出了点小岔子。')
+    expect(wrapper.text()).toContain('先确认 API Key 已经完整贴进来，不要漏掉开头或结尾。')
+
+    const recheckButton = wrapper.findAll('.guideActions button').find((button) => button.text() === '只重新检测')
+    await recheckButton.trigger('click')
+    await flushPromises()
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/api/model/status'),
+      expect.anything()
+    )
+  })
+
+  it('refreshes configured model summary state', async () => {
+    const fetchMock = createSettingsFlowFetchMock({
+      configured: true,
+      maskedApiKey: 'sk-t***-key',
+      statusConfigured: true,
+      statusOk: true,
+      settingsConfigured: true
+    })
+    globalThis.fetch = fetchMock
+
+    const wrapper = mount(App)
+    await flushPromises()
+
+    const refreshButton = wrapper.find('.modelRetry')
+    await refreshButton.trigger('click')
+    await flushPromises()
+    expect(fetchMock).toHaveBeenCalledWith(
+      expect.stringContaining('/api/settings/model'),
+      expect.anything()
+    )
   })
 })
