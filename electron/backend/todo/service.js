@@ -80,9 +80,12 @@ export function createTodoService(store) {
       })
     },
     complete: ({ id }) => updateTodoEntryStatus(store, { id, status: 'done' }),
+    reopen: ({ id }) => updateTodoEntryStatus(store, { id, status: 'pending' }),
     delete: ({ id }) => updateTodoEntryStatus(store, { id, status: 'cancelled' }),
     get: (id) => getTodoEntry(store, id),
     listToday: () => listTodoEntries(store, { status: 'pending' }),
+    listOpen: () => listTodoEntries(store, { status: 'pending' }),
+    listCompleted: () => listTodoEntries(store, { status: 'done' }),
     listByRange: ({ from, to }) => listTodoEntries(store, { from, to }),
     listCategories: () => listTodoCategories(store),
     createCategory: ({ name, id, sortOrder = 0 }) => {

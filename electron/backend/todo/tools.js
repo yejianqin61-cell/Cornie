@@ -23,6 +23,12 @@ export function registerTodoTools(store, { registerTool }) {
     handler: async (args) => ({ ok: true, result: todo.complete(args) })
   })
   registerTool({
+    name: 'todo.reopen',
+    description: '重新打开待办',
+    riskLevel: 'high',
+    handler: async (args) => ({ ok: true, result: todo.reopen(args) })
+  })
+  registerTool({
     name: 'todo.delete',
     description: '删除待办',
     riskLevel: 'high',
@@ -45,6 +51,18 @@ export function registerTodoTools(store, { registerTool }) {
     description: '按范围列出待办',
     riskLevel: 'low',
     handler: async (args) => ({ ok: true, result: todo.listByRange(args) })
+  })
+  registerTool({
+    name: 'todo.list_open',
+    description: '列出未完成待办',
+    riskLevel: 'low',
+    handler: async () => ({ ok: true, result: todo.listOpen() })
+  })
+  registerTool({
+    name: 'todo.list_completed',
+    description: '列出已完成待办',
+    riskLevel: 'low',
+    handler: async () => ({ ok: true, result: todo.listCompleted() })
   })
   registerTool({
     name: 'todo_category.list',
