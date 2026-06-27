@@ -58,15 +58,86 @@ function createScheduleFetchMock({ failList = false } = {}) {
         })
         return { ok: true, status: 200, json: async () => ({ ok: true }), text: async () => '' }
       }
+
+      if (method === 'PUT') {
+        const id = url.split('/').pop()
+        const payload = JSON.parse(init.body)
+        const target = items.find((item) => item.id === id)
+        if (target) {
+          target.title = payload.title
+          target.description = payload.description ?? target.description
+          target.location = payload.location ?? target.location
+        }
+        return { ok: true, status: 200, json: async () => ({ ok: true }), text: async () => '' }
+      }
+
+      if (method === 'DELETE') {
+        const id = url.split('/').pop()
+        const index = items.findIndex((item) => item.id === id)
+        if (index >= 0) items.splice(index, 1)
+        return { ok: true, status: 204, json: async () => ({}), text: async () => '' }
+      }
+
+      if (method === 'POST' && url.includes('/cancel')) {
+        const id = url.split('/').slice(-2)[0]
+        const target = items.find((item) => item.id === id)
+        if (target) target.status = 'cancelled'
+        return { ok: true, status: 200, json: async () => ({ ok: true }), text: async () => '' }
+      }
+
+      if (method === 'POST' && url.includes('/restore')) {
+        const id = url.split('/').slice(-2)[0]
+        const target = items.find((item) => item.id === id)
+        if (target) target.status = 'scheduled'
+        return { ok: true, status: 200, json: async () => ({ ok: true }), text: async () => '' }
+      }
     }
 
     if (url.endsWith('/api/schedule-categories')) {
-      return {
-        ok: true,
-        status: 200,
-        json: async () => ({ items: categories }),
-        text: async () => ''
+      if (method === 'GET') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ items: categories }),
+          text: async () => ''
+        }
       }
+
+      if (method === 'POST') {
+        const payload = JSON.parse(init.body)
+        categories.push({
+          id: `schedule-cat-${categories.length + 1}`,
+          name: payload.name,
+          sortOrder: payload.sortOrder,
+          isActive: true
+        })
+        return { ok: true, status: 200, json: async () => ({ ok: true }), text: async () => '' }
+      }
+    }
+
+    if (url.includes('/api/schedule-categories/') && method === 'PUT') {
+      const id = url.split('/').pop()
+      const payload = JSON.parse(init.body)
+      const category = categories.find((item) => item.id === id)
+      if (category && typeof payload.isActive === 'boolean') {
+        category.isActive = payload.isActive
+      }
+      return { ok: true, status: 200, json: async () => ({ ok: true }), text: async () => '' }
+    }
+
+    if (url.includes('/api/schedule-categories/') && url.endsWith('/restore') && method === 'POST') {
+      const id = url.split('/').slice(-2)[0]
+      const category = categories.find((item) => item.id === id)
+      if (category) category.isActive = true
+      return { ok: true, status: 200, json: async () => ({ ok: true }), text: async () => '' }
+    }
+
+    if (url.includes('/api/schedule-categories/') && url.endsWith('/reorder') && method === 'POST') {
+      const id = url.split('/').slice(-2)[0]
+      const payload = JSON.parse(init.body)
+      const category = categories.find((item) => item.id === id)
+      if (category) category.sortOrder = payload.sortOrder
+      return { ok: true, status: 200, json: async () => ({ ok: true }), text: async () => '' }
     }
 
     return {
@@ -112,5 +183,53 @@ describe('ScheduleWorkspace async flow', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('日程列表加载失败')
+  })
+
+  it('supports cancel, restore, delete, and category management flows', async () => {
+    const wrapper = mount(ScheduleWorkspace)
+    await flushPromises()
+
+    await wrapper.find('.entryRow').trigger('click')
+    await flushPromises()
+
+    const actionButtons = wrapper.findAll('.actionRow button')
+    await actionButtons[1].trigger('click')
+    await flushPromises()
+    await flushPromises()
+    expect(wrapper.text()).toContain('cancelled')
+
+    await wrapper.findAll('.cardFilters button')[1].trigger('click')
+    await flushPromises()
+    const restoreButtons = wrapper.findAll('.actionRow button')
+    await restoreButtons[1].trigger('click')
+    await flushPromises()
+    await flushPromises()
+    expect(wrapper.text()).toContain('scheduled')
+
+    await wrapper.find('.entryRow').trigger('click')
+    await flushPromises()
+    await wrapper.find('.dangerGhost').trigger('click')
+    await flushPromises()
+    await flushPromises()
+    expect(wrapper.text()).not.toContain('周日晚吃龙虾')
+
+    const categoryInputs = wrapper.findAll('.categoryCreator input')
+    await categoryInputs[0].setValue('会议')
+    await categoryInputs[1].setValue('20')
+    await wrapper.find('.categoryCreator button').trigger('click')
+    await flushPromises()
+    await flushPromises()
+    expect(wrapper.text()).toContain('会议')
+
+    const miniButtons = wrapper.findAll('.miniActions button')
+    await miniButtons[0].trigger('click')
+    await flushPromises()
+    await flushPromises()
+    expect(wrapper.text()).toContain('排序 0')
+
+    await miniButtons[2].trigger('click')
+    await flushPromises()
+    await flushPromises()
+    expect(wrapper.text()).toContain('已停用')
   })
 })
