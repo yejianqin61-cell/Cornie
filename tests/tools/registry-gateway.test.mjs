@@ -8,9 +8,10 @@ import { registerSystemTools } from '../../electron/backend/system/tools.js'
 import { registerTodoTools } from '../../electron/backend/todo/tools.js'
 import { registerScheduleTools } from '../../electron/backend/schedule/tools.js'
 import { assert } from '../shared/service-harness.mjs'
+import { cleanupSqliteFile, createRuntimeSqlitePath } from '../../scripts/tmp-artifacts.mjs'
 
 async function withStore(caseName, run) {
-  const dbPath = `./tmp-tools-test-${caseName}-${randomUUID()}.sqlite`
+  const dbPath = await createRuntimeSqlitePath(`tools-test-${caseName}-${randomUUID()}`)
   const store = await openDb(dbPath)
   try {
     return await run(store)
@@ -18,6 +19,7 @@ async function withStore(caseName, run) {
     try {
       store.close()
     } catch {}
+    cleanupSqliteFile(dbPath)
   }
 }
 

@@ -38,6 +38,7 @@ import { registerScheduleTools } from '../electron/backend/schedule/tools.js'
 import { createTodoService } from '../electron/backend/todo/service.js'
 import { registerTodoTools } from '../electron/backend/todo/tools.js'
 import { getTool, registerTool } from '../electron/backend/tools/registry.js'
+import { cleanupSqliteFile, createRuntimeSqlitePath } from './tmp-artifacts.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -94,12 +95,6 @@ global.fetch = async (url, options = {}) => {
   }
 }
 
-function cleanupDbFile(dbPath) {
-  if (fs.existsSync(dbPath)) {
-    fs.unlinkSync(dbPath)
-  }
-}
-
 function resetRegisteredTools() {
   const toolNames = [
     'ledger.add_expense',
@@ -151,8 +146,8 @@ function resetRegisteredTools() {
 }
 
 async function createHarness(caseName) {
-  const dbPath = path.join(repoRoot, `tmp-${caseName}.sqlite`)
-  cleanupDbFile(dbPath)
+  const dbPath = await createRuntimeSqlitePath(caseName)
+  cleanupSqliteFile(dbPath)
   resetRegisteredTools()
 
   const store = await openDb(dbPath)
@@ -184,7 +179,7 @@ async function createHarness(caseName) {
       try {
         store.close()
       } catch {}
-      cleanupDbFile(dbPath)
+      cleanupSqliteFile(dbPath)
     }
   }
 }
@@ -1051,12 +1046,12 @@ async function caseCategoryAuditSamplesExport() {
 }
 
 async function caseCategoryDataAuditAndRepair() {
-  const tempDbPath = path.join(repoRoot, 'tmp-task038-verify.sqlite')
-  cleanupDbFile(tempDbPath)
+  const tempDbPath = await createRuntimeSqlitePath('task038-verify', { keepNameStable: true })
+  cleanupSqliteFile(tempDbPath)
 
   const seedScript = `
     import { openDb, saveTodoEntry, upsertTodoCategory, saveScheduleEntry, saveLedgerEntry } from './electron/db.js'
-    const store = await openDb('./tmp-task038-verify.sqlite')
+    const store = await openDb(${JSON.stringify(tempDbPath)})
     upsertTodoCategory(store, { id: 'todo_dup_a', name: '宠物护理', sortOrder: 40 })
     upsertTodoCategory(store, { id: 'todo_dup_b', name: '宠物护理', sortOrder: 41 })
     saveTodoEntry(store, {
@@ -1099,7 +1094,7 @@ async function caseCategoryDataAuditAndRepair() {
 
     const auditBefore = JSON.parse(
       (
-        await execFile('node', ['scripts/audit-category-data.mjs', '--db', '.\\tmp-task038-verify.sqlite'], {
+        await execFile('node', ['scripts/audit-category-data.mjs', '--db', tempDbPath], {
           cwd: repoRoot
         })
       ).stdout
@@ -1108,7 +1103,7 @@ async function caseCategoryDataAuditAndRepair() {
       (
         await execFile(
           'node',
-          ['scripts/repair-category-data.mjs', '--db', '.\\tmp-task038-verify.sqlite', '--dry-run'],
+          ['scripts/repair-category-data.mjs', '--db', tempDbPath, '--dry-run'],
           { cwd: repoRoot }
         )
       ).stdout
@@ -1117,14 +1112,14 @@ async function caseCategoryDataAuditAndRepair() {
       (
         await execFile(
           'node',
-          ['scripts/repair-category-data.mjs', '--db', '.\\tmp-task038-verify.sqlite', '--apply'],
+          ['scripts/repair-category-data.mjs', '--db', tempDbPath, '--apply'],
           { cwd: repoRoot }
         )
       ).stdout
     )
     const auditAfter = JSON.parse(
       (
-        await execFile('node', ['scripts/audit-category-data.mjs', '--db', '.\\tmp-task038-verify.sqlite'], {
+        await execFile('node', ['scripts/audit-category-data.mjs', '--db', tempDbPath], {
           cwd: repoRoot
         })
       ).stdout
@@ -1141,7 +1136,7 @@ async function caseCategoryDataAuditAndRepair() {
       issuesAfter: auditAfter.summary.totals.issues
     })
   } finally {
-    cleanupDbFile(tempDbPath)
+    cleanupSqliteFile(tempDbPath)
   }
 }
 

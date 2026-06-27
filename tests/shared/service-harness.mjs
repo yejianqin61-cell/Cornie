@@ -13,6 +13,7 @@ import { registerMemoryTools } from '../../electron/backend/memory/tools.js'
 import { registerSystemTools } from '../../electron/backend/system/tools.js'
 import { registerMemoryWikiTools } from '../../electron/backend/memory-wiki/tools.js'
 import { registerTool } from '../../electron/backend/tools/registry.js'
+import { cleanupSqliteFile, createRuntimeSqlitePath } from '../../scripts/tmp-artifacts.mjs'
 
 export function assert(condition, message, details = null) {
   if (!condition) {
@@ -22,19 +23,15 @@ export function assert(condition, message, details = null) {
   }
 }
 
-function cleanupDbFile(dbPath) {
-  if (fs.existsSync(dbPath)) {
-    fs.unlinkSync(dbPath)
-  }
-}
-
 export async function createServiceHarness(caseName, options = {}) {
-  const dbPath = `./tmp-service-test-${caseName}-${randomUUID()}.sqlite`
+  const dbPath =
+    options.dbPath ??
+    (await createRuntimeSqlitePath(`service-test-${caseName}-${randomUUID()}`))
   const baseDir =
     options.baseDir ??
     (await fsPromises.mkdtemp(path.join(os.tmpdir(), `cornie-service-test-${caseName}-`)))
 
-  cleanupDbFile(dbPath)
+  cleanupSqliteFile(dbPath)
   const store = await openDb(dbPath)
 
   registerLedgerTools(store, { registerTool })
@@ -52,7 +49,7 @@ export async function createServiceHarness(caseName, options = {}) {
       try {
         store.close()
       } catch {}
-      cleanupDbFile(dbPath)
+      cleanupSqliteFile(dbPath)
       await fsPromises.rm(baseDir, { recursive: true, force: true })
     }
   }

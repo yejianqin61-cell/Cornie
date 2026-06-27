@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { openDb } from '../electron/db.js'
 import { registerTool, getTool } from '../electron/backend/tools/registry.js'
 import { registerTodoTools } from '../electron/backend/todo/tools.js'
+import { cleanupSqliteFile, createRuntimeSqlitePath } from './tmp-artifacts.mjs'
 
 function assert(condition, message, details) {
   if (!condition) {
@@ -12,7 +13,7 @@ function assert(condition, message, details) {
 }
 
 async function main() {
-  const dbPath = `./tmp-task100-verify-${randomUUID()}.sqlite`
+  const dbPath = await createRuntimeSqlitePath(`task100-verify-${randomUUID()}`)
   const store = await openDb(dbPath)
 
   try {
@@ -70,6 +71,7 @@ async function main() {
     try {
       store.close()
     } catch {}
+    cleanupSqliteFile(dbPath)
   }
 }
 

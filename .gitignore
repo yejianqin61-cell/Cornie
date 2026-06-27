@@ -23,6 +23,7 @@ Desktop.ini
 
 # Build artifacts / caches
 coverage/
+tmp/
 *.log
 
 # Electron runtime data (keep local)

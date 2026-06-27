@@ -8,6 +8,7 @@ import { registerSystemTools } from '../electron/backend/system/tools.js'
 import { parseModelJson } from '../electron/backend/agent/jsonProtocol.js'
 import { evaluateToolRule } from '../electron/backend/policy/rules.js'
 import { getToolRiskLevel } from '../electron/backend/policy/riskLevels.js'
+import { cleanupSqliteFile, createRuntimeSqlitePath } from './tmp-artifacts.mjs'
 
 function assert(condition, message, details) {
   if (!condition) {
@@ -18,7 +19,7 @@ function assert(condition, message, details) {
 }
 
 async function main() {
-  const dbPath = `./tmp-task050-verify-${randomUUID()}.sqlite`
+  const dbPath = await createRuntimeSqlitePath(`task050-verify-${randomUUID()}`)
   const store = await openDb(dbPath)
 
   try {
@@ -73,6 +74,7 @@ async function main() {
     try {
       store.close()
     } catch {}
+    cleanupSqliteFile(dbPath)
   }
 }
 

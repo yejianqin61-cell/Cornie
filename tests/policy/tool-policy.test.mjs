@@ -10,6 +10,7 @@ import { registerMemoryTools } from '../../electron/backend/memory/tools.js'
 import { registerSystemTools } from '../../electron/backend/system/tools.js'
 import { registerMemoryWikiTools } from '../../electron/backend/memory-wiki/tools.js'
 import { registerTool } from '../../electron/backend/tools/registry.js'
+import { cleanupSqliteFile, createRuntimeSqlitePath, createRuntimeTempDir } from '../../scripts/tmp-artifacts.mjs'
 
 function assert(condition, message, details = null) {
   if (!condition) {
@@ -19,16 +20,10 @@ function assert(condition, message, details = null) {
   }
 }
 
-function cleanupDbFile(dbPath) {
-  if (fs.existsSync(dbPath)) {
-    fs.unlinkSync(dbPath)
-  }
-}
-
 async function createStore(caseName) {
-  const dbPath = `./tmp-policy-test-${caseName}-${randomUUID()}.sqlite`
-  const baseDir = `./tmp-policy-test-${caseName}-${randomUUID()}`
-  cleanupDbFile(dbPath)
+  const dbPath = await createRuntimeSqlitePath(`policy-test-${caseName}-${randomUUID()}`)
+  const baseDir = await createRuntimeTempDir(`policy-test-${caseName}-${randomUUID()}`)
+  cleanupSqliteFile(dbPath)
   const store = await openDb(dbPath)
   registerLedgerTools(store, { registerTool })
   registerTodoTools(store, { registerTool })
@@ -43,7 +38,8 @@ async function createStore(caseName) {
       try {
         store.close()
       } catch {}
-      cleanupDbFile(dbPath)
+      cleanupSqliteFile(dbPath)
+      fs.rmSync(baseDir, { recursive: true, force: true })
     }
   }
 }
