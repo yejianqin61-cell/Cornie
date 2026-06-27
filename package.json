@@ -67,6 +67,7 @@
     "verify:task107": "node scripts/verify-task107-memory-wiki-status-tiers.mjs",
     "verify:task108": "node scripts/verify-task108-topic-heat-decay.mjs",
     "verify:task109": "node scripts/verify-task109-memory-wiki-compression.mjs",
+    "verify:task110": "node scripts/verify-task110-inspection-governance-queue.mjs",
     "verify:m1-memory-wiki": "node scripts/verify-m1-memory-wiki.mjs",
     "verify:m2-memory-wiki-service": "node scripts/verify-m2-memory-wiki-service.mjs",
     "verify:m3-topic-index": "node scripts/verify-m3-topic-index.mjs",

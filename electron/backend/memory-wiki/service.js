@@ -21,6 +21,38 @@ function summarizePage(page) {
   }
 }
 
+function buildGovernanceRequestFromBrokenLinkIssue(issue) {
+  const pageIds = [issue.pageId, issue.relatedPageId].filter(Boolean)
+  const topicKeys = [issue.normalizedKey].filter(Boolean)
+  return {
+    requestType: 'repair_suggestion',
+    triggerSource: 'inspection',
+    queueSection: 'repair_suggestions',
+    riskLevel: 'high',
+    pageIds,
+    topicKeys,
+    title: issue.issueType,
+    reason: issue.suggestion?.reason || '巡检发现需要修复的问题',
+    evidence: [issue],
+    payload: issue.suggestion ?? {}
+  }
+}
+
+function buildGovernanceRequestFromOrphanItem(item) {
+  return {
+    requestType: 'archive_candidate',
+    triggerSource: 'inspection',
+    queueSection: 'archive_candidates',
+    riskLevel: 'high',
+    pageIds: [item.pageId].filter(Boolean),
+    topicKeys: [],
+    title: item.title || item.pageId,
+    reason: item.suggestion?.reason || '页面缺少来源与关联，可归档或补链',
+    evidence: [item],
+    payload: item.suggestion ?? {}
+  }
+}
+
 export async function createMemoryWikiService({ baseDir, store } = {}) {
   if (!baseDir) {
     throw new Error('memory wiki service baseDir is required')
@@ -377,6 +409,25 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
         topicIndex
       })
       return liveInspector.inspectOrphanPages()
+    },
+
+    async enqueueInspectionGovernanceRequests() {
+      const created = []
+
+      const brokenLinks = await this.inspectBrokenLinks()
+      for (const issue of brokenLinks.issues ?? []) {
+        created.push(await governanceStore.create(buildGovernanceRequestFromBrokenLinkIssue(issue)))
+      }
+
+      const orphanPages = await this.inspectOrphanPages()
+      for (const item of orphanPages.items ?? []) {
+        created.push(await governanceStore.create(buildGovernanceRequestFromOrphanItem(item)))
+      }
+
+      return {
+        createdCount: created.length,
+        items: created
+      }
     },
 
     async createGovernanceRequest(input) {
