@@ -251,6 +251,37 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
       return deleted
     },
 
+    async compressPage({ pageId, summary, body, reason = 'manual_compression' }) {
+      if (!pageId) throw new Error('memory wiki pageId is required')
+      const existing = await this.get(pageId)
+      if (!existing) {
+        throw new Error(`memory wiki page not found: ${pageId}`)
+      }
+
+      await versionStore.snapshotPage(existing, { reason: 'before_compression' })
+
+      const compressed = await storage.updatePage({
+        ...existing,
+        pageId,
+        summary: summary ?? existing.summary,
+        body: body ?? existing.body
+      })
+
+      await versionStore.snapshotPage(compressed, { reason: 'after_compression' })
+      await writeAudit({
+        eventType: 'page_compressed',
+        pageId,
+        status: compressed.status,
+        importance: compressed.importance,
+        reason,
+        details: {
+          title: compressed.title
+        }
+      })
+
+      return compressed
+    },
+
     async list({ pageType, status } = {}) {
       const items = await storage.listIndexedPages()
       return items.filter((item) => {
