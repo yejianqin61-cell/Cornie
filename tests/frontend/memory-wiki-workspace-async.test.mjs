@@ -487,7 +487,13 @@ describe('MemoryWikiWorkspace async flow', () => {
     await flushPromises()
     expect(wrapper.text()).toContain('这里放的是治理建议，不会直接改数据，先给主人过目再决定怎么处理。')
     expect(wrapper.text()).toContain('当前待处理 2 项')
+    expect(wrapper.text()).toContain('当前筛选：pending · 全部分区 · 2 条结果')
     expect(wrapper.text()).toContain('内容高度重复，建议合并。')
+    expect(wrapper.text()).toContain('为什么建议这样处理')
+    expect(wrapper.text()).toContain('建议动作')
+    expect(wrapper.text()).toContain('当前没有额外的建议动作参数。')
+    expect(wrapper.text()).toContain('证据与依据')
+    expect(wrapper.text()).toContain('重复度：0.93')
 
     const markApprovedButton = wrapper.findAll('.actionRow button').find((button) => button.text() === '标记已处理')
     await markApprovedButton.trigger('click')
@@ -586,6 +592,7 @@ describe('MemoryWikiWorkspace async flow', () => {
       expect.stringContaining('/api/memory-wiki/governance?status=approved'),
       expect.anything()
     )
+    expect(wrapper.text()).toContain('当前筛选：approved · 全部分区 · 0 条结果')
     expect(wrapper.text()).toContain('点左边一条治理请求，我就把它的原因、证据和处理入口摊给你看。')
   })
 
@@ -623,7 +630,8 @@ describe('MemoryWikiWorkspace async flow', () => {
     await governanceRow.trigger('click')
     await flushPromises()
     expect(wrapper.text()).toContain('暂无原因说明')
-    expect(wrapper.find('.evidenceBlock').exists()).toBe(false)
+    expect(wrapper.text()).toContain('当前没有额外的建议动作参数。')
+    expect(wrapper.text()).toContain('这条治理建议当前没有附带更多证据。')
   })
 
   it('requires selecting a version before rollback', async () => {
@@ -780,10 +788,12 @@ describe('MemoryWikiWorkspace async flow', () => {
     await governanceRow.trigger('click')
     await flushPromises()
 
-    expect(wrapper.text()).toContain('来源：unknown')
-    expect(wrapper.text()).toContain('分区：merge')
-    expect(wrapper.text()).toContain('页面：无')
-    expect(wrapper.text()).toContain('主题：无')
+    expect(wrapper.text()).toContain('来源unknown')
+    expect(wrapper.text()).toContain('分区merge')
+    expect(wrapper.text()).toContain('页面无')
+    expect(wrapper.text()).toContain('主题无')
+    expect(wrapper.text()).toContain('筛选视角')
+    expect(wrapper.text()).toContain('pending · 全部分区 · 1 条结果')
 
     const markApprovedButton = wrapper.findAll('.actionRow button').find((button) => button.text() === '标记已处理')
     await markApprovedButton.trigger('click')

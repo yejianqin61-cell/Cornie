@@ -73,6 +73,26 @@ const governanceSections = computed(() =>
 )
 const pendingGovernanceCount = computed(() => governanceItems.value.filter((item) => item.status === 'pending').length)
 const pendingConfirmationCount = computed(() => confirmations.value.filter((item) => item.status === 'pending').length)
+const governanceFilterSummary = computed(() => {
+  const statusLabel = governanceFilterStatus.value || '全部状态'
+  const sectionLabel = governanceFilterSection.value || '全部分区'
+  return `${statusLabel} · ${sectionLabel} · ${governanceItems.value.length} 条结果`
+})
+const governanceEvidenceItems = computed(() => {
+  if (!Array.isArray(governanceDetail.value?.evidence)) return []
+  return governanceDetail.value.evidence.map((item, index) => ({
+    id: `${governanceDetail.value?.requestId || 'gov'}-${index}`,
+    summary: buildEvidenceSummary(item, index),
+    body: formatEvidence(item)
+  }))
+})
+const governanceSuggestedActions = computed(() => {
+  const payload = governanceDetail.value?.payload
+  if (!payload || typeof payload !== 'object') return []
+  return Object.entries(payload)
+    .filter(([, value]) => value !== undefined && value !== null && String(value).trim() !== '')
+    .map(([key, value]) => `${key}：${String(value)}`)
+})
 
 async function refreshPages() {
   const data = await listMemoryWikiPages({
@@ -388,6 +408,28 @@ function formatEvidence(item) {
   }
 }
 
+function buildEvidenceSummary(item, index) {
+  if (!item || typeof item !== 'object') {
+    return `证据 ${index + 1}`
+  }
+
+  if (item.issueType) {
+    return `问题类型：${item.issueType}`
+  }
+
+  if (item.duplicateScore !== undefined) {
+    return `重复度：${item.duplicateScore}`
+  }
+
+  if (item.suggestion?.action) {
+    return `建议动作：${item.suggestion.action}`
+  }
+
+  const firstKey = Object.keys(item)[0]
+  if (!firstKey) return `证据 ${index + 1}`
+  return `${firstKey}：${String(item[firstKey])}`
+}
+
 onMounted(refreshAll)
 </script>
 
@@ -649,6 +691,10 @@ onMounted(refreshAll)
           当前待处理 <strong>{{ pendingGovernanceCount }}</strong> 项
         </div>
 
+        <div class="filterSummary">
+          当前筛选：{{ governanceFilterSummary }}
+        </div>
+
         <div v-if="governanceItems.length === 0" class="emptyDetail compactEmpty">
           现在没有新的治理建议。等巡检或整理过程发现问题，这里会再提醒你。
         </div>
@@ -685,20 +731,55 @@ onMounted(refreshAll)
             <span class="detailBadge">{{ governanceDetail.status }}</span>
             <span class="detailBadge">{{ governanceDetail.riskLevel || 'unknown risk' }}</span>
           </div>
-          <div class="detailMeta">状态：{{ governanceDetail.status }}</div>
-          <div class="detailMeta">来源：{{ governanceDetail.triggerSource || 'unknown' }}</div>
-          <div class="detailMeta">分区：{{ governanceDetail.queueSection || 'unknown' }}</div>
-          <div class="detailMeta">页面：{{ (governanceDetail.pageIds || []).join(', ') || '无' }}</div>
-          <div class="detailMeta">主题：{{ (governanceDetail.topicKeys || []).join(', ') || '无' }}</div>
-          <div class="detailText">{{ governanceDetail.reason || '暂无原因说明' }}</div>
+          <div class="detailMetaGrid">
+            <div class="detailMetaCard">
+              <div class="detailMetaLabel">状态</div>
+              <div class="detailMetaValue">{{ governanceDetail.status }}</div>
+            </div>
+            <div class="detailMetaCard">
+              <div class="detailMetaLabel">来源</div>
+              <div class="detailMetaValue">{{ governanceDetail.triggerSource || 'unknown' }}</div>
+            </div>
+            <div class="detailMetaCard">
+              <div class="detailMetaLabel">分区</div>
+              <div class="detailMetaValue">{{ governanceDetail.queueSection || 'unknown' }}</div>
+            </div>
+            <div class="detailMetaCard">
+              <div class="detailMetaLabel">页面</div>
+              <div class="detailMetaValue">{{ (governanceDetail.pageIds || []).join(', ') || '无' }}</div>
+            </div>
+            <div class="detailMetaCard">
+              <div class="detailMetaLabel">主题</div>
+              <div class="detailMetaValue">{{ (governanceDetail.topicKeys || []).join(', ') || '无' }}</div>
+            </div>
+            <div class="detailMetaCard">
+              <div class="detailMetaLabel">筛选视角</div>
+              <div class="detailMetaValue">{{ governanceFilterSummary }}</div>
+            </div>
+          </div>
 
-          <div class="evidenceBlock" v-if="(governanceDetail.evidence || []).length > 0">
-            <div class="evidenceTitle">证据与建议</div>
-            <pre
-              v-for="(item, index) in governanceDetail.evidence"
-              :key="`${governanceDetail.requestId}-${index}`"
-              class="evidenceItem"
-            >{{ formatEvidence(item) }}</pre>
+          <div class="detailSection">
+            <div class="evidenceTitle">为什么建议这样处理</div>
+            <div class="detailText">{{ governanceDetail.reason || '暂无原因说明' }}</div>
+          </div>
+
+          <div class="detailSection">
+            <div class="evidenceTitle">建议动作</div>
+            <div v-if="governanceSuggestedActions.length > 0" class="suggestionList">
+              <div v-for="item in governanceSuggestedActions" :key="item" class="suggestionItem">{{ item }}</div>
+            </div>
+            <div v-else class="emptyInline">当前没有额外的建议动作参数。</div>
+          </div>
+
+          <div class="evidenceBlock">
+            <div class="evidenceTitle">证据与依据</div>
+            <div v-if="governanceEvidenceItems.length > 0" class="evidenceCards">
+              <div v-for="item in governanceEvidenceItems" :key="item.id" class="evidenceCard">
+                <div class="evidenceSummary">{{ item.summary }}</div>
+                <pre class="evidenceItem">{{ item.body }}</pre>
+              </div>
+            </div>
+            <div v-else class="emptyInline">这条治理建议当前没有附带更多证据。</div>
           </div>
 
           <div class="actionRow">
@@ -811,6 +892,14 @@ onMounted(refreshAll)
   gap: 8px;
   flex-wrap: wrap;
 }
+.filterSummary{
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px dashed rgba(125,211,252,.20);
+  background: rgba(125,211,252,.06);
+  color: rgba(224,242,254,.88);
+  font-size: 13px;
+}
 .emptyState{
   padding: 14px 16px;
   border-radius: 16px;
@@ -918,10 +1007,52 @@ onMounted(refreshAll)
   font-size: 11px;
 }
 .detailMeta{ margin-top: 8px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.detailMetaGrid{
+  margin-top: 14px;
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+.detailMetaCard{
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 14px;
+  background: rgba(255,255,255,.03);
+  padding: 12px;
+}
+.detailMetaLabel{
+  font-size: 11px;
+  color: var(--muted);
+}
+.detailMetaValue{
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(255,255,255,.90);
+  word-break: break-word;
+}
+.detailSection{
+  margin-top: 14px;
+}
 .detailText{
   margin-top: 12px;
   line-height: 1.6;
   white-space: pre-wrap;
+}
+.suggestionList{
+  margin-top: 10px;
+  display:flex;
+  flex-direction:column;
+  gap: 8px;
+}
+.suggestionItem{
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.03);
+  color: rgba(255,255,255,.88);
+  font-size: 13px;
+  line-height: 1.5;
+  word-break: break-word;
 }
 .topicAliases{
   display:flex;
@@ -940,16 +1071,42 @@ onMounted(refreshAll)
   font-size: 13px;
   font-weight: 700;
 }
+.evidenceCards{
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
+}
+.evidenceCard{
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(255,255,255,.02);
+  padding: 12px;
+}
+.evidenceSummary{
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(248,250,252,.92);
+  margin-bottom: 8px;
+}
 .evidenceItem{
   margin: 0;
   padding: 12px;
-  border-radius: 14px;
-  border: 1px solid var(--border);
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.08);
   background: rgba(15,23,42,.55);
   color: rgba(226,232,240,.92);
   font-size: 12px;
   white-space: pre-wrap;
   overflow:auto;
+}
+.emptyInline{
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px dashed rgba(255,255,255,.14);
+  background: rgba(255,255,255,.02);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
 }
 .confirmGrid{
   display:grid;
@@ -983,6 +1140,9 @@ onMounted(refreshAll)
     text-align:left;
   }
   .formGrid{
+    grid-template-columns: 1fr;
+  }
+  .detailMetaGrid{
     grid-template-columns: 1fr;
   }
 }
