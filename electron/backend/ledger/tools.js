@@ -40,6 +40,27 @@ export function registerLedgerTools(store, { registerTool }) {
   })
 
   registerTool({
+    name: 'ledger.list_by_category',
+    description: '按类目查看收支记录',
+    riskLevel: 'low',
+    handler: async (args = {}) => ({ ok: true, result: ledger.listByCategory(args) })
+  })
+
+  registerTool({
+    name: 'ledger.list_recent',
+    description: '查看最近 N 条收支记录',
+    riskLevel: 'low',
+    handler: async (args = {}) => ({ ok: true, result: ledger.listRecent(args) })
+  })
+
+  registerTool({
+    name: 'ledger.list_by_id_batch',
+    description: '批量按 id 读取收支记录',
+    riskLevel: 'low',
+    handler: async (args = {}) => ({ ok: true, result: ledger.listByIdBatch(args) })
+  })
+
+  registerTool({
     name: 'ledger.update_entry',
     description: '更新收支记录',
     riskLevel: 'high',

@@ -1631,6 +1631,47 @@ export function listLedgerEntries(store, { type, from, to } = {}) {
   return rows
 }
 
+export function listLedgerEntriesByIds(store, ids = []) {
+  const normalizedIds = Array.from(
+    new Set((Array.isArray(ids) ? ids : []).map((item) => String(item ?? '').trim()).filter(Boolean))
+  )
+  if (normalizedIds.length === 0) return []
+
+  const placeholders = normalizedIds.map((_, index) => `$id${index}`)
+  const params = Object.fromEntries(normalizedIds.map((id, index) => [`$id${index}`, id]))
+  const stmt = store.db.prepare(
+    `
+    select id, type, occurred_at as occurredAt, amount, currency, category_id as categoryId, category_name as categoryName, merchant, item, source_text as sourceText, confidence, created_at as createdAt, updated_at as updatedAt
+    from ledger_entries
+    where id in (${placeholders.join(', ')})
+  `
+  )
+  stmt.bind(params)
+
+  const rowMap = new Map()
+  while (stmt.step()) {
+    const r = stmt.getAsObject()
+    rowMap.set(String(r.id), {
+      id: String(r.id),
+      type: String(r.type),
+      occurredAt: String(r.occurredAt),
+      amount: Number(r.amount),
+      currency: String(r.currency),
+      categoryId: r.categoryId == null ? null : String(r.categoryId),
+      categoryName: r.categoryName == null ? null : String(r.categoryName),
+      merchant: r.merchant == null ? null : String(r.merchant),
+      item: r.item == null ? null : String(r.item),
+      sourceText: r.sourceText == null ? null : String(r.sourceText),
+      confidence: r.confidence == null ? null : Number(r.confidence),
+      createdAt: Number(r.createdAt),
+      updatedAt: Number(r.updatedAt)
+    })
+  }
+  stmt.free()
+
+  return normalizedIds.map((id) => rowMap.get(id)).filter(Boolean)
+}
+
 export function deleteLedgerEntry(store, id) {
   store.db.run('delete from ledger_entries where id = $id', { $id: id })
   store.persist()

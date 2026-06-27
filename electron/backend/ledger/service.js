@@ -3,6 +3,7 @@ import {
   getLedgerCategory,
   getLedgerEntry,
   listLedgerCategories,
+  listLedgerEntriesByIds,
   listLedgerEntries,
   saveLedgerEntry,
   upsertLedgerCategory
@@ -131,6 +132,19 @@ export function createLedgerService(store) {
       if (!id) throw new Error('ledger entry id is required')
       return getLedgerEntry(store, id)
     },
+    listByCategory: ({ categoryId, categoryName, type, from, to } = {}) => {
+      const normalizedCategoryId = typeof categoryId === 'string' ? categoryId.trim() : ''
+      const normalizedCategoryName = typeof categoryName === 'string' ? categoryName.trim() : ''
+      const items = listLedgerEntries(store, { type, from, to })
+      return items.filter((item) => {
+        if (normalizedCategoryId && item.categoryId !== normalizedCategoryId) return false
+        if (normalizedCategoryName && item.categoryName !== normalizedCategoryName) return false
+        return true
+      })
+    },
+    listRecent: ({ limit = 10, type } = {}) =>
+      listLedgerEntries(store, { type }).slice(0, Math.max(1, Math.min(100, Number.parseInt(String(limit), 10) || 10))),
+    listByIdBatch: ({ ids } = {}) => listLedgerEntriesByIds(store, ids),
     listToday: ({ date, type } = {}) => {
       const range = buildDayRange(date)
       return listLedgerEntries(store, { type, from: range.from, to: range.to })
