@@ -101,6 +101,10 @@ export function createScheduleService(store) {
     listToday: () => listScheduleEntries(store, { status: 'scheduled' }),
     listByRange: ({ from, to }) => listScheduleEntries(store, { from, to }),
     listCategories: () => listScheduleCategories(store),
+    getCategory: (id) => {
+      if (!id) throw new Error('schedule category id is required')
+      return getScheduleCategory(store, id)
+    },
     createCategory: ({ name, id, sortOrder = 0 }) => {
       const validation = validateCategoryName(name, listScheduleCategories(store))
 
@@ -129,6 +133,29 @@ export function createScheduleService(store) {
         name: name ?? existing.name,
         sortOrder: sortOrder ?? existing.sortOrder,
         isActive: false
+      })
+    },
+    restoreCategory: ({ id }) => {
+      if (!id) throw new Error('schedule category id is required')
+      const existing = getScheduleCategory(store, id)
+      if (!existing) throw new Error('schedule category not found')
+      return upsertScheduleCategory(store, {
+        id,
+        name: existing.name,
+        sortOrder: existing.sortOrder,
+        isActive: true
+      })
+    },
+    reorderCategory: ({ id, sortOrder }) => {
+      if (!id) throw new Error('schedule category id is required')
+      if (!Number.isFinite(sortOrder)) throw new Error('schedule category sortOrder is required')
+      const existing = getScheduleCategory(store, id)
+      if (!existing) throw new Error('schedule category not found')
+      return upsertScheduleCategory(store, {
+        id,
+        name: existing.name,
+        sortOrder,
+        isActive: existing.isActive
       })
     },
     updateCategory: ({ id, name, isActive, sortOrder }) =>

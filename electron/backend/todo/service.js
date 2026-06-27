@@ -88,6 +88,10 @@ export function createTodoService(store) {
     listCompleted: () => listTodoEntries(store, { status: 'done' }),
     listByRange: ({ from, to }) => listTodoEntries(store, { from, to }),
     listCategories: () => listTodoCategories(store),
+    getCategory: (id) => {
+      if (!id) throw new Error('todo category id is required')
+      return getTodoCategory(store, id)
+    },
     createCategory: ({ name, id, sortOrder = 0 }) => {
       const validation = validateCategoryName(name, listTodoCategories(store))
 
@@ -116,6 +120,29 @@ export function createTodoService(store) {
         name: name ?? existing.name,
         sortOrder: sortOrder ?? existing.sortOrder,
         isActive: false
+      })
+    },
+    restoreCategory: ({ id }) => {
+      if (!id) throw new Error('todo category id is required')
+      const existing = getTodoCategory(store, id)
+      if (!existing) throw new Error('todo category not found')
+      return upsertTodoCategory(store, {
+        id,
+        name: existing.name,
+        sortOrder: existing.sortOrder,
+        isActive: true
+      })
+    },
+    reorderCategory: ({ id, sortOrder }) => {
+      if (!id) throw new Error('todo category id is required')
+      if (!Number.isFinite(sortOrder)) throw new Error('todo category sortOrder is required')
+      const existing = getTodoCategory(store, id)
+      if (!existing) throw new Error('todo category not found')
+      return upsertTodoCategory(store, {
+        id,
+        name: existing.name,
+        sortOrder,
+        isActive: existing.isActive
       })
     },
     updateCategory: ({ id, name, isActive, sortOrder }) =>

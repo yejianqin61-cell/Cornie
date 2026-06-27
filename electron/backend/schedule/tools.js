@@ -58,6 +58,12 @@ export function registerScheduleTools(store, { registerTool }) {
     })
   })
   registerTool({
+    name: 'schedule_category.get',
+    description: '读取单个日程类目详情',
+    riskLevel: 'low',
+    handler: async ({ id }) => ({ ok: true, result: schedule.getCategory(id) })
+  })
+  registerTool({
     name: 'schedule_category.create',
     description: '创建日程类目',
     riskLevel: 'high',
@@ -74,5 +80,20 @@ export function registerScheduleTools(store, { registerTool }) {
     description: '停用日程类目',
     riskLevel: 'high',
     handler: async (args) => ({ ok: true, result: schedule.deleteCategory(args) })
+  })
+  registerTool({
+    name: 'schedule_category.restore',
+    description: '恢复已停用的日程类目',
+    riskLevel: 'high',
+    handler: async ({ id }) => ({ ok: true, result: schedule.restoreCategory({ id }) })
+  })
+  registerTool({
+    name: 'schedule_category.reorder',
+    description: '调整日程类目排序',
+    riskLevel: 'high',
+    handler: async ({ id, sortOrder }) => ({
+      ok: true,
+      result: schedule.reorderCategory({ id, sortOrder })
+    })
   })
 }

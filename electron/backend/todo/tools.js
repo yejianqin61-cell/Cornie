@@ -76,6 +76,12 @@ export function registerTodoTools(store, { registerTool }) {
     })
   })
   registerTool({
+    name: 'todo_category.get',
+    description: '读取单个待办类目详情',
+    riskLevel: 'low',
+    handler: async ({ id }) => ({ ok: true, result: todo.getCategory(id) })
+  })
+  registerTool({
     name: 'todo_category.create',
     description: '创建待办类目',
     riskLevel: 'high',
@@ -92,5 +98,17 @@ export function registerTodoTools(store, { registerTool }) {
     description: '停用待办类目',
     riskLevel: 'high',
     handler: async (args) => ({ ok: true, result: todo.deleteCategory(args) })
+  })
+  registerTool({
+    name: 'todo_category.restore',
+    description: '恢复已停用的待办类目',
+    riskLevel: 'high',
+    handler: async ({ id }) => ({ ok: true, result: todo.restoreCategory({ id }) })
+  })
+  registerTool({
+    name: 'todo_category.reorder',
+    description: '调整待办类目排序',
+    riskLevel: 'high',
+    handler: async ({ id, sortOrder }) => ({ ok: true, result: todo.reorderCategory({ id, sortOrder }) })
   })
 }
