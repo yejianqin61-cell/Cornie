@@ -87,6 +87,7 @@
     "verify:task130": "node scripts/verify-task130-deepseek-only.mjs",
     "verify:task132": "node scripts/verify-task132-model-settings.mjs",
     "verify:task133": "node scripts/verify-task133-model-guide.mjs",
+    "verify:task134": "node scripts/verify-task134-model-copy.mjs",
     "verify:8.1": "node scripts/verify-8.1.mjs",
     "verify:8.2": "node scripts/verify-8.2.mjs",
     "verify:8.3": "node scripts/verify-8.3.mjs",

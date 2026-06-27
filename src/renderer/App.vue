@@ -97,6 +97,55 @@ const guideReason = computed(() => {
   }
   return '钥匙已经在了，但铃湾这会儿没顺利连上 DeepSeek。我们可以先检查一下网络、地址、模型名，或者重新试一遍。'
 })
+const statusHint = computed(() => {
+  if (modelStatus.value.ok) {
+    return '已经连上啦，铃湾现在可以安心开工。'
+  }
+  if (!modelStatus.value.configured) {
+    return '先把钥匙放好，铃湾才能继续帮主人处理事情。'
+  }
+  return '钥匙在，但连接还没顺过来。我们可以先按下面的小提示排查一下。'
+})
+const recoveryTips = computed(() => {
+  if (!modelStatus.value.configured) {
+    return [
+      '先确认 API Key 已经完整贴进来，不要漏掉开头或结尾。',
+      '如果你有自定义地址，也一起填上；没有的话，Base URL 留空就好。',
+      '点一下“保存并重新检测”，让铃湾再试一次。'
+    ]
+  }
+
+  if (modelStatus.value.reason === 'request_failed') {
+    return [
+      '先看看当前网络是不是正常。',
+      '如果你用了代理或自定义地址，确认它现在还能访问。',
+      '重新检测一次；如果还是不行，再检查钥匙有没有过期。'
+    ]
+  }
+
+  return [
+    '确认 API Key、Base URL、模型名有没有填错。',
+    '如果你刚换过钥匙，可以先清空再重新保存一次。',
+    '重试前不用着急，铃湾会一直在这里等你。'
+  ]
+})
+
+function toFriendlySettingsError(error) {
+  const raw = String(error?.message || error || '').trim()
+  if (!raw) {
+    return '铃湾刚刚没把设置收好，我们再试一次就好。'
+  }
+  if (/apiKey is required/i.test(raw)) {
+    return 'API Key 这一栏还是空的，铃湾还没拿到钥匙呢。'
+  }
+  if (/invalid timeout/i.test(raw)) {
+    return '超时毫秒要填成正整数呀，比如 30000。'
+  }
+  if (/http_|request_failed|fetch|network|timeout/i.test(raw)) {
+    return '铃湾刚刚去敲门时没收到顺利回应，可能是网络、地址或者钥匙状态出了点小岔子。'
+  }
+  return '这次保存没成功，不过别担心，我们检查一下输入内容再试一次就好。'
+}
 
 async function refreshModelState() {
   settingsLoading.value = true
@@ -114,7 +163,7 @@ async function refreshModelState() {
     }
   } catch (error) {
     modelStatus.value = { ok: false, configured: false, provider: 'deepseek', model: '', reason: 'request_failed' }
-    settingsError.value = error?.message || String(error)
+    settingsError.value = toFriendlySettingsError(error)
   } finally {
     settingsLoading.value = false
   }
@@ -145,7 +194,7 @@ async function submitModelSettings() {
     await refreshModelState()
     await checkModel()
   } catch (error) {
-    settingsError.value = error?.message || String(error)
+    settingsError.value = toFriendlySettingsError(error)
   } finally {
     settingsSaving.value = false
   }
@@ -162,7 +211,7 @@ async function resetModelSettings() {
     await refreshModelState()
     await checkModel()
   } catch (error) {
-    settingsError.value = error?.message || String(error)
+    settingsError.value = toFriendlySettingsError(error)
   } finally {
     settingsSaving.value = false
   }
@@ -440,6 +489,7 @@ onMounted(async () => {
         <div class="guideEyebrow">DeepSeek 引导</div>
         <h1 class="guideTitle">{{ guideTitle }}</h1>
         <p class="guideText">{{ guideReason }}</p>
+        <div class="guideStatus">{{ statusHint }}</div>
 
         <div class="guideInfo">
           <div class="guideInfoCard">
@@ -451,9 +501,16 @@ onMounted(async () => {
             <div class="guideInfoText">你发给铃湾的对话内容、生成请求，以及为了完成任务必须发送给模型的上下文。</div>
           </div>
           <div class="guideInfoCard">
-            <div class="guideInfoTitle">如果暂时不想填呢？</div>
-            <div class="guideInfoText">现在主工作台会先等一等，因为没有钥匙时，铃湾没法稳定工作。</div>
+            <div class="guideInfoTitle">联网和隐私要知道什么？</div>
+            <div class="guideInfoText">只要开始调用模型，请求就会发往 DeepSeek。铃湾会尽量少带无关内容，但这一步不是纯离线能力。</div>
           </div>
+        </div>
+
+        <div class="guideTips">
+          <div class="guideTipsTitle">如果还是连不上，可以先这样试试：</div>
+          <ul class="guideTipsList">
+            <li v-for="tip in recoveryTips" :key="tip">{{ tip }}</li>
+          </ul>
         </div>
 
         <form class="guideForm" @submit.prevent="submitModelSettings">
@@ -818,6 +875,13 @@ onMounted(async () => {
   line-height: 1.7;
   max-width: 760px;
 }
+.guideStatus{
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.04);
+  padding: 12px 14px;
+  color: rgba(248,250,252,.94);
+}
 .guideInfo{
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -838,6 +902,22 @@ onMounted(async () => {
   font-size: 13px;
   line-height: 1.6;
   color: var(--muted);
+}
+.guideTips{
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 18px;
+  background: rgba(255,255,255,.03);
+  padding: 16px;
+}
+.guideTipsTitle{
+  font-size: 14px;
+  font-weight: 800;
+}
+.guideTipsList{
+  margin: 10px 0 0;
+  padding-left: 18px;
+  color: var(--muted);
+  line-height: 1.7;
 }
 .guideForm{
   display: grid;
