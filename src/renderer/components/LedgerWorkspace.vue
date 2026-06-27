@@ -59,6 +59,12 @@ const selectedEntry = computed(() => entries.value.find((item) => item.id === se
 const selectedCategory = computed(() => categories.value.find((item) => item.id === selectedCategoryId.value) || null)
 const expenseCategories = computed(() => categories.value.filter((item) => item.type === 'expense'))
 const incomeCategories = computed(() => categories.value.filter((item) => item.type === 'income'))
+const entryFilterSummary = computed(() => {
+  const typeLabel = filterType.value === 'income' ? '收入' : filterType.value === 'expense' ? '支出' : '全部类型'
+  const category = categories.value.find((item) => item.id === filterCategoryId.value)
+  const categoryLabel = category?.name || '全部类目'
+  return `${typeLabel} · ${categoryLabel}`
+})
 
 async function refreshEntries() {
   const params = {}
@@ -230,7 +236,10 @@ onMounted(refreshAll)
     <div class="workspaceGrid">
       <section class="workspaceCard">
         <div class="cardHead">
-          <div class="cardTitle">最近记录</div>
+          <div>
+            <div class="cardTitle">最近记录</div>
+            <div class="cardSubhint">先看最近发生了什么，再决定是补记一笔，还是顺手把旧记录改得更准确一点。</div>
+          </div>
           <div class="cardFilters">
             <select v-model="filterType" @change="refreshEntries">
               <option value="">全部类型</option>
@@ -246,7 +255,13 @@ onMounted(refreshAll)
           </div>
         </div>
 
-        <div class="entryList">
+        <div class="filterSummary">当前筛选：{{ entryFilterSummary }}</div>
+
+        <div v-if="entries.length === 0" class="emptyState">
+          这个筛选条件下还没有记录。可以换个筛选看看，或者直接在右边补记一笔新的收支。
+        </div>
+
+        <div v-else class="entryList">
           <button
             v-for="entry in entries"
             :key="entry.id"
@@ -265,7 +280,12 @@ onMounted(refreshAll)
 
       <section class="workspaceCard">
         <div class="cardHead">
-          <div class="cardTitle">{{ selectedEntry ? '编辑记录' : '新建记录' }}</div>
+          <div>
+            <div class="cardTitle">{{ selectedEntry ? '编辑记录' : '新建记录' }}</div>
+            <div class="cardSubhint">
+              {{ selectedEntry ? '正在整理这笔收支的金额、类目和说明。' : '先填金额，再决定要不要补类目、项目和来源。' }}
+            </div>
+          </div>
           <button v-if="selectedEntry" @click="resetEntryForm">新建一条</button>
         </div>
 
@@ -357,7 +377,7 @@ onMounted(refreshAll)
                 v-for="category in expenseCategories"
                 :key="category.id"
                 class="categoryCard"
-                :class="{ active: category.id === selectedCategoryId }"
+                :class="{ active: category.id === selectedCategoryId, inactive: !category.isActive }"
                 @click="selectCategory(category)"
               >
                 <div>
@@ -377,7 +397,7 @@ onMounted(refreshAll)
                 v-for="category in incomeCategories"
                 :key="category.id"
                 class="categoryCard"
-                :class="{ active: category.id === selectedCategoryId }"
+                :class="{ active: category.id === selectedCategoryId, inactive: !category.isActive }"
                 @click="selectCategory(category)"
               >
                 <div>
@@ -450,10 +470,26 @@ onMounted(refreshAll)
 }
 .cardTitle{ font-weight: 800; font-size: 16px; }
 .cardHint{ color: var(--muted); font-size: 12px; max-width: 360px; text-align: right; }
-.cardSubhint{ margin-top: 4px; color: var(--muted); font-size: 12px; }
+.cardSubhint{ margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .cardFilters{
   display:flex;
   gap: 8px;
+}
+.filterSummary{
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px dashed rgba(255,255,255,.14);
+  background: rgba(255,255,255,.03);
+  color: var(--muted);
+  font-size: 12px;
+}
+.emptyState{
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px dashed var(--border);
+  background: rgba(255,255,255,.03);
+  color: var(--muted);
+  line-height: 1.6;
 }
 .entryList{
   display:flex;
@@ -562,6 +598,10 @@ onMounted(refreshAll)
 .categoryCard.active{
   background: rgba(125,211,252,.12);
   border-color: rgba(125,211,252,.35);
+}
+.categoryCard.inactive{
+  opacity: .68;
+  background: rgba(255,255,255,.02);
 }
 .categoryName{ font-weight: 700; }
 .categoryMeta{ margin-top: 4px; font-size: 12px; color: var(--muted); }

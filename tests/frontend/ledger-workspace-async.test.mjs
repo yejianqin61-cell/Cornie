@@ -261,6 +261,8 @@ describe('LedgerWorkspace async flow', () => {
     const wrapper = mount(LedgerWorkspace)
     await flushPromises()
 
+    expect(wrapper.text()).toContain('最近记录')
+    expect(wrapper.text()).toContain('当前筛选：全部类型 · 全部类目')
     expect(wrapper.text()).toContain('龙虾聚餐')
     expect(wrapper.text()).toContain('海鲜')
 
@@ -315,6 +317,7 @@ describe('LedgerWorkspace async flow', () => {
       expect.stringContaining('type=expense'),
       expect.any(Object)
     )
+    expect(wrapper.text()).toContain('当前筛选：支出 · 全部类目')
     expect(wrapper.text()).not.toContain('公司转账')
 
     await selects[1].setValue('cat-lobster')
@@ -323,6 +326,7 @@ describe('LedgerWorkspace async flow', () => {
       expect.stringContaining('categoryId=cat-lobster'),
       expect.any(Object)
     )
+    expect(wrapper.text()).toContain('当前筛选：支出 · 海鲜')
 
     await wrapper.find('.entryRow').trigger('click')
     await flushPromises()
@@ -343,6 +347,7 @@ describe('LedgerWorkspace async flow', () => {
     await flushPromises()
     await flushPromises()
     expect(wrapper.text()).toContain('恢复当前类目')
+    expect(wrapper.findAll('.categoryCard').find((card) => card.text().includes('海鲜')).classes()).toContain('inactive')
 
     const restoreButton = wrapper.findAll('button').find((button) => button.text() === '恢复当前类目')
     expect(restoreButton).toBeTruthy()
@@ -462,11 +467,13 @@ describe('LedgerWorkspace async flow', () => {
     const selects = wrapper.findAll('select')
     await selects[0].setValue('income')
     await flushPromises()
+    expect(wrapper.text()).toContain('当前筛选：收入 · 全部类目')
     expect(wrapper.text()).toContain('公司转账')
     expect(wrapper.text()).not.toContain('龙虾聚餐')
 
     await selects[1].setValue('cat-salary')
     await flushPromises()
+    expect(wrapper.text()).toContain('当前筛选：收入 · 工资')
     expect(wrapper.text()).toContain('公司转账')
     expect(wrapper.text()).not.toContain('未命名记录')
 
@@ -477,6 +484,28 @@ describe('LedgerWorkspace async flow', () => {
     await resetButton.trigger('click')
     await flushPromises()
     expect(wrapper.text()).toContain('新建记录')
+    expect(wrapper.text()).toContain('先填金额，再决定要不要补类目、项目和来源。')
+  })
+
+  it('shows entry empty state for unmatched filters and clearer edit helper copy', async () => {
+    const wrapper = mount(LedgerWorkspace)
+    await flushPromises()
+
+    const selects = wrapper.findAll('select')
+    await selects[0].setValue('income')
+    await flushPromises()
+    await selects[1].setValue('cat-lobster')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('当前筛选：收入 · 海鲜')
+    expect(wrapper.text()).toContain('这个筛选条件下还没有记录。')
+
+    await selects[0].setValue('')
+    await selects[1].setValue('')
+    await flushPromises()
+    await wrapper.find('.entryRow').trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('正在整理这笔收支的金额、类目和说明。')
   })
 
   it('submits default category sort order and shows readable entry save failure', async () => {
