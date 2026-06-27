@@ -181,6 +181,8 @@ describe('ScheduleWorkspace async flow', () => {
     const wrapper = mount(ScheduleWorkspace)
     await flushPromises()
 
+    expect(wrapper.text()).toContain('日程工作台')
+    expect(wrapper.text()).toContain('日程类目管理')
     expect(wrapper.text()).toContain('周日晚吃龙虾')
 
     const inputs = wrapper.findAll('input')
@@ -279,12 +281,14 @@ describe('ScheduleWorkspace async flow', () => {
     const row = wrapper.find('.entryRow')
     await row.trigger('click')
     await flushPromises()
+    expect(wrapper.text()).toContain('当前正在整理这条安排的时间、地点和说明。')
     expect(wrapper.find('input[placeholder="可选"]').element.value).toBe('')
 
     const resetButton = wrapper.findAll('button').find((button) => button.text() === '新建一条')
     await resetButton.trigger('click')
     await flushPromises()
     expect(wrapper.text()).toContain('新增日程')
+    expect(wrapper.text()).toContain('先写标题，再慢慢补时间、地点和背景说明。')
   })
 
   it('submits category default sort order and shows readable save failures', async () => {

@@ -219,14 +219,21 @@ onMounted(refreshAll)
     <div class="workspaceGrid">
       <section class="workspaceCard">
         <div class="cardHead">
-          <div class="cardTitle">待办列表</div>
+          <div>
+            <div class="cardTitle">待办列表</div>
+            <div class="cardSubhint">先看眼前还没做完的，再决定铃湾要先陪你处理哪一件。</div>
+          </div>
           <div class="cardFilters">
             <button :class="{ activeChip: currentView === 'open' }" @click="currentView = 'open'; refreshItems()">未完成</button>
             <button :class="{ activeChip: currentView === 'completed' }" @click="currentView = 'completed'; refreshItems()">已完成</button>
           </div>
         </div>
 
-        <div class="entryList">
+        <div v-if="items.length === 0" class="emptyState">
+          这一栏现在还是空的。等主人记下一件小事，铃湾就会帮你把它放稳。
+        </div>
+
+        <div v-else class="entryList">
           <button
             v-for="item in items"
             :key="item.id"
@@ -245,7 +252,12 @@ onMounted(refreshAll)
 
       <section class="workspaceCard">
         <div class="cardHead">
-          <div class="cardTitle">{{ selectedTodo ? '编辑待办' : '新增待办' }}</div>
+          <div>
+            <div class="cardTitle">{{ selectedTodo ? '编辑待办' : '新增待办' }}</div>
+            <div class="cardSubhint">
+              {{ selectedTodo ? '当前正在整理这条待办的标题、说明和截止时间。' : '先写标题，再决定要不要补类目和截止时间。' }}
+            </div>
+          </div>
           <button v-if="selectedTodo" @click="resetTodoForm">新建一条</button>
         </div>
 
@@ -283,7 +295,10 @@ onMounted(refreshAll)
 
       <section class="workspaceCard span2">
         <div class="cardHead">
-          <div class="cardTitle">待办类目管理</div>
+          <div>
+            <div class="cardTitle">待办类目管理</div>
+            <div class="cardSubhint">把常用类型提前整理好，后面无论是主人自己记，还是铃湾帮你记，都会更顺手。</div>
+          </div>
         </div>
 
         <div class="categoryCreator">
@@ -362,10 +377,19 @@ onMounted(refreshAll)
   gap: 12px;
 }
 .cardTitle{ font-weight: 800; font-size: 16px; }
+.cardSubhint{ margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .cardFilters{
   display:flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+.emptyState{
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px dashed var(--border);
+  background: rgba(255,255,255,.03);
+  color: var(--muted);
+  line-height: 1.6;
 }
 .activeChip{
   background: rgba(125,211,252,.12);

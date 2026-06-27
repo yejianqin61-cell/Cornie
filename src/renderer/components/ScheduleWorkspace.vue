@@ -225,14 +225,21 @@ onMounted(refreshAll)
     <div class="workspaceGrid">
       <section class="workspaceCard">
         <div class="cardHead">
-          <div class="cardTitle">日程列表</div>
+          <div>
+            <div class="cardTitle">日程列表</div>
+            <div class="cardSubhint">先把接下来要发生的事排清楚，铃湾才好在恰当的时候提醒你。</div>
+          </div>
           <div class="cardFilters">
             <button :class="{ activeChip: currentView === 'upcoming' }" @click="currentView = 'upcoming'; refreshItems()">未来日程</button>
             <button :class="{ activeChip: currentView === 'cancelled' }" @click="currentView = 'cancelled'; refreshItems()">已取消</button>
           </div>
         </div>
 
-        <div class="entryList">
+        <div v-if="items.length === 0" class="emptyState">
+          这里暂时没有安排。要是主人想记下一场见面、提醒或行程，就从右边开始写吧。
+        </div>
+
+        <div v-else class="entryList">
           <button
             v-for="item in items"
             :key="item.id"
@@ -251,7 +258,12 @@ onMounted(refreshAll)
 
       <section class="workspaceCard">
         <div class="cardHead">
-          <div class="cardTitle">{{ selectedSchedule ? '编辑日程' : '新增日程' }}</div>
+          <div>
+            <div class="cardTitle">{{ selectedSchedule ? '编辑日程' : '新增日程' }}</div>
+            <div class="cardSubhint">
+              {{ selectedSchedule ? '当前正在整理这条安排的时间、地点和说明。' : '先写标题，再慢慢补时间、地点和背景说明。' }}
+            </div>
+          </div>
           <button v-if="selectedSchedule" @click="resetScheduleForm">新建一条</button>
         </div>
 
@@ -297,7 +309,10 @@ onMounted(refreshAll)
 
       <section class="workspaceCard span2">
         <div class="cardHead">
-          <div class="cardTitle">日程类目管理</div>
+          <div>
+            <div class="cardTitle">日程类目管理</div>
+            <div class="cardSubhint">把聚餐、会议、出行这些安排类型整理好，后面查找和归类都会轻松很多。</div>
+          </div>
         </div>
 
         <div class="categoryCreator">
@@ -376,10 +391,19 @@ onMounted(refreshAll)
   gap: 12px;
 }
 .cardTitle{ font-weight: 800; font-size: 16px; }
+.cardSubhint{ margin-top: 4px; color: var(--muted); font-size: 12px; line-height: 1.5; }
 .cardFilters{
   display:flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+.emptyState{
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px dashed var(--border);
+  background: rgba(255,255,255,.03);
+  color: var(--muted);
+  line-height: 1.6;
 }
 .activeChip{
   background: rgba(125,211,252,.12);

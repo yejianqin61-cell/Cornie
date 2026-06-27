@@ -174,6 +174,8 @@ describe('TodoWorkspace async flow', () => {
     const wrapper = mount(TodoWorkspace)
     await flushPromises()
 
+    expect(wrapper.text()).toContain('待办工作台')
+    expect(wrapper.text()).toContain('待办类目管理')
     expect(wrapper.text()).toContain('整理龙虾账单')
 
     const inputs = wrapper.findAll('input')
@@ -272,11 +274,13 @@ describe('TodoWorkspace async flow', () => {
     const row = wrapper.find('.entryRow')
     await row.trigger('click')
     await flushPromises()
+    expect(wrapper.text()).toContain('当前正在整理这条待办的标题、说明和截止时间。')
 
     const resetButton = wrapper.findAll('button').find((button) => button.text() === '新建一条')
     await resetButton.trigger('click')
     await flushPromises()
     expect(wrapper.text()).toContain('新增待办')
+    expect(wrapper.text()).toContain('先写标题，再决定要不要补类目和截止时间。')
   })
 
   it('submits category default sort order and shows readable save failures', async () => {
