@@ -455,10 +455,98 @@ function applyMemoryRule(toolCall, sourceText) {
   }
 }
 
+function applyMemoryWikiRule(toolCall, sourceText) {
+  if (!toolCall.tool_name.startsWith('memory_wiki.') && !toolCall.tool_name.startsWith('memory_index.')) {
+    return null
+  }
+
+  if (
+    toolCall.tool_name === 'memory_wiki.get_page' ||
+    toolCall.tool_name === 'memory_wiki.list_pages' ||
+    toolCall.tool_name === 'memory_wiki.search_topic_index' ||
+    toolCall.tool_name === 'memory_wiki.list_topic_index'
+  ) {
+    return {
+      decision: 'allow',
+      toolCall
+    }
+  }
+
+  if (toolCall.tool_name === 'memory_wiki.merge_pages') {
+    const targetPageId = normalizeString(toolCall.arguments?.targetPageId)
+    const sourcePageId = normalizeString(toolCall.arguments?.sourcePageId)
+    if (!targetPageId || !sourcePageId) {
+      return {
+        decision: 'ask_back',
+        question: '你想合并哪两个长期记忆页面？小铃湾还缺少目标页或源页信息。',
+        reason: 'memory wiki merge pages requires both targetPageId and sourcePageId',
+        toolCall
+      }
+    }
+    if (targetPageId === sourcePageId) {
+      return {
+        decision: 'deny',
+        reason: '长期记忆页面不能把自己合并到自己。',
+        toolCall
+      }
+    }
+  }
+
+  if (toolCall.tool_name === 'memory_wiki.rollback_page') {
+    const pageId = normalizeString(toolCall.arguments?.pageId)
+    const versionId = normalizeString(toolCall.arguments?.versionId)
+    if (!pageId || !versionId) {
+      return {
+        decision: 'ask_back',
+        question: '你想回滚哪一个页面、回到哪个版本？小铃湾还缺少页面或版本信息。',
+        reason: 'memory wiki rollback requires pageId and versionId',
+        toolCall
+      }
+    }
+  }
+
+  if (toolCall.tool_name === 'memory_index.link_page') {
+    const normalizedKey = normalizeString(toolCall.arguments?.normalizedKey)
+    const pageId = normalizeString(toolCall.arguments?.pageId)
+    if (!normalizedKey || !pageId) {
+      return {
+        decision: 'ask_back',
+        question: '你想把哪个主题索引关联到哪个页面？小铃湾还缺少主题键或页面信息。',
+        reason: 'memory index link page requires normalizedKey and pageId',
+        toolCall
+      }
+    }
+  }
+
+  const confirmMessageMap = {
+    'memory_wiki.create_page': '长期记忆页面创建会影响后续很多轮对话，需要主人确认是否写入。',
+    'memory_wiki.merge_pages': '长期记忆页面合并会改变记忆结构，需要主人确认是否合并。',
+    'memory_wiki.rollback_page': '长期记忆页面回滚会恢复旧版本，需要主人确认是否回滚。',
+    'memory_wiki.archive_page': '长期记忆页面归档会影响后续默认使用范围，需要主人确认。',
+    'memory_wiki.set_status': '长期记忆页面状态调整属于高风险治理动作，需要主人确认。',
+    'memory_wiki.set_importance': '长期记忆页面重要性调整会影响后续优先级，需要主人确认。',
+    'memory_index.link_page': '主题索引页面绑定会改变长期记忆关联，需要主人确认。',
+    'memory_index.update_aliases': '主题索引别名调整会影响主题归一化结果，需要主人确认。'
+  }
+
+  return {
+    decision: 'confirm',
+    confirmRequest: buildConfirmRequest(
+      toolCall,
+      confirmMessageMap[toolCall.tool_name] ?? '长期记忆 wiki 的写入、治理或索引修改属于高风险动作，需要主人确认。',
+      sourceText
+    ),
+    toolCall
+  }
+}
+
 function applySystemReadRule(toolCall) {
   if (
     toolCall.tool_name === 'settings.get_runtime_context' ||
-    toolCall.tool_name === 'health.get_model_status'
+    toolCall.tool_name === 'health.get_model_status' ||
+    toolCall.tool_name === 'conversation.get_day_record' ||
+    toolCall.tool_name === 'conversation.search_day_records' ||
+    toolCall.tool_name === 'observation.get_day_record'
   ) {
     return {
       decision: 'allow',
@@ -492,6 +580,7 @@ export function evaluateToolRule(toolCall, sourceText, options = {}) {
     applyScheduleRule(toolCall, sourceText, options) ??
     applySystemReadRule(toolCall) ??
     applyMemoryRule(toolCall, sourceText) ??
+    applyMemoryWikiRule(toolCall, sourceText) ??
     applyHighRiskRule(toolCall, sourceText) ?? {
       decision: 'allow',
       toolCall
