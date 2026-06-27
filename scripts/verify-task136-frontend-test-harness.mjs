@@ -15,7 +15,11 @@ async function main() {
   const summary = JSON.parse(await fs.readFile(path.join(repoRoot, 'coverage/frontend/coverage-summary.json'), 'utf8'))
 
   assert.equal(packageJson.scripts['test:frontend'], 'vitest run', 'test:frontend script should exist')
-  assert.equal(packageJson.scripts['test:frontend:coverage'], 'vitest run --coverage', 'test:frontend:coverage script should exist')
+  assert.match(
+    packageJson.scripts['test:frontend:coverage'],
+    /vitest run --coverage/,
+    'test:frontend:coverage script should run vitest coverage'
+  )
   assert.match(viteConfig, /environment:\s*'jsdom'/, 'vite config should enable jsdom frontend tests')
   assert.match(viteConfig, /reportsDirectory:\s*'\.\/coverage\/frontend'/, 'vite config should emit frontend coverage reports')
   assert.match(setupFile, /ResizeObserver/, 'frontend setup should include jsdom shims')

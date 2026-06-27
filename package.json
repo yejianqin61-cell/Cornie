@@ -12,7 +12,7 @@
     "lint": "echo \"(no lint configured)\"",
     "test:frontend": "vitest run",
     "test:frontend:watch": "vitest",
-    "test:frontend:coverage": "vitest run --coverage",
+    "test:frontend:coverage": "powershell -NoProfile -Command \"if (Test-Path 'coverage/frontend') { Remove-Item -LiteralPath 'coverage/frontend' -Recurse -Force }; vitest run --coverage\"",
     "test:fast": "node scripts/run-tests.mjs fast",
     "test:integration": "node scripts/run-tests.mjs integration",
     "test:full": "node scripts/run-tests.mjs full",
