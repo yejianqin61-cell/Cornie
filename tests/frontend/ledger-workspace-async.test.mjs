@@ -3,7 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 
 import LedgerWorkspace from '../../src/renderer/components/LedgerWorkspace.vue'
 
-function createLedgerFetchMock({ failEntries = false } = {}) {
+function createLedgerFetchMock({ failEntries = false, failSaveCategory = false } = {}) {
   const entries = [
     {
       id: 'entry-1',
@@ -43,6 +43,48 @@ function createLedgerFetchMock({ failEntries = false } = {}) {
       }
     }
 
+    if (url.endsWith('/api/ledger/entries/expense') && method === 'POST') {
+      const payload = JSON.parse(init.body)
+      entries.unshift({
+        id: 'entry-2',
+        type: 'expense',
+        amount: payload.amount,
+        categoryId: payload.categoryId,
+        categoryName: '海鲜',
+        item: payload.item,
+        merchant: payload.merchant,
+        occurredAt: payload.occurredAt
+      })
+
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ ok: true }),
+        text: async () => ''
+      }
+    }
+
+    if (url.endsWith('/api/ledger/entries/income') && method === 'POST') {
+      const payload = JSON.parse(init.body)
+      entries.unshift({
+        id: 'entry-3',
+        type: 'income',
+        amount: payload.amount,
+        categoryId: payload.categoryId,
+        categoryName: '工资',
+        item: payload.item,
+        merchant: payload.merchant,
+        occurredAt: payload.occurredAt
+      })
+
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ ok: true }),
+        text: async () => ''
+      }
+    }
+
     if (url.includes('/api/ledger/entries/') && method === 'PUT') {
       const id = url.split('/').pop()
       const payload = JSON.parse(init.body)
@@ -70,19 +112,41 @@ function createLedgerFetchMock({ failEntries = false } = {}) {
       }
     }
 
-    if (url.endsWith('/api/ledger/entries/expense') && method === 'POST') {
-      const payload = JSON.parse(init.body)
-      entries.unshift({
-        id: 'entry-2',
-        type: 'expense',
-        amount: payload.amount,
-        categoryId: payload.categoryId,
-        categoryName: '海鲜',
-        item: payload.item,
-        merchant: payload.merchant,
-        occurredAt: payload.occurredAt
-      })
+    if (url.endsWith('/api/ledger/categories/expense') && method === 'POST') {
+      if (failSaveCategory) {
+        return {
+          ok: false,
+          status: 500,
+          json: async () => ({}),
+          text: async () => '保存类目失败'
+        }
+      }
 
+      const payload = JSON.parse(init.body)
+      categories.push({
+        id: 'cat-dinner',
+        type: 'expense',
+        name: payload.name,
+        sortOrder: payload.sortOrder,
+        isActive: true
+      })
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ ok: true }),
+        text: async () => ''
+      }
+    }
+
+    if (url.endsWith('/api/ledger/categories/income') && method === 'POST') {
+      const payload = JSON.parse(init.body)
+      categories.push({
+        id: 'cat-bonus',
+        type: 'income',
+        name: payload.name,
+        sortOrder: payload.sortOrder,
+        isActive: true
+      })
       return {
         ok: true,
         status: 200,
@@ -149,18 +213,18 @@ describe('LedgerWorkspace async flow', () => {
     globalThis.fetch = createLedgerFetchMock()
   })
 
-  it('loads entries and categories, then saves a new ledger entry', async () => {
+  it('loads entries and categories, then saves a new expense ledger entry', async () => {
     const wrapper = mount(LedgerWorkspace)
     await flushPromises()
 
     expect(wrapper.text()).toContain('龙虾聚餐')
     expect(wrapper.text()).toContain('海鲜')
 
-    const inputs = wrapper.findAll('input')
-    await inputs[0].setValue('88')
-    await inputs[2].setValue('第二顿龙虾')
-    await inputs[3].setValue('海边大排档')
-    await wrapper.get('.actionRow button').trigger('click')
+    const formInputs = wrapper.findAll('.formGrid input')
+    await formInputs[0].setValue('88')
+    await formInputs[2].setValue('第二顿龙虾')
+    await formInputs[3].setValue('海边大排档')
+    await wrapper.find('.actionRow button').trigger('click')
     await flushPromises()
     await flushPromises()
 
@@ -187,9 +251,9 @@ describe('LedgerWorkspace async flow', () => {
     await row.trigger('click')
     await flushPromises()
 
-    const inputs = wrapper.findAll('input')
-    await inputs[0].setValue('288')
-    await inputs[2].setValue('升级版龙虾聚餐')
+    const formInputs = wrapper.findAll('.formGrid input')
+    await formInputs[0].setValue('288')
+    await formInputs[2].setValue('升级版龙虾聚餐')
     await wrapper.find('.actionRow button').trigger('click')
     await flushPromises()
     await flushPromises()
@@ -208,18 +272,84 @@ describe('LedgerWorkspace async flow', () => {
       expect.any(Object)
     )
 
+    await selects[1].setValue('cat-lobster')
+    await flushPromises()
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('categoryId=cat-lobster'),
+      expect.any(Object)
+    )
+
     await wrapper.find('.entryRow').trigger('click')
     await flushPromises()
     await wrapper.find('.dangerGhost').trigger('click')
     await flushPromises()
     await flushPromises()
     expect(wrapper.text()).not.toContain('升级版龙虾聚餐')
+    expect(wrapper.text()).toContain('新建记录')
+  })
 
-    const categoryToggle = wrapper.findAll('.categoryCard button')[0]
-    expect(categoryToggle.text()).toBe('停用')
-    await categoryToggle.trigger('click')
+  it('supports income entry and category creation flows', async () => {
+    const wrapper = mount(LedgerWorkspace)
+    await flushPromises()
+
+    const selects = wrapper.findAll('select')
+    await selects[2].setValue('income')
+    await flushPromises()
+    await selects[3].setValue('cat-salary')
+    await flushPromises()
+
+    const formInputs = wrapper.findAll('.formGrid input')
+    await formInputs[0].setValue('1200')
+    await formInputs[2].setValue('六月奖金')
+    await formInputs[3].setValue('公司')
+    await wrapper.find('.actionRow button').trigger('click')
     await flushPromises()
     await flushPromises()
-    expect(wrapper.findAll('.categoryCard button')[0].text()).toBe('恢复')
+
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/ledger/entries/income'),
+      expect.objectContaining({ method: 'POST' })
+    )
+    expect(wrapper.text()).toContain('六月奖金')
+    expect(wrapper.text()).toContain('新建记录')
+
+    const categoryInputs = wrapper.findAll('.categoryCreator input')
+    await categoryInputs[0].setValue('夜宵')
+    await categoryInputs[1].setValue('6')
+    await wrapper.findAll('.categoryCreator button')[0].trigger('click')
+    await flushPromises()
+    await flushPromises()
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/ledger/categories/expense'),
+      expect.objectContaining({ method: 'POST' })
+    )
+    expect(wrapper.text()).toContain('夜宵')
+
+    await wrapper.findAll('.categoryCreator select')[0].setValue('income')
+    await flushPromises()
+    await categoryInputs[0].setValue('红包')
+    await categoryInputs[1].setValue('9')
+    await wrapper.findAll('.categoryCreator button')[0].trigger('click')
+    await flushPromises()
+    await flushPromises()
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/ledger/categories/income'),
+      expect.objectContaining({ method: 'POST' })
+    )
+    expect(wrapper.text()).toContain('红包')
+  })
+
+  it('shows readable error when category save fails', async () => {
+    globalThis.fetch = createLedgerFetchMock({ failSaveCategory: true })
+    const wrapper = mount(LedgerWorkspace)
+    await flushPromises()
+
+    const categoryInputs = wrapper.findAll('.categoryCreator input')
+    await categoryInputs[0].setValue('夜宵')
+    await categoryInputs[1].setValue('6')
+    await wrapper.findAll('.categoryCreator button')[0].trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('保存类目失败')
   })
 })
