@@ -14,7 +14,11 @@ import { registerLedgerTools } from './backend/ledger/tools.js'
 import { createLedgerService } from './backend/ledger/service.js'
 import { ledgerRoutes } from './backend/ledger/routes.js'
 import { registerTodoTools } from './backend/todo/tools.js'
+import { createTodoService } from './backend/todo/service.js'
+import { todoRoutes } from './backend/todo/routes.js'
 import { registerScheduleTools } from './backend/schedule/tools.js'
+import { createScheduleService } from './backend/schedule/service.js'
+import { scheduleRoutes } from './backend/schedule/routes.js'
 import { registerObservationTools } from './backend/observation/tools.js'
 import { registerMemoryTools } from './backend/memory/tools.js'
 import { registerSystemTools } from './backend/system/tools.js'
@@ -53,6 +57,12 @@ export function createServer({ store }) {
 
   const ledger = createLedgerService(store)
   app.use('/api', ledgerRoutes({ ledger }))
+
+  const todo = createTodoService(store)
+  app.use('/api', todoRoutes({ todo }))
+
+  const schedule = createScheduleService(store)
+  app.use('/api', scheduleRoutes({ schedule }))
 
   registerLedgerTools(store, { registerTool })
   registerTodoTools(store, { registerTool })
