@@ -39,6 +39,40 @@ export function memoryWikiRoutes({ memoryWiki, topicIndex }) {
     })
   )
 
+  r.get(
+    '/memory-wiki/governance',
+    asyncHandler(async (req, res) => {
+      const status = req.query.status ? requireString(req.query.status, 'status', { maxLen: 64 }) : undefined
+      const requestType = req.query.requestType
+        ? requireString(req.query.requestType, 'requestType', { maxLen: 64 })
+        : undefined
+      const triggerSource = req.query.triggerSource
+        ? requireString(req.query.triggerSource, 'triggerSource', { maxLen: 64 })
+        : undefined
+      const queueSection = req.query.queueSection
+        ? requireString(req.query.queueSection, 'queueSection', { maxLen: 64 })
+        : undefined
+
+      res.json({
+        items: await memoryWiki.listGovernanceRequests({
+          status,
+          requestType,
+          triggerSource,
+          queueSection
+        })
+      })
+    })
+  )
+
+  r.get(
+    '/memory-wiki/governance/:requestId',
+    asyncHandler(async (req, res) => {
+      const requestId = requireString(req.params.requestId, 'requestId', { maxLen: 256 })
+      const item = await memoryWiki.getGovernanceRequest(requestId)
+      res.json({ item })
+    })
+  )
+
   r.post(
     '/memory-wiki/pages',
     asyncHandler(async (req, res) => {
@@ -162,6 +196,22 @@ export function memoryWikiRoutes({ memoryWiki, topicIndex }) {
       const normalizedKey = requireString(req.params.normalizedKey, 'normalizedKey', { maxLen: 256 })
       const pageId = requireString(req.body?.pageId ?? '', 'pageId', { maxLen: 256 })
       res.json({ item: await topicIndex.linkPage(normalizedKey, pageId) })
+    })
+  )
+
+  r.put(
+    '/memory-wiki/governance/:requestId/status',
+    asyncHandler(async (req, res) => {
+      const requestId = requireString(req.params.requestId, 'requestId', { maxLen: 256 })
+      const status = requireString(req.body?.status ?? '', 'status', { maxLen: 64 })
+      res.json({ item: await memoryWiki.updateGovernanceRequestStatus(requestId, status) })
+    })
+  )
+
+  r.post(
+    '/memory-wiki/governance/inspection-scan',
+    asyncHandler(async (_req, res) => {
+      res.json({ result: await memoryWiki.enqueueInspectionGovernanceRequests() })
     })
   )
 

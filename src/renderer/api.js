@@ -448,3 +448,30 @@ export async function linkTopicIndexPage(normalizedKey, pageId) {
   })
 }
 
+export async function listMemoryWikiGovernanceRequests({ status, requestType, triggerSource, queueSection } = {}) {
+  const params = new URLSearchParams()
+  if (status) params.set('status', status)
+  if (requestType) params.set('requestType', requestType)
+  if (triggerSource) params.set('triggerSource', triggerSource)
+  if (queueSection) params.set('queueSection', queueSection)
+  const qs = params.toString()
+  return apiFetch(`/memory-wiki/governance${qs ? `?${qs}` : ''}`)
+}
+
+export async function getMemoryWikiGovernanceRequest(requestId) {
+  return apiFetch(`/memory-wiki/governance/${encodeURIComponent(requestId)}`)
+}
+
+export async function updateMemoryWikiGovernanceRequestStatus(requestId, status) {
+  return apiFetch(`/memory-wiki/governance/${encodeURIComponent(requestId)}/status`, {
+    method: 'PUT',
+    body: JSON.stringify({ status })
+  })
+}
+
+export async function enqueueMemoryWikiInspectionScan() {
+  return apiFetch('/memory-wiki/governance/inspection-scan', {
+    method: 'POST'
+  })
+}
+

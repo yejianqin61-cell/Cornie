@@ -22,6 +22,8 @@ import { scheduleRoutes } from './backend/schedule/routes.js'
 import { registerObservationTools } from './backend/observation/tools.js'
 import { registerMemoryTools } from './backend/memory/tools.js'
 import { registerSystemTools } from './backend/system/tools.js'
+import { createMemoryWikiService, createTopicIndexStore } from './backend/memory-wiki/index.js'
+import { memoryWikiRoutes } from './backend/memory-wiki/routes.js'
 
 export function createServer({ store }) {
   const app = express()
@@ -63,6 +65,30 @@ export function createServer({ store }) {
 
   const schedule = createScheduleService(store)
   app.use('/api', scheduleRoutes({ schedule }))
+
+  const baseDir = process.cwd()
+  let memoryWikiReady = null
+  async function getMemoryWikiDeps() {
+    if (!memoryWikiReady) {
+      memoryWikiReady = (async () => {
+        const memoryWiki = await createMemoryWikiService({ baseDir, store })
+        const topicIndex = await createTopicIndexStore(baseDir)
+        return { memoryWiki, topicIndex }
+      })()
+    }
+    return memoryWikiReady
+  }
+
+  const memoryWikiApi = express.Router()
+  memoryWikiApi.use(async (req, res, next) => {
+    try {
+      const deps = await getMemoryWikiDeps()
+      memoryWikiRoutes(deps)(req, res, next)
+    } catch (error) {
+      next(error)
+    }
+  })
+  app.use('/api', memoryWikiApi)
 
   registerLedgerTools(store, { registerTool })
   registerTodoTools(store, { registerTool })

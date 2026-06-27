@@ -3,18 +3,25 @@ import { computed, onMounted, ref } from 'vue'
 import {
   archiveMemoryWikiPage,
   createMemoryWikiPage,
+  enqueueMemoryWikiInspectionScan,
   getMemoryWikiPage,
+  getMemoryWikiGovernanceRequest,
   getTopicIndexItem,
+  listConfirmations,
+  listMemoryWikiGovernanceRequests,
   listMemoryWikiPages,
   listTopicIndexItems,
   restoreMemoryWikiPage,
   rollbackMemoryWikiPage,
   setMemoryWikiImportance,
   setMemoryWikiStatus,
+  submitConfirmationDecision,
   updateMemoryWikiAliases,
+  updateMemoryWikiGovernanceRequestStatus,
   updateMemoryWikiPage,
   updateTopicIndexAliases
 } from '../api'
+import ConfirmCard from './ConfirmCard.vue'
 
 const loading = ref(false)
 const saving = ref(false)
@@ -22,14 +29,24 @@ const errorMsg = ref('')
 
 const pages = ref([])
 const topicItems = ref([])
+const governanceItems = ref([])
+const confirmations = ref([])
+
 const selectedPageId = ref('')
 const selectedTopicKey = ref('')
+const selectedGovernanceId = ref('')
 
 const pageFilterType = ref('')
 const pageFilterStatus = ref('')
+const governanceFilterStatus = ref('pending')
+const governanceFilterSection = ref('')
+const confirmationFilterStatus = ref('pending')
 
 const pageForm = ref(createEmptyPageForm())
 const topicDetail = ref(null)
+const governanceDetail = ref(null)
+const confirmStatusMap = ref({})
+const confirmErrorMap = ref({})
 
 function createEmptyPageForm() {
   return {
@@ -45,6 +62,11 @@ function createEmptyPageForm() {
 }
 
 const selectedPage = computed(() => pages.value.find((item) => item.pageId === selectedPageId.value) || null)
+const governanceSections = computed(() =>
+  Array.from(new Set(governanceItems.value.map((item) => item.queueSection).filter(Boolean)))
+)
+const pendingGovernanceCount = computed(() => governanceItems.value.filter((item) => item.status === 'pending').length)
+const pendingConfirmationCount = computed(() => confirmations.value.filter((item) => item.status === 'pending').length)
 
 async function refreshPages() {
   const data = await listMemoryWikiPages({
@@ -59,11 +81,34 @@ async function refreshTopicItems() {
   topicItems.value = data.items || []
 }
 
+async function refreshGovernanceItems() {
+  const data = await listMemoryWikiGovernanceRequests({
+    status: governanceFilterStatus.value || undefined,
+    queueSection: governanceFilterSection.value || undefined
+  })
+  governanceItems.value = data.items || []
+
+  if (selectedGovernanceId.value) {
+    const exists = governanceItems.value.some((item) => item.requestId === selectedGovernanceId.value)
+    if (!exists) {
+      governanceDetail.value = null
+      selectedGovernanceId.value = ''
+    }
+  }
+}
+
+async function refreshConfirmations() {
+  const data = await listConfirmations({
+    status: confirmationFilterStatus.value || undefined
+  })
+  confirmations.value = data.confirmations || []
+}
+
 async function refreshAll() {
   loading.value = true
   errorMsg.value = ''
   try {
-    await Promise.all([refreshPages(), refreshTopicItems()])
+    await Promise.all([refreshPages(), refreshTopicItems(), refreshGovernanceItems(), refreshConfirmations()])
   } catch (error) {
     errorMsg.value = error?.message || String(error)
   } finally {
@@ -101,7 +146,24 @@ async function selectTopic(normalizedKey) {
   try {
     selectedTopicKey.value = normalizedKey
     const data = await getTopicIndexItem(normalizedKey)
-    topicDetail.value = data.item
+    topicDetail.value = {
+      ...data.item,
+      aliasesText: Array.isArray(data.item?.aliases) ? data.item.aliases.join(', ') : ''
+    }
+  } catch (error) {
+    errorMsg.value = error?.message || String(error)
+  } finally {
+    loading.value = false
+  }
+}
+
+async function selectGovernance(requestId) {
+  loading.value = true
+  errorMsg.value = ''
+  try {
+    selectedGovernanceId.value = requestId
+    const data = await getMemoryWikiGovernanceRequest(requestId)
+    governanceDetail.value = data.item
   } catch (error) {
     errorMsg.value = error?.message || String(error)
   } finally {
@@ -222,6 +284,82 @@ async function saveTopicAliases() {
   }
 }
 
+async function runInspectionScan() {
+  saving.value = true
+  errorMsg.value = ''
+  try {
+    await enqueueMemoryWikiInspectionScan()
+    await refreshGovernanceItems()
+  } catch (error) {
+    errorMsg.value = error?.message || String(error)
+  } finally {
+    saving.value = false
+  }
+}
+
+async function changeGovernanceStatus(requestId, status) {
+  saving.value = true
+  errorMsg.value = ''
+  try {
+    await updateMemoryWikiGovernanceRequestStatus(requestId, status)
+    await refreshGovernanceItems()
+    if (selectedGovernanceId.value === requestId) {
+      await selectGovernance(requestId)
+    }
+  } catch (error) {
+    errorMsg.value = error?.message || String(error)
+  } finally {
+    saving.value = false
+  }
+}
+
+function resolveConfirmationState(confirmation) {
+  return confirmStatusMap.value[confirmation.id] || confirmation.status || 'pending'
+}
+
+async function handleConfirmationAction(action, confirmation) {
+  const nextStatus = action === 'approve' ? 'processing' : 'processing'
+  confirmStatusMap.value = {
+    ...confirmStatusMap.value,
+    [confirmation.id]: nextStatus
+  }
+  confirmErrorMap.value = {
+    ...confirmErrorMap.value,
+    [confirmation.id]: ''
+  }
+
+  try {
+    const result = await submitConfirmationDecision(confirmation.id, action)
+    const status =
+      result?.confirmation?.status ||
+      result?.followupConfirmation?.status ||
+      (action === 'approve' ? 'approved' : 'rejected')
+
+    confirmStatusMap.value = {
+      ...confirmStatusMap.value,
+      [confirmation.id]: status
+    }
+    await refreshConfirmations()
+  } catch (error) {
+    confirmStatusMap.value = {
+      ...confirmStatusMap.value,
+      [confirmation.id]: 'failed'
+    }
+    confirmErrorMap.value = {
+      ...confirmErrorMap.value,
+      [confirmation.id]: error?.message || String(error)
+    }
+  }
+}
+
+function formatEvidence(item) {
+  try {
+    return JSON.stringify(item, null, 2)
+  } catch {
+    return String(item)
+  }
+}
+
 onMounted(refreshAll)
 </script>
 
@@ -230,9 +368,14 @@ onMounted(refreshAll)
     <header class="workspaceHead">
       <div>
         <div class="workspaceTitle">Memory Wiki 工作台</div>
-        <div class="workspaceHint">主人可以直接看长期记忆页面、主题索引，还有它们之间的组织方式。</div>
+        <div class="workspaceHint">
+          主人可以直接看长期记忆页面、主题索引、治理待审核池，还有那些需要你亲自点头的高风险动作。
+        </div>
       </div>
-      <button :disabled="loading" @click="refreshAll">{{ loading ? '刷新中…' : '刷新' }}</button>
+      <div class="headActions">
+        <button :disabled="saving" @click="runInspectionScan">{{ saving ? '处理中…' : '运行巡检入池' }}</button>
+        <button :disabled="loading" @click="refreshAll">{{ loading ? '刷新中…' : '刷新全部' }}</button>
+      </div>
     </header>
 
     <div v-if="errorMsg" class="workspaceError">{{ errorMsg }}</div>
@@ -363,7 +506,7 @@ onMounted(refreshAll)
             <div class="detailTitle">{{ topicDetail.keyword || topicDetail.normalizedKey }}</div>
             <div class="detailMeta">normalizedKey: {{ topicDetail.normalizedKey }}</div>
             <div class="detailMeta">相关日期：{{ (topicDetail.dates || []).join(', ') || '无' }}</div>
-            <div class="detailMeta">关联页面：{{ (topicDetail.pageIds || []).join(', ') || '无' }}</div>
+            <div class="detailMeta">关联页面：{{ (topicDetail.pageIds || topicDetail.memoryPageIds || []).join(', ') || '无' }}</div>
             <label class="topicAliases">
               <span>别名（逗号分隔）</span>
               <input v-model="topicDetail.aliasesText" />
@@ -372,6 +515,112 @@ onMounted(refreshAll)
           </div>
           <div v-else class="emptyDetail">点一个主题，我就把它的索引详情展开给主人看。</div>
         </div>
+      </section>
+
+      <section class="workspaceCard">
+        <div class="cardHead">
+          <div>
+            <div class="cardTitle">治理待审核区</div>
+            <div class="cardSubhint">当前待处理 {{ pendingGovernanceCount }} 项</div>
+          </div>
+          <div class="cardFilters">
+            <select v-model="governanceFilterStatus" @change="refreshGovernanceItems">
+              <option value="">全部状态</option>
+              <option value="pending">pending</option>
+              <option value="approved">approved</option>
+              <option value="rejected">rejected</option>
+              <option value="deferred">deferred</option>
+            </select>
+            <select v-model="governanceFilterSection" @change="refreshGovernanceItems">
+              <option value="">全部分区</option>
+              <option v-for="section in governanceSections" :key="section" :value="section">{{ section }}</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="entryList">
+          <button
+            v-for="item in governanceItems"
+            :key="item.requestId"
+            class="entryRow"
+            :class="{ active: item.requestId === selectedGovernanceId }"
+            @click="selectGovernance(item.requestId)"
+          >
+            <div>
+              <div class="entryMain">{{ item.title || item.requestType }}</div>
+              <div class="entryMeta">{{ item.queueSection }} · {{ item.status }} · {{ item.riskLevel }}</div>
+            </div>
+          </button>
+        </div>
+      </section>
+
+      <section class="workspaceCard">
+        <div class="cardHead">
+          <div class="cardTitle">治理详情</div>
+          <div class="cardHint">巡检入池的修复建议、归档候选，都会在这里等你慢慢看。</div>
+        </div>
+
+        <div v-if="governanceDetail" class="governanceDetail">
+          <div class="detailTitle">{{ governanceDetail.title || governanceDetail.requestType }}</div>
+          <div class="detailMeta">状态：{{ governanceDetail.status }}</div>
+          <div class="detailMeta">来源：{{ governanceDetail.triggerSource || 'unknown' }}</div>
+          <div class="detailMeta">分区：{{ governanceDetail.queueSection || 'unknown' }}</div>
+          <div class="detailMeta">页面：{{ (governanceDetail.pageIds || []).join(', ') || '无' }}</div>
+          <div class="detailMeta">主题：{{ (governanceDetail.topicKeys || []).join(', ') || '无' }}</div>
+          <div class="detailText">{{ governanceDetail.reason || '暂无原因说明' }}</div>
+
+          <div class="evidenceBlock" v-if="(governanceDetail.evidence || []).length > 0">
+            <div class="evidenceTitle">证据与建议</div>
+            <pre
+              v-for="(item, index) in governanceDetail.evidence"
+              :key="`${governanceDetail.requestId}-${index}`"
+              class="evidenceItem"
+            >{{ formatEvidence(item) }}</pre>
+          </div>
+
+          <div class="actionRow">
+            <button :disabled="saving || governanceDetail.status === 'approved'" @click="changeGovernanceStatus(governanceDetail.requestId, 'approved')">
+              标记已处理
+            </button>
+            <button :disabled="saving || governanceDetail.status === 'deferred'" @click="changeGovernanceStatus(governanceDetail.requestId, 'deferred')">
+              稍后再看
+            </button>
+            <button :disabled="saving || governanceDetail.status === 'rejected'" @click="changeGovernanceStatus(governanceDetail.requestId, 'rejected')">
+              驳回建议
+            </button>
+          </div>
+        </div>
+        <div v-else class="emptyDetail">点左边一条治理请求，我就把它的原因、证据和处理入口摊给你看。</div>
+      </section>
+
+      <section class="workspaceCard span2">
+        <div class="cardHead">
+          <div>
+            <div class="cardTitle">高风险确认中心</div>
+            <div class="cardSubhint">当前待确认 {{ pendingConfirmationCount }} 项</div>
+          </div>
+          <div class="cardFilters">
+            <select v-model="confirmationFilterStatus" @change="refreshConfirmations">
+              <option value="">全部状态</option>
+              <option value="pending">pending</option>
+              <option value="approved">approved</option>
+              <option value="rejected">rejected</option>
+            </select>
+          </div>
+        </div>
+
+        <div v-if="confirmations.length > 0" class="confirmGrid">
+          <ConfirmCard
+            v-for="confirmation in confirmations"
+            :key="confirmation.id"
+            :request="confirmation.confirmRequest || {}"
+            :status="resolveConfirmationState(confirmation)"
+            :error-message="confirmErrorMap[confirmation.id] || ''"
+            @confirm="handleConfirmationAction('approve', confirmation)"
+            @reject="handleConfirmationAction('reject', confirmation)"
+          />
+        </div>
+        <div v-else class="emptyDetail">现在没有排队等你点头的高风险动作，小铃湾先乖乖看着。</div>
       </section>
     </div>
   </section>
@@ -391,7 +640,12 @@ onMounted(refreshAll)
   gap: 12px;
 }
 .workspaceTitle{ font-size: 22px; font-weight: 800; }
-.workspaceHint{ margin-top: 6px; color: var(--muted); font-size: 13px; }
+.workspaceHint{ margin-top: 6px; color: var(--muted); font-size: 13px; line-height: 1.5; max-width: 720px; }
+.headActions{
+  display:flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
 .workspaceError{
   padding: 12px 14px;
   border-radius: 14px;
@@ -423,10 +677,12 @@ onMounted(refreshAll)
   gap: 12px;
 }
 .cardTitle{ font-weight: 800; font-size: 16px; }
-.cardHint{ color: var(--muted); font-size: 12px; max-width: 360px; text-align: right; }
+.cardHint{ color: var(--muted); font-size: 12px; max-width: 360px; text-align: right; line-height: 1.5; }
+.cardSubhint{ margin-top: 4px; color: var(--muted); font-size: 12px; }
 .cardFilters{
   display:flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 .entryList{
   display:flex;
@@ -481,6 +737,7 @@ onMounted(refreshAll)
   overflow:auto;
 }
 .topicDetail,
+.governanceDetail,
 .emptyDetail{
   border: 1px solid var(--border);
   border-radius: 16px;
@@ -489,6 +746,11 @@ onMounted(refreshAll)
 }
 .detailTitle{ font-weight: 800; font-size: 18px; }
 .detailMeta{ margin-top: 8px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.detailText{
+  margin-top: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
 .topicAliases{
   display:flex;
   flex-direction:column;
@@ -496,12 +758,39 @@ onMounted(refreshAll)
   margin-top: 12px;
   font-size: 13px;
 }
+.evidenceBlock{
+  margin-top: 14px;
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
+}
+.evidenceTitle{
+  font-size: 13px;
+  font-weight: 700;
+}
+.evidenceItem{
+  margin: 0;
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: rgba(15,23,42,.55);
+  color: rgba(226,232,240,.92);
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow:auto;
+}
+.confirmGrid{
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+}
 .emptyDetail{
   color: var(--muted);
   display:grid;
   place-items:center;
   min-height: 180px;
   text-align:center;
+  line-height: 1.6;
 }
 @media (max-width: 1120px){
   .workspaceGrid,
