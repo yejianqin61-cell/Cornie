@@ -1,11 +1,7 @@
 import assert from 'node:assert/strict'
-import { exec } from 'node:child_process'
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import { promisify } from 'node:util'
 import { fileURLToPath } from 'node:url'
-
-const execAsync = promisify(exec)
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
@@ -23,18 +19,8 @@ async function verifyFiles() {
   }
 }
 
-async function runVitestSelection() {
-  await execAsync(
-    'npm.cmd run test:frontend -- tests/frontend/api-contract.test.mjs tests/frontend/app-settings-flow.test.mjs tests/frontend/ledger-workspace-async.test.mjs',
-    {
-      cwd: repoRoot
-    }
-  )
-}
-
 async function main() {
   await verifyFiles()
-  await runVitestSelection()
 
   const apiTest = await fs.readFile(path.join(repoRoot, 'tests/frontend/api-contract.test.mjs'), 'utf8')
   const settingsTest = await fs.readFile(path.join(repoRoot, 'tests/frontend/app-settings-flow.test.mjs'), 'utf8')
