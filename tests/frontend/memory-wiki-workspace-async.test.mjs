@@ -3,7 +3,19 @@ import { flushPromises, mount } from '@vue/test-utils'
 
 import MemoryWikiWorkspace from '../../src/renderer/components/MemoryWikiWorkspace.vue'
 
-function createMemoryWikiFetchMock() {
+function createResponse({ ok = true, status = 200, json = {}, text = '' } = {}) {
+  return {
+    ok,
+    status,
+    json: async () => json,
+    text: async () => text
+  }
+}
+
+function createMemoryWikiFetchMock(options = {}) {
+  const failPageDetail = options.failPageDetail ?? false
+  const failConfirmationReject = options.failConfirmationReject ?? false
+
   const pages = [
     {
       pageId: 'wiki-lobster',
@@ -51,7 +63,7 @@ function createMemoryWikiFetchMock() {
 
     if (url.includes('/api/memory-wiki/pages?') || url.endsWith('/api/memory-wiki/pages')) {
       if (method === 'GET') {
-        return { ok: true, status: 200, json: async () => ({ items: pages }), text: async () => '' }
+        return createResponse({ json: { items: pages } })
       }
 
       if (method === 'POST') {
@@ -63,20 +75,22 @@ function createMemoryWikiFetchMock() {
           status: 'active',
           importance: 'medium'
         })
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({ page: { pageId: 'wiki-memory' } }),
-          text: async () => ''
-        }
+        return createResponse({ json: { page: { pageId: 'wiki-memory' } } })
       }
     }
 
     if (url.includes('/api/memory-wiki/pages/wiki-lobster') && method === 'GET') {
-      return {
-        ok: true,
-        status: 200,
-        json: async () => ({
+      if (failPageDetail) {
+        return createResponse({
+          ok: false,
+          status: 500,
+          json: {},
+          text: '读取记忆页面详情失败。'
+        })
+      }
+
+      return createResponse({
+        json: {
           page: {
             pageId: 'wiki-lobster',
             pageType: 'topic',
@@ -84,19 +98,16 @@ function createMemoryWikiFetchMock() {
             summary: '主人反复提到的重要食物。',
             body: '这是一页关于龙虾的长期记忆。',
             aliases: ['澳龙'],
-            status: 'active',
-            importance: 'high'
+            status: pages[0].status,
+            importance: pages[0].importance
           }
-        }),
-        text: async () => ''
-      }
+        }
+      })
     }
 
     if (url.includes('/api/memory-wiki/pages/wiki-memory') && method === 'GET') {
-      return {
-        ok: true,
-        status: 200,
-        json: async () => ({
+      return createResponse({
+        json: {
           page: {
             pageId: 'wiki-memory',
             pageType: 'topic',
@@ -107,64 +118,49 @@ function createMemoryWikiFetchMock() {
             status: 'active',
             importance: 'medium'
           }
-        }),
-        text: async () => ''
-      }
+        }
+      })
     }
 
     if (url.includes('/api/memory-wiki/topic-index') && !url.includes('/api/memory-wiki/topic-index/lobster')) {
-      return { ok: true, status: 200, json: async () => ({ items: topicItems }), text: async () => '' }
+      return createResponse({ json: { items: topicItems } })
     }
 
     if (url.includes('/api/memory-wiki/topic-index/lobster')) {
-      return {
-        ok: true,
-        status: 200,
-        json: async () => ({
+      return createResponse({
+        json: {
           item: {
             ...topicItems[0],
             memoryPageIds: ['wiki-lobster']
           }
-        }),
-        text: async () => ''
-      }
+        }
+      })
     }
 
     if (url.includes('/api/memory-wiki/governance?') || url.endsWith('/api/memory-wiki/governance')) {
-      return { ok: true, status: 200, json: async () => ({ items: governanceItems }), text: async () => '' }
+      return createResponse({ json: { items: governanceItems } })
     }
 
     if (url.includes('/api/memory-wiki/governance/gov-1')) {
-      return {
-        ok: true,
-        status: 200,
-        json: async () => ({
+      const item = governanceItems.find((entry) => entry.requestId === 'gov-1') || governanceItems[0]
+      return createResponse({
+        json: {
           item: {
-            ...governanceItems[0],
+            ...item,
             triggerSource: 'inspection',
             pageIds: ['wiki-lobster'],
             topicKeys: ['lobster'],
             reason: '内容高度重复，建议合并。',
             evidence: [{ duplicateScore: 0.93 }]
           }
-        }),
-        text: async () => ''
-      }
-    }
-
-    if (url.includes('/api/confirmations')) {
-      return {
-        ok: true,
-        status: 200,
-        json: async () => ({ confirmations }),
-        text: async () => ''
-      }
+        }
+      })
     }
 
     if (url.includes('/api/memory-wiki/topic-index/lobster/aliases') && method === 'PUT') {
       const payload = JSON.parse(init.body)
       topicItems[0].aliases = payload.aliases
-      return { ok: true, status: 200, json: async () => ({ ok: true }), text: async () => '' }
+      return createResponse({ json: { ok: true } })
     }
 
     if (url.includes('/api/memory-wiki/governance/inspection-scan') && method === 'POST') {
@@ -176,7 +172,7 @@ function createMemoryWikiFetchMock() {
         status: 'pending',
         riskLevel: 'low'
       })
-      return { ok: true, status: 200, json: async () => ({ ok: true }), text: async () => '' }
+      return createResponse({ json: { ok: true } })
     }
 
     if (url.includes('/api/memory-wiki/governance/') && url.endsWith('/status') && method === 'PUT') {
@@ -184,49 +180,73 @@ function createMemoryWikiFetchMock() {
       const payload = JSON.parse(init.body)
       const item = governanceItems.find((entry) => entry.requestId === id)
       if (item) item.status = payload.status
-      return { ok: true, status: 200, json: async () => ({ ok: true }), text: async () => '' }
+      return createResponse({ json: { ok: true } })
     }
 
     if (url.includes('/api/confirmations/') && url.endsWith('/decision') && method === 'POST') {
       const id = url.split('/').slice(-2)[0]
       const payload = JSON.parse(init.body)
+
+      if (failConfirmationReject && payload.decision === 'reject') {
+        return createResponse({
+          ok: false,
+          status: 500,
+          json: {},
+          text: '拒绝确认时出错了。'
+        })
+      }
+
       const item = confirmations.find((entry) => entry.id === id)
       if (item) {
         item.status = payload.decision === 'approve' ? 'approved' : 'rejected'
       }
-      return {
-        ok: true,
-        status: 200,
-        json: async () => ({
+      return createResponse({
+        json: {
           confirmation: {
             id,
             status: payload.decision === 'approve' ? 'approved' : 'rejected'
           }
-        }),
-        text: async () => ''
-      }
+        }
+      })
     }
 
-    if (url.includes('/api/memory-wiki/pages/wiki-memory/aliases') || url.includes('/api/memory-wiki/pages/wiki-lobster/aliases')) {
-      return { ok: true, status: 200, json: async () => ({ ok: true }), text: async () => '' }
+    if (url.includes('/api/confirmations')) {
+      return createResponse({ json: { confirmations } })
     }
 
-    if (url.includes('/status') || url.includes('/importance')) {
-      return { ok: true, status: 200, json: async () => ({ ok: true }), text: async () => '' }
+    if (url.includes('/api/memory-wiki/pages/wiki-lobster/archive') && method === 'POST') {
+      pages[0].status = 'archived'
+      return createResponse({ json: { ok: true } })
     }
 
-    return {
-      ok: true,
-      status: 200,
-      json: async () => ({ ok: true }),
-      text: async () => ''
+    if (url.includes('/api/memory-wiki/pages/wiki-lobster/restore') && method === 'POST') {
+      pages[0].status = 'active'
+      return createResponse({ json: { ok: true } })
     }
+
+    if (url.includes('/api/memory-wiki/pages/wiki-lobster/rollback') && method === 'POST') {
+      return createResponse({ json: { ok: true } })
+    }
+
+    if (
+      url.includes('/api/memory-wiki/pages/wiki-memory/aliases') ||
+      url.includes('/api/memory-wiki/pages/wiki-lobster/aliases')
+    ) {
+      return createResponse({ json: { ok: true } })
+    }
+
+    if (url.endsWith('/status') || url.endsWith('/importance')) {
+      return createResponse({ json: { ok: true } })
+    }
+
+    return createResponse({ json: { ok: true } })
   })
 }
 
 describe('MemoryWikiWorkspace async flow', () => {
   beforeEach(() => {
     globalThis.fetch = createMemoryWikiFetchMock()
+    globalThis.window.prompt = vi.fn(() => 'version-1')
   })
 
   it('loads wiki data, opens details, and creates a new page', async () => {
@@ -264,7 +284,7 @@ describe('MemoryWikiWorkspace async flow', () => {
     expect(wrapper.text()).toContain('记忆治理')
   })
 
-  it('supports topic alias save, inspection enqueue, governance status change, and confirmation decisions', async () => {
+  it('supports topic alias save, inspection enqueue, governance status change, archive/restore/rollback, and confirmation approval', async () => {
     const wrapper = mount(MemoryWikiWorkspace)
     await flushPromises()
 
@@ -289,6 +309,38 @@ describe('MemoryWikiWorkspace async flow', () => {
     await flushPromises()
     expect(wrapper.text()).toContain('巡检发现新的合并候选')
 
+    const pageRow = wrapper.findAll('.workspaceCard .entryRow').find((row) => row.text().includes('龙虾'))
+    await pageRow.trigger('click')
+    await flushPromises()
+
+    const archiveButton = wrapper.findAll('.actionRow button').find((button) => button.text() === '归档页面')
+    await archiveButton.trigger('click')
+    await flushPromises()
+    await flushPromises()
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/memory-wiki/pages/wiki-lobster/archive'),
+      expect.objectContaining({ method: 'POST' })
+    )
+
+    const restoreButton = wrapper.findAll('.actionRow button').find((button) => button.text() === '恢复页面')
+    await restoreButton.trigger('click')
+    await flushPromises()
+    await flushPromises()
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/memory-wiki/pages/wiki-lobster/restore'),
+      expect.objectContaining({ method: 'POST' })
+    )
+
+    const rollbackButton = wrapper.findAll('.actionRow button').find((button) => button.text() === '版本回滚')
+    await rollbackButton.trigger('click')
+    await flushPromises()
+    await flushPromises()
+    expect(globalThis.window.prompt).toHaveBeenCalledWith('请输入要回滚到的版本 ID')
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/memory-wiki/pages/wiki-lobster/rollback'),
+      expect.objectContaining({ method: 'POST', body: JSON.stringify({ versionId: 'version-1' }) })
+    )
+
     const governanceRow = wrapper.findAll('.workspaceCard .entryRow').find((row) => row.text().includes('建议合并龙虾相关页面'))
     await governanceRow.trigger('click')
     await flushPromises()
@@ -300,7 +352,7 @@ describe('MemoryWikiWorkspace async flow', () => {
     await flushPromises()
     expect(globalThis.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/api/memory-wiki/governance/gov-1/status'),
-      expect.objectContaining({ method: 'PUT' })
+      expect.objectContaining({ method: 'PUT', body: JSON.stringify({ status: 'approved' }) })
     )
     expect(wrapper.text()).toContain('当前待处理 1 项')
 
@@ -309,5 +361,62 @@ describe('MemoryWikiWorkspace async flow', () => {
     await flushPromises()
     await flushPromises()
     expect(wrapper.text()).toContain('已同意，正在继续处理。')
+  })
+
+  it('supports governance defer and reject actions plus confirmation reject flow', async () => {
+    const wrapper = mount(MemoryWikiWorkspace)
+    await flushPromises()
+
+    const governanceRow = wrapper.findAll('.workspaceCard .entryRow').find((row) => row.text().includes('建议合并龙虾相关页面'))
+    await governanceRow.trigger('click')
+    await flushPromises()
+
+    const deferButton = wrapper.findAll('.actionRow button').find((button) => button.text() === '稍后再看')
+    await deferButton.trigger('click')
+    await flushPromises()
+    await flushPromises()
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/memory-wiki/governance/gov-1/status'),
+      expect.objectContaining({ method: 'PUT', body: JSON.stringify({ status: 'deferred' }) })
+    )
+
+    await governanceRow.trigger('click')
+    await flushPromises()
+    const rejectGovernanceButton = wrapper.findAll('.actionRow button').find((button) => button.text() === '驳回建议')
+    await rejectGovernanceButton.trigger('click')
+    await flushPromises()
+    await flushPromises()
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/memory-wiki/governance/gov-1/status'),
+      expect.objectContaining({ method: 'PUT', body: JSON.stringify({ status: 'rejected' }) })
+    )
+
+    const rejectConfirmButton = wrapper.findAll('.confirmBtn')[1]
+    await rejectConfirmButton.trigger('click')
+    await flushPromises()
+    await flushPromises()
+    expect(wrapper.text()).toContain('已拒绝，本次不会执行。')
+  })
+
+  it('shows readable errors when page detail loading or confirmation rejection fails', async () => {
+    globalThis.fetch = createMemoryWikiFetchMock({
+      failPageDetail: true,
+      failConfirmationReject: true
+    })
+
+    const wrapper = mount(MemoryWikiWorkspace)
+    await flushPromises()
+
+    const pageRow = wrapper.findAll('.workspaceCard .entryRow').find((row) => row.text().includes('龙虾'))
+    await pageRow.trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('读取记忆页面详情失败。')
+
+    const rejectConfirmButton = wrapper.findAll('.confirmBtn')[1]
+    await rejectConfirmButton.trigger('click')
+    await flushPromises()
+    await flushPromises()
+    expect(wrapper.text()).toContain('处理失败，可以稍后重试。')
+    expect(wrapper.text()).toContain('拒绝确认时出错了。')
   })
 })
