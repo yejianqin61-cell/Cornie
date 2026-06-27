@@ -1,6 +1,16 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
-import { getEntry, getModelStatus, listEntries, listOnThisDay, regenerateCornie, upsertEntry } from './api'
+import {
+  clearModelSettings,
+  getEntry,
+  getModelSettings,
+  getModelStatus,
+  listEntries,
+  listOnThisDay,
+  regenerateCornie,
+  saveModelSettings,
+  upsertEntry
+} from './api'
 import CornieComposer from './CornieComposer.vue'
 import ChatHistory from './ChatHistory.vue'
 import LedgerWorkspace from './components/LedgerWorkspace.vue'
@@ -51,16 +61,110 @@ const sections = [
 ]
 
 const mode = ref('diary')
-
 const modeMeta = computed(() => sections.find((item) => item.id === mode.value) || sections[0])
 
 const modelStatus = ref({ ok: false, configured: false, provider: 'deepseek', model: '', reason: '' })
+const modelSettings = ref({
+  provider: 'deepseek',
+  configured: false,
+  hasApiKey: false,
+  maskedApiKey: '',
+  baseUrl: '',
+  model: '',
+  timeoutMs: null,
+  source: 'empty'
+})
+
+const settingsForm = ref({
+  apiKey: '',
+  baseUrl: '',
+  model: 'deepseek-chat',
+  timeoutMs: '30000'
+})
+const settingsSaving = ref(false)
+const settingsLoading = ref(false)
+const settingsError = ref('')
+const settingsNotice = ref('')
+
+const isGuideVisible = computed(() => !modelStatus.value.configured)
+const guideTitle = computed(() => {
+  if (!modelStatus.value.configured) return '先把 DeepSeek 的钥匙交给铃湾吧'
+  return '铃湾暂时没连上 DeepSeek'
+})
+const guideReason = computed(() => {
+  if (!modelStatus.value.configured) {
+    return '现在还没检测到可用的 DeepSeek API Key。只要先把钥匙放好，铃湾就能继续陪你记日记、记账、写待办。'
+  }
+  return '钥匙已经在了，但铃湾这会儿没顺利连上 DeepSeek。我们可以先检查一下网络、地址、模型名，或者重新试一遍。'
+})
+
+async function refreshModelState() {
+  settingsLoading.value = true
+  settingsError.value = ''
+
+  try {
+    const [statusData, settingsData] = await Promise.all([getModelStatus(), getModelSettings()])
+    modelStatus.value = statusData
+    modelSettings.value = settingsData.settings
+    settingsForm.value = {
+      apiKey: '',
+      baseUrl: settingsData.settings.baseUrl || '',
+      model: settingsData.settings.model || 'deepseek-chat',
+      timeoutMs: settingsData.settings.timeoutMs ? String(settingsData.settings.timeoutMs) : '30000'
+    }
+  } catch (error) {
+    modelStatus.value = { ok: false, configured: false, provider: 'deepseek', model: '', reason: 'request_failed' }
+    settingsError.value = error?.message || String(error)
+  } finally {
+    settingsLoading.value = false
+  }
+}
+
 async function checkModel() {
   try {
     const data = await getModelStatus()
     modelStatus.value = data
   } catch {
     modelStatus.value = { ok: false, configured: false, provider: 'deepseek', model: '', reason: 'request_failed' }
+  }
+}
+
+async function submitModelSettings() {
+  settingsSaving.value = true
+  settingsError.value = ''
+  settingsNotice.value = ''
+
+  try {
+    await saveModelSettings({
+      apiKey: settingsForm.value.apiKey,
+      baseUrl: settingsForm.value.baseUrl,
+      model: settingsForm.value.model,
+      timeoutMs: settingsForm.value.timeoutMs
+    })
+    settingsNotice.value = '铃湾已经把钥匙收好啦，现在去重新确认连接状态。'
+    await refreshModelState()
+    await checkModel()
+  } catch (error) {
+    settingsError.value = error?.message || String(error)
+  } finally {
+    settingsSaving.value = false
+  }
+}
+
+async function resetModelSettings() {
+  settingsSaving.value = true
+  settingsError.value = ''
+  settingsNotice.value = ''
+
+  try {
+    await clearModelSettings()
+    settingsNotice.value = '已经把本地保存的钥匙收起来啦。'
+    await refreshModelState()
+    await checkModel()
+  } catch (error) {
+    settingsError.value = error?.message || String(error)
+  } finally {
+    settingsSaving.value = false
   }
 }
 
@@ -153,7 +257,7 @@ watch(
 )
 
 onMounted(async () => {
-  checkModel()
+  await refreshModelState()
   await refreshList()
   await loadEntry(selectedDate.value)
   await loadOnThisDay(selectedDate.value)
@@ -161,8 +265,8 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="appShell">
-    <aside class="navPanel">
+  <div class="appShell" :class="{ guided: isGuideVisible }">
+    <aside class="navPanel" :class="{ disabled: isGuideVisible }">
       <div class="brandBlock">
         <div class="logoMark">C</div>
         <div>
@@ -177,6 +281,7 @@ onMounted(async () => {
           :key="section.id"
           class="navItem"
           :class="{ active: mode === section.id }"
+          :disabled="isGuideVisible"
           @click="mode = section.id"
         >
           <span class="navLabel">{{ section.label }}</span>
@@ -185,7 +290,7 @@ onMounted(async () => {
       </nav>
     </aside>
 
-    <main class="mainPanel">
+    <main class="mainPanel" :class="{ disabled: isGuideVisible }">
       <header class="topBar">
         <div>
           <div class="topTitle">{{ modeMeta.label }}</div>
@@ -198,16 +303,10 @@ onMounted(async () => {
         </div>
       </header>
 
-      <div v-if="!modelStatus.ok" class="modelBanner">
-        <template v-if="!modelStatus.configured">
-          <span>铃湾现在还没拿到 DeepSeek 的钥匙呢，先把 API Key 配好，我才能认真帮主人做事呀。</span>
-          <code class="modelCmd">DEEPSEEK_API_KEY=你的密钥</code>
-        </template>
-        <template v-else>
-          <span>铃湾这会儿没连上 DeepSeek，主人可以检查一下网络、Key 或模型配置。</span>
-          <code class="modelCmd">{{ modelStatus.reason || 'request_failed' }}</code>
-        </template>
-        <button class="modelRetry" @click="checkModel">重新检测</button>
+      <div v-if="modelStatus.ok && modelSettings.configured" class="modelSummary">
+        <span>铃湾已经拿到钥匙啦，当前模型是 {{ modelStatus.model || modelSettings.model || 'deepseek-chat' }}。</span>
+        <span v-if="modelSettings.maskedApiKey">已保存：{{ modelSettings.maskedApiKey }}</span>
+        <button class="modelRetry" @click="refreshModelState">刷新状态</button>
       </div>
 
       <section v-if="mode === 'diary'" class="contentFrame">
@@ -335,6 +434,77 @@ onMounted(async () => {
         <CornieComposer />
       </section>
     </main>
+
+    <section v-if="isGuideVisible" class="guideOverlay">
+      <div class="guideCard">
+        <div class="guideEyebrow">DeepSeek 引导</div>
+        <h1 class="guideTitle">{{ guideTitle }}</h1>
+        <p class="guideText">{{ guideReason }}</p>
+
+        <div class="guideInfo">
+          <div class="guideInfoCard">
+            <div class="guideInfoTitle">铃湾会怎么用这把钥匙？</div>
+            <div class="guideInfoText">用来连接 DeepSeek，帮主人聊天、生成 Cornie 日记、理解工具调用结果。</div>
+          </div>
+          <div class="guideInfoCard">
+            <div class="guideInfoTitle">哪些内容会出门？</div>
+            <div class="guideInfoText">你发给铃湾的对话内容、生成请求，以及为了完成任务必须发送给模型的上下文。</div>
+          </div>
+          <div class="guideInfoCard">
+            <div class="guideInfoTitle">如果暂时不想填呢？</div>
+            <div class="guideInfoText">现在主工作台会先等一等，因为没有钥匙时，铃湾没法稳定工作。</div>
+          </div>
+        </div>
+
+        <form class="guideForm" @submit.prevent="submitModelSettings">
+          <label>
+            <span>DeepSeek API Key</span>
+            <input
+              v-model="settingsForm.apiKey"
+              type="password"
+              autocomplete="off"
+              placeholder="把你的钥匙放在这里"
+            />
+          </label>
+          <label>
+            <span>Base URL</span>
+            <input v-model="settingsForm.baseUrl" placeholder="默认可留空，或填写自定义地址" />
+          </label>
+          <label>
+            <span>模型名</span>
+            <input v-model="settingsForm.model" placeholder="默认是 deepseek-chat" />
+          </label>
+          <label>
+            <span>超时毫秒</span>
+            <input v-model="settingsForm.timeoutMs" inputmode="numeric" placeholder="例如 30000" />
+          </label>
+
+          <div class="guideCurrent" v-if="modelSettings.maskedApiKey">
+            当前已保存：{{ modelSettings.maskedApiKey }}
+          </div>
+          <div class="guideError" v-if="settingsError">{{ settingsError }}</div>
+          <div class="guideNotice" v-if="settingsNotice">{{ settingsNotice }}</div>
+
+          <div class="guideActions">
+            <button :disabled="settingsSaving || settingsLoading" type="submit">
+              {{ settingsSaving ? '保存中…' : '保存并重新检测' }}
+            </button>
+            <button class="ghostBtn" :disabled="settingsSaving || settingsLoading" type="button" @click="checkModel">
+              只重新检测
+            </button>
+            <button
+              v-if="modelSettings.configured"
+              class="ghostBtn dangerBtn"
+              :disabled="settingsSaving || settingsLoading"
+              type="button"
+              @click="resetModelSettings"
+            >
+              清空已保存钥匙
+            </button>
+          </div>
+        </form>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -345,6 +515,18 @@ onMounted(async () => {
   grid-template-columns: 280px minmax(0, 1fr);
   gap: 16px;
   padding: 16px;
+  position: relative;
+}
+.appShell.guided{
+  background:
+    radial-gradient(circle at top left, rgba(253,224,71,.10), transparent 36%),
+    radial-gradient(circle at bottom right, rgba(125,211,252,.12), transparent 42%);
+}
+.disabled{
+  pointer-events: none;
+  filter: blur(8px) saturate(.8);
+  opacity: .28;
+  user-select: none;
 }
 .navPanel{
   border: 1px solid var(--border);
@@ -442,38 +624,30 @@ onMounted(async () => {
 .monthInput{
   width: 160px;
 }
-.modelBanner{
+.modelSummary{
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 12px 16px;
   border-radius: 18px;
-  border: 1px solid rgba(251,191,36,.35);
-  background: rgba(251,191,36,.08);
-  color: rgba(254,243,199,.95);
+  border: 1px solid rgba(125,211,252,.28);
+  background: rgba(125,211,252,.08);
+  color: rgba(224,242,254,.95);
   font-size: 13px;
   flex-wrap: wrap;
-}
-.modelCmd{
-  padding: 2px 8px;
-  border-radius: 6px;
-  background: rgba(0,0,0,.25);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12px;
-  white-space: nowrap;
 }
 .modelRetry{
   margin-left: auto;
   padding: 6px 12px;
   font-size: 12px;
   border-radius: 8px;
-  border: 1px solid rgba(251,191,36,.35);
-  background: rgba(251,191,36,.12);
+  border: 1px solid rgba(125,211,252,.35);
+  background: rgba(125,211,252,.12);
   color: inherit;
   cursor: pointer;
   white-space: nowrap;
 }
-.modelRetry:hover{ background: rgba(251,191,36,.20); }
+.modelRetry:hover{ background: rgba(125,211,252,.20); }
 .contentFrame{
   flex:1;
   min-height: 0;
@@ -607,6 +781,110 @@ onMounted(async () => {
   background: rgba(248,113,113,.08);
   color: rgba(254,226,226,.95);
 }
+.guideOverlay{
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+}
+.guideCard{
+  width: min(980px, 100%);
+  border-radius: 30px;
+  border: 1px solid rgba(251,191,36,.26);
+  background:
+    linear-gradient(160deg, rgba(251,191,36,.09), rgba(15,23,42,.90) 42%),
+    rgba(15,23,42,.92);
+  box-shadow: 0 28px 80px rgba(15,23,42,.45);
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.guideEyebrow{
+  font-size: 11px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: rgba(253,224,71,.78);
+}
+.guideTitle{
+  margin: 0;
+  font-size: 34px;
+  line-height: 1.1;
+}
+.guideText{
+  margin: 0;
+  color: rgba(226,232,240,.88);
+  line-height: 1.7;
+  max-width: 760px;
+}
+.guideInfo{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.guideInfoCard{
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 18px;
+  background: rgba(255,255,255,.04);
+  padding: 16px;
+}
+.guideInfoTitle{
+  font-weight: 800;
+  font-size: 14px;
+}
+.guideInfoText{
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.guideForm{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.guideForm label{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+.guideCurrent,
+.guideError,
+.guideNotice{
+  grid-column: 1 / -1;
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+.guideCurrent{
+  border: 1px solid rgba(125,211,252,.28);
+  background: rgba(125,211,252,.08);
+  color: rgba(224,242,254,.95);
+}
+.guideError{
+  border: 1px solid rgba(248,113,113,.35);
+  background: rgba(248,113,113,.08);
+  color: rgba(254,226,226,.95);
+}
+.guideNotice{
+  border: 1px solid rgba(74,222,128,.28);
+  background: rgba(74,222,128,.08);
+  color: rgba(220,252,231,.95);
+}
+.guideActions{
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.ghostBtn{
+  background: rgba(255,255,255,.05);
+}
+.dangerBtn{
+  border-color: rgba(248,113,113,.35);
+  color: rgba(254,202,202,.95);
+}
 @media (max-width: 1180px){
   .appShell{
     grid-template-columns: 1fr;
@@ -621,6 +899,12 @@ onMounted(async () => {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
   .diaryGrid{
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 960px){
+  .guideInfo,
+  .guideForm{
     grid-template-columns: 1fr;
   }
 }
@@ -640,6 +924,12 @@ onMounted(async () => {
   }
   .otdGrid{
     grid-template-columns: 1fr;
+  }
+  .guideCard{
+    padding: 20px;
+  }
+  .guideTitle{
+    font-size: 28px;
   }
 }
 </style>
