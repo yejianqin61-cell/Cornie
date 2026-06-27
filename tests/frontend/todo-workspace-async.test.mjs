@@ -56,18 +56,83 @@ function createTodoFetchMock({ failList = false } = {}) {
       }
 
       if (method === 'POST' && url.includes('/complete')) {
-        items[0].status = 'done'
+        const id = url.split('/').slice(-2)[0]
+        const target = items.find((item) => item.id === id)
+        if (target) target.status = 'done'
         return { ok: true, status: 200, json: async () => ({ ok: true }), text: async () => '' }
+      }
+
+      if (method === 'POST' && url.includes('/reopen')) {
+        const id = url.split('/').slice(-2)[0]
+        const target = items.find((item) => item.id === id)
+        if (target) target.status = 'open'
+        return { ok: true, status: 200, json: async () => ({ ok: true }), text: async () => '' }
+      }
+
+      if (method === 'PUT') {
+        const id = url.split('/').pop()
+        const payload = JSON.parse(init.body)
+        const target = items.find((item) => item.id === id)
+        if (target) {
+          target.title = payload.title
+          target.description = payload.description ?? target.description
+        }
+        return { ok: true, status: 200, json: async () => ({ ok: true }), text: async () => '' }
+      }
+
+      if (method === 'DELETE') {
+        const id = url.split('/').pop()
+        const index = items.findIndex((item) => item.id === id)
+        if (index >= 0) items.splice(index, 1)
+        return { ok: true, status: 204, json: async () => ({}), text: async () => '' }
       }
     }
 
     if (url.endsWith('/api/todo-categories')) {
-      return {
-        ok: true,
-        status: 200,
-        json: async () => ({ items: categories }),
-        text: async () => ''
+      if (method === 'GET') {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ items: categories }),
+          text: async () => ''
+        }
       }
+
+      if (method === 'POST') {
+        const payload = JSON.parse(init.body)
+        categories.push({
+          id: `todo-cat-${categories.length + 1}`,
+          name: payload.name,
+          sortOrder: payload.sortOrder,
+          isActive: true
+        })
+        return { ok: true, status: 200, json: async () => ({ ok: true }), text: async () => '' }
+      }
+    }
+
+    if (url.includes('/api/todo-categories/') && method === 'PUT') {
+      const id = url.split('/').pop()
+      const payload = JSON.parse(init.body)
+      const category = categories.find((item) => item.id === id)
+      if (category && typeof payload.isActive === 'boolean') {
+        category.isActive = payload.isActive
+      }
+      return { ok: true, status: 200, json: async () => ({ ok: true }), text: async () => '' }
+    }
+
+    if (url.includes('/api/todo-categories/') && url.endsWith('/restore') && method === 'POST') {
+      const id = url.split('/').slice(-2)[0]
+      const category = categories.find((item) => item.id === id)
+      if (category) category.isActive = true
+      return { ok: true, status: 200, json: async () => ({ ok: true }), text: async () => '' }
+    }
+
+    if (url.includes('/api/todo-categories/') && url.endsWith('/reorder') && method === 'POST') {
+      const id = url.split('/').slice(-2)[0]
+      const payload = JSON.parse(init.body)
+      const category = categories.find((item) => item.id === id)
+      if (category) category.sortOrder = payload.sortOrder
+      return { ok: true, status: 200, json: async () => ({ ok: true }), text: async () => '' }
     }
 
     return {
@@ -110,5 +175,52 @@ describe('TodoWorkspace async flow', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('待办列表加载失败')
+  })
+
+  it('supports complete, reopen, delete, and category management flows', async () => {
+    const wrapper = mount(TodoWorkspace)
+    await flushPromises()
+
+    const row = wrapper.find('.entryRow')
+    await row.trigger('click')
+    await flushPromises()
+
+    const actionButtons = wrapper.findAll('.actionRow button')
+    await actionButtons[1].trigger('click')
+    await flushPromises()
+    await flushPromises()
+    expect(wrapper.text()).toContain('done')
+
+    await wrapper.findAll('.cardFilters button')[1].trigger('click')
+    await flushPromises()
+    const reopenedButtons = wrapper.findAll('.actionRow button')
+    await reopenedButtons[1].trigger('click')
+    await flushPromises()
+    await flushPromises()
+    expect(wrapper.text()).toContain('open')
+
+    await wrapper.find('.dangerGhost').trigger('click')
+    await flushPromises()
+    await flushPromises()
+    expect(wrapper.text()).not.toContain('整理龙虾账单')
+
+    const categoryInputs = wrapper.findAll('.categoryCreator input')
+    await categoryInputs[0].setValue('采购')
+    await categoryInputs[1].setValue('20')
+    await wrapper.find('.categoryCreator button').trigger('click')
+    await flushPromises()
+    await flushPromises()
+    expect(wrapper.text()).toContain('采购')
+
+    const miniButtons = wrapper.findAll('.miniActions button')
+    await miniButtons[0].trigger('click')
+    await flushPromises()
+    await flushPromises()
+    expect(wrapper.text()).toContain('排序 0')
+
+    await miniButtons[2].trigger('click')
+    await flushPromises()
+    await flushPromises()
+    expect(wrapper.text()).toContain('已停用')
   })
 })

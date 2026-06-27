@@ -43,6 +43,24 @@ function createLedgerFetchMock({ failEntries = false } = {}) {
       }
     }
 
+    if (url.includes('/api/ledger/entries/') && method === 'PUT') {
+      const id = url.split('/').pop()
+      const payload = JSON.parse(init.body)
+      const target = entries.find((item) => item.id === id)
+      if (target) {
+        target.amount = payload.amount
+        target.item = payload.item ?? target.item
+        target.merchant = payload.merchant ?? target.merchant
+      }
+
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ ok: true }),
+        text: async () => ''
+      }
+    }
+
     if (url.endsWith('/api/ledger/categories')) {
       return {
         ok: true,
@@ -82,6 +100,37 @@ function createLedgerFetchMock({ failEntries = false } = {}) {
         ok: true,
         status: 204,
         json: async () => ({}),
+        text: async () => ''
+      }
+    }
+
+    if (url.includes('/api/ledger/categories/') && method === 'PUT') {
+      const id = url.split('/').slice(-1)[0]
+      const payload = JSON.parse(init.body)
+      const category = categories.find((item) => item.id === id)
+      if (category && typeof payload.isActive === 'boolean') {
+        category.isActive = payload.isActive
+      }
+
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ ok: true }),
+        text: async () => ''
+      }
+    }
+
+    if (url.includes('/api/ledger/categories/') && url.endsWith('/restore') && method === 'POST') {
+      const id = url.split('/').slice(-2)[0]
+      const category = categories.find((item) => item.id === id)
+      if (category) {
+        category.isActive = true
+      }
+
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ ok: true }),
         text: async () => ''
       }
     }
@@ -128,5 +177,49 @@ describe('LedgerWorkspace async flow', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('收支记录加载失败')
+  })
+
+  it('supports editing, deleting, filtering, and toggling categories', async () => {
+    const wrapper = mount(LedgerWorkspace)
+    await flushPromises()
+
+    const row = wrapper.find('.entryRow')
+    await row.trigger('click')
+    await flushPromises()
+
+    const inputs = wrapper.findAll('input')
+    await inputs[0].setValue('288')
+    await inputs[2].setValue('升级版龙虾聚餐')
+    await wrapper.find('.actionRow button').trigger('click')
+    await flushPromises()
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('升级版龙虾聚餐')
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/ledger/entries/entry-1'),
+      expect.objectContaining({ method: 'PUT' })
+    )
+
+    const selects = wrapper.findAll('select')
+    await selects[0].setValue('expense')
+    await flushPromises()
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('type=expense'),
+      expect.any(Object)
+    )
+
+    await wrapper.find('.entryRow').trigger('click')
+    await flushPromises()
+    await wrapper.find('.dangerGhost').trigger('click')
+    await flushPromises()
+    await flushPromises()
+    expect(wrapper.text()).not.toContain('升级版龙虾聚餐')
+
+    const categoryToggle = wrapper.findAll('.categoryCard button')[0]
+    expect(categoryToggle.text()).toBe('停用')
+    await categoryToggle.trigger('click')
+    await flushPromises()
+    await flushPromises()
+    expect(wrapper.findAll('.categoryCard button')[0].text()).toBe('恢复')
   })
 })
