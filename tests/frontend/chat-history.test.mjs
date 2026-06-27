@@ -3,11 +3,21 @@ import { flushPromises, mount } from '@vue/test-utils'
 
 import ChatHistory from '../../src/renderer/ChatHistory.vue'
 
-function createChatlogFetchMock({ shouldFailMessages = false } = {}) {
+function createChatlogFetchMock({ shouldFailMessages = false, stringErrorOnMessages = false } = {}) {
   return vi.fn(async (input) => {
     const url = String(input)
 
     if (url.includes('/api/chatlogs?month=')) {
+      if (url.includes('month=2026-07')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            entries: [{ date: '2026-07-02', messageCount: 1 }]
+          }),
+          text: async () => ''
+        }
+      }
       return {
         ok: true,
         status: 200,
@@ -22,6 +32,9 @@ function createChatlogFetchMock({ shouldFailMessages = false } = {}) {
     }
 
     if (url.includes('/api/chatlogs/2026-06-27')) {
+      if (stringErrorOnMessages) {
+        throw '后端炸毛了'
+      }
       return {
         ok: !shouldFailMessages,
         status: shouldFailMessages ? 500 : 200,
@@ -82,6 +95,28 @@ describe('ChatHistory', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('读取聊天记录失败')
+    expect(wrapper.text()).toContain('这一天还没有聊天记录。')
+  })
+
+  it('switches to the first available date when month changes and previous selection disappears', async () => {
+    const wrapper = mount(ChatHistory)
+    await flushPromises()
+
+    const monthInput = wrapper.get('.monthInput')
+    await monthInput.setValue('2026-07')
+    await flushPromises()
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('2026-07-02')
+    expect(wrapper.find('.historyContent .historyTitle').text()).toBe('2026-07-02')
+  })
+
+  it('falls back to stringified errors when thrown value has no message', async () => {
+    globalThis.fetch = createChatlogFetchMock({ stringErrorOnMessages: true })
+    const wrapper = mount(ChatHistory)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('后端炸毛了')
     expect(wrapper.text()).toContain('这一天还没有聊天记录。')
   })
 })

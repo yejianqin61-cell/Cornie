@@ -97,4 +97,67 @@ describe('cornieBlink controller', () => {
     await vi.advanceTimersByTimeAsync(4000)
     expect(showLayer.mock.calls.length).toBe(showCountAfterStop)
   })
+
+  it('returns early when blinking is already in progress or controller is stopped', async () => {
+    vi.spyOn(Math, 'random').mockReturnValue(0.1)
+
+    const showLayer = vi.fn()
+    const hideLayers = vi.fn()
+    const setHeadDipPx = vi.fn()
+
+    const controller = createCornieBlinkController({
+      showLayer,
+      hideLayers,
+      setHeadDipPx,
+      doubleBlinkChance: 0
+    })
+
+    const firstBlink = controller.blinkNow()
+    const overlappingBlink = controller.blinkNow()
+    await vi.advanceTimersByTimeAsync(300)
+    await Promise.all([firstBlink, overlappingBlink])
+
+    expect(showLayer).toHaveBeenCalledTimes(3)
+
+    controller.stop()
+    await controller.blinkNow()
+    expect(showLayer).toHaveBeenCalledTimes(3)
+  })
+
+  it('stops before double blink continuation and safely stops without timer', async () => {
+    const randomValues = [0.1, 0.1, 0.1, 0.1, 0.1]
+    vi.spyOn(Math, 'random').mockImplementation(() => randomValues.shift() ?? 0.1)
+
+    const showLayer = vi.fn()
+    const hideLayers = vi.fn()
+    const setHeadDipPx = vi.fn()
+
+    const controller = createCornieBlinkController({
+      showLayer,
+      hideLayers,
+      setHeadDipPx,
+      doubleBlinkChance: 1
+    })
+
+    const blinkPromise = controller.blinkNow()
+    await vi.advanceTimersByTimeAsync(220)
+    controller.stop()
+    await vi.advanceTimersByTimeAsync(400)
+    await blinkPromise
+
+    expect(showLayer).toHaveBeenCalledTimes(3)
+
+    const cleanShowLayer = vi.fn()
+    const cleanHideLayers = vi.fn()
+    const cleanHeadDip = vi.fn()
+    const cleanController = createCornieBlinkController({
+      showLayer: cleanShowLayer,
+      hideLayers: cleanHideLayers,
+      setHeadDipPx: cleanHeadDip
+    })
+
+    cleanController.stop()
+    expect(cleanHideLayers).toHaveBeenCalledTimes(1)
+    expect(cleanHeadDip).toHaveBeenCalledWith(0)
+  })
 })
