@@ -196,7 +196,7 @@ export function createConversationOrchestrator(store) {
       })
 
       const history = getMessagesByDate(store, date)
-      const context = buildConversationContext(store, { date })
+      const context = await buildConversationContext(store, { date })
       const baseMessages = buildBaseMessages(history, context)
       attachContextTelemetry(telemetry, context)
       captureInitialPromptTelemetry(telemetry, baseMessages)

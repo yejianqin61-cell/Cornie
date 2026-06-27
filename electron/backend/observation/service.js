@@ -137,6 +137,68 @@ export function createObservationService(store) {
     )
   }
 
+  function prepareNote(input) {
+    const note = normalizeObservationInput(input)
+    if (!note.title) throw new Error('observation title is required')
+    if (!note.content) throw new Error('observation content is required')
+
+    const todayItems = listByDate(note.date)
+    const exactMatch = findDuplicateNote(note, todayItems)
+    if (exactMatch) {
+      return {
+        mode: 'duplicate',
+        note: exactMatch,
+        existing: exactMatch,
+        changed: false
+      }
+    }
+
+    const incrementalMatch = findIncrementalCandidate(note, todayItems)
+    if (incrementalMatch) {
+      const merged = mergeObservation(incrementalMatch, note)
+      const patch = buildObservationPatch(incrementalMatch, merged)
+      return {
+        mode: Object.keys(patch).length === 0 ? 'duplicate' : 'merge',
+        note: merged,
+        existing: incrementalMatch,
+        patch,
+        changed: Object.keys(patch).length > 0
+      }
+    }
+
+    return {
+      mode: 'create',
+      note,
+      existing: null,
+      changed: true
+    }
+  }
+
+  function addNoteSmart(input) {
+    const prepared = prepareNote(input)
+    if (prepared.mode === 'duplicate') {
+      return {
+        action: 'duplicate',
+        note: prepared.note
+      }
+    }
+
+    if (prepared.mode === 'merge' && prepared.existing?.id) {
+      return {
+        action: 'merged',
+        note: updateObservationLog(store, {
+          id: prepared.existing.id,
+          ...prepared.patch
+        })
+      }
+    }
+
+    return {
+      action: 'created',
+      note: saveObservationLog(store, prepared.note)
+    }
+  }
+
   return {
     addNote: (input) => {
       const note = normalizeObservationInput(input)
@@ -163,71 +225,13 @@ export function createObservationService(store) {
     listByDate,
     listToday: (date = new Date().toISOString().slice(0, 10)) => listObservationLogs(store, { date }),
     listByRange: ({ from, to, type, limit }) => listObservationLogs(store, { from, to, type, limit }),
-    prepareNote(input) {
-      const note = normalizeObservationInput(input)
-      if (!note.title) throw new Error('observation title is required')
-      if (!note.content) throw new Error('observation content is required')
-
-      const todayItems = listByDate(note.date)
-      const exactMatch = findDuplicateNote(note, todayItems)
-      if (exactMatch) {
-        return {
-          mode: 'duplicate',
-          note: exactMatch,
-          existing: exactMatch,
-          changed: false
-        }
-      }
-
-      const incrementalMatch = findIncrementalCandidate(note, todayItems)
-      if (incrementalMatch) {
-        const merged = mergeObservation(incrementalMatch, note)
-        const patch = buildObservationPatch(incrementalMatch, merged)
-        return {
-          mode: Object.keys(patch).length === 0 ? 'duplicate' : 'merge',
-          note: merged,
-          existing: incrementalMatch,
-          patch,
-          changed: Object.keys(patch).length > 0
-        }
-      }
-
-      return {
-        mode: 'create',
-        note,
-        existing: null,
-        changed: true
-      }
-    },
-    addNoteSmart(input) {
-      const prepared = this.prepareNote(input)
-      if (prepared.mode === 'duplicate') {
-        return {
-          action: 'duplicate',
-          note: prepared.note
-        }
-      }
-
-      if (prepared.mode === 'merge' && prepared.existing?.id) {
-        return {
-          action: 'merged',
-          note: updateObservationLog(store, {
-            id: prepared.existing.id,
-            ...prepared.patch
-          })
-        }
-      }
-
-      return {
-        action: 'created',
-        note: saveObservationLog(store, prepared.note)
-      }
-    },
+    prepareNote,
+    addNoteSmart,
     recordConversationTurn: ({ date, userMessage, cornieMessage }) => {
       if (!shouldRecordObservation({ userMessage, cornieMessage })) return null
 
       const note = deriveConversationObservation({ date, userMessage, cornieMessage })
-      return this.addNoteSmart(note).note
+      return addNoteSmart(note).note
     }
   }
 }

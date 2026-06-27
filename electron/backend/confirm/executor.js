@@ -67,9 +67,9 @@ async function requestProtocolEnvelope(messages, telemetry, phase = 'confirmatio
   throw new Error('confirmation executor protocol request failed unexpectedly')
 }
 
-function buildBaseMessages(store, date) {
+async function buildBaseMessages(store, date) {
   const history = getMessagesByDate(store, date)
-  const context = buildConversationContext(store, { date })
+  const context = await buildConversationContext(store, { date })
   return {
     context,
     messages: trimMessages([
@@ -383,7 +383,7 @@ export function createConfirmExecutor(store) {
         throw error
       }
 
-      const baseMessages = buildBaseMessages(store, confirmation.date)
+      const baseMessages = await buildBaseMessages(store, confirmation.date)
       attachContextTelemetry(telemetry, baseMessages.context)
       captureInitialPromptTelemetry(telemetry, baseMessages.messages)
       const followupMessages = buildToolFollowupMessages(
