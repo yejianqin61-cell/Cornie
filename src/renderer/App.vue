@@ -3,6 +3,9 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { getEntry, getModelStatus, listEntries, listOnThisDay, regenerateCornie, upsertEntry } from './api'
 import CornieComposer from './CornieComposer.vue'
 import ChatHistory from './ChatHistory.vue'
+import LedgerWorkspace from './components/LedgerWorkspace.vue'
+import TodoWorkspace from './components/TodoWorkspace.vue'
+import ScheduleWorkspace from './components/ScheduleWorkspace.vue'
 
 function pad2(n) {
   return String(n).padStart(2, '0')
@@ -36,7 +39,18 @@ const onThisDayItems = ref([])
 
 const selectedLabel = computed(() => selectedDate.value)
 
-const mode = ref('diary') // diary | history | cornie-composer
+const sections = [
+  { id: 'diary', label: '日记本', hint: '保留现在的日记与往年今日' },
+  { id: 'ledger', label: '收支', hint: '记录收入支出与类目' },
+  { id: 'todo', label: '待办', hint: '整理待办与类目' },
+  { id: 'schedule', label: '日程', hint: '管理未来安排与类目' },
+  { id: 'history', label: '聊天记录', hint: '按天翻阅聊天历史' },
+  { id: 'cornie-composer', label: 'Cornie 拼装', hint: '编辑 Cornie 外观贴图' }
+]
+
+const mode = ref('diary')
+
+const modeMeta = computed(() => sections.find((item) => item.id === mode.value) || sections[0])
 
 const modelStatus = ref({ ok: false, configured: false, provider: 'deepseek', model: '', reason: '' })
 async function checkModel() {
@@ -81,7 +95,6 @@ async function loadOnThisDay(date) {
     const data = await listOnThisDay(date, { limit: 10 })
     onThisDayItems.value = data.items || []
   } catch (e) {
-    // 往年今日属于增强信息：失败时不打断主流程，只在 UI 上给提示
     onThisDayItems.value = [{ date: '', userText: '', cornieText: '', __error: e?.message || String(e) }]
   } finally {
     loadingOnThisDay.value = false
@@ -146,225 +159,324 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="app">
-    <header class="top">
-      <div class="brand">
-        <div class="logo">C</div>
+  <div class="appShell">
+    <aside class="navPanel">
+      <div class="brandBlock">
+        <div class="logoMark">C</div>
         <div>
-          <div class="title">
-            {{ mode === 'diary' ? 'Cornie · 日记本（MVP）' : 'Cornie · 小窗口拼装（编辑模式）' }}
-          </div>
-          <div class="subtitle">
-            {{
-              mode === 'diary'
-                ? '本地优先 · 轻量优雅 · 先把“记录”跑通'
-                : mode === 'history'
-                  ? '按天翻阅聊天记录，不打断实时陪伴感'
-                : '拖动部件拼装 Cornie，然后复制配置给我固化到 CSS'
-            }}
-          </div>
+          <div class="brandTitle">Cornie 工作台</div>
+          <div class="brandHint">铃湾把日记、收支、待办、日程和聊天都放到一起啦。</div>
         </div>
       </div>
 
-      <div class="actions">
-        <div class="modeTabs">
-          <button class="tab" :class="{ active: mode === 'diary' }" @click="mode = 'diary'">日记本</button>
-          <button class="tab" :class="{ active: mode === 'history' }" @click="mode = 'history'">聊天记录</button>
-          <button
-            class="tab"
-            :class="{ active: mode === 'cornie-composer' }"
-            @click="mode = 'cornie-composer'"
-          >
-            Cornie 拼装
-          </button>
+      <nav class="navList">
+        <button
+          v-for="section in sections"
+          :key="section.id"
+          class="navItem"
+          :class="{ active: mode === section.id }"
+          @click="mode = section.id"
+        >
+          <span class="navLabel">{{ section.label }}</span>
+          <span class="navHint">{{ section.hint }}</span>
+        </button>
+      </nav>
+    </aside>
+
+    <main class="mainPanel">
+      <header class="topBar">
+        <div>
+          <div class="topTitle">{{ modeMeta.label }}</div>
+          <div class="topHint">{{ modeMeta.hint }}</div>
         </div>
 
-        <template v-if="mode === 'diary'">
-          <input
-            class="month"
-            type="month"
-            v-model="selectedMonth"
-            aria-label="选择月份"
-          />
+        <div class="topActions" v-if="mode === 'diary'">
+          <input class="monthInput" type="month" v-model="selectedMonth" aria-label="选择月份" />
           <button @click="pickDate(toISODate(new Date()))">回到今天</button>
+        </div>
+      </header>
+
+      <div v-if="!modelStatus.ok" class="modelBanner">
+        <template v-if="!modelStatus.configured">
+          <span>铃湾现在还没拿到 DeepSeek 的钥匙呢，先把 API Key 配好，我才能认真帮主人做事呀。</span>
+          <code class="modelCmd">DEEPSEEK_API_KEY=你的密钥</code>
         </template>
+        <template v-else>
+          <span>铃湾这会儿没连上 DeepSeek，主人可以检查一下网络、Key 或模型配置。</span>
+          <code class="modelCmd">{{ modelStatus.reason || 'request_failed' }}</code>
+        </template>
+        <button class="modelRetry" @click="checkModel">重新检测</button>
       </div>
-    </header>
 
-    <div v-if="!modelStatus.ok" class="modelBanner">
-      <template v-if="!modelStatus.configured">
-        <span>Cornie需要配置 DeepSeek API Key 才能提供 AI 能力。</span>
-        <code class="modelCmd">DEEPSEEK_API_KEY=你的密钥</code>
-      </template>
-      <template v-else>
-        <span>DeepSeek 当前不可用，请检查网络、API Key 或模型配置。</span>
-        <code class="modelCmd">{{ modelStatus.reason || 'request_failed' }}</code>
-      </template>
-      <button class="modelRetry" @click="checkModel">重新检测</button>
-    </div>
-
-    <main v-if="mode === 'diary'" class="main">
-      <aside class="sidebar card">
-        <div class="sidebarHead">
-          <div class="sidebarTitle">本月条目</div>
-          <div class="sidebarHint" v-if="loadingList">加载中…</div>
-          <div class="sidebarHint" v-else>{{ entries.length }} 天有记录</div>
-        </div>
-
-        <div class="list">
-          <button
-            v-for="e in entries"
-            :key="e.date"
-            class="row"
-            :class="{ active: e.date === selectedDate }"
-            @click="pickDate(e.date)"
-          >
-            <div class="date">{{ e.date }}</div>
-            <div class="meta">
-              <span v-if="e.hasUserText" class="pill">我的</span>
-              <span v-if="e.hasCornieText" class="pill pill2">Cornie</span>
-            </div>
-          </button>
-        </div>
-      </aside>
-
-      <section class="content card">
-        <div class="contentHead">
-          <div>
-            <div class="contentTitle">{{ selectedLabel }}</div>
-            <div class="contentHint">
-              {{ loadingEntry ? '加载中…' : dirty ? '未保存更改' : '已同步到本地' }}
-            </div>
-          </div>
-          <div class="contentActions">
-            <button :disabled="saving || !dirty" @click="save">
-              {{ saving ? '保存中…' : '保存' }}
-            </button>
-            <button :disabled="regenerating" @click="regenCornie">
-              {{ regenerating ? '生成中…' : '生成 Cornie 日记' }}
-            </button>
-          </div>
-        </div>
-
-        <div v-if="errorMsg" class="error">
-          {{ errorMsg }}
-        </div>
-
-        <div class="grid">
-          <div class="panel">
-            <div class="panelTitle">我的日记（可空）</div>
-            <textarea
-              v-model="entry.userText"
-              placeholder="今天发生了什么？写一点也行。"
-              @input="dirty = true"
-            />
-          </div>
-
-          <div class="panel">
-            <div class="panelTitle">Cornie 的日记（暂时先占位）</div>
-            <textarea
-              v-model="entry.cornieText"
-              placeholder="点击「生成 Cornie 日记」让Cornie帮你写一篇。"
-              @input="dirty = true"
-            />
-          </div>
-
-          <div class="panel span2">
-            <div class="panelTitle">
-              往年今日
-              <span class="panelHint">{{ loadingOnThisDay ? '加载中…' : '' }}</span>
+      <section v-if="mode === 'diary'" class="contentFrame">
+        <div class="diaryGrid">
+          <aside class="sidebar card">
+            <div class="sidebarHead">
+              <div class="sidebarTitle">本月条目</div>
+              <div class="sidebarHint" v-if="loadingList">加载中…</div>
+              <div class="sidebarHint" v-else>{{ entries.length }} 天有记录</div>
             </div>
 
-            <div v-if="onThisDayItems.length === 0 && !loadingOnThisDay" class="empty">
-              那时候我还没出生呢，不过现在我在了。
+            <div class="list">
+              <button
+                v-for="e in entries"
+                :key="e.date"
+                class="row"
+                :class="{ active: e.date === selectedDate }"
+                @click="pickDate(e.date)"
+              >
+                <div class="date">{{ e.date }}</div>
+                <div class="meta">
+                  <span v-if="e.hasUserText" class="pill">我的</span>
+                  <span v-if="e.hasCornieText" class="pill pill2">Cornie</span>
+                </div>
+              </button>
             </div>
+          </aside>
 
-            <div v-else class="otdList">
-              <div v-for="it in onThisDayItems" :key="it.date || 'err'" class="otdItem">
-                <div v-if="it.__error" class="otdError">加载失败：{{ it.__error }}</div>
-                <template v-else>
-                  <div class="otdDate">{{ it.date }}</div>
-                  <div class="otdGrid">
-                    <div class="otdCol">
-                      <div class="otdLabel">我的</div>
-                      <div class="otdText">{{ it.userText || '（空）' }}</div>
-                    </div>
-                    <div class="otdCol">
-                      <div class="otdLabel">Cornie</div>
-                      <div class="otdText">{{ it.cornieText || '（空）' }}</div>
-                    </div>
-                  </div>
-                </template>
+          <section class="content card">
+            <div class="contentHead">
+              <div>
+                <div class="contentTitle">{{ selectedLabel }}</div>
+                <div class="contentHint">
+                  {{ loadingEntry ? '加载中…' : dirty ? '未保存更改' : '已同步到本地' }}
+                </div>
+              </div>
+              <div class="contentActions">
+                <button :disabled="saving || !dirty" @click="save">
+                  {{ saving ? '保存中…' : '保存' }}
+                </button>
+                <button :disabled="regenerating" @click="regenCornie">
+                  {{ regenerating ? '生成中…' : '生成 Cornie 日记' }}
+                </button>
               </div>
             </div>
-          </div>
+
+            <div v-if="errorMsg" class="error">
+              {{ errorMsg }}
+            </div>
+
+            <div class="grid">
+              <div class="panel">
+                <div class="panelTitle">我的日记（可空）</div>
+                <textarea
+                  v-model="entry.userText"
+                  placeholder="今天发生了什么？写一点也行。"
+                  @input="dirty = true"
+                />
+              </div>
+
+              <div class="panel">
+                <div class="panelTitle">Cornie 的日记</div>
+                <textarea
+                  v-model="entry.cornieText"
+                  placeholder="点击「生成 Cornie 日记」让 Cornie 帮你写一篇。"
+                  @input="dirty = true"
+                />
+              </div>
+
+              <div class="panel span2">
+                <div class="panelTitle">
+                  往年今日
+                  <span class="panelHint">{{ loadingOnThisDay ? '加载中…' : '' }}</span>
+                </div>
+
+                <div v-if="onThisDayItems.length === 0 && !loadingOnThisDay" class="empty">
+                  那时候我还没出生呢，不过现在我在了。
+                </div>
+
+                <div v-else class="otdList">
+                  <div v-for="it in onThisDayItems" :key="it.date || 'err'" class="otdItem">
+                    <div v-if="it.__error" class="otdError">加载失败：{{ it.__error }}</div>
+                    <template v-else>
+                      <div class="otdDate">{{ it.date }}</div>
+                      <div class="otdGrid">
+                        <div class="otdCol">
+                          <div class="otdLabel">我的</div>
+                          <div class="otdText">{{ it.userText || '（空）' }}</div>
+                        </div>
+                        <div class="otdCol">
+                          <div class="otdLabel">Cornie</div>
+                          <div class="otdText">{{ it.cornieText || '（空）' }}</div>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
         </div>
       </section>
-    </main>
 
-    <main v-else-if="mode === 'history'" class="composerMain">
-      <ChatHistory />
-    </main>
+      <section v-else-if="mode === 'ledger'" class="contentFrame">
+        <LedgerWorkspace />
+      </section>
 
-    <main v-else class="composerMain">
-      <CornieComposer />
+      <section v-else-if="mode === 'todo'" class="contentFrame">
+        <TodoWorkspace />
+      </section>
+
+      <section v-else-if="mode === 'schedule'" class="contentFrame">
+        <ScheduleWorkspace />
+      </section>
+
+      <section v-else-if="mode === 'history'" class="contentFrame">
+        <ChatHistory />
+      </section>
+
+      <section v-else class="contentFrame">
+        <CornieComposer />
+      </section>
     </main>
   </div>
 </template>
 
 <style scoped>
-.app{
+.appShell{
   height: 100vh;
-  display:flex;
-  flex-direction: column;
-  gap: 14px;
+  display:grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  gap: 16px;
   padding: 16px;
 }
-.top{
-  display:flex;
-  align-items:center;
-  justify-content: space-between;
-  gap: 16px;
-  padding: 14px 16px;
+.navPanel{
   border: 1px solid var(--border);
-  border-radius: 18px;
-  background: rgba(255,255,255,.04);
-}
-.brand{
+  border-radius: 24px;
+  background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
+  padding: 18px;
   display:flex;
-  align-items:center;
-  gap: 12px;
+  flex-direction:column;
+  gap: 18px;
+  min-height: 0;
 }
-.logo{
-  width: 38px;
-  height: 38px;
+.brandBlock{
+  display:flex;
+  gap: 12px;
+  align-items:flex-start;
+}
+.logoMark{
+  width: 42px;
+  height: 42px;
   display:grid;
   place-items:center;
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  background: rgba(125,211,252,.12);
+  border-radius: 16px;
+  background: rgba(125,211,252,.15);
+  border: 1px solid rgba(125,211,252,.28);
   color: var(--accent);
+  font-weight: 800;
+}
+.brandTitle{
+  font-size: 18px;
+  font-weight: 800;
+}
+.brandHint{
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.navList{
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
+  overflow:auto;
+}
+.navItem{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap: 4px;
+  padding: 14px 14px;
+  border-radius: 18px;
+  text-align:left;
+}
+.navItem.active{
+  background: rgba(125,211,252,.14);
+  border-color: rgba(125,211,252,.35);
+}
+.navLabel{
   font-weight: 700;
 }
-.title{ font-weight: 700; letter-spacing: .2px; }
-.subtitle{ font-size: 12px; color: var(--muted); margin-top: 2px; }
-.actions{ display:flex; align-items:center; gap: 10px; }
-.modeTabs{ display:flex; gap: 8px; padding: 4px; border: 1px solid var(--border); border-radius: 14px; background: rgba(255,255,255,.03); }
-.tab{ padding: 8px 10px; border-radius: 12px; border-color: transparent; }
-.tab.active{ border-color: rgba(125,211,252,.35); background: rgba(125,211,252,.10); }
-.month{
-  width: 150px;
+.navHint{
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
 }
-.main{
+.mainPanel{
+  display:flex;
+  flex-direction:column;
+  gap: 14px;
+  min-height: 0;
+}
+.topBar{
+  display:flex;
+  align-items:flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: rgba(255,255,255,.05);
+}
+.topTitle{
+  font-size: 24px;
+  font-weight: 800;
+}
+.topHint{
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.topActions{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+}
+.monthInput{
+  width: 160px;
+}
+.modelBanner{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(251,191,36,.35);
+  background: rgba(251,191,36,.08);
+  color: rgba(254,243,199,.95);
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+.modelCmd{
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(0,0,0,.25);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.modelRetry{
+  margin-left: auto;
+  padding: 6px 12px;
+  font-size: 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(251,191,36,.35);
+  background: rgba(251,191,36,.12);
+  color: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.modelRetry:hover{ background: rgba(251,191,36,.20); }
+.contentFrame{
   flex:1;
+  min-height: 0;
+}
+.diaryGrid{
+  height: 100%;
   display:grid;
   grid-template-columns: 260px 1fr;
   gap: 14px;
-  min-height: 0;
-}
-.composerMain{
-  flex: 1;
-  min-height: 0;
 }
 .sidebar{
   display:flex;
@@ -408,7 +520,6 @@ onMounted(async () => {
   color: var(--muted);
 }
 .pill2{ color: rgba(167,139,250,.9); }
-
 .content{
   display:flex;
   flex-direction: column;
@@ -490,44 +601,39 @@ onMounted(async () => {
   background: rgba(248,113,113,.08);
   color: rgba(254,226,226,.95);
 }
-
-.modelBanner{
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
-  margin: 0 0 -4px;
-  border-radius: 14px;
-  border: 1px solid rgba(251,191,36,.35);
-  background: rgba(251,191,36,.08);
-  color: rgba(254,243,199,.95);
-  font-size: 13px;
-  flex-wrap: wrap;
+@media (max-width: 1180px){
+  .appShell{
+    grid-template-columns: 1fr;
+    height: auto;
+    min-height: 100vh;
+  }
+  .navPanel{
+    min-height: auto;
+  }
+  .navList{
+    display:grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .diaryGrid{
+    grid-template-columns: 1fr;
+  }
 }
-.modelCmd{
-  padding: 2px 8px;
-  border-radius: 6px;
-  background: rgba(0,0,0,.25);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12px;
-  white-space: nowrap;
-}
-.modelRetry{
-  margin-left: auto;
-  padding: 6px 12px;
-  font-size: 12px;
-  border-radius: 8px;
-  border: 1px solid rgba(251,191,36,.35);
-  background: rgba(251,191,36,.12);
-  color: inherit;
-  cursor: pointer;
-  white-space: nowrap;
-}
-.modelRetry:hover{ background: rgba(251,191,36,.20); }
-
-@media (max-width: 980px){
-  .main{ grid-template-columns: 1fr; }
-  .grid{ grid-template-columns: 1fr; }
+@media (max-width: 760px){
+  .navList{
+    grid-template-columns: 1fr;
+  }
+  .topBar{
+    flex-direction: column;
+  }
+  .topActions{
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  .grid{
+    grid-template-columns: 1fr;
+  }
+  .otdGrid{
+    grid-template-columns: 1fr;
+  }
 }
 </style>
-
