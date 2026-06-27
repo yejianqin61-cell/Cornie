@@ -38,7 +38,10 @@ export function registerObservationTools(store, { registerTool }) {
     name: 'observation.list_today',
     description: '列出今天观察日志',
     riskLevel: 'low',
-    handler: async () => ({ ok: true, result: observation.listToday() })
+    handler: async (args = {}, context = {}) => ({
+      ok: true,
+      result: observation.listToday(args.date ?? context.date)
+    })
   })
 
   registerTool({
@@ -46,5 +49,15 @@ export function registerObservationTools(store, { registerTool }) {
     description: '按范围列出观察日志',
     riskLevel: 'low',
     handler: async (args) => ({ ok: true, result: observation.listByRange(args) })
+  })
+
+  registerTool({
+    name: 'observation.list_by_date',
+    description: '按指定日期列出观察日志',
+    riskLevel: 'low',
+    handler: async ({ date } = {}, context = {}) => ({
+      ok: true,
+      result: observation.listByDate(date ?? context.date)
+    })
   })
 }

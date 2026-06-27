@@ -33,6 +33,9 @@ function buildContextSection(context) {
     `日程摘要：\n${context.scheduleSummary}`,
     `观察日志摘要：\n${context.observationSummary}`,
     `长期记忆摘要：\n${context.memorySummary}`,
+    `主题索引摘要：\n${context.topicSummary}`,
+    `历史聊天命中摘要：\n${context.chatRecallSummary}`,
+    `观察补查摘要：\n${context.observationRecallSummary}`,
     `可用工具摘要：\n${context.toolSummary}`
   ].join('\n\n')
 }

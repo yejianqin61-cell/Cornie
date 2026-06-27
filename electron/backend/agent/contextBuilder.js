@@ -2,6 +2,7 @@ import { getMessagesByDate, listObservationLogs, listScheduleEntries, listTodoEn
 import { buildCategorySummaryPayload } from './categorySummary.js'
 import { buildMemorySearchSummary } from '../memory/search.js'
 import { listTools } from '../tools/registry.js'
+import { buildWikiContext } from './wikiContext.js'
 
 function summarizeRecentConversation(messages, limit = 8) {
   if (!Array.isArray(messages) || messages.length === 0) {
@@ -50,12 +51,17 @@ function summarizeObservations(store, date) {
   return items.map((item) => `- [${item.type}] ${item.title}`).join('\n')
 }
 
-export function buildConversationContext(store, { date }) {
+export async function buildConversationContext(store, { date, baseDir = process.cwd() }) {
   const messages = getMessagesByDate(store, date)
   const recentConversationSummary = summarizeRecentConversation(messages)
-  const memorySummary = buildMemorySearchSummary(store, {
+  const legacyMemorySummary = buildMemorySearchSummary(store, {
     query: messages.slice(-3).map((item) => item.content).join(' '),
     limit: 5
+  })
+  const wikiContext = await buildWikiContext(store, {
+    date,
+    baseDir,
+    query: messages.slice(-3).map((item) => item.content).join(' ')
   })
   const categorySummary = buildCategorySummaryPayload(store)
   const todoItems = listTodoEntries(store, { status: 'pending' })
@@ -79,7 +85,11 @@ export function buildConversationContext(store, { date }) {
     todoSummary,
     scheduleSummary,
     observationSummary,
-    memorySummary,
+    memorySummary: wikiContext.memorySummary,
+    topicSummary: wikiContext.topicSummary,
+    chatRecallSummary: wikiContext.chatSummary,
+    observationRecallSummary: wikiContext.observationSummary,
+    legacyMemorySummary,
     toolSummary,
     contextMeta: {
       recentConversationChars: recentConversationSummary.length,
@@ -87,13 +97,19 @@ export function buildConversationContext(store, { date }) {
       todoSummaryChars: todoSummary.length,
       scheduleSummaryChars: scheduleSummary.length,
       observationSummaryChars: observationSummary.length,
-      memorySummaryChars: memorySummary.length,
+      memorySummaryChars: wikiContext.memorySummary.length,
+      topicSummaryChars: wikiContext.topicSummary.length,
+      chatRecallSummaryChars: wikiContext.chatSummary.length,
+      observationRecallSummaryChars: wikiContext.observationSummary.length,
+      legacyMemorySummaryChars: legacyMemorySummary.length,
       toolSummaryChars: toolSummary.length,
       categoryCounts: categorySummary.counts,
       todoCount: todoItems.length,
       scheduleCount: scheduleItems.length,
       observationCount: observationItems.length,
-      memoryHitCount: memorySummary === '暂无长期记忆。' ? 0 : memorySummary.split('\n').filter(Boolean).length
+      memoryHitCount: wikiContext.selectedPages.length,
+      topicHitCount: wikiContext.selectedTopics.length,
+      chatRecallHitCount: wikiContext.chatHits.length
     }
   }
 }
