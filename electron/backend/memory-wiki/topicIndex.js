@@ -132,6 +132,17 @@ export async function createTopicIndexStore(baseDir) {
       })
     },
 
+    async unlinkPage(normalizedKey, pageId) {
+      const existing = await this.get(normalizedKey)
+      if (!existing) {
+        throw new Error(`topic index entry not found: ${normalizedKey}`)
+      }
+      return this.upsert({
+        ...existing,
+        memoryPageIds: existing.memoryPageIds.filter((item) => item !== normalizeString(pageId))
+      })
+    },
+
     async addChatRef(normalizedKey, chatRef) {
       const existing = (await this.get(normalizedKey)) ?? createTopicIndexEntry({ keyword: normalizedKey })
       return this.upsert({
@@ -155,6 +166,41 @@ export async function createTopicIndexStore(baseDir) {
       return Object.values(indexMap)
         .map((item) => createTopicIndexEntry(item))
         .sort((a, b) => a.normalizedKey.localeCompare(b.normalizedKey, 'zh-CN'))
+    },
+
+    async mergeTopics({ targetNormalizedKey, sourceNormalizedKey }) {
+      const target = await this.get(targetNormalizedKey)
+      const source = await this.get(sourceNormalizedKey)
+      if (!target || !source) {
+        throw new Error('topic index merge entries not found')
+      }
+
+      const merged = await this.upsert({
+        ...target,
+        keyword: target.keyword || source.keyword,
+        normalizedKey: target.normalizedKey,
+        aliases: dedupe([
+          ...(target.aliases ?? []),
+          ...(source.aliases ?? []),
+          source.keyword,
+          source.normalizedKey
+        ]),
+        dates: dedupe([...(target.dates ?? []), ...(source.dates ?? [])]),
+        chatRefs: dedupe([...(target.chatRefs ?? []), ...(source.chatRefs ?? [])]),
+        observationRefs: dedupe([...(target.observationRefs ?? []), ...(source.observationRefs ?? [])]),
+        memoryPageIds: dedupe([...(target.memoryPageIds ?? []), ...(source.memoryPageIds ?? [])]),
+        note: [target.note, source.note].filter(Boolean).join('\n').trim() || target.note || source.note
+      })
+
+      const indexMap = await readIndexMap()
+      delete indexMap[normalizeKey(sourceNormalizedKey)]
+      indexMap[merged.normalizedKey] = merged
+      await writeIndexMap(indexMap)
+
+      return {
+        target: merged,
+        removedSourceNormalizedKey: normalizeKey(sourceNormalizedKey)
+      }
     },
 
     getFilePath() {

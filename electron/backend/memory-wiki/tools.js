@@ -1,8 +1,8 @@
 import { createMemoryWikiService } from './service.js'
 import { createTopicIndexStore } from './topicIndex.js'
 
-export async function registerMemoryWikiTools({ baseDir }, { registerTool }) {
-  const memoryWiki = await createMemoryWikiService({ baseDir })
+export async function registerMemoryWikiTools({ baseDir, store }, { registerTool }) {
+  const memoryWiki = await createMemoryWikiService({ baseDir, store })
   const topicIndex = await createTopicIndexStore(baseDir)
 
   registerTool({
@@ -97,6 +97,44 @@ export async function registerMemoryWikiTools({ baseDir }, { registerTool }) {
   })
 
   registerTool({
+    name: 'memory_wiki.get_versions',
+    description: '读取长期记忆 wiki 页面版本列表',
+    riskLevel: 'low',
+    handler: async ({ pageId }) => ({ ok: true, result: await memoryWiki.listVersions(pageId) })
+  })
+
+  registerTool({
+    name: 'memory_wiki.get_version_diff',
+    description: '读取长期记忆 wiki 页面两个版本之间的差异',
+    riskLevel: 'low',
+    handler: async ({ pageId, fromVersionId, toVersionId }) => ({
+      ok: true,
+      result: await memoryWiki.getVersionDiff({ pageId, fromVersionId, toVersionId })
+    })
+  })
+
+  registerTool({
+    name: 'memory_wiki.list_audit_events',
+    description: '读取长期记忆 wiki 审计日志',
+    riskLevel: 'low',
+    handler: async (args = {}) => ({ ok: true, result: await memoryWiki.listAuditEvents(args) })
+  })
+
+  registerTool({
+    name: 'memory_wiki.inspect_broken_links',
+    description: '巡检长期记忆 wiki 中的断链问题',
+    riskLevel: 'low',
+    handler: async () => ({ ok: true, result: await memoryWiki.inspectBrokenLinks() })
+  })
+
+  registerTool({
+    name: 'memory_wiki.inspect_orphan_pages',
+    description: '巡检长期记忆 wiki 中的孤儿页面',
+    riskLevel: 'low',
+    handler: async () => ({ ok: true, result: await memoryWiki.inspectOrphanPages() })
+  })
+
+  registerTool({
     name: 'memory_wiki.link_related_pages',
     description: '维护长期记忆 wiki 页面关联',
     riskLevel: 'high',
@@ -114,6 +152,13 @@ export async function registerMemoryWikiTools({ baseDir }, { registerTool }) {
   })
 
   registerTool({
+    name: 'memory_wiki.delete_page',
+    description: '删除长期记忆 wiki 页面',
+    riskLevel: 'high',
+    handler: async ({ pageId }) => ({ ok: true, result: await memoryWiki.delete(pageId) })
+  })
+
+  registerTool({
     name: 'memory_index.update_aliases',
     description: '更新主题索引别名',
     riskLevel: 'high',
@@ -125,5 +170,39 @@ export async function registerMemoryWikiTools({ baseDir }, { registerTool }) {
     description: '将主题索引关联到指定 wiki 页面',
     riskLevel: 'high',
     handler: async ({ normalizedKey, pageId }) => ({ ok: true, result: await topicIndex.linkPage(normalizedKey, pageId) })
+  })
+
+  registerTool({
+    name: 'memory_index.get',
+    description: '读取单个主题索引项',
+    riskLevel: 'low',
+    handler: async ({ normalizedKey }) => ({ ok: true, result: await topicIndex.get(normalizedKey) })
+  })
+
+  registerTool({
+    name: 'memory_index.list',
+    description: '列出全部主题索引项',
+    riskLevel: 'low',
+    handler: async () => ({ ok: true, result: await topicIndex.list() })
+  })
+
+  registerTool({
+    name: 'memory_index.merge_topics',
+    description: '合并两个主题索引项',
+    riskLevel: 'high',
+    handler: async ({ targetNormalizedKey, sourceNormalizedKey }) => ({
+      ok: true,
+      result: await topicIndex.mergeTopics({ targetNormalizedKey, sourceNormalizedKey })
+    })
+  })
+
+  registerTool({
+    name: 'memory_index.unlink_page',
+    description: '解除主题索引与 wiki 页面的关联',
+    riskLevel: 'high',
+    handler: async ({ normalizedKey, pageId }) => ({
+      ok: true,
+      result: await topicIndex.unlinkPage(normalizedKey, pageId)
+    })
   })
 }

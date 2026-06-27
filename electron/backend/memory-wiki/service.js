@@ -263,6 +263,13 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
       return versionStore.listPageVersions(pageId)
     },
 
+    async getVersionDiff({ pageId, fromVersionId, toVersionId }) {
+      if (!pageId) throw new Error('memory wiki pageId is required')
+      if (!fromVersionId) throw new Error('memory wiki fromVersionId is required')
+      if (!toVersionId) throw new Error('memory wiki toVersionId is required')
+      return versionStore.diffVersions({ pageId, fromVersionId, toVersionId })
+    },
+
     async rollback(pageId, versionId) {
       if (!pageId) throw new Error('memory wiki pageId is required')
       if (!versionId) throw new Error('memory wiki versionId is required')
