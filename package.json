@@ -74,6 +74,7 @@
     "verify:task111": "node scripts/verify-task111-7.2-memory-governance.mjs",
     "verify:task112": "node scripts/verify-task112-test-structure.mjs",
     "verify:task113": "node scripts/verify-task113-protocol-structured-tests.mjs",
+    "verify:task114": "node scripts/verify-task114-policy-structured-tests.mjs",
     "verify:m1-memory-wiki": "node scripts/verify-m1-memory-wiki.mjs",
     "verify:m2-memory-wiki-service": "node scripts/verify-m2-memory-wiki-service.mjs",
     "verify:m3-topic-index": "node scripts/verify-m3-topic-index.mjs",
