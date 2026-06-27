@@ -120,7 +120,12 @@ function createMemoryWikiFetchMock() {
       return {
         ok: true,
         status: 200,
-        json: async () => ({ item: topicItems[0] }),
+        json: async () => ({
+          item: {
+            ...topicItems[0],
+            memoryPageIds: ['wiki-lobster']
+          }
+        }),
         text: async () => ''
       }
     }
@@ -152,6 +157,52 @@ function createMemoryWikiFetchMock() {
         ok: true,
         status: 200,
         json: async () => ({ confirmations }),
+        text: async () => ''
+      }
+    }
+
+    if (url.includes('/api/memory-wiki/topic-index/lobster/aliases') && method === 'PUT') {
+      const payload = JSON.parse(init.body)
+      topicItems[0].aliases = payload.aliases
+      return { ok: true, status: 200, json: async () => ({ ok: true }), text: async () => '' }
+    }
+
+    if (url.includes('/api/memory-wiki/governance/inspection-scan') && method === 'POST') {
+      governanceItems.push({
+        requestId: 'gov-2',
+        title: '巡检发现新的合并候选',
+        requestType: 'inspection_candidate',
+        queueSection: 'inspection',
+        status: 'pending',
+        riskLevel: 'low'
+      })
+      return { ok: true, status: 200, json: async () => ({ ok: true }), text: async () => '' }
+    }
+
+    if (url.includes('/api/memory-wiki/governance/') && url.endsWith('/status') && method === 'PUT') {
+      const id = url.split('/').slice(-2)[0]
+      const payload = JSON.parse(init.body)
+      const item = governanceItems.find((entry) => entry.requestId === id)
+      if (item) item.status = payload.status
+      return { ok: true, status: 200, json: async () => ({ ok: true }), text: async () => '' }
+    }
+
+    if (url.includes('/api/confirmations/') && url.endsWith('/decision') && method === 'POST') {
+      const id = url.split('/').slice(-2)[0]
+      const payload = JSON.parse(init.body)
+      const item = confirmations.find((entry) => entry.id === id)
+      if (item) {
+        item.status = payload.decision === 'approve' ? 'approved' : 'rejected'
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({
+          confirmation: {
+            id,
+            status: payload.decision === 'approve' ? 'approved' : 'rejected'
+          }
+        }),
         text: async () => ''
       }
     }
@@ -211,5 +262,52 @@ describe('MemoryWikiWorkspace async flow', () => {
       expect.objectContaining({ method: 'POST' })
     )
     expect(wrapper.text()).toContain('记忆治理')
+  })
+
+  it('supports topic alias save, inspection enqueue, governance status change, and confirmation decisions', async () => {
+    const wrapper = mount(MemoryWikiWorkspace)
+    await flushPromises()
+
+    const topicRow = wrapper.findAll('.topicList .entryRow')[0]
+    await topicRow.trigger('click')
+    await flushPromises()
+
+    const topicAliasInput = wrapper.find('.topicAliases input')
+    await topicAliasInput.setValue('澳龙, 小龙虾')
+    const saveAliasButton = wrapper.findAll('button').find((button) => button.text() === '保存主题别名')
+    await saveAliasButton.trigger('click')
+    await flushPromises()
+    await flushPromises()
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/memory-wiki/topic-index/lobster/aliases'),
+      expect.objectContaining({ method: 'PUT' })
+    )
+
+    const inspectionButton = wrapper.findAll('button').find((button) => button.text() === '运行巡检入池')
+    await inspectionButton.trigger('click')
+    await flushPromises()
+    await flushPromises()
+    expect(wrapper.text()).toContain('巡检发现新的合并候选')
+
+    const governanceRow = wrapper.findAll('.workspaceCard .entryRow').find((row) => row.text().includes('建议合并龙虾相关页面'))
+    await governanceRow.trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('内容高度重复，建议合并。')
+
+    const markApprovedButton = wrapper.findAll('.actionRow button').find((button) => button.text() === '标记已处理')
+    await markApprovedButton.trigger('click')
+    await flushPromises()
+    await flushPromises()
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/memory-wiki/governance/gov-1/status'),
+      expect.objectContaining({ method: 'PUT' })
+    )
+    expect(wrapper.text()).toContain('当前待处理 1 项')
+
+    const confirmApproveButton = wrapper.findAll('.confirmBtnPrimary')[0]
+    await confirmApproveButton.trigger('click')
+    await flushPromises()
+    await flushPromises()
+    expect(wrapper.text()).toContain('已同意，正在继续处理。')
   })
 })
