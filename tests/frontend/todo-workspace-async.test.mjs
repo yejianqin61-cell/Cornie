@@ -325,6 +325,37 @@ describe('TodoWorkspace async flow', () => {
     expect(failCategoryWrapper.text()).toContain('保存待办类目失败')
   })
 
+  it('supports selecting and editing an existing todo category in the management area', async () => {
+    const wrapper = mount(TodoWorkspace)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('新增类目')
+
+    const categoryCard = wrapper.findAll('.categoryCard').find((card) => card.text().includes('记账'))
+    await categoryCard.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('编辑类目')
+    expect(wrapper.text()).toContain('正在管理类目：记账')
+
+    const categoryInputs = wrapper.findAll('.categoryCreator input')
+    await categoryInputs[0].setValue('记账整理')
+    await categoryInputs[1].setValue('5')
+
+    const saveCategoryButton = wrapper.findAll('.categoryCreator button').find((button) => button.text() === '保存类目')
+    await saveCategoryButton.trigger('click')
+    await flushPromises()
+    await flushPromises()
+
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/todo-categories/todo-cat-1'),
+      expect.objectContaining({
+        method: 'PUT',
+        body: JSON.stringify({ name: '记账整理', sortOrder: 5 })
+      })
+    )
+  })
+
   it('shows completed view summary after reopening one completed todo', async () => {
     const wrapper = mount(TodoWorkspace)
     await flushPromises()

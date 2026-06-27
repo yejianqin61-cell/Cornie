@@ -21,6 +21,7 @@ const errorMsg = ref('')
 const items = ref([])
 const categories = ref([])
 const selectedTodoId = ref('')
+const selectedCategoryId = ref('')
 const currentView = ref('open')
 
 const todoForm = ref(createEmptyTodoForm())
@@ -39,12 +40,14 @@ function createEmptyTodoForm() {
 
 function createEmptyCategoryForm() {
   return {
+    id: '',
     name: '',
     sortOrder: ''
   }
 }
 
 const selectedTodo = computed(() => items.value.find((item) => item.id === selectedTodoId.value) || null)
+const selectedCategory = computed(() => categories.value.find((item) => item.id === selectedCategoryId.value) || null)
 const todoViewSummary = computed(() => (currentView.value === 'completed' ? '已完成事项' : '未完成事项'))
 
 async function refreshItems() {
@@ -84,6 +87,20 @@ function selectTodo(item) {
 function resetTodoForm() {
   selectedTodoId.value = ''
   todoForm.value = createEmptyTodoForm()
+}
+
+function selectCategory(category) {
+  selectedCategoryId.value = category.id
+  categoryForm.value = {
+    id: category.id,
+    name: category.name ?? '',
+    sortOrder: category.sortOrder ?? ''
+  }
+}
+
+function resetCategoryForm() {
+  selectedCategoryId.value = ''
+  categoryForm.value = createEmptyCategoryForm()
 }
 
 async function saveTodo() {
@@ -159,11 +176,18 @@ async function saveCategory() {
   saving.value = true
   errorMsg.value = ''
   try {
-    await createTodoCategory({
+    const payload = {
       name: categoryForm.value.name,
       sortOrder: categoryForm.value.sortOrder === '' ? 0 : Number(categoryForm.value.sortOrder)
-    })
-    categoryForm.value = createEmptyCategoryForm()
+    }
+
+    if (categoryForm.value.id) {
+      await updateTodoCategory(categoryForm.value.id, payload)
+    } else {
+      await createTodoCategory(payload)
+    }
+
+    resetCategoryForm()
     await refreshCategories()
   } catch (error) {
     errorMsg.value = error?.message || String(error)
@@ -308,6 +332,10 @@ onMounted(refreshAll)
         </div>
 
         <div class="categoryCreator">
+          <div class="categoryEditorHead">
+            <div class="categoryEditorTitle">{{ selectedCategory ? '编辑类目' : '新增类目' }}</div>
+            <button v-if="selectedCategory" class="ghostBtn" @click="resetCategoryForm">新增一个</button>
+          </div>
           <label>
             <span>类目名</span>
             <input v-model="categoryForm.name" placeholder="输入新类目名" />
@@ -316,11 +344,23 @@ onMounted(refreshAll)
             <span>排序</span>
             <input v-model="categoryForm.sortOrder" type="number" step="1" placeholder="默认 0" />
           </label>
-          <button :disabled="saving" @click="saveCategory">新增类目</button>
+          <button :disabled="saving" @click="saveCategory">{{ selectedCategory ? '保存类目' : '新增类目' }}</button>
+        </div>
+
+        <div v-if="selectedCategory" class="categoryActions">
+          <div class="categoryActionText">
+            正在管理类目：<strong>{{ selectedCategory.name }}</strong>
+          </div>
         </div>
 
         <div class="categoryGrid">
-          <div v-for="category in categories" :key="category.id" class="categoryCard" :class="{ inactive: !category.isActive }">
+          <button
+            v-for="category in categories"
+            :key="category.id"
+            class="categoryCard"
+            :class="{ inactive: !category.isActive, active: category.id === selectedCategoryId }"
+            @click="selectCategory(category)"
+          >
             <div>
               <div class="categoryName">{{ category.name }}</div>
               <div class="categoryMeta">排序 {{ category.sortOrder }} · {{ category.isActive ? '启用中' : '已停用' }}</div>
@@ -330,7 +370,7 @@ onMounted(refreshAll)
               <button :disabled="saving" @click="moveCategory(category, 10)">下移</button>
               <button :disabled="saving" @click="toggleCategory(category)">{{ category.isActive ? '停用' : '恢复' }}</button>
             </div>
-          </div>
+          </button>
         </div>
       </section>
     </div>
@@ -462,9 +502,36 @@ onMounted(refreshAll)
 }
 .categoryCreator{
   display:grid;
-  grid-template-columns: 1fr 160px 140px;
+  grid-template-columns: 180px 1fr 160px 140px;
   gap: 12px;
   align-items:end;
+}
+.categoryEditorHead{
+  display:flex;
+  flex-direction:column;
+  gap: 8px;
+}
+.categoryEditorTitle{
+  font-weight: 700;
+  font-size: 14px;
+}
+.ghostBtn{
+  border-color: rgba(255,255,255,.16);
+  background: rgba(255,255,255,.04);
+}
+.categoryActions{
+  display:flex;
+  justify-content: space-between;
+  align-items:center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px dashed rgba(255,255,255,.14);
+  background: rgba(255,255,255,.03);
+}
+.categoryActionText{
+  color: var(--muted);
+  font-size: 13px;
 }
 .categoryGrid{
   display:grid;
@@ -480,6 +547,11 @@ onMounted(refreshAll)
   border: 1px solid var(--border);
   border-radius: 16px;
   background: rgba(255,255,255,.03);
+  text-align:left;
+}
+.categoryCard.active{
+  background: rgba(125,211,252,.12);
+  border-color: rgba(125,211,252,.35);
 }
 .categoryCard.inactive{
   opacity: .68;
@@ -492,6 +564,10 @@ onMounted(refreshAll)
   gap: 8px;
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+.miniActions button{
+  position: relative;
+  z-index: 1;
 }
 @media (max-width: 1120px){
   .workspaceGrid{
@@ -506,6 +582,10 @@ onMounted(refreshAll)
   .workspaceHead,
   .cardHead{
     flex-direction: column;
+  }
+  .categoryActions{
+    flex-direction: column;
+    align-items: stretch;
   }
 }
 </style>

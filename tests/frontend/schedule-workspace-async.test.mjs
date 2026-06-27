@@ -333,6 +333,37 @@ describe('ScheduleWorkspace async flow', () => {
     expect(failCategoryWrapper.text()).toContain('保存日程类目失败')
   })
 
+  it('supports selecting and editing an existing schedule category in the management area', async () => {
+    const wrapper = mount(ScheduleWorkspace)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('新增类目')
+
+    const categoryCard = wrapper.findAll('.categoryCard').find((card) => card.text().includes('聚餐'))
+    await categoryCard.trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('编辑类目')
+    expect(wrapper.text()).toContain('正在管理类目：聚餐')
+
+    const categoryInputs = wrapper.findAll('.categoryCreator input')
+    await categoryInputs[0].setValue('聚餐安排')
+    await categoryInputs[1].setValue('6')
+
+    const saveCategoryButton = wrapper.findAll('.categoryCreator button').find((button) => button.text() === '保存类目')
+    await saveCategoryButton.trigger('click')
+    await flushPromises()
+    await flushPromises()
+
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/schedule-categories/schedule-cat-1'),
+      expect.objectContaining({
+        method: 'PUT',
+        body: JSON.stringify({ name: '聚餐安排', sortOrder: 6 })
+      })
+    )
+  })
+
   it('shows cancelled view summary after restoring one cancelled schedule', async () => {
     const wrapper = mount(ScheduleWorkspace)
     await flushPromises()
