@@ -10,6 +10,7 @@ import { registerMemoryTools } from '../electron/backend/memory/tools.js'
 import { registerSystemTools } from '../electron/backend/system/tools.js'
 import { evaluateToolCalls } from '../electron/backend/policy/toolPolicy.js'
 import { registerTool } from '../electron/backend/tools/registry.js'
+import { cleanupSqliteFile, createRuntimeSqlitePath } from './tmp-artifacts.mjs'
 
 function assert(condition, message, details = null) {
   if (!condition) {
@@ -19,15 +20,9 @@ function assert(condition, message, details = null) {
   }
 }
 
-function cleanupDbFile(dbPath) {
-  if (fs.existsSync(dbPath)) {
-    fs.unlinkSync(dbPath)
-  }
-}
-
 async function createStore(caseName) {
-  const dbPath = `./tmp-task052-${caseName}-${randomUUID()}.sqlite`
-  cleanupDbFile(dbPath)
+  const dbPath = await createRuntimeSqlitePath(`task052-${caseName}-${randomUUID()}`)
+  cleanupSqliteFile(dbPath)
   const store = await openDb(dbPath)
   registerLedgerTools(store, { registerTool })
   registerTodoTools(store, { registerTool })
@@ -42,7 +37,7 @@ async function createStore(caseName) {
       try {
         store.close()
       } catch {}
-      cleanupDbFile(dbPath)
+      cleanupSqliteFile(dbPath)
     }
   }
 }

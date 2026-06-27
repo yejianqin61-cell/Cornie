@@ -9,11 +9,11 @@ import { registerLedgerTools } from '../electron/backend/ledger/tools.js'
 import { registerTodoTools } from '../electron/backend/todo/tools.js'
 import { registerScheduleTools } from '../electron/backend/schedule/tools.js'
 import { getTool, registerTool } from '../electron/backend/tools/registry.js'
+import { cleanupSqliteFile, createRuntimeSqlitePath } from './tmp-artifacts.mjs'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const repoRoot = path.resolve(__dirname, '..')
-const defaultDbPath = path.join(repoRoot, 'tmp-profile-category-flow.sqlite')
 const profileDate = '2026-06-27'
 
 process.env.DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY || 'profile-key'
@@ -23,7 +23,7 @@ process.env.DEEPSEEK_TIMEOUT_MS = process.env.DEEPSEEK_TIMEOUT_MS || '3000'
 
 function parseArgs(argv) {
   const options = {
-    db: defaultDbPath,
+    db: null,
     format: 'json',
     output: null,
     help: false
@@ -67,12 +67,6 @@ function printHelp() {
     '  --output <path>    write result to file',
     '  --help             show this help'
   ].join('\n'))
-}
-
-function cleanupDbFile(dbPath) {
-  if (fs.existsSync(dbPath)) {
-    fs.unlinkSync(dbPath)
-  }
 }
 
 function resetRegisteredTools() {
@@ -126,7 +120,7 @@ function resetRegisteredTools() {
 }
 
 async function createHarness(dbPath) {
-  cleanupDbFile(dbPath)
+  cleanupSqliteFile(dbPath)
   resetRegisteredTools()
 
   const store = await openDb(dbPath)
@@ -140,7 +134,7 @@ async function createHarness(dbPath) {
       try {
         store.close()
       } catch {}
-      cleanupDbFile(dbPath)
+      cleanupSqliteFile(dbPath)
     }
   }
 }
@@ -359,6 +353,10 @@ async function main() {
   if (options.help) {
     printHelp()
     return
+  }
+
+  if (!options.db) {
+    options.db = await createRuntimeSqlitePath('profile-category-flow', { keepNameStable: true })
   }
 
   const harness = await createHarness(options.db)
