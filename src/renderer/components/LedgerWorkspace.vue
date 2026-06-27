@@ -26,6 +26,7 @@ const filterCategoryId = ref('')
 
 const entryForm = ref(createEmptyEntryForm())
 const categoryForm = ref(createEmptyCategoryForm())
+const selectedCategoryId = ref('')
 
 function createEmptyEntryForm() {
   return {
@@ -42,6 +43,7 @@ function createEmptyEntryForm() {
 
 function createEmptyCategoryForm() {
   return {
+    id: '',
     type: 'expense',
     name: '',
     sortOrder: ''
@@ -54,6 +56,9 @@ const filteredCategories = computed(() => {
 })
 
 const selectedEntry = computed(() => entries.value.find((item) => item.id === selectedEntryId.value) || null)
+const selectedCategory = computed(() => categories.value.find((item) => item.id === selectedCategoryId.value) || null)
+const expenseCategories = computed(() => categories.value.filter((item) => item.type === 'expense'))
+const incomeCategories = computed(() => categories.value.filter((item) => item.type === 'income'))
 
 async function refreshEntries() {
   const params = {}
@@ -98,6 +103,21 @@ function selectEntry(entry) {
 function resetEntryForm() {
   selectedEntryId.value = ''
   entryForm.value = createEmptyEntryForm()
+}
+
+function selectCategory(category) {
+  selectedCategoryId.value = category.id
+  categoryForm.value = {
+    id: category.id,
+    type: category.type,
+    name: category.name ?? '',
+    sortOrder: category.sortOrder ?? ''
+  }
+}
+
+function resetCategoryForm() {
+  selectedCategoryId.value = ''
+  categoryForm.value = createEmptyCategoryForm()
 }
 
 async function saveEntry() {
@@ -157,13 +177,15 @@ async function saveCategory() {
       sortOrder: categoryForm.value.sortOrder === '' ? 0 : Number(categoryForm.value.sortOrder)
     }
 
-    if (categoryForm.value.type === 'income') {
+    if (categoryForm.value.id) {
+      await updateLedgerCategory(categoryForm.value.id, payload)
+    } else if (categoryForm.value.type === 'income') {
       await createIncomeCategory(payload)
     } else {
       await createExpenseCategory(payload)
     }
 
-    categoryForm.value = createEmptyCategoryForm()
+    resetCategoryForm()
     await refreshCategories()
   } catch (error) {
     errorMsg.value = error?.message || String(error)
@@ -296,11 +318,18 @@ onMounted(refreshAll)
 
       <section class="workspaceCard span2">
         <div class="cardHead">
-          <div class="cardTitle">类目管理</div>
+          <div>
+            <div class="cardTitle">类目管理</div>
+            <div class="cardSubhint">人类现在也能直接整理收入、支出类目，不必只靠模型代劳。</div>
+          </div>
           <div class="cardHint">先把主人常用的类目准备好，铃湾之后匹配也会更稳一点。</div>
         </div>
 
         <div class="categoryCreator">
+          <div class="categoryEditorHead">
+            <div class="categoryEditorTitle">{{ selectedCategory ? '编辑类目' : '新增类目' }}</div>
+            <button v-if="selectedCategory" class="ghostBtn" @click="resetCategoryForm">新增一个</button>
+          </div>
           <label>
             <span>类型</span>
             <select v-model="categoryForm.type">
@@ -316,19 +345,58 @@ onMounted(refreshAll)
             <span>排序</span>
             <input v-model="categoryForm.sortOrder" type="number" step="1" placeholder="默认 0" />
           </label>
-          <button :disabled="saving" @click="saveCategory">新增类目</button>
+          <button :disabled="saving" @click="saveCategory">{{ selectedCategory ? '保存类目' : '新增类目' }}</button>
         </div>
 
         <div class="categoryGrid">
-          <div v-for="category in categories" :key="category.id" class="categoryCard">
-            <div>
-              <div class="categoryName">{{ category.name }}</div>
-              <div class="categoryMeta">{{ category.type === 'income' ? '收入' : '支出' }} · 排序 {{ category.sortOrder }}</div>
+          <section class="categoryLane">
+            <div class="laneTitle">支出类目</div>
+            <div class="laneHint">吃喝、交通、购物这类支出项目都在这里整理。</div>
+            <div class="laneList">
+              <button
+                v-for="category in expenseCategories"
+                :key="category.id"
+                class="categoryCard"
+                :class="{ active: category.id === selectedCategoryId }"
+                @click="selectCategory(category)"
+              >
+                <div>
+                  <div class="categoryName">{{ category.name }}</div>
+                  <div class="categoryMeta">支出 · 排序 {{ category.sortOrder }} · {{ category.isActive ? '启用中' : '已停用' }}</div>
+                </div>
+                <span class="categoryState">{{ category.isActive ? '可用' : '已停用' }}</span>
+              </button>
             </div>
-            <button :disabled="saving" @click="toggleCategory(category)">
-              {{ category.isActive ? '停用' : '恢复' }}
-            </button>
+          </section>
+
+          <section class="categoryLane">
+            <div class="laneTitle">收入类目</div>
+            <div class="laneHint">工资、奖金、红包之类的收入来源在这里整理。</div>
+            <div class="laneList">
+              <button
+                v-for="category in incomeCategories"
+                :key="category.id"
+                class="categoryCard"
+                :class="{ active: category.id === selectedCategoryId }"
+                @click="selectCategory(category)"
+              >
+                <div>
+                  <div class="categoryName">{{ category.name }}</div>
+                  <div class="categoryMeta">收入 · 排序 {{ category.sortOrder }} · {{ category.isActive ? '启用中' : '已停用' }}</div>
+                </div>
+                <span class="categoryState">{{ category.isActive ? '可用' : '已停用' }}</span>
+              </button>
+            </div>
+          </section>
+        </div>
+
+        <div v-if="selectedCategory" class="categoryActions">
+          <div class="categoryActionText">
+            正在管理类目：<strong>{{ selectedCategory.name }}</strong>
           </div>
+          <button :disabled="saving" @click="toggleCategory(selectedCategory)">
+            {{ selectedCategory.isActive ? '停用当前类目' : '恢复当前类目' }}
+          </button>
         </div>
       </section>
     </div>
@@ -382,6 +450,7 @@ onMounted(refreshAll)
 }
 .cardTitle{ font-weight: 800; font-size: 16px; }
 .cardHint{ color: var(--muted); font-size: 12px; max-width: 360px; text-align: right; }
+.cardSubhint{ margin-top: 4px; color: var(--muted); font-size: 12px; }
 .cardFilters{
   display:flex;
   gap: 8px;
@@ -434,13 +503,49 @@ onMounted(refreshAll)
 }
 .categoryCreator{
   display:grid;
-  grid-template-columns: 160px 1fr 140px 140px;
+  grid-template-columns: 180px 1fr 140px 140px;
   gap: 12px;
   align-items:end;
 }
+.categoryEditorHead{
+  display:flex;
+  flex-direction:column;
+  gap: 8px;
+}
+.categoryEditorTitle{
+  font-weight: 700;
+  font-size: 14px;
+}
+.ghostBtn{
+  border-color: rgba(255,255,255,.16);
+  background: rgba(255,255,255,.04);
+}
 .categoryGrid{
   display:grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+.categoryLane{
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: rgba(255,255,255,.03);
+}
+.laneTitle{
+  font-weight: 800;
+  font-size: 14px;
+}
+.laneHint{
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.laneList{
+  display:flex;
+  flex-direction:column;
   gap: 10px;
 }
 .categoryCard{
@@ -452,9 +557,33 @@ onMounted(refreshAll)
   border: 1px solid var(--border);
   border-radius: 16px;
   background: rgba(255,255,255,.03);
+  text-align:left;
+}
+.categoryCard.active{
+  background: rgba(125,211,252,.12);
+  border-color: rgba(125,211,252,.35);
 }
 .categoryName{ font-weight: 700; }
 .categoryMeta{ margin-top: 4px; font-size: 12px; color: var(--muted); }
+.categoryState{
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.categoryActions{
+  display:flex;
+  justify-content: space-between;
+  align-items:center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px dashed rgba(255,255,255,.14);
+  background: rgba(255,255,255,.03);
+}
+.categoryActionText{
+  color: var(--muted);
+  font-size: 13px;
+}
 @media (max-width: 1120px){
   .workspaceGrid{
     grid-template-columns: 1fr;
@@ -474,6 +603,10 @@ onMounted(refreshAll)
   }
   .cardHint{
     text-align:left;
+  }
+  .categoryActions{
+    flex-direction: column;
+    align-items: stretch;
   }
 }
 </style>

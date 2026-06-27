@@ -332,17 +332,24 @@ describe('LedgerWorkspace async flow', () => {
     expect(wrapper.text()).not.toContain('升级版龙虾聚餐')
     expect(wrapper.text()).toContain('新建记录')
 
-    const categoryToggleButton = wrapper.findAll('.categoryGrid button')[0]
+    const categoryToggleButton = wrapper.findAll('.categoryCard').find((card) => card.text().includes('海鲜'))
     await categoryToggleButton.trigger('click')
     await flushPromises()
-    await flushPromises()
-    expect(wrapper.text()).toContain('恢复')
+    expect(wrapper.text()).toContain('正在管理类目：海鲜')
 
-    const restoreButton = wrapper.findAll('.categoryGrid button')[0]
+    const currentCategoryActionButton = wrapper.findAll('button').find((button) => button.text() === '停用当前类目')
+    expect(currentCategoryActionButton).toBeTruthy()
+    await currentCategoryActionButton.trigger('click')
+    await flushPromises()
+    await flushPromises()
+    expect(wrapper.text()).toContain('恢复当前类目')
+
+    const restoreButton = wrapper.findAll('button').find((button) => button.text() === '恢复当前类目')
+    expect(restoreButton).toBeTruthy()
     await restoreButton.trigger('click')
     await flushPromises()
     await flushPromises()
-    expect(wrapper.text()).toContain('停用')
+    expect(wrapper.text()).toContain('停用当前类目')
   })
 
   it('supports income entry and category creation flows', async () => {
@@ -394,6 +401,39 @@ describe('LedgerWorkspace async flow', () => {
       expect.objectContaining({ method: 'POST' })
     )
     expect(wrapper.text()).toContain('红包')
+  })
+
+  it('supports selecting and editing an existing category in the management area', async () => {
+    const wrapper = mount(LedgerWorkspace)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('支出类目')
+    expect(wrapper.text()).toContain('收入类目')
+    expect(wrapper.text()).toContain('新增类目')
+
+    const seafoodCategoryButton = wrapper.findAll('.categoryCard').find((card) => card.text().includes('海鲜'))
+    await seafoodCategoryButton.trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('编辑类目')
+
+    expect(wrapper.text()).toContain('正在管理类目：海鲜')
+
+    const categoryInputs = wrapper.findAll('.categoryCreator input')
+    await categoryInputs[0].setValue('海鲜聚餐')
+    await categoryInputs[1].setValue('5')
+
+    const saveCategoryButton = wrapper.findAll('.categoryCreator button').find((button) => button.text() === '保存类目')
+    await saveCategoryButton.trigger('click')
+    await flushPromises()
+    await flushPromises()
+
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/ledger/categories/cat-lobster'),
+      expect.objectContaining({
+        method: 'PUT',
+        body: JSON.stringify({ name: '海鲜聚餐', sortOrder: 5 })
+      })
+    )
   })
 
   it('shows readable error when category save fails', async () => {
