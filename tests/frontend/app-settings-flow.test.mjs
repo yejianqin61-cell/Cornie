@@ -15,6 +15,10 @@ function createSettingsFlowFetchMock(initialState = {}) {
     failStatusMessage: 'network timeout',
     failRefreshStatusOnce: false,
     putErrorText: null,
+    deleteErrorText: null,
+    settingsModel: 'deepseek-chat',
+    settingsTimeoutMs: 30000,
+    settingsBaseUrl: '',
     ...initialState
   }
 
@@ -59,9 +63,9 @@ function createSettingsFlowFetchMock(initialState = {}) {
             configured: state.settingsConfigured ?? state.configured,
             hasApiKey: state.settingsConfigured ?? state.configured,
             maskedApiKey: state.maskedApiKey,
-            baseUrl: '',
-            model: 'deepseek-chat',
-            timeoutMs: 30000,
+            baseUrl: state.settingsBaseUrl,
+            model: state.settingsModel,
+            timeoutMs: state.settingsTimeoutMs,
             source: (state.settingsConfigured ?? state.configured) ? 'persisted' : 'empty'
           }
         }),
@@ -116,6 +120,15 @@ function createSettingsFlowFetchMock(initialState = {}) {
     }
 
     if (url.includes('/api/settings/model') && method === 'DELETE') {
+      if (state.deleteErrorText !== null) {
+        return {
+          ok: false,
+          status: 500,
+          json: async () => ({}),
+          text: async () => state.deleteErrorText
+        }
+      }
+
       state.configured = false
       state.maskedApiKey = ''
       state.reason = 'missing_api_key'
@@ -319,5 +332,43 @@ describe('App settings async flow', () => {
       expect.stringContaining('/api/settings/model'),
       expect.anything()
     )
+  })
+
+  it('falls back to saved model name when status model is empty and applies default form values', async () => {
+    globalThis.fetch = createSettingsFlowFetchMock({
+      configured: true,
+      maskedApiKey: 'sk-t***-key',
+      statusConfigured: true,
+      statusOk: true,
+      settingsConfigured: true,
+      settingsModel: '',
+      settingsTimeoutMs: null
+    })
+
+    const wrapper = mount(App)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('当前模型是 deepseek-chat')
+    expect(wrapper.text()).toContain('已保存：sk-t***-key')
+  })
+
+  it('shows friendly copy when clearing persisted settings fails', async () => {
+    globalThis.fetch = createSettingsFlowFetchMock({
+      configured: true,
+      maskedApiKey: 'sk-t***-key',
+      statusConfigured: false,
+      statusOk: false,
+      settingsConfigured: true,
+      reason: 'request_failed',
+      deleteErrorText: ''
+    })
+
+    const wrapper = mount(App)
+    await flushPromises()
+
+    await wrapper.get('.dangerBtn').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('这次保存没成功，不过别担心，我们检查一下输入内容再试一次就好。')
   })
 })

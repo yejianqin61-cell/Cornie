@@ -136,5 +136,20 @@ describe('App navigation', () => {
     await navButtons[5].trigger('click')
     await flushPromises()
     expect(wrapper.find('chat-history-stub').exists()).toBe(true)
+
+    await navButtons[2].trigger('click')
+    await flushPromises()
+    expect(wrapper.find('todo-workspace-stub').exists()).toBe(true)
+    expect(wrapper.text()).toContain('整理待办与类目')
+
+    await navButtons[3].trigger('click')
+    await flushPromises()
+    expect(wrapper.find('schedule-workspace-stub').exists()).toBe(true)
+    expect(wrapper.text()).toContain('管理未来安排与类目')
+
+    await navButtons[6].trigger('click')
+    await flushPromises()
+    expect(wrapper.find('cornie-composer-stub').exists()).toBe(true)
+    expect(wrapper.text()).toContain('编辑 Cornie 外观贴图')
   })
 })

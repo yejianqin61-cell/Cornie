@@ -3,7 +3,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 
 import App from '../../src/renderer/App.vue'
 
-function createDiaryFlowFetchMock({ failSave = false, failOnThisDay = false } = {}) {
+function createDiaryFlowFetchMock({ failSave = false, failOnThisDay = false, failEntriesString = false, emptyOnThisDay = false } = {}) {
   const entriesByDate = {
     '2026-06-27': {
       date: '2026-06-27',
@@ -70,13 +70,15 @@ function createDiaryFlowFetchMock({ failSave = false, failOnThisDay = false } = 
         ok: true,
         status: 200,
         json: async () => ({
-          items: [
-            {
-              date: '2025-06-27',
-              userText: '去年也提到过龙虾。',
-              cornieText: '那时候铃湾还不在。'
-            }
-          ]
+          items: emptyOnThisDay
+            ? []
+            : [
+                {
+                  date: '2025-06-27',
+                  userText: '去年也提到过龙虾。',
+                  cornieText: '那时候铃湾还不在。'
+                }
+              ]
         }),
         text: async () => ''
       }
@@ -141,6 +143,9 @@ function createDiaryFlowFetchMock({ failSave = false, failOnThisDay = false } = 
     }
 
     if (url.includes('/api/entries')) {
+      if (failEntriesString) {
+        throw '列表忽然失踪了'
+      }
       return {
         ok: true,
         status: 200,
@@ -248,5 +253,30 @@ describe('App diary flow', () => {
 
     expect(wrapper.text()).toContain('保存日记失败')
     expect(wrapper.text()).toContain('未保存更改')
+  })
+
+  it('shows empty on-this-day copy and refreshes month list changes', async () => {
+    globalThis.fetch = createDiaryFlowFetchMock({ emptyOnThisDay: true })
+    const wrapper = mount(App)
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('那时候我还没出生呢，不过现在我在了。')
+
+    const monthInput = wrapper.get('.monthInput')
+    await monthInput.setValue('2026-07')
+    await flushPromises()
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/entries?month=2026-07'),
+      expect.anything()
+    )
+  })
+
+  it('shows stringified list errors when monthly entries request throws a raw string', async () => {
+    globalThis.fetch = createDiaryFlowFetchMock({ failEntriesString: true })
+    const wrapper = mount(App)
+    await flushPromises()
+
+    expect(wrapper.findAll('.row')).toHaveLength(0)
+    expect(wrapper.text()).toContain('2026-06-27')
   })
 })
