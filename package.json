@@ -84,6 +84,7 @@
     "verify:task121": "node scripts/verify-task121-electron-startup-chain.mjs",
     "verify:task123": "node scripts/verify-task123-ledger-human-routes.mjs",
     "verify:task124": "node scripts/verify-task124-todo-schedule-human-routes.mjs",
+    "verify:task130": "node scripts/verify-task130-deepseek-only.mjs",
     "verify:8.1": "node scripts/verify-8.1.mjs",
     "verify:8.2": "node scripts/verify-8.2.mjs",
     "verify:task127": "node scripts/verify-task127-memory-wiki-workbench.mjs",
