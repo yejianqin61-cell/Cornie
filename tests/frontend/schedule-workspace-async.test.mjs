@@ -183,6 +183,7 @@ describe('ScheduleWorkspace async flow', () => {
 
     expect(wrapper.text()).toContain('日程工作台')
     expect(wrapper.text()).toContain('日程类目管理')
+    expect(wrapper.text()).toContain('当前查看：未来日程')
     expect(wrapper.text()).toContain('周日晚吃龙虾')
 
     const inputs = wrapper.findAll('input')
@@ -216,6 +217,7 @@ describe('ScheduleWorkspace async flow', () => {
 
     await wrapper.find('.entryRow').trigger('click')
     await flushPromises()
+    expect(wrapper.text()).toContain('如果计划变动，可以先取消；如果这条安排彻底无效，再删除也不迟。')
 
     const actionButtons = wrapper.findAll('.actionRow button')
     await actionButtons[1].trigger('click')
@@ -225,7 +227,11 @@ describe('ScheduleWorkspace async flow', () => {
 
     await wrapper.findAll('.cardFilters button')[1].trigger('click')
     await flushPromises()
+    expect(wrapper.text()).toContain('当前查看：已取消日程')
     expect(wrapper.text()).toContain('周日晚吃龙虾')
+    await wrapper.find('.entryRow').trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('这条日程目前已经取消了。如果计划恢复，就把它重新放回未来安排里。')
     const restoreButtons = wrapper.findAll('.actionRow button')
     await restoreButtons[1].trigger('click')
     await flushPromises()
@@ -257,6 +263,7 @@ describe('ScheduleWorkspace async flow', () => {
     await flushPromises()
     await flushPromises()
     expect(wrapper.text()).toContain('已停用')
+    expect(wrapper.findAll('.categoryCard')[0].classes()).toContain('inactive')
 
     const restoreCategoryButton = wrapper.findAll('.miniActions button')[2]
     await restoreCategoryButton.trigger('click')
@@ -324,5 +331,31 @@ describe('ScheduleWorkspace async flow', () => {
     await failCategoryWrapper.find('.categoryCreator button').trigger('click')
     await flushPromises()
     expect(failCategoryWrapper.text()).toContain('保存日程类目失败')
+  })
+
+  it('shows cancelled view summary after restoring one cancelled schedule', async () => {
+    const wrapper = mount(ScheduleWorkspace)
+    await flushPromises()
+
+    await wrapper.find('.entryRow').trigger('click')
+    await flushPromises()
+    const actionButtons = wrapper.findAll('.actionRow button')
+    await actionButtons[1].trigger('click')
+    await flushPromises()
+    await flushPromises()
+
+    await wrapper.findAll('.cardFilters button')[1].trigger('click')
+    await flushPromises()
+    const cancelledRows = wrapper.findAll('.entryRow')
+    const restoredRow = cancelledRows.find((entry) => entry.text().includes('周日晚吃龙虾'))
+    await restoredRow.trigger('click')
+    await flushPromises()
+    const restoreButtons = wrapper.findAll('.actionRow button')
+    await restoreButtons[1].trigger('click')
+    await flushPromises()
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('当前查看：已取消日程')
+    expect(wrapper.text()).toContain('取消的散步提醒')
   })
 })

@@ -47,6 +47,7 @@ function createEmptyCategoryForm() {
 }
 
 const selectedSchedule = computed(() => items.value.find((item) => item.id === selectedScheduleId.value) || null)
+const scheduleViewSummary = computed(() => (currentView.value === 'cancelled' ? '已取消日程' : '未来日程'))
 
 async function refreshItems() {
   const data = await listSchedules({ view: currentView.value })
@@ -235,6 +236,8 @@ onMounted(refreshAll)
           </div>
         </div>
 
+        <div class="viewSummary">当前查看：{{ scheduleViewSummary }}</div>
+
         <div v-if="items.length === 0" class="emptyState">
           这里暂时没有安排。要是主人想记下一场见面、提醒或行程，就从右边开始写吧。
         </div>
@@ -305,6 +308,9 @@ onMounted(refreshAll)
           <button v-if="selectedSchedule && selectedSchedule.status === 'cancelled'" :disabled="saving" @click="markRestore(selectedSchedule)">恢复日程</button>
           <button v-if="selectedSchedule" class="dangerGhost" :disabled="saving" @click="removeSchedule(selectedSchedule)">删除日程</button>
         </div>
+        <div v-if="selectedSchedule" class="actionHint">
+          {{ selectedSchedule.status === 'cancelled' ? '这条日程目前已经取消了。如果计划恢复，就把它重新放回未来安排里。' : '如果计划变动，可以先取消；如果这条安排彻底无效，再删除也不迟。' }}
+        </div>
       </section>
 
       <section class="workspaceCard span2">
@@ -328,7 +334,7 @@ onMounted(refreshAll)
         </div>
 
         <div class="categoryGrid">
-          <div v-for="category in categories" :key="category.id" class="categoryCard">
+          <div v-for="category in categories" :key="category.id" class="categoryCard" :class="{ inactive: !category.isActive }">
             <div>
               <div class="categoryName">{{ category.name }}</div>
               <div class="categoryMeta">排序 {{ category.sortOrder }} · {{ category.isActive ? '启用中' : '已停用' }}</div>
@@ -397,6 +403,14 @@ onMounted(refreshAll)
   gap: 8px;
   flex-wrap: wrap;
 }
+.viewSummary{
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px dashed rgba(255,255,255,.14);
+  background: rgba(255,255,255,.03);
+  color: var(--muted);
+  font-size: 12px;
+}
 .emptyState{
   padding: 14px 16px;
   border-radius: 16px;
@@ -451,6 +465,11 @@ onMounted(refreshAll)
   gap: 10px;
   flex-wrap: wrap;
 }
+.actionHint{
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
 .dangerGhost{
   border-color: rgba(248,113,113,.35);
   background: rgba(248,113,113,.08);
@@ -475,6 +494,10 @@ onMounted(refreshAll)
   border: 1px solid var(--border);
   border-radius: 16px;
   background: rgba(255,255,255,.03);
+}
+.categoryCard.inactive{
+  opacity: .68;
+  background: rgba(255,255,255,.02);
 }
 .categoryName{ font-weight: 700; }
 .categoryMeta{ margin-top: 4px; font-size: 12px; color: var(--muted); }

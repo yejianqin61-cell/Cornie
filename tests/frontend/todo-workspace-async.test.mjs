@@ -176,6 +176,7 @@ describe('TodoWorkspace async flow', () => {
 
     expect(wrapper.text()).toContain('待办工作台')
     expect(wrapper.text()).toContain('待办类目管理')
+    expect(wrapper.text()).toContain('当前查看：未完成事项')
     expect(wrapper.text()).toContain('整理龙虾账单')
 
     const inputs = wrapper.findAll('input')
@@ -207,6 +208,7 @@ describe('TodoWorkspace async flow', () => {
     const row = wrapper.find('.entryRow')
     await row.trigger('click')
     await flushPromises()
+    expect(wrapper.text()).toContain('确认做完后可以直接标记完成；如果不再需要，也可以删除它。')
 
     const actionButtons = wrapper.findAll('.actionRow button')
     await actionButtons[1].trigger('click')
@@ -216,7 +218,11 @@ describe('TodoWorkspace async flow', () => {
 
     await wrapper.findAll('.cardFilters button')[1].trigger('click')
     await flushPromises()
+    expect(wrapper.text()).toContain('当前查看：已完成事项')
     expect(wrapper.text()).toContain('整理龙虾账单')
+    await wrapper.find('.entryRow').trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('这条待办已经完成了。如果还有后续，可以重新打开继续跟进。')
     const reopenedButtons = wrapper.findAll('.actionRow button')
     await reopenedButtons[1].trigger('click')
     await flushPromises()
@@ -250,6 +256,7 @@ describe('TodoWorkspace async flow', () => {
     await flushPromises()
     await flushPromises()
     expect(wrapper.text()).toContain('已停用')
+    expect(wrapper.findAll('.categoryCard')[0].classes()).toContain('inactive')
 
     const restoreCategoryButton = wrapper.findAll('.miniActions button')[2]
     await restoreCategoryButton.trigger('click')
@@ -316,5 +323,31 @@ describe('TodoWorkspace async flow', () => {
     await failCategoryWrapper.find('.categoryCreator button').trigger('click')
     await flushPromises()
     expect(failCategoryWrapper.text()).toContain('保存待办类目失败')
+  })
+
+  it('shows completed view summary after reopening one completed todo', async () => {
+    const wrapper = mount(TodoWorkspace)
+    await flushPromises()
+
+    await wrapper.find('.entryRow').trigger('click')
+    await flushPromises()
+    const actionButtons = wrapper.findAll('.actionRow button')
+    await actionButtons[1].trigger('click')
+    await flushPromises()
+    await flushPromises()
+
+    await wrapper.findAll('.cardFilters button')[1].trigger('click')
+    await flushPromises()
+    const completedRows = wrapper.findAll('.entryRow')
+    const reopenedRow = completedRows.find((entry) => entry.text().includes('整理龙虾账单'))
+    await reopenedRow.trigger('click')
+    await flushPromises()
+    const reopenedButtons = wrapper.findAll('.actionRow button')
+    await reopenedButtons[1].trigger('click')
+    await flushPromises()
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('当前查看：已完成事项')
+    expect(wrapper.text()).toContain('已经完成的观察整理')
   })
 })

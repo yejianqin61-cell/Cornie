@@ -45,6 +45,7 @@ function createEmptyCategoryForm() {
 }
 
 const selectedTodo = computed(() => items.value.find((item) => item.id === selectedTodoId.value) || null)
+const todoViewSummary = computed(() => (currentView.value === 'completed' ? '已完成事项' : '未完成事项'))
 
 async function refreshItems() {
   const data = await listTodos({ view: currentView.value })
@@ -229,6 +230,8 @@ onMounted(refreshAll)
           </div>
         </div>
 
+        <div class="viewSummary">当前查看：{{ todoViewSummary }}</div>
+
         <div v-if="items.length === 0" class="emptyState">
           这一栏现在还是空的。等主人记下一件小事，铃湾就会帮你把它放稳。
         </div>
@@ -291,6 +294,9 @@ onMounted(refreshAll)
           <button v-if="selectedTodo && selectedTodo.status === 'done'" :disabled="saving" @click="markReopen(selectedTodo)">重新打开</button>
           <button v-if="selectedTodo" class="dangerGhost" :disabled="saving" @click="removeTodo(selectedTodo)">删除待办</button>
         </div>
+        <div v-if="selectedTodo" class="actionHint">
+          {{ selectedTodo.status === 'done' ? '这条待办已经完成了。如果还有后续，可以重新打开继续跟进。' : '确认做完后可以直接标记完成；如果不再需要，也可以删除它。' }}
+        </div>
       </section>
 
       <section class="workspaceCard span2">
@@ -314,7 +320,7 @@ onMounted(refreshAll)
         </div>
 
         <div class="categoryGrid">
-          <div v-for="category in categories" :key="category.id" class="categoryCard">
+          <div v-for="category in categories" :key="category.id" class="categoryCard" :class="{ inactive: !category.isActive }">
             <div>
               <div class="categoryName">{{ category.name }}</div>
               <div class="categoryMeta">排序 {{ category.sortOrder }} · {{ category.isActive ? '启用中' : '已停用' }}</div>
@@ -383,6 +389,14 @@ onMounted(refreshAll)
   gap: 8px;
   flex-wrap: wrap;
 }
+.viewSummary{
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px dashed rgba(255,255,255,.14);
+  background: rgba(255,255,255,.03);
+  color: var(--muted);
+  font-size: 12px;
+}
 .emptyState{
   padding: 14px 16px;
   border-radius: 16px;
@@ -437,6 +451,11 @@ onMounted(refreshAll)
   gap: 10px;
   flex-wrap: wrap;
 }
+.actionHint{
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
 .dangerGhost{
   border-color: rgba(248,113,113,.35);
   background: rgba(248,113,113,.08);
@@ -461,6 +480,10 @@ onMounted(refreshAll)
   border: 1px solid var(--border);
   border-radius: 16px;
   background: rgba(255,255,255,.03);
+}
+.categoryCard.inactive{
+  opacity: .68;
+  background: rgba(255,255,255,.02);
 }
 .categoryName{ font-weight: 700; }
 .categoryMeta{ margin-top: 4px; font-size: 12px; color: var(--muted); }
