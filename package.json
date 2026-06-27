@@ -78,6 +78,7 @@
     "verify:task115": "node scripts/verify-task115-service-structured-tests.mjs",
     "verify:task116": "node scripts/verify-task116-tools-gateway-structured-tests.mjs",
     "verify:task117": "node scripts/verify-task117-orchestrator-structured-tests.mjs",
+    "verify:task118": "node scripts/verify-task118-memory-governance-structured-tests.mjs",
     "verify:m1-memory-wiki": "node scripts/verify-m1-memory-wiki.mjs",
     "verify:m2-memory-wiki-service": "node scripts/verify-m2-memory-wiki-service.mjs",
     "verify:m3-topic-index": "node scripts/verify-m3-topic-index.mjs",
