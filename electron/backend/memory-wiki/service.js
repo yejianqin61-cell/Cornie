@@ -4,6 +4,7 @@ import { createMemoryWikiAuditStore } from './audit.js'
 import { createMemoryWikiInspector } from './inspector.js'
 import { createTopicIndexStore } from './topicIndex.js'
 import { createMemoryWikiGovernanceStore } from './governanceStore.js'
+import { normalizePageStatus } from './pageModel.js'
 
 function summarizePage(page) {
   return {
@@ -110,7 +111,7 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
       return this.update({
         ...existing,
         pageId,
-        status
+        status: normalizePageStatus(status)
       })
     },
 
@@ -153,6 +154,10 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
 
     async archive(pageId) {
       return this.setStatus(pageId, 'archived')
+    },
+
+    async demote(pageId) {
+      return this.setStatus(pageId, 'inactive')
     },
 
     async restore(pageId) {

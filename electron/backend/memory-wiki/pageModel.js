@@ -1,6 +1,9 @@
 import { randomUUID } from 'node:crypto'
 import { MEMORY_WIKI_PAGE_TYPE_DIRECTORY, MEMORY_WIKI_PAGE_TYPES } from './constants.js'
 
+export const MEMORY_WIKI_PRIMARY_STATUSES = Object.freeze(['active', 'inactive', 'archived'])
+export const MEMORY_WIKI_COMPATIBLE_STATUSES = Object.freeze([...MEMORY_WIKI_PRIMARY_STATUSES, 'draft', 'review'])
+
 function normalizeString(value) {
   return String(value ?? '').trim()
 }
@@ -46,6 +49,15 @@ export function buildPageId({ pageType, slug, pageId } = {}) {
   return `${assertPageType(pageType)}_${buildPageSlug({ slug })}_${randomUUID().slice(0, 8)}`
 }
 
+export function normalizePageStatus(status, { fallback = 'active', allowLegacy = true } = {}) {
+  const normalized = normalizeString(status) || fallback
+  const allowed = allowLegacy ? MEMORY_WIKI_COMPATIBLE_STATUSES : MEMORY_WIKI_PRIMARY_STATUSES
+  if (!allowed.includes(normalized)) {
+    throw new Error(`unsupported memory wiki status: ${normalized}`)
+  }
+  return normalized
+}
+
 export function createDefaultPageMetadata(input = {}) {
   const pageType = assertPageType(input.pageType ?? input.page_type)
   const title = normalizeString(input.title)
@@ -61,7 +73,7 @@ export function createDefaultPageMetadata(input = {}) {
     aliases,
     relatedPageIds: normalizeStringArray(input.relatedPageIds ?? input.related_page_ids),
     summary: normalizeString(input.summary),
-    status: normalizeString(input.status) || 'draft',
+    status: normalizePageStatus(input.status),
     confidence: normalizeString(input.confidence) || 'medium',
     sourceRefs: Array.isArray(input.sourceRefs ?? input.source_refs) ? input.sourceRefs ?? input.source_refs : [],
     firstNotedAt: normalizeString(input.firstNotedAt ?? input.first_noted_at) || now,
