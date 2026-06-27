@@ -28,3 +28,4 @@ export { buildTopicCandidateKeys, createTopicIndexEntry, createTopicIndexStore }
 export { createMemoryWikiVersionStore } from './versionStore.js'
 export { createMemoryWikiAuditStore } from './audit.js'
 export { createMemoryWikiInspector } from './inspector.js'
+export { createGovernanceRequest, createMemoryWikiGovernanceStore } from './governanceStore.js'
