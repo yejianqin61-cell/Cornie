@@ -82,6 +82,7 @@
     "verify:task118": "node scripts/verify-task118-memory-governance-structured-tests.mjs",
     "verify:task119": "node scripts/verify-task119-7.3-test-system.mjs",
     "verify:task121": "node scripts/verify-task121-electron-startup-chain.mjs",
+    "verify:task123": "node scripts/verify-task123-ledger-human-routes.mjs",
     "verify:8.1": "node scripts/verify-8.1.mjs",
     "verify:m1-memory-wiki": "node scripts/verify-m1-memory-wiki.mjs",
     "verify:m2-memory-wiki-service": "node scripts/verify-m2-memory-wiki-service.mjs",

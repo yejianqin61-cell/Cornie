@@ -11,6 +11,8 @@ import { checkHealth as checkModelHealth } from './backend/model/deepseek/client
 import { jsonErrorHandler } from './backend/http/middleware.js'
 import { registerTool } from './backend/tools/registry.js'
 import { registerLedgerTools } from './backend/ledger/tools.js'
+import { createLedgerService } from './backend/ledger/service.js'
+import { ledgerRoutes } from './backend/ledger/routes.js'
 import { registerTodoTools } from './backend/todo/tools.js'
 import { registerScheduleTools } from './backend/schedule/tools.js'
 import { registerObservationTools } from './backend/observation/tools.js'
@@ -48,6 +50,9 @@ export function createServer({ store }) {
 
   const chatlog = createChatlogService(store)
   app.use('/api', chatlogRoutes({ chatlog }))
+
+  const ledger = createLedgerService(store)
+  app.use('/api', ledgerRoutes({ ledger }))
 
   registerLedgerTools(store, { registerTool })
   registerTodoTools(store, { registerTool })
