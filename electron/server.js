@@ -24,10 +24,13 @@ import { registerMemoryTools } from './backend/memory/tools.js'
 import { registerSystemTools } from './backend/system/tools.js'
 import { createMemoryWikiService, createTopicIndexStore } from './backend/memory-wiki/index.js'
 import { memoryWikiRoutes } from './backend/memory-wiki/routes.js'
+import { applyPersistedModelSettingsToEnv, createSettingsService } from './backend/settings/service.js'
+import { settingsRoutes } from './backend/settings/routes.js'
 
 export function createServer({ store }) {
   const app = express()
   app.use(express.json({ limit: '1mb' }))
+  applyPersistedModelSettingsToEnv(store)
 
   // 开发期：渲染进程(vite:5173) -> 本地 API(5174) 需要 CORS
   // 打包后建议改为走 preload/IPC 或同源 scheme，届时可移除此段
@@ -65,6 +68,9 @@ export function createServer({ store }) {
 
   const schedule = createScheduleService(store)
   app.use('/api', scheduleRoutes({ schedule }))
+
+  const settings = createSettingsService(store)
+  app.use('/api', settingsRoutes({ settings }))
 
   const baseDir = process.cwd()
   let memoryWikiReady = null

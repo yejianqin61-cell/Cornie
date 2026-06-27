@@ -72,6 +72,23 @@ export async function getModelStatus() {
   return apiFetch('/model/status')
 }
 
+export async function getModelSettings() {
+  return apiFetch('/settings/model')
+}
+
+export async function saveModelSettings(payload) {
+  return apiFetch('/settings/model', {
+    method: 'PUT',
+    body: JSON.stringify(payload)
+  })
+}
+
+export async function clearModelSettings() {
+  return apiFetch('/settings/model', {
+    method: 'DELETE'
+  })
+}
+
 export async function submitConfirmationDecision(id, decision) {
   return apiFetch(`/confirmations/${encodeURIComponent(id)}/decision`, {
     method: 'POST',

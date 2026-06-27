@@ -29,6 +29,10 @@ function setMeta(db, key, value) {
   )
 }
 
+function deleteMeta(db, key) {
+  db.run('delete from meta where key = $key', { $key: key })
+}
+
 function migrate(db) {
   ensureMetaTable(db)
 
@@ -343,6 +347,21 @@ export async function openDb(dbPath) {
   persist()
 
   return { db, persist, close: () => db.close() }
+}
+
+export function getAppSetting(store, key) {
+  return getMeta(store.db, key)
+}
+
+export function setAppSetting(store, key, value) {
+  setMeta(store.db, key, value)
+  store.persist()
+  return getAppSetting(store, key)
+}
+
+export function deleteAppSetting(store, key) {
+  deleteMeta(store.db, key)
+  store.persist()
 }
 
 export function upsertUserText(store, { date, userText, cornieText }) {
