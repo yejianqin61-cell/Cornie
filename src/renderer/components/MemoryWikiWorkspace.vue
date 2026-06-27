@@ -5,9 +5,11 @@ import {
   createMemoryWikiPage,
   enqueueMemoryWikiInspectionScan,
   getMemoryWikiPage,
+  getMemoryWikiPageVersionDiff,
   getMemoryWikiGovernanceRequest,
   getTopicIndexItem,
   listConfirmations,
+  listMemoryWikiPageVersions,
   listMemoryWikiGovernanceRequests,
   listMemoryWikiPages,
   listTopicIndexItems,
@@ -31,6 +33,9 @@ const pages = ref([])
 const topicItems = ref([])
 const governanceItems = ref([])
 const confirmations = ref([])
+const pageVersions = ref([])
+const selectedVersionId = ref('')
+const versionDiff = ref(null)
 
 const selectedPageId = ref('')
 const selectedTopicKey = ref('')
@@ -62,6 +67,7 @@ function createEmptyPageForm() {
 }
 
 const selectedPage = computed(() => pages.value.find((item) => item.pageId === selectedPageId.value) || null)
+const selectedVersion = computed(() => pageVersions.value.find((item) => item.versionId === selectedVersionId.value) || null)
 const governanceSections = computed(() =>
   Array.from(new Set(governanceItems.value.map((item) => item.queueSection).filter(Boolean)))
 )
@@ -121,8 +127,11 @@ async function selectPage(pageId) {
   errorMsg.value = ''
   try {
     selectedPageId.value = pageId
-    const data = await getMemoryWikiPage(pageId)
+    const [data, versionData] = await Promise.all([getMemoryWikiPage(pageId), listMemoryWikiPageVersions(pageId)])
     const page = data.page
+    pageVersions.value = versionData.items || []
+    selectedVersionId.value = ''
+    versionDiff.value = null
     pageForm.value = {
       pageId: page.pageId,
       pageType: page.pageType ?? 'topic',
@@ -173,7 +182,28 @@ async function selectGovernance(requestId) {
 
 function resetPageForm() {
   selectedPageId.value = ''
+  pageVersions.value = []
+  selectedVersionId.value = ''
+  versionDiff.value = null
   pageForm.value = createEmptyPageForm()
+}
+
+async function selectVersion(versionId) {
+  if (!pageForm.value.pageId || !versionId) return
+  loading.value = true
+  errorMsg.value = ''
+  try {
+    selectedVersionId.value = versionId
+    const data = await getMemoryWikiPageVersionDiff(pageForm.value.pageId, {
+      fromVersionId: versionId,
+      toVersionId: versionId
+    })
+    versionDiff.value = data.diff
+  } catch (error) {
+    errorMsg.value = error?.message || String(error)
+  } finally {
+    loading.value = false
+  }
 }
 
 async function savePage() {
@@ -248,13 +278,11 @@ async function restorePage() {
 }
 
 async function rollbackPage() {
-  if (!pageForm.value.pageId) return
-  const versionId = window.prompt('请输入要回滚到的版本 ID')
-  if (!versionId) return
+  if (!pageForm.value.pageId || !selectedVersionId.value) return
   saving.value = true
   errorMsg.value = ''
   try {
-    await rollbackMemoryWikiPage(pageForm.value.pageId, versionId)
+    await rollbackMemoryWikiPage(pageForm.value.pageId, selectedVersionId.value)
     await refreshPages()
     await selectPage(pageForm.value.pageId)
   } catch (error) {
@@ -488,7 +516,66 @@ onMounted(refreshAll)
           <button :disabled="saving" @click="savePage">{{ saving ? '保存中…' : '保存页面' }}</button>
           <button v-if="pageForm.pageId && pageForm.status !== 'archived'" :disabled="saving" @click="archivePage">归档页面</button>
           <button v-if="pageForm.pageId && pageForm.status === 'archived'" :disabled="saving" @click="restorePage">恢复页面</button>
-          <button v-if="pageForm.pageId" :disabled="saving" @click="rollbackPage">版本回滚</button>
+          <button v-if="pageForm.pageId" :disabled="saving || !selectedVersionId" @click="rollbackPage">
+            {{ selectedVersionId ? '回滚到当前选中版本' : '先选择版本再回滚' }}
+          </button>
+        </div>
+      </section>
+
+      <section class="workspaceCard span2">
+        <div class="cardHead">
+          <div>
+            <div class="cardTitle">版本历史与回滚</div>
+            <div class="cardSubhint">先看版本列表，再选一个版本。这样主人不需要手输版本 ID，也更不容易回滚错页。</div>
+          </div>
+          <div class="cardHint">每次重要修改前后留下的快照，都会在这里排开给你看。</div>
+        </div>
+
+        <div v-if="!pageForm.pageId" class="emptyDetail compactEmpty">
+          先从左边选中一个记忆页面，我就把这页的版本历史整理给你看。
+        </div>
+
+        <div v-else class="versionGrid">
+          <div v-if="pageVersions.length === 0" class="emptyDetail compactEmpty">
+            这页目前还没有可用的历史版本记录。
+          </div>
+
+          <div v-else class="versionList">
+            <button
+              v-for="item in pageVersions"
+              :key="item.versionId"
+              class="entryRow"
+              :class="{ active: item.versionId === selectedVersionId }"
+              @click="selectVersion(item.versionId)"
+            >
+              <div>
+                <div class="entryMain">{{ item.reason || 'snapshot' }}</div>
+                <div class="entryMeta">{{ item.versionId }} · {{ item.createdAt || '未知时间' }}</div>
+              </div>
+            </button>
+          </div>
+
+          <div class="versionDetail">
+            <div v-if="selectedVersion" class="governanceDetail">
+              <div class="detailTitle">已选版本</div>
+              <div class="detailMeta">版本 ID：{{ selectedVersion.versionId }}</div>
+              <div class="detailMeta">快照原因：{{ selectedVersion.reason || 'snapshot' }}</div>
+              <div class="detailMeta">创建时间：{{ selectedVersion.createdAt || '未知时间' }}</div>
+
+              <div v-if="versionDiff" class="evidenceBlock">
+                <div class="evidenceTitle">版本摘要</div>
+                <div class="detailMeta">标题变更：{{ versionDiff.titleChanged ? '是' : '否' }}</div>
+                <div class="detailMeta">摘要变更：{{ versionDiff.summaryChanged ? '是' : '否' }}</div>
+                <div class="detailMeta">正文变更：{{ versionDiff.bodyChanged ? '是' : '否' }}</div>
+                <div class="detailMeta">状态变更：{{ versionDiff.statusChanged ? '是' : '否' }}</div>
+                <div class="detailMeta">重要性变更：{{ versionDiff.importanceChanged ? '是' : '否' }}</div>
+                <pre class="evidenceItem">回滚后将把当前页面恢复到这个历史快照。</pre>
+              </div>
+            </div>
+            <div v-else class="emptyDetail compactEmpty">
+              点左边某个版本，我就把这个版本的关键信息展开给你看。
+            </div>
+          </div>
         </div>
       </section>
 
@@ -786,6 +873,21 @@ onMounted(refreshAll)
   gap: 14px;
   min-height: 0;
 }
+.versionGrid{
+  display:grid;
+  grid-template-columns: minmax(260px, 360px) minmax(0, 1fr);
+  gap: 14px;
+  min-height: 0;
+}
+.versionList{
+  display:flex;
+  flex-direction:column;
+  gap: 8px;
+  overflow:auto;
+}
+.versionDetail{
+  min-width: 0;
+}
 .topicList{
   display:flex;
   flex-direction:column;
@@ -867,7 +969,8 @@ onMounted(refreshAll)
 }
 @media (max-width: 1120px){
   .workspaceGrid,
-  .topicGrid{
+  .topicGrid,
+  .versionGrid{
     grid-template-columns: 1fr;
   }
 }

@@ -368,6 +368,17 @@ export async function getMemoryWikiPage(pageId) {
   return apiFetch(`/memory-wiki/pages/${encodeURIComponent(pageId)}`)
 }
 
+export async function listMemoryWikiPageVersions(pageId) {
+  return apiFetch(`/memory-wiki/pages/${encodeURIComponent(pageId)}/versions`)
+}
+
+export async function getMemoryWikiPageVersionDiff(pageId, { fromVersionId, toVersionId }) {
+  const params = new URLSearchParams()
+  params.set('fromVersionId', fromVersionId)
+  params.set('toVersionId', toVersionId)
+  return apiFetch(`/memory-wiki/pages/${encodeURIComponent(pageId)}/version-diff?${params.toString()}`)
+}
+
 export async function createMemoryWikiPage(payload) {
   return apiFetch('/memory-wiki/pages', {
     method: 'POST',

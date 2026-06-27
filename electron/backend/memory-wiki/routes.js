@@ -24,6 +24,30 @@ export function memoryWikiRoutes({ memoryWiki, topicIndex }) {
   )
 
   r.get(
+    '/memory-wiki/pages/:pageId/versions',
+    asyncHandler(async (req, res) => {
+      const pageId = requireString(req.params.pageId, 'pageId', { maxLen: 256 })
+      res.json({ items: await memoryWiki.listVersions(pageId) })
+    })
+  )
+
+  r.get(
+    '/memory-wiki/pages/:pageId/version-diff',
+    asyncHandler(async (req, res) => {
+      const pageId = requireString(req.params.pageId, 'pageId', { maxLen: 256 })
+      const fromVersionId = requireString(req.query.fromVersionId ?? '', 'fromVersionId', { maxLen: 256 })
+      const toVersionId = requireString(req.query.toVersionId ?? '', 'toVersionId', { maxLen: 256 })
+      res.json({
+        diff: await memoryWiki.getVersionDiff({
+          pageId,
+          fromVersionId,
+          toVersionId
+        })
+      })
+    })
+  )
+
+  r.get(
     '/memory-wiki/topic-index',
     asyncHandler(async (_req, res) => {
       res.json({ items: await topicIndex.list() })

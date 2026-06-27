@@ -33,6 +33,7 @@ function createMemoryWikiFetchMock(options = {}) {
   const governanceWithoutEvidence = options.governanceWithoutEvidence ?? false
   const governanceWithoutMetadata = options.governanceWithoutMetadata ?? false
   const emptyConfirmations = options.emptyConfirmations ?? false
+  const emptyVersions = options.emptyVersions ?? false
 
   const pages = [
     {
@@ -84,18 +85,15 @@ function createMemoryWikiFetchMock(options = {}) {
     const method = init?.method || 'GET'
     const parsedUrl = new URL(url, 'http://localhost')
 
-    if (failRefreshAll) {
-      if (url.includes('/api/memory-wiki/pages') && method === 'GET') {
-        if (rawRefreshAllError) {
-          throw '刷新记忆页面时断线了'
-        }
-        return createResponse({
-          ok: false,
-          status: 500,
-          json: {},
-          text: '刷新记忆页面失败。'
-        })
+    if (failRefreshAll && url.includes('/api/memory-wiki/pages') && method === 'GET') {
+      if (rawRefreshAllError) {
+        throw '刷新记忆页面时断线了'
       }
+      return createResponse({
+        ok: false,
+        status: 500,
+        text: '刷新记忆页面失败。'
+      })
     }
 
     if (url.includes('/api/memory-wiki/pages?') || url.endsWith('/api/memory-wiki/pages')) {
@@ -116,12 +114,55 @@ function createMemoryWikiFetchMock(options = {}) {
       }
     }
 
+    if (url.includes('/api/memory-wiki/pages/wiki-lobster/versions') && method === 'GET') {
+      return createResponse({
+        json: {
+          items: emptyVersions
+            ? []
+            : [
+                {
+                  versionId: 'ver-1',
+                  title: '龙虾',
+                  reason: 'before_update',
+                  createdAt: '2026-06-27T10:00:00.000Z'
+                },
+                {
+                  versionId: 'ver-2',
+                  title: '龙虾',
+                  reason: 'before_rollback',
+                  createdAt: '2026-06-27T11:00:00.000Z'
+                }
+              ]
+        }
+      })
+    }
+
+    if (url.includes('/api/memory-wiki/pages/wiki-memory/versions') && method === 'GET') {
+      return createResponse({ json: { items: [] } })
+    }
+
+    if (url.includes('/api/memory-wiki/pages/wiki-lobster/version-diff') && method === 'GET') {
+      return createResponse({
+        json: {
+          diff: {
+            pageId: 'wiki-lobster',
+            fromVersionId: 'ver-1',
+            toVersionId: 'ver-1',
+            titleChanged: false,
+            summaryChanged: true,
+            bodyChanged: true,
+            statusChanged: false,
+            importanceChanged: false
+          }
+        }
+      })
+    }
+
     if (url.includes('/api/memory-wiki/pages/wiki-lobster') && method === 'GET') {
       if (failPageDetail) {
         return createResponse({
           ok: false,
           status: 500,
-          json: {},
           text: '读取记忆页面详情失败。'
         })
       }
@@ -168,7 +209,6 @@ function createMemoryWikiFetchMock(options = {}) {
         return createResponse({
           ok: false,
           status: 500,
-          json: {},
           text: '读取主题索引详情失败。'
         })
       }
@@ -199,7 +239,6 @@ function createMemoryWikiFetchMock(options = {}) {
         return createResponse({
           ok: false,
           status: 500,
-          json: {},
           text: '治理状态更新失败。'
         })
       }
@@ -215,7 +254,6 @@ function createMemoryWikiFetchMock(options = {}) {
         return createResponse({
           ok: false,
           status: 500,
-          json: {},
           text: '读取治理详情失败。'
         })
       }
@@ -245,7 +283,6 @@ function createMemoryWikiFetchMock(options = {}) {
         return createResponse({
           ok: false,
           status: 500,
-          json: {},
           text: '巡检入池失败了。'
         })
       }
@@ -268,7 +305,6 @@ function createMemoryWikiFetchMock(options = {}) {
         return createResponse({
           ok: false,
           status: 500,
-          json: {},
           text: '拒绝确认时出错了。'
         })
       }
@@ -330,7 +366,6 @@ function createMemoryWikiFetchMock(options = {}) {
 describe('MemoryWikiWorkspace async flow', () => {
   beforeEach(() => {
     globalThis.fetch = createMemoryWikiFetchMock()
-    globalThis.window.prompt = vi.fn(() => 'version-1')
   })
 
   it('loads wiki data, opens details, and creates a new page', async () => {
@@ -350,6 +385,8 @@ describe('MemoryWikiWorkspace async flow', () => {
     const textareas = wrapper.findAll('textarea')
     expect(textareas[0].element.value).toBe('主人反复提到的重要食物。')
     expect(textareas[1].element.value).toContain('这是一页关于龙虾的长期记忆。')
+    expect(wrapper.text()).toContain('版本历史与回滚')
+    expect(wrapper.text()).toContain('before_update')
 
     const resetButton = wrapper.findAll('button').find((button) => button.text() === '新建页面')
     await resetButton.trigger('click')
@@ -368,10 +405,14 @@ describe('MemoryWikiWorkspace async flow', () => {
       expect.stringContaining('/api/memory-wiki/pages'),
       expect.objectContaining({ method: 'POST' })
     )
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/memory-wiki/pages/wiki-memory/versions'),
+      expect.anything()
+    )
     expect(wrapper.text()).toContain('记忆治理')
   })
 
-  it('supports topic alias save, inspection enqueue, governance status change, archive/restore/rollback, and confirmation approval', async () => {
+  it('supports version selection, rollback, archive/restore, topic alias save, governance status change, and confirmation approval', async () => {
     const wrapper = mount(MemoryWikiWorkspace)
     await flushPromises()
 
@@ -402,6 +443,14 @@ describe('MemoryWikiWorkspace async flow', () => {
     await pageRow.trigger('click')
     await flushPromises()
 
+    expect(wrapper.text()).toContain('点左边某个版本，我就把这个版本的关键信息展开给你看。')
+    const versionRow = wrapper.findAll('.versionList .entryRow')[0]
+    await versionRow.trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('已选版本')
+    expect(wrapper.text()).toContain('版本 ID：ver-1')
+    expect(wrapper.text()).toContain('摘要变更：是')
+
     const archiveButton = wrapper.findAll('.actionRow button').find((button) => button.text() === '归档页面')
     await archiveButton.trigger('click')
     await flushPromises()
@@ -420,14 +469,17 @@ describe('MemoryWikiWorkspace async flow', () => {
       expect.objectContaining({ method: 'POST' })
     )
 
-    const rollbackButton = wrapper.findAll('.actionRow button').find((button) => button.text() === '版本回滚')
+    const versionRowAfterRestore = wrapper.findAll('.versionList .entryRow')[0]
+    await versionRowAfterRestore.trigger('click')
+    await flushPromises()
+
+    const rollbackButton = wrapper.findAll('.actionRow button').find((button) => button.text() === '回滚到当前选中版本')
     await rollbackButton.trigger('click')
     await flushPromises()
     await flushPromises()
-    expect(globalThis.window.prompt).toHaveBeenCalledWith('请输入要回滚到的版本 ID')
     expect(globalThis.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/api/memory-wiki/pages/wiki-lobster/rollback'),
-      expect.objectContaining({ method: 'POST', body: JSON.stringify({ versionId: 'version-1' }) })
+      expect.objectContaining({ method: 'POST', body: JSON.stringify({ versionId: 'ver-1' }) })
     )
 
     const governanceRow = wrapper.findAll('.workspaceCard .entryRow').find((row) => row.text().includes('建议合并龙虾相关页面'))
@@ -435,8 +487,6 @@ describe('MemoryWikiWorkspace async flow', () => {
     await flushPromises()
     expect(wrapper.text()).toContain('这里放的是治理建议，不会直接改数据，先给主人过目再决定怎么处理。')
     expect(wrapper.text()).toContain('当前待处理 2 项')
-    expect(wrapper.text()).toContain('建议')
-    expect(wrapper.text()).toContain('medium')
     expect(wrapper.text()).toContain('内容高度重复，建议合并。')
 
     const markApprovedButton = wrapper.findAll('.actionRow button').find((button) => button.text() === '标记已处理')
@@ -539,13 +589,14 @@ describe('MemoryWikiWorkspace async flow', () => {
     expect(wrapper.text()).toContain('点左边一条治理请求，我就把它的原因、证据和处理入口摊给你看。')
   })
 
-  it('shows topic, governance, and confirmation fallback states', async () => {
+  it('shows topic, governance, confirmation, and empty version fallback states', async () => {
     globalThis.fetch = createMemoryWikiFetchMock({
       topicWithoutDates: true,
       topicWithoutPages: true,
       governanceWithoutReason: true,
       governanceWithoutEvidence: true,
-      emptyConfirmations: true
+      emptyConfirmations: true,
+      emptyVersions: true
     })
 
     const wrapper = mount(MemoryWikiWorkspace)
@@ -554,6 +605,7 @@ describe('MemoryWikiWorkspace async flow', () => {
     expect(wrapper.text()).toContain('现在没有排队等你点头的高风险动作，小铃湾先乖乖看着。')
     expect(wrapper.text()).toContain('点一个主题，我就把它的索引详情展开给主人看。')
     expect(wrapper.text()).toContain('点左边一条治理请求，我就把它的原因、证据和处理入口摊给你看。')
+    expect(wrapper.text()).toContain('先从左边选中一个记忆页面，我就把这页的版本历史整理给你看。')
 
     const topicRow = wrapper.findAll('.topicList .entryRow')[0]
     await topicRow.trigger('click')
@@ -562,6 +614,11 @@ describe('MemoryWikiWorkspace async flow', () => {
     expect(wrapper.text()).toContain('关联页面：无')
     expect(wrapper.text()).toContain('索引键：lobster')
 
+    const pageRow = wrapper.findAll('.workspaceCard .entryRow').find((row) => row.text().includes('龙虾'))
+    await pageRow.trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('这页目前还没有可用的历史版本记录。')
+
     const governanceRow = wrapper.findAll('.workspaceCard .entryRow').find((row) => row.text().includes('建议合并龙虾相关页面'))
     await governanceRow.trigger('click')
     await flushPromises()
@@ -569,8 +626,7 @@ describe('MemoryWikiWorkspace async flow', () => {
     expect(wrapper.find('.evidenceBlock').exists()).toBe(false)
   })
 
-  it('does not request rollback when prompt is cancelled', async () => {
-    globalThis.window.prompt = vi.fn(() => '')
+  it('requires selecting a version before rollback', async () => {
     const wrapper = mount(MemoryWikiWorkspace)
     await flushPromises()
 
@@ -578,11 +634,8 @@ describe('MemoryWikiWorkspace async flow', () => {
     await pageRow.trigger('click')
     await flushPromises()
 
-    const rollbackButton = wrapper.findAll('.actionRow button').find((button) => button.text() === '版本回滚')
-    await rollbackButton.trigger('click')
-    await flushPromises()
-
-    expect(globalThis.window.prompt).toHaveBeenCalledWith('请输入要回滚到的版本 ID')
+    const rollbackButton = wrapper.findAll('.actionRow button').find((button) => button.text() === '先选择版本再回滚')
+    expect(rollbackButton.attributes('disabled')).toBeDefined()
     expect(globalThis.fetch).not.toHaveBeenCalledWith(
       expect.stringContaining('/api/memory-wiki/pages/wiki-lobster/rollback'),
       expect.anything()

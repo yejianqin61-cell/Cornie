@@ -188,7 +188,13 @@ function createDiaryFlowFetchMock({ failSave = false, failOnThisDay = false, fai
 
 describe('App diary flow', () => {
   beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-06-27T12:00:00.000+08:00'))
     globalThis.fetch = createDiaryFlowFetchMock()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('loads diary entries, switches dates, saves edits, and regenerates cornie text', async () => {
