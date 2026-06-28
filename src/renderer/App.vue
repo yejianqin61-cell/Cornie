@@ -11,6 +11,7 @@ import {
   saveModelSettings,
   upsertEntry
 } from './api'
+import ChatHome from './components/ChatHome.vue'
 import LedgerWorkspace from './components/LedgerWorkspace.vue'
 import TodoWorkspace from './components/TodoWorkspace.vue'
 import ScheduleWorkspace from './components/ScheduleWorkspace.vue'
@@ -329,13 +330,9 @@ onMounted(async () => {
         </div>
       </section>
 
-      <!-- 聊天模式（占位，task-003 构建） -->
+      <!-- 聊天模式 -->
       <section v-else-if="mode === 'chat'" class="contentFrame">
-        <div class="placeholderPage">
-          <div class="placeholderIcon">💬</div>
-          <div class="placeholderTitle">和铃湾聊聊天</div>
-          <div class="placeholderHint">聊天首页将在下一步构建。</div>
-        </div>
+        <ChatHome />
       </section>
 
       <!-- 日记模式（保留现有日记内联 UI，task-005 拆分） -->
