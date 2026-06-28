@@ -17,6 +17,10 @@ import DiaryEditor from './components/DiaryEditor.vue'
 import CornieDiaryReview from './components/CornieDiaryReview.vue'
 import OnThisDayPage from './components/OnThisDayPage.vue'
 import ObserveMemoryHome from './components/ObserveMemoryHome.vue'
+import ObservationList from './components/ObservationList.vue'
+import ObservationDetail from './components/ObservationDetail.vue'
+import MemoryPageList from './components/MemoryPageList.vue'
+import MemoryPageDetail from './components/MemoryPageDetail.vue'
 import LedgerWorkspace from './components/LedgerWorkspace.vue'
 import TodoWorkspace from './components/TodoWorkspace.vue'
 import ScheduleWorkspace from './components/ScheduleWorkspace.vue'
@@ -377,8 +381,30 @@ onMounted(async () => {
       <!-- 观察与记忆 -->
       <section v-else-if="mode === 'observe-memory'" class="contentFrame">
         <ObserveMemoryHome
+          v-if="omView === 'home'"
           @go="(v, id) => { omView = v; omDetailId = id || '' }"
           @goChat="mode = 'chat'"
+        />
+        <ObservationList
+          v-else-if="omView === 'observation-list'"
+          @back="omView = 'home'"
+          @go="(v, id) => { omView = v; omDetailId = id || '' }"
+        />
+        <ObservationDetail
+          v-else-if="omView === 'observation-detail'"
+          :id="omDetailId"
+          @back="omView = 'observation-list'"
+          @deleted="omView = 'observation-list'"
+        />
+        <MemoryPageList
+          v-else-if="omView === 'memory-list'"
+          @back="omView = 'home'"
+          @go="(v, id) => { omView = v; omDetailId = id || '' }"
+        />
+        <MemoryPageDetail
+          v-else-if="omView === 'memory-detail'"
+          :id="omDetailId"
+          @back="omView = 'memory-list'"
         />
       </section>
 

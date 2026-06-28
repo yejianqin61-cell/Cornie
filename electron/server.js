@@ -19,6 +19,7 @@ import { todoRoutes } from './backend/todo/routes.js'
 import { registerScheduleTools } from './backend/schedule/tools.js'
 import { createScheduleService } from './backend/schedule/service.js'
 import { scheduleRoutes } from './backend/schedule/routes.js'
+import { observationRoutes } from './backend/observation/routes.js'
 import { registerObservationTools } from './backend/observation/tools.js'
 import { registerMemoryTools } from './backend/memory/tools.js'
 import { registerSystemTools } from './backend/system/tools.js'
@@ -71,6 +72,8 @@ export function createServer({ store }) {
 
   const settings = createSettingsService(store)
   app.use('/api', settingsRoutes({ settings }))
+
+  app.use('/api', observationRoutes({ store }))
 
   const baseDir = process.cwd()
   let memoryWikiReady = null
