@@ -12,6 +12,10 @@ import {
   upsertEntry
 } from './api'
 import ChatHome from './components/ChatHome.vue'
+import DiaryHome from './components/DiaryHome.vue'
+import DiaryEditor from './components/DiaryEditor.vue'
+import CornieDiaryReview from './components/CornieDiaryReview.vue'
+import OnThisDayPage from './components/OnThisDayPage.vue'
 import LedgerWorkspace from './components/LedgerWorkspace.vue'
 import TodoWorkspace from './components/TodoWorkspace.vue'
 import ScheduleWorkspace from './components/ScheduleWorkspace.vue'
@@ -60,6 +64,9 @@ const sections = [
 
 const mode = ref('chat')
 const modeMeta = computed(() => sections.find((item) => item.id === mode.value) || sections[0])
+
+// Diary sub-view
+const diaryView = ref('home') // 'home' | 'editor' | 'cornie-review' | 'on-this-day'
 
 const modelStatus = ref({ ok: false, configured: false, provider: 'deepseek', model: '', reason: '' })
 const modelSettings = ref({
@@ -238,18 +245,9 @@ function pickDate(date) {
   selectedDate.value = date
 }
 
-watch(selectedDate, async (d) => {
-  await loadEntry(d)
-  await loadOnThisDay(d)
+watch(mode, () => {
+  diaryView.value = 'home'
 })
-
-watch(
-  selectedMonth,
-  async () => {
-    await refreshList()
-  },
-  { immediate: false }
-)
 
 onMounted(async () => {
   await refreshModelState()
@@ -335,99 +333,24 @@ onMounted(async () => {
         <ChatHome />
       </section>
 
-      <!-- 日记模式（保留现有日记内联 UI，task-005 拆分） -->
+      <!-- 日记模式 -->
       <section v-else-if="mode === 'diary'" class="contentFrame">
-        <div class="diaryGrid">
-          <aside class="sidebar card">
-            <div class="sidebarHead">
-              <div class="sidebarTitle">本月条目</div>
-              <div class="sidebarHint" v-if="loadingList">加载中…</div>
-              <div class="sidebarHint" v-else>{{ entries.length }} 天有记录</div>
-            </div>
-            <div class="list">
-              <button
-                v-for="e in entries"
-                :key="e.date"
-                class="row"
-                :class="{ active: e.date === selectedDate }"
-                @click="pickDate(e.date)"
-              >
-                <div class="date">{{ e.date }}</div>
-                <div class="meta">
-                  <span v-if="e.hasUserText" class="pill">我的</span>
-                  <span v-if="e.hasCornieText" class="pill pill2">Cornie</span>
-                </div>
-              </button>
-            </div>
-          </aside>
-
-          <section class="content card">
-            <div class="contentHead">
-              <div>
-                <div class="contentTitle">{{ selectedLabel }}</div>
-                <div class="contentHint">
-                  {{ loadingEntry ? '加载中…' : dirty ? '未保存更改' : '已同步到本地' }}
-                </div>
-              </div>
-              <div class="contentActions">
-                <button class="primary" :disabled="saving || !dirty" @click="save">
-                  {{ saving ? '保存中…' : '保存' }}
-                </button>
-                <button :disabled="regenerating" @click="regenCornie">
-                  {{ regenerating ? '生成中…' : '让铃湾写一篇' }}
-                </button>
-              </div>
-            </div>
-
-            <div v-if="errorMsg" class="error">{{ errorMsg }}</div>
-
-            <div class="grid">
-              <div class="panel">
-                <div class="panelTitle">我的日记（可空）</div>
-                <textarea
-                  v-model="entry.userText"
-                  placeholder="今天发生了什么？写一点也行。"
-                  @input="dirty = true"
-                />
-              </div>
-              <div class="panel">
-                <div class="panelTitle">Cornie 的日记</div>
-                <textarea
-                  v-model="entry.cornieText"
-                  placeholder="点击「让铃湾写一篇」让 Cornie 帮你写。"
-                  @input="dirty = true"
-                />
-              </div>
-              <div class="panel span2">
-                <div class="panelTitle">
-                  往年今日
-                  <span class="panelHint">{{ loadingOnThisDay ? '加载中…' : '' }}</span>
-                </div>
-                <div v-if="onThisDayItems.length === 0 && !loadingOnThisDay" class="empty">
-                  那时候我还没出生呢，不过现在我在了。
-                </div>
-                <div v-else class="otdList">
-                  <div v-for="it in onThisDayItems" :key="it.date || 'err'" class="otdItem">
-                    <div v-if="it.__error" class="otdError">加载失败：{{ it.__error }}</div>
-                    <template v-else>
-                      <div class="otdDate">{{ it.date }}</div>
-                      <div class="otdGrid">
-                        <div class="otdCol">
-                          <div class="otdLabel">我的</div>
-                          <div class="otdText">{{ it.userText || '（空）' }}</div>
-                        </div>
-                        <div class="otdCol">
-                          <div class="otdLabel">Cornie</div>
-                          <div class="otdText">{{ it.cornieText || '（空）' }}</div>
-                        </div>
-                      </div>
-                    </template>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </section>
-        </div>
+        <DiaryHome
+          v-if="diaryView === 'home'"
+          @go="(v) => diaryView = v"
+        />
+        <DiaryEditor
+          v-else-if="diaryView === 'editor'"
+          @back="diaryView = 'home'"
+        />
+        <CornieDiaryReview
+          v-else-if="diaryView === 'cornie-review'"
+          @back="diaryView = 'home'"
+        />
+        <OnThisDayPage
+          v-else-if="diaryView === 'on-this-day'"
+          @back="diaryView = 'home'"
+        />
       </section>
 
       <!-- 收支模式 -->
