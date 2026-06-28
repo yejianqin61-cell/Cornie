@@ -3,7 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { getEntry, listEntries, listOnThisDay, regenerateCornie, upsertEntry } from '../api'
 
 function pad2(n) { return String(n).padStart(2, '0') }
-function toISODate(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
+function toISODate(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}` }
 function toISOMonth(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}` }
 
 const today = new Date()

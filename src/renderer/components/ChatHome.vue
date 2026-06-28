@@ -45,6 +45,12 @@ async function onSend() {
   await scrollChatToBottom(chatListRef)
 }
 
+function autoResize(e) {
+  const el = e.target
+  el.style.height = 'auto'
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px'
+}
+
 async function onConfirm(action, item) {
   await handleConfirmAction(action, item)
   await scrollChatToBottom(chatListRef)
@@ -132,11 +138,7 @@ onMounted(async () => {
         placeholder="和铃湾说句话..."
         rows="1"
         @keydown.enter.exact.prevent="onSend"
-        @input="
-          const el = $event.target
-          el.style.height = 'auto'
-          el.style.height = Math.min(el.scrollHeight, 120) + 'px'
-        "
+        @input="autoResize"
       />
       <button
         class="primary chatSendBtn"
