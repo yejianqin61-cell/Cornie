@@ -2,14 +2,9 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import {
   clearModelSettings,
-  getEntry,
   getModelSettings,
   getModelStatus,
-  listEntries,
-  listOnThisDay,
-  regenerateCornie,
-  saveModelSettings,
-  upsertEntry
+  saveModelSettings
 } from './api'
 import ChatHome from './components/ChatHome.vue'
 import DiaryHome from './components/DiaryHome.vue'
@@ -27,40 +22,6 @@ import ScheduleHome from './components/ScheduleHome.vue'
 import SettingsHome from './components/SettingsHome.vue'
 import DeepseekConfig from './components/DeepseekConfig.vue'
 import AdvancedSettings from './components/AdvancedSettings.vue'
-import TodoWorkspace from './components/TodoWorkspace.vue'
-import ScheduleWorkspace from './components/ScheduleWorkspace.vue'
-
-function pad2(n) {
-  return String(n).padStart(2, '0')
-}
-function toISODate(d) {
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
-}
-function toISOMonth(d) {
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`
-}
-
-const today = new Date()
-const selectedDate = ref(toISODate(today))
-const selectedMonth = ref(toISOMonth(today))
-
-const entries = ref([])
-const loadingList = ref(false)
-const loadingEntry = ref(false)
-const loadingOnThisDay = ref(false)
-const saving = ref(false)
-const regenerating = ref(false)
-const errorMsg = ref('')
-
-const entry = ref({
-  date: selectedDate.value,
-  userText: '',
-  cornieText: ''
-})
-const dirty = ref(false)
-const onThisDayItems = ref([])
-
-const selectedLabel = computed(() => selectedDate.value)
 
 const sections = [
   { id: 'chat',            label: '聊天',       hint: '和铃湾说说话',       icon: '💬' },
@@ -187,81 +148,6 @@ async function resetModelSettings() {
   }
 }
 
-async function refreshList() {
-  loadingList.value = true
-  errorMsg.value = ''
-  try {
-    const data = await listEntries({ month: selectedMonth.value })
-    entries.value = data.entries
-  } catch (e) {
-    errorMsg.value = e?.message || String(e)
-  } finally {
-    loadingList.value = false
-  }
-}
-
-async function loadEntry(date) {
-  loadingEntry.value = true
-  errorMsg.value = ''
-  try {
-    const data = await getEntry(date)
-    entry.value = data.entry
-    dirty.value = false
-  } catch (e) {
-    errorMsg.value = e?.message || String(e)
-  } finally {
-    loadingEntry.value = false
-  }
-}
-
-async function loadOnThisDay(date) {
-  loadingOnThisDay.value = true
-  try {
-    const data = await listOnThisDay(date, { limit: 10 })
-    onThisDayItems.value = data.items || []
-  } catch (e) {
-    onThisDayItems.value = [{ date: '', userText: '', cornieText: '', __error: e?.message || String(e) }]
-  } finally {
-    loadingOnThisDay.value = false
-  }
-}
-
-async function save() {
-  saving.value = true
-  errorMsg.value = ''
-  try {
-    const data = await upsertEntry(selectedDate.value, {
-      userText: entry.value.userText,
-      cornieText: entry.value.cornieText
-    })
-    entry.value = data.entry
-    dirty.value = false
-    await refreshList()
-  } catch (e) {
-    errorMsg.value = e?.message || String(e)
-  } finally {
-    saving.value = false
-  }
-}
-
-async function regenCornie() {
-  regenerating.value = true
-  errorMsg.value = ''
-  try {
-    const data = await regenerateCornie(selectedDate.value)
-    entry.value = data.entry
-    await refreshList()
-  } catch (e) {
-    errorMsg.value = e?.message || String(e)
-  } finally {
-    regenerating.value = false
-  }
-}
-
-function pickDate(date) {
-  selectedDate.value = date
-}
-
 watch(mode, () => {
   diaryView.value = 'home'
   omView.value = 'home'
@@ -270,9 +156,6 @@ watch(mode, () => {
 
 onMounted(async () => {
   await refreshModelState()
-  await refreshList()
-  await loadEntry(selectedDate.value)
-  await loadOnThisDay(selectedDate.value)
 })
 </script>
 
@@ -314,9 +197,7 @@ onMounted(async () => {
           <div class="topTitle">{{ modeMeta.label }}</div>
           <div class="topHint">{{ modeMeta.hint }}</div>
         </div>
-        <div class="topActions" v-if="mode === 'diary'">
-          <input class="monthInput" type="month" v-model="selectedMonth" aria-label="选择月份" />
-          <button @click="pickDate(toISODate(new Date()))">回到今天</button>
+        <div class="topActions">
         </div>
       </header>
 
