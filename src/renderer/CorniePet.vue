@@ -1,15 +1,25 @@
 <script setup>
-import { computed, nextTick, onMounted, ref } from 'vue'
-import { sendMessage } from './api'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useChat } from './composables/useChat'
 
 const hover = ref(false)
 const pinned = ref(false)
 const focused = ref(false)
-const sending = ref(false)
 const message = ref('')
-const messages = ref([])
 const dragReady = ref(false)
 const chatListRef = ref(null)
+
+const {
+  messages,
+  sending,
+  send: sendChat,
+  loadConversation,
+  restorePendingConfirmations,
+  startConversationSync,
+  stopConversationSync
+} = useChat()
+
+const displayMessages = computed(() => messages.value.filter((item) => item.kind === 'message'))
 
 const mood = computed(() => {
   if (sending.value) return '( •_• )'
@@ -101,43 +111,32 @@ async function send() {
   focused.value = true
   pinned.value = true
 
-  messages.value.push({
-    id: `user-${Date.now()}`,
-    role: 'user',
-    content: text
-  })
+  await sendChat(text)
   await scrollToLatest()
-
-  sending.value = true
-  try {
-    const data = await sendMessage(text, today())
-    if (data?.cornieMessage?.content) {
-      messages.value.push({
-        id: data.cornieMessage.id || `cornie-${Date.now()}`,
-        role: 'cornie',
-        content: data.cornieMessage.content
-      })
-    } else {
-      messages.value.push({
-        id: `cornie-empty-${Date.now()}`,
-        role: 'cornie',
-        content: '小铃湾刚刚愣了一下，不过还在这里陪你。'
-      })
-    }
-  } catch {
-    messages.value.push({
-      id: `cornie-error-${Date.now()}`,
-      role: 'cornie',
-      content: '唔，我刚刚走神了一下。主人再说一遍，好不好？'
-    })
-  } finally {
-    sending.value = false
-    await scrollToLatest()
-  }
 }
 
-onMounted(() => {
+watch(
+  () => displayMessages.value.length,
+  async () => {
+    await scrollToLatest()
+  }
+)
+
+onMounted(async () => {
   dragReady.value = typeof window !== 'undefined' && Boolean(window.cornieDesktop)
+  const date = today()
+  await loadConversation(date)
+  await restorePendingConfirmations(date)
+  await scrollToLatest()
+  startConversationSync(date, {
+    onAfterSync: async () => {
+      await scrollToLatest()
+    }
+  })
+})
+
+onBeforeUnmount(() => {
+  stopConversationSync()
 })
 </script>
 
@@ -159,14 +158,14 @@ onMounted(() => {
         <div class="petPanelAura"></div>
 
         <div ref="chatListRef" class="petMessages">
-          <div v-if="messages.length === 0 && !sending" class="petEmpty">
+          <div v-if="displayMessages.length === 0 && !sending" class="petEmpty">
             <div class="petEmptyTitle">小铃湾在这里</div>
             <div class="petEmptyHint">把今天想说的话，轻轻放过来吧。</div>
           </div>
 
           <template v-else>
             <div
-              v-for="item in messages"
+              v-for="item in displayMessages"
               :key="item.id"
               class="petMessageRow"
               :class="item.role === 'user' ? 'is-user' : 'is-cornie'"

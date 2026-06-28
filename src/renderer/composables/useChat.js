@@ -10,6 +10,7 @@ import { collectChangedDomains, emitDataChanged } from '../syncSignals'
 export function useChat() {
   const messages = ref([])
   const sending = ref(false)
+  let syncTimer = null
 
   function today() {
     return new Date().toISOString().slice(0, 10)
@@ -191,6 +192,38 @@ export function useChat() {
     }
   }
 
+  async function syncConversation(date) {
+    await loadConversation(date)
+    await restorePendingConfirmations(date)
+  }
+
+  function startConversationSync(date, options = {}) {
+    const syncDate = date || today()
+    const intervalMs = Math.max(1000, Number(options.intervalMs) || 3000)
+    const onAfterSync = typeof options.onAfterSync === 'function' ? options.onAfterSync : null
+
+    stopConversationSync()
+
+    const runSync = async () => {
+      if (typeof document !== 'undefined' && document.hidden) return
+      await syncConversation(syncDate)
+      await onAfterSync?.()
+    }
+
+    syncTimer = window.setInterval(() => {
+      runSync()
+    }, intervalMs)
+
+    runSync()
+  }
+
+  function stopConversationSync() {
+    if (syncTimer) {
+      window.clearInterval(syncTimer)
+      syncTimer = null
+    }
+  }
+
   async function scrollChatToBottom(chatListRef) {
     await nextTick()
     if (chatListRef?.value) {
@@ -208,6 +241,9 @@ export function useChat() {
     handleConfirmAction,
     restorePendingConfirmations,
     loadConversation,
+    syncConversation,
+    startConversationSync,
+    stopConversationSync,
     scrollChatToBottom
   }
 }

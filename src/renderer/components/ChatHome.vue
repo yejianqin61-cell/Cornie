@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
 import { useChat } from '../composables/useChat'
 import ConfirmCard from './ConfirmCard.vue'
 import AskBackBubble from './AskBackBubble.vue'
@@ -12,6 +12,8 @@ const {
   handleConfirmAction,
   restorePendingConfirmations,
   loadConversation,
+  startConversationSync,
+  stopConversationSync,
   scrollChatToBottom
 } = useChat()
 
@@ -61,6 +63,15 @@ onMounted(async () => {
   await loadConversation(date)
   await restorePendingConfirmations(date)
   await scrollChatToBottom(chatListRef)
+  startConversationSync(date, {
+    onAfterSync: async () => {
+      await scrollChatToBottom(chatListRef)
+    }
+  })
+})
+
+onBeforeUnmount(() => {
+  stopConversationSync()
 })
 </script>
 
