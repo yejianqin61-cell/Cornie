@@ -11,10 +11,7 @@ import {
   saveModelSettings,
   upsertEntry
 } from './api'
-import CornieComposer from './CornieComposer.vue'
-import ChatHistory from './ChatHistory.vue'
 import LedgerWorkspace from './components/LedgerWorkspace.vue'
-import MemoryWikiWorkspace from './components/MemoryWikiWorkspace.vue'
 import TodoWorkspace from './components/TodoWorkspace.vue'
 import ScheduleWorkspace from './components/ScheduleWorkspace.vue'
 
@@ -51,16 +48,16 @@ const onThisDayItems = ref([])
 const selectedLabel = computed(() => selectedDate.value)
 
 const sections = [
-  { id: 'diary', label: '日记本', hint: '保留现在的日记与往年今日' },
-  { id: 'ledger', label: '收支', hint: '记录收入支出与类目' },
-  { id: 'todo', label: '待办', hint: '整理待办与类目' },
-  { id: 'schedule', label: '日程', hint: '管理未来安排与类目' },
-  { id: 'memory-wiki', label: 'Memory Wiki', hint: '查看长期记忆页面与主题索引' },
-  { id: 'history', label: '聊天记录', hint: '按天翻阅聊天历史' },
-  { id: 'cornie-composer', label: 'Cornie 拼装', hint: '编辑 Cornie 外观贴图' }
+  { id: 'chat',            label: '聊天',       hint: '和铃湾说说话',       icon: '💬' },
+  { id: 'diary',           label: '日记',       hint: '写下今天的心情',       icon: '📔' },
+  { id: 'ledger',          label: '收支',       hint: '轻松记一笔',           icon: '💰' },
+  { id: 'todo',            label: '待办',       hint: '今天要做什么',         icon: '✅' },
+  { id: 'schedule',        label: '日程',       hint: '接下来的安排',         icon: '📅' },
+  { id: 'observe-memory',  label: '观察与记忆',  hint: '想记住的小事',         icon: '🌟' },
+  { id: 'settings',        label: '设置',       hint: '铃湾的连接和偏好',     icon: '⚙️' },
 ]
 
-const mode = ref('diary')
+const mode = ref('chat')
 const modeMeta = computed(() => sections.find((item) => item.id === mode.value) || sections[0])
 
 const modelStatus = ref({ ok: false, configured: false, provider: 'deepseek', model: '', reason: '' })
@@ -87,70 +84,20 @@ const settingsError = ref('')
 const settingsNotice = ref('')
 
 const isGuideVisible = computed(() => !modelStatus.value.configured)
-const guideTitle = computed(() => {
-  if (!modelStatus.value.configured) return '先把 DeepSeek 的钥匙交给铃湾吧'
-  return '铃湾暂时没连上 DeepSeek'
-})
-const guideReason = computed(() => {
-  if (!modelStatus.value.configured) {
-    return '现在还没检测到可用的 DeepSeek API Key。只要先把钥匙放好，铃湾就能继续陪你记日记、记账、写待办。'
-  }
-  return '钥匙已经在了，但铃湾这会儿没顺利连上 DeepSeek。我们可以先检查一下网络、地址、模型名，或者重新试一遍。'
-})
-const statusHint = computed(() => {
-  if (modelStatus.value.ok) {
-    return '已经连上啦，铃湾现在可以安心开工。'
-  }
-  if (!modelStatus.value.configured) {
-    return '先把钥匙放好，铃湾才能继续帮主人处理事情。'
-  }
-  return '钥匙在，但连接还没顺过来。我们可以先按下面的小提示排查一下。'
-})
-const recoveryTips = computed(() => {
-  if (!modelStatus.value.configured) {
-    return [
-      '先确认 API Key 已经完整贴进来，不要漏掉开头或结尾。',
-      '如果你有自定义地址，也一起填上；没有的话，Base URL 留空就好。',
-      '点一下“保存并重新检测”，让铃湾再试一次。'
-    ]
-  }
-
-  if (modelStatus.value.reason === 'request_failed') {
-    return [
-      '先看看当前网络是不是正常。',
-      '如果你用了代理或自定义地址，确认它现在还能访问。',
-      '重新检测一次；如果还是不行，再检查钥匙有没有过期。'
-    ]
-  }
-
-  return [
-    '确认 API Key、Base URL、模型名有没有填错。',
-    '如果你刚换过钥匙，可以先清空再重新保存一次。',
-    '重试前不用着急，铃湾会一直在这里等你。'
-  ]
-})
 
 function toFriendlySettingsError(error) {
   const raw = String(error?.message || error || '').trim()
-  if (!raw) {
-    return '铃湾刚刚没把设置收好，我们再试一次就好。'
-  }
-  if (/apiKey is required/i.test(raw)) {
-    return 'API Key 这一栏还是空的，铃湾还没拿到钥匙呢。'
-  }
-  if (/invalid timeout/i.test(raw)) {
-    return '超时毫秒要填成正整数呀，比如 30000。'
-  }
-  if (/http_|request_failed|fetch|network|timeout/i.test(raw)) {
+  if (!raw) return '铃湾刚刚没把设置收好，我们再试一次就好。'
+  if (/apiKey is required/i.test(raw)) return 'API Key 这一栏还是空的，铃湾还没拿到钥匙呢。'
+  if (/invalid timeout/i.test(raw)) return '超时毫秒要填成正整数呀，比如 30000。'
+  if (/http_|request_failed|fetch|network|timeout/i.test(raw))
     return '铃湾刚刚去敲门时没收到顺利回应，可能是网络、地址或者钥匙状态出了点小岔子。'
-  }
   return '这次保存没成功，不过别担心，我们检查一下输入内容再试一次就好。'
 }
 
 async function refreshModelState() {
   settingsLoading.value = true
   settingsError.value = ''
-
   try {
     const [statusData, settingsData] = await Promise.all([getModelStatus(), getModelSettings()])
     modelStatus.value = statusData
@@ -161,9 +108,9 @@ async function refreshModelState() {
       model: settingsData.settings.model || 'deepseek-chat',
       timeoutMs: settingsData.settings.timeoutMs ? String(settingsData.settings.timeoutMs) : '30000'
     }
-  } catch (error) {
+  } catch {
     modelStatus.value = { ok: false, configured: false, provider: 'deepseek', model: '', reason: 'request_failed' }
-    settingsError.value = toFriendlySettingsError(error)
+    settingsError.value = '铃湾没能连上，我们可以稍后再试。'
   } finally {
     settingsLoading.value = false
   }
@@ -182,7 +129,6 @@ async function submitModelSettings() {
   settingsSaving.value = true
   settingsError.value = ''
   settingsNotice.value = ''
-
   try {
     await saveModelSettings({
       apiKey: settingsForm.value.apiKey,
@@ -204,7 +150,6 @@ async function resetModelSettings() {
   settingsSaving.value = true
   settingsError.value = ''
   settingsNotice.value = ''
-
   try {
     await clearModelSettings()
     settingsNotice.value = '已经把本地保存的钥匙收起来啦。'
@@ -314,51 +259,87 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="appShell" :class="{ guided: isGuideVisible }">
-    <aside class="navPanel" :class="{ disabled: isGuideVisible }">
+  <div class="appShell">
+    <!-- 左侧导航 -->
+    <nav class="navPanel">
       <div class="brandBlock">
-        <div class="logoMark">C</div>
-        <div>
-          <div class="brandTitle">Cornie 工作台</div>
-          <div class="brandHint">铃湾把日记、收支、待办、日程和聊天都放到一起啦。</div>
-        </div>
+        <div class="brandTitle">铃湾</div>
+        <div class="brandSub">Cornie</div>
       </div>
 
-      <nav class="navList">
+      <div class="navList">
         <button
           v-for="section in sections"
           :key="section.id"
           class="navItem"
           :class="{ active: mode === section.id }"
-          :disabled="isGuideVisible"
           @click="mode = section.id"
         >
-          <span class="navLabel">{{ section.label }}</span>
-          <span class="navHint">{{ section.hint }}</span>
+          <span class="navIcon">{{ section.icon }}</span>
+          <div class="navText">
+            <span class="navLabel">{{ section.label }}</span>
+            <span class="navHint">{{ section.hint }}</span>
+          </div>
         </button>
-      </nav>
-    </aside>
+      </div>
 
-    <main class="mainPanel" :class="{ disabled: isGuideVisible }">
+      <div class="navFooter">
+        <div v-if="modelStatus.ok" class="statusDot ok">铃湾在线</div>
+        <div v-else class="statusDot off">未连接</div>
+      </div>
+    </nav>
+
+    <!-- 右侧主区 -->
+    <main class="mainPanel">
       <header class="topBar">
         <div>
           <div class="topTitle">{{ modeMeta.label }}</div>
           <div class="topHint">{{ modeMeta.hint }}</div>
         </div>
-
         <div class="topActions" v-if="mode === 'diary'">
           <input class="monthInput" type="month" v-model="selectedMonth" aria-label="选择月份" />
           <button @click="pickDate(toISODate(new Date()))">回到今天</button>
         </div>
       </header>
 
-      <div v-if="modelStatus.ok && modelSettings.configured" class="modelSummary">
-        <span>铃湾已经拿到钥匙啦，当前模型是 {{ modelStatus.model || modelSettings.model || 'deepseek-chat' }}。</span>
-        <span v-if="modelSettings.maskedApiKey">已保存：{{ modelSettings.maskedApiKey }}</span>
-        <button class="modelRetry" @click="refreshModelState">刷新状态</button>
-      </div>
+      <!-- 配网引导遮罩 -->
+      <section v-if="isGuideVisible" class="guideBanner">
+        <div class="guideBannerInner">
+          <div class="guideBannerTitle">先把 DeepSeek 的钥匙交给铃湾吧</div>
+          <div class="guideBannerText">还没检测到可用钥匙，铃湾需要连上 DeepSeek 才能继续陪你聊天、记日记。</div>
+          <form class="guideBannerForm" @submit.prevent="submitModelSettings">
+            <input
+              v-model="settingsForm.apiKey"
+              type="password"
+              autocomplete="off"
+              placeholder="把你的 API Key 放在这里"
+            />
+            <input v-model="settingsForm.baseUrl" placeholder="Base URL（可留空）" />
+            <input v-model="settingsForm.model" placeholder="模型名（默认 deepseek-chat）" />
+            <input v-model="settingsForm.timeoutMs" inputmode="numeric" placeholder="超时毫秒（如 30000）" />
+            <div class="guideBannerActions">
+              <button class="primary" :disabled="settingsSaving || settingsLoading" type="submit">
+                {{ settingsSaving ? '保存中…' : '保存并检测' }}
+              </button>
+              <button :disabled="settingsSaving || settingsLoading" type="button" @click="checkModel">只检测</button>
+            </div>
+          </form>
+          <div v-if="settingsError" class="guideBannerError">{{ settingsError }}</div>
+          <div v-if="settingsNotice" class="guideBannerNotice">{{ settingsNotice }}</div>
+        </div>
+      </section>
 
-      <section v-if="mode === 'diary'" class="contentFrame">
+      <!-- 聊天模式（占位，task-003 构建） -->
+      <section v-else-if="mode === 'chat'" class="contentFrame">
+        <div class="placeholderPage">
+          <div class="placeholderIcon">💬</div>
+          <div class="placeholderTitle">和铃湾聊聊天</div>
+          <div class="placeholderHint">聊天首页将在下一步构建。</div>
+        </div>
+      </section>
+
+      <!-- 日记模式（保留现有日记内联 UI，task-005 拆分） -->
+      <section v-else-if="mode === 'diary'" class="contentFrame">
         <div class="diaryGrid">
           <aside class="sidebar card">
             <div class="sidebarHead">
@@ -366,7 +347,6 @@ onMounted(async () => {
               <div class="sidebarHint" v-if="loadingList">加载中…</div>
               <div class="sidebarHint" v-else>{{ entries.length }} 天有记录</div>
             </div>
-
             <div class="list">
               <button
                 v-for="e in entries"
@@ -393,18 +373,16 @@ onMounted(async () => {
                 </div>
               </div>
               <div class="contentActions">
-                <button :disabled="saving || !dirty" @click="save">
+                <button class="primary" :disabled="saving || !dirty" @click="save">
                   {{ saving ? '保存中…' : '保存' }}
                 </button>
                 <button :disabled="regenerating" @click="regenCornie">
-                  {{ regenerating ? '生成中…' : '生成 Cornie 日记' }}
+                  {{ regenerating ? '生成中…' : '让铃湾写一篇' }}
                 </button>
               </div>
             </div>
 
-            <div v-if="errorMsg" class="error">
-              {{ errorMsg }}
-            </div>
+            <div v-if="errorMsg" class="error">{{ errorMsg }}</div>
 
             <div class="grid">
               <div class="panel">
@@ -415,26 +393,22 @@ onMounted(async () => {
                   @input="dirty = true"
                 />
               </div>
-
               <div class="panel">
                 <div class="panelTitle">Cornie 的日记</div>
                 <textarea
                   v-model="entry.cornieText"
-                  placeholder="点击「生成 Cornie 日记」让 Cornie 帮你写一篇。"
+                  placeholder="点击「让铃湾写一篇」让 Cornie 帮你写。"
                   @input="dirty = true"
                 />
               </div>
-
               <div class="panel span2">
                 <div class="panelTitle">
                   往年今日
                   <span class="panelHint">{{ loadingOnThisDay ? '加载中…' : '' }}</span>
                 </div>
-
                 <div v-if="onThisDayItems.length === 0 && !loadingOnThisDay" class="empty">
                   那时候我还没出生呢，不过现在我在了。
                 </div>
-
                 <div v-else class="otdList">
                   <div v-for="it in onThisDayItems" :key="it.date || 'err'" class="otdItem">
                     <div v-if="it.__error" class="otdError">加载失败：{{ it.__error }}</div>
@@ -459,109 +433,43 @@ onMounted(async () => {
         </div>
       </section>
 
+      <!-- 收支模式 -->
       <section v-else-if="mode === 'ledger'" class="contentFrame">
         <LedgerWorkspace />
       </section>
 
+      <!-- 待办模式 -->
       <section v-else-if="mode === 'todo'" class="contentFrame">
         <TodoWorkspace />
       </section>
 
+      <!-- 日程模式 -->
       <section v-else-if="mode === 'schedule'" class="contentFrame">
         <ScheduleWorkspace />
       </section>
 
-      <section v-else-if="mode === 'memory-wiki'" class="contentFrame">
-        <MemoryWikiWorkspace />
+      <!-- 观察与记忆（占位，task-006 构建） -->
+      <section v-else-if="mode === 'observe-memory'" class="contentFrame">
+        <div class="placeholderPage">
+          <div class="placeholderIcon">🌟</div>
+          <div class="placeholderTitle">观察与记忆</div>
+          <div class="placeholderHint">观察与记忆首页将在后续步骤构建。</div>
+        </div>
       </section>
 
-      <section v-else-if="mode === 'history'" class="contentFrame">
-        <ChatHistory />
-      </section>
-
-      <section v-else class="contentFrame">
-        <CornieComposer />
+      <!-- 设置（占位，task-012 构建） -->
+      <section v-else-if="mode === 'settings'" class="contentFrame">
+        <div class="placeholderPage">
+          <div class="placeholderIcon">⚙️</div>
+          <div class="placeholderTitle">设置</div>
+          <div class="placeholderHint">设置页将在后续步骤构建。</div>
+          <div v-if="modelStatus.configured" class="guideBannerReset">
+            <span>已保存钥匙：{{ modelSettings.maskedApiKey }}</span>
+            <button class="danger" :disabled="settingsSaving" @click="resetModelSettings">清空钥匙</button>
+          </div>
+        </div>
       </section>
     </main>
-
-    <section v-if="isGuideVisible" class="guideOverlay">
-      <div class="guideCard">
-        <div class="guideEyebrow">DeepSeek 引导</div>
-        <h1 class="guideTitle">{{ guideTitle }}</h1>
-        <p class="guideText">{{ guideReason }}</p>
-        <div class="guideStatus">{{ statusHint }}</div>
-
-        <div class="guideInfo">
-          <div class="guideInfoCard">
-            <div class="guideInfoTitle">铃湾会怎么用这把钥匙？</div>
-            <div class="guideInfoText">用来连接 DeepSeek，帮主人聊天、生成 Cornie 日记、理解工具调用结果。</div>
-          </div>
-          <div class="guideInfoCard">
-            <div class="guideInfoTitle">哪些内容会出门？</div>
-            <div class="guideInfoText">你发给铃湾的对话内容、生成请求，以及为了完成任务必须发送给模型的上下文。</div>
-          </div>
-          <div class="guideInfoCard">
-            <div class="guideInfoTitle">联网和隐私要知道什么？</div>
-            <div class="guideInfoText">只要开始调用模型，请求就会发往 DeepSeek。铃湾会尽量少带无关内容，但这一步不是纯离线能力。</div>
-          </div>
-        </div>
-
-        <div class="guideTips">
-          <div class="guideTipsTitle">如果还是连不上，可以先这样试试：</div>
-          <ul class="guideTipsList">
-            <li v-for="tip in recoveryTips" :key="tip">{{ tip }}</li>
-          </ul>
-        </div>
-
-        <form class="guideForm" @submit.prevent="submitModelSettings">
-          <label>
-            <span>DeepSeek API Key</span>
-            <input
-              v-model="settingsForm.apiKey"
-              type="password"
-              autocomplete="off"
-              placeholder="把你的钥匙放在这里"
-            />
-          </label>
-          <label>
-            <span>Base URL</span>
-            <input v-model="settingsForm.baseUrl" placeholder="默认可留空，或填写自定义地址" />
-          </label>
-          <label>
-            <span>模型名</span>
-            <input v-model="settingsForm.model" placeholder="默认是 deepseek-chat" />
-          </label>
-          <label>
-            <span>超时毫秒</span>
-            <input v-model="settingsForm.timeoutMs" inputmode="numeric" placeholder="例如 30000" />
-          </label>
-
-          <div class="guideCurrent" v-if="modelSettings.maskedApiKey">
-            当前已保存：{{ modelSettings.maskedApiKey }}
-          </div>
-          <div class="guideError" v-if="settingsError">{{ settingsError }}</div>
-          <div class="guideNotice" v-if="settingsNotice">{{ settingsNotice }}</div>
-
-          <div class="guideActions">
-            <button :disabled="settingsSaving || settingsLoading" type="submit">
-              {{ settingsSaving ? '保存中…' : '保存并重新检测' }}
-            </button>
-            <button class="ghostBtn" :disabled="settingsSaving || settingsLoading" type="button" @click="checkModel">
-              只重新检测
-            </button>
-            <button
-              v-if="modelSettings.configured"
-              class="ghostBtn dangerBtn"
-              :disabled="settingsSaving || settingsLoading"
-              type="button"
-              @click="resetModelSettings"
-            >
-              清空已保存钥匙
-            </button>
-          </div>
-        </form>
-      </div>
-    </section>
   </div>
 </template>
 
@@ -569,107 +477,131 @@ onMounted(async () => {
 .appShell{
   height: 100vh;
   display:grid;
-  grid-template-columns: 280px minmax(0, 1fr);
+  grid-template-columns: 260px minmax(0, 1fr);
   gap: 16px;
   padding: 16px;
-  position: relative;
 }
-.appShell.guided{
-  background:
-    radial-gradient(circle at top left, rgba(253,224,71,.10), transparent 36%),
-    radial-gradient(circle at bottom right, rgba(125,211,252,.12), transparent 42%);
-}
-.disabled{
-  pointer-events: none;
-  filter: blur(8px) saturate(.8);
-  opacity: .28;
-  user-select: none;
-}
+
+/* ─── 导航面板 ─── */
 .navPanel{
   border: 1px solid var(--border);
-  border-radius: 24px;
-  background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04));
-  padding: 18px;
+  border-radius: 20px;
+  background: var(--surface);
+  padding: 16px;
   display:flex;
   flex-direction:column;
-  gap: 18px;
+  gap: 14px;
   min-height: 0;
 }
+
 .brandBlock{
   display:flex;
-  gap: 12px;
-  align-items:flex-start;
-}
-.logoMark{
-  width: 42px;
-  height: 42px;
-  display:grid;
-  place-items:center;
-  border-radius: 16px;
-  background: rgba(125,211,252,.15);
-  border: 1px solid rgba(125,211,252,.28);
-  color: var(--accent);
-  font-weight: 800;
+  align-items:baseline;
+  gap: 8px;
+  padding: 0 8px;
 }
 .brandTitle{
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 800;
+  color: var(--text);
 }
-.brandHint{
-  margin-top: 6px;
-  color: var(--muted);
+.brandSub{
   font-size: 12px;
-  line-height: 1.5;
+  color: var(--muted);
 }
+
 .navList{
   display:flex;
   flex-direction:column;
-  gap: 10px;
+  gap: 6px;
   overflow:auto;
+  flex:1;
 }
+
 .navItem{
   display:flex;
-  flex-direction:column;
-  align-items:flex-start;
-  gap: 4px;
-  padding: 14px 14px;
-  border-radius: 18px;
+  align-items:center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
   text-align:left;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  width: 100%;
+}
+.navItem:hover{
+  background: var(--surface-2);
 }
 .navItem.active{
-  background: rgba(125,211,252,.14);
-  border-color: rgba(125,211,252,.35);
+  background: rgba(232,133,106,.10);
+}
+.navIcon{
+  font-size: 20px;
+  flex: 0 0 auto;
+}
+.navText{
+  display:flex;
+  flex-direction:column;
+  gap: 2px;
+  min-width: 0;
 }
 .navLabel{
   font-weight: 700;
+  font-size: 14px;
 }
 .navHint{
   color: var(--muted);
-  font-size: 12px;
-  line-height: 1.4;
+  font-size: 11px;
+  line-height: 1.3;
 }
+
+.navFooter{
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+}
+.statusDot{
+  font-size: 12px;
+  display:flex;
+  align-items:center;
+  gap: 6px;
+}
+.statusDot::before{
+  content:'';
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+.statusDot.ok{ color: #5B9A6B; }
+.statusDot.ok::before{ background: #5B9A6B; }
+.statusDot.off{ color: var(--muted); }
+.statusDot.off::before{ background: #D6D0C4; }
+
+/* ─── 主区 ─── */
 .mainPanel{
   display:flex;
   flex-direction:column;
   gap: 14px;
   min-height: 0;
 }
+
 .topBar{
   display:flex;
   align-items:flex-start;
   justify-content: space-between;
   gap: 12px;
-  padding: 16px 18px;
+  padding: 16px 20px;
   border: 1px solid var(--border);
-  border-radius: 22px;
-  background: rgba(255,255,255,.05);
+  border-radius: 18px;
+  background: var(--surface);
 }
 .topTitle{
   font-size: 24px;
   font-weight: 800;
 }
 .topHint{
-  margin-top: 6px;
+  margin-top: 4px;
   color: var(--muted);
   font-size: 13px;
 }
@@ -681,34 +613,88 @@ onMounted(async () => {
 .monthInput{
   width: 160px;
 }
-.modelSummary{
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
+
+/* ─── 配网引导横条 ─── */
+.guideBanner{
+  border: 1px solid rgba(232,133,106,.25);
   border-radius: 18px;
-  border: 1px solid rgba(125,211,252,.28);
-  background: rgba(125,211,252,.08);
-  color: rgba(224,242,254,.95);
+  background: #FFF8F5;
+  padding: 24px;
+}
+.guideBannerInner{
+  display:flex;
+  flex-direction:column;
+  gap: 14px;
+  max-width: 640px;
+}
+.guideBannerTitle{
+  font-size: 18px;
+  font-weight: 800;
+}
+.guideBannerText{
+  color: var(--muted);
+  line-height: 1.6;
+}
+.guideBannerForm{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.guideBannerForm input{
+  min-width: 0;
+}
+.guideBannerActions{
+  grid-column: 1 / -1;
+  display:flex;
+  gap: 10px;
+}
+.guideBannerError{
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(217,106,92,.25);
+  background: rgba(217,106,92,.06);
+  color: var(--danger);
   font-size: 13px;
-  flex-wrap: wrap;
 }
-.modelRetry{
-  margin-left: auto;
-  padding: 6px 12px;
-  font-size: 12px;
-  border-radius: 8px;
-  border: 1px solid rgba(125,211,252,.35);
-  background: rgba(125,211,252,.12);
-  color: inherit;
-  cursor: pointer;
-  white-space: nowrap;
+.guideBannerNotice{
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(91,154,107,.25);
+  background: rgba(91,154,107,.06);
+  color: #5B9A6B;
+  font-size: 13px;
 }
-.modelRetry:hover{ background: rgba(125,211,252,.20); }
+.guideBannerReset{
+  display:flex;
+  align-items:center;
+  gap: 12px;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* ─── 占位页 ─── */
+.placeholderPage{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap: 12px;
+  color: var(--muted);
+  min-height: 400px;
+}
+.placeholderIcon{ font-size: 48px; }
+.placeholderTitle{ font-size: 20px; font-weight: 700; color: var(--text); }
+.placeholderHint{ font-size: 14px; }
+
+/* ─── 内容区 ─── */
 .contentFrame{
   flex:1;
   min-height: 0;
 }
+
+/* ─── 日记模块（task-005 前临时保留） ─── */
 .diaryGrid{
   height: 100%;
   display:grid;
@@ -742,21 +728,26 @@ onMounted(async () => {
   gap: 10px;
   padding: 10px 12px;
   border-radius: 14px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
 }
+.row:hover{ background: var(--surface-2); }
 .row.active{
-  border-color: rgba(125,211,252,.35);
-  background: rgba(125,211,252,.10);
+  border-color: rgba(232,133,106,.25);
+  background: rgba(232,133,106,.08);
 }
 .date{ font-variant-numeric: tabular-nums; font-size: 13px; }
 .meta{ display:flex; gap: 6px; }
 .pill{
-  font-size: 12px;
+  font-size: 11px;
   padding: 2px 8px;
   border-radius: 999px;
   border: 1px solid var(--border);
   color: var(--muted);
 }
-.pill2{ color: rgba(167,139,250,.9); }
+.pill2{ border-color: rgba(232,133,106,.30); color: var(--accent); }
 .content{
   display:flex;
   flex-direction: column;
@@ -794,18 +785,12 @@ onMounted(async () => {
   border: 1px dashed var(--border);
   border-radius: 12px;
   color: var(--muted);
-  background: rgba(255,255,255,.02);
 }
-.otdList{
-  display:flex;
-  flex-direction: column;
-  gap: 10px;
-}
+.otdList{ display:flex; flex-direction: column; gap: 10px; }
 .otdItem{
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 12px;
-  background: rgba(255,255,255,.02);
 }
 .otdDate{ font-weight: 700; font-variant-numeric: tabular-nums; margin-bottom: 8px; }
 .otdGrid{
@@ -824,9 +809,9 @@ onMounted(async () => {
   padding-right: 6px;
 }
 .otdError{
-  border: 1px solid rgba(248,113,113,.35);
-  background: rgba(248,113,113,.08);
-  color: rgba(254,226,226,.95);
+  border: 1px solid rgba(217,106,92,.25);
+  background: rgba(217,106,92,.06);
+  color: var(--danger);
   padding: 10px 12px;
   border-radius: 12px;
 }
@@ -834,182 +819,31 @@ onMounted(async () => {
   margin: 12px 16px 0;
   padding: 10px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(248,113,113,.35);
-  background: rgba(248,113,113,.08);
-  color: rgba(254,226,226,.95);
+  border: 1px solid rgba(217,106,92,.25);
+  background: rgba(217,106,92,.06);
+  color: var(--danger);
 }
-.guideOverlay{
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding: 28px;
-}
-.guideCard{
-  width: min(980px, 100%);
-  border-radius: 30px;
-  border: 1px solid rgba(251,191,36,.26);
-  background:
-    linear-gradient(160deg, rgba(251,191,36,.09), rgba(15,23,42,.90) 42%),
-    rgba(15,23,42,.92);
-  box-shadow: 0 28px 80px rgba(15,23,42,.45);
-  padding: 28px;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-.guideEyebrow{
-  font-size: 11px;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-  color: rgba(253,224,71,.78);
-}
-.guideTitle{
-  margin: 0;
-  font-size: 34px;
-  line-height: 1.1;
-}
-.guideText{
-  margin: 0;
-  color: rgba(226,232,240,.88);
-  line-height: 1.7;
-  max-width: 760px;
-}
-.guideStatus{
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,.08);
-  background: rgba(255,255,255,.04);
-  padding: 12px 14px;
-  color: rgba(248,250,252,.94);
-}
-.guideInfo{
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-}
-.guideInfoCard{
-  border: 1px solid rgba(255,255,255,.08);
-  border-radius: 18px;
-  background: rgba(255,255,255,.04);
-  padding: 16px;
-}
-.guideInfoTitle{
-  font-weight: 800;
-  font-size: 14px;
-}
-.guideInfoText{
-  margin-top: 8px;
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--muted);
-}
-.guideTips{
-  border: 1px solid rgba(255,255,255,.08);
-  border-radius: 18px;
-  background: rgba(255,255,255,.03);
-  padding: 16px;
-}
-.guideTipsTitle{
-  font-size: 14px;
-  font-weight: 800;
-}
-.guideTipsList{
-  margin: 10px 0 0;
-  padding-left: 18px;
-  color: var(--muted);
-  line-height: 1.7;
-}
-.guideForm{
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-}
-.guideForm label{
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  font-size: 13px;
-}
-.guideCurrent,
-.guideError,
-.guideNotice{
-  grid-column: 1 / -1;
-  border-radius: 14px;
-  padding: 12px 14px;
-}
-.guideCurrent{
-  border: 1px solid rgba(125,211,252,.28);
-  background: rgba(125,211,252,.08);
-  color: rgba(224,242,254,.95);
-}
-.guideError{
-  border: 1px solid rgba(248,113,113,.35);
-  background: rgba(248,113,113,.08);
-  color: rgba(254,226,226,.95);
-}
-.guideNotice{
-  border: 1px solid rgba(74,222,128,.28);
-  background: rgba(74,222,128,.08);
-  color: rgba(220,252,231,.95);
-}
-.guideActions{
-  grid-column: 1 / -1;
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.ghostBtn{
-  background: rgba(255,255,255,.05);
-}
-.dangerBtn{
-  border-color: rgba(248,113,113,.35);
-  color: rgba(254,202,202,.95);
-}
+
+/* ─── 响应式 ─── */
 @media (max-width: 1180px){
   .appShell{
     grid-template-columns: 1fr;
     height: auto;
     min-height: 100vh;
   }
-  .navPanel{
-    min-height: auto;
-  }
+  .navPanel{ min-height: auto; }
   .navList{
     display:grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .diaryGrid{
-    grid-template-columns: 1fr;
-  }
-}
-@media (max-width: 960px){
-  .guideInfo,
-  .guideForm{
-    grid-template-columns: 1fr;
-  }
+  .diaryGrid{ grid-template-columns: 1fr; }
 }
 @media (max-width: 760px){
-  .navList{
-    grid-template-columns: 1fr;
-  }
-  .topBar{
-    flex-direction: column;
-  }
-  .topActions{
-    width: 100%;
-    flex-wrap: wrap;
-  }
-  .grid{
-    grid-template-columns: 1fr;
-  }
-  .otdGrid{
-    grid-template-columns: 1fr;
-  }
-  .guideCard{
-    padding: 20px;
-  }
-  .guideTitle{
-    font-size: 28px;
-  }
+  .navList{ grid-template-columns: 1fr; }
+  .topBar{ flex-direction: column; }
+  .topActions{ width: 100%; flex-wrap: wrap; }
+  .grid{ grid-template-columns: 1fr; }
+  .otdGrid{ grid-template-columns: 1fr; }
+  .guideBannerForm{ grid-template-columns: 1fr; }
 }
 </style>
