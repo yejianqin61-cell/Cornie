@@ -23,6 +23,32 @@ export function useChat() {
     })
   }
 
+  function findMessageIndexById(id) {
+    return messages.value.findIndex((item) => item.id === id)
+  }
+
+  function replaceMessageById(id, patch) {
+    const index = findMessageIndexById(id)
+    if (index < 0) return false
+    messages.value[index] = {
+      ...messages.value[index],
+      ...patch
+    }
+    return true
+  }
+
+  function hasEquivalentMessage(msg) {
+    return messages.value.some((item) => {
+      if (item.kind !== 'message') return false
+      if (item.id === msg.id) return true
+      return (
+        item.role === (msg.role === 'user' ? 'user' : 'cornie') &&
+        item.content === msg.content &&
+        item.pendingSync === true
+      )
+    })
+  }
+
   function setConfirmMessageState(id, patch) {
     const target = messages.value.find((item) => item.id === id)
     if (!target) return
@@ -81,13 +107,28 @@ export function useChat() {
     if (!text || sending.value) return
     sending.value = true
 
-    pushChatItem({ kind: 'message', role: 'user', content: text, id: Date.now().toString() })
+    const tempId = `temp-user-${Date.now()}`
+
+    pushChatItem({
+      kind: 'message',
+      role: 'user',
+      content: text,
+      id: tempId,
+      pendingSync: true
+    })
 
     try {
       const data = await sendMessage(text, today())
+      if (data?.userMessage?.id) {
+        replaceMessageById(tempId, {
+          id: data.userMessage.id,
+          pendingSync: false
+        })
+      }
       appendResponse(data)
       return data
     } catch {
+      replaceMessageById(tempId, { pendingSync: false, error: true })
       pushChatItem({
         kind: 'message',
         role: 'cornie',
@@ -176,7 +217,7 @@ export function useChat() {
       const data = await getConversation(date)
       if (Array.isArray(data?.messages)) {
         for (const msg of data.messages) {
-          const exists = messages.value.some((m) => m.id === msg.id)
+          const exists = hasEquivalentMessage(msg)
           if (!exists) {
             pushChatItem({
               kind: 'message',
