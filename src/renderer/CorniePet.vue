@@ -1,196 +1,71 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref } from 'vue'
-import { cornieCssVars, cornieEyeOverlay, corniePetTransform, cornieStage } from './cornieConfig'
-import { createCornieBlinkController } from './cornieBlink'
-import { listConfirmations, sendMessage, submitConfirmationDecision } from './api'
-import ToolResultPanel from './components/ToolResultPanel.vue'
-import ConfirmCard from './components/ConfirmCard.vue'
-import AskBackBubble from './components/AskBackBubble.vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
+import { sendMessage } from './api'
 
-const parts = [
-  { id: 'tail1', label: '尾巴', src: '/pic/tail1-removebg-preview.png' },
-  { id: 'body', label: '身体', src: '/pic/body-removebg-preview.png' },
-  { id: 'head', label: '头', src: '/pic/head1-removebg-preview.png' },
-  { id: 'ring', label: '铃铛', src: '/pic/ring-removebg-preview.png' }
-]
-
-const eyeHalfSrc = '/pic/halfclosedeye.png'
-const eyeClosedSrc = '/pic/closedeye.png'
-
-const stageStyle = computed(() => ({
-  width: `${cornieStage.w}px`,
-  height: `${cornieStage.h}px`,
-  ...cornieCssVars
-}))
-
-const stageTransformStyle = computed(() => ({
-  transform: `translate(${corniePetTransform.offsetX}px, ${corniePetTransform.offsetY}px) scale(${corniePetTransform.scale})`
-}))
-
-const headDipPx = ref(0)
-const eyeLayer = ref('none')
-
-const editing = ref(false)
-const overlay = reactive({ ...cornieEyeOverlay })
 const hover = ref(false)
 const pinned = ref(false)
-const message = ref('')
-const dragReady = ref(false)
-const showHitbox = ref(true)
-
-const messages = ref([])
+const focused = ref(false)
 const sending = ref(false)
+const message = ref('')
+const messages = ref([])
+const dragReady = ref(false)
 const chatListRef = ref(null)
+
+const mood = computed(() => {
+  if (sending.value) return '( •_• )'
+  if (focused.value) return '( •ᴗ• )'
+  if (hover.value || pinned.value) return '(•‿•)'
+  return '( ᴗ ᴗ )'
+})
+
+const petStateClass = computed(() => {
+  if (sending.value) return 'is-thinking'
+  if (focused.value) return 'is-focus'
+  if (hover.value || pinned.value) return 'is-hover'
+  return 'is-idle'
+})
+
+const isExpanded = computed(() => hover.value || pinned.value || focused.value)
 
 function today() {
   return new Date().toISOString().slice(0, 10)
 }
 
-const overlayStyle = computed(() => ({
-  left: `${overlay.x}px`,
-  top: `${overlay.y}px`,
-  width: `${overlay.w}px`,
-  height: `${overlay.h}px`,
-  transform: `rotate(${overlay.rot}deg)`,
-  opacity: overlay.opacity
-}))
-
-function hideLayers() {
-  eyeLayer.value = 'none'
+function onEnter() {
+  hover.value = true
 }
 
-function showLayer(name) {
-  eyeLayer.value = name
-}
-
-function parseEditingFromUrl() {
-  try {
-    const u = new URL(window.location.href)
-    return u.searchParams.get('edit') === '1'
-  } catch {
-    return false
+function onLeave() {
+  hover.value = false
+  if (!pinned.value && !focused.value) {
+    scrollToLatest()
   }
 }
 
-let blink = null
-
-function parseHitboxFromUrl() {
-  try {
-    const u = new URL(window.location.href)
-    const v = u.searchParams.get('hitbox')
-    if (v === '0' || v === 'false') return false
-    if (v === '1' || v === 'true') return true
-  } catch {
-    // ignore
-  }
-  return null
+function onFocusIn() {
+  focused.value = true
 }
 
-onMounted(() => {
-  editing.value = parseEditingFromUrl()
-  const hb = parseHitboxFromUrl()
-  if (hb !== null) showHitbox.value = hb
-  dragReady.value = typeof window !== 'undefined' && Boolean(window.cornieDesktop)
-
-  blink = createCornieBlinkController({
-    showLayer,
-    hideLayers,
-    setHeadDipPx: (px) => (headDipPx.value = px)
-  })
-  blink.start()
-
-  window.addEventListener('keydown', onKeyDown)
-  restorePendingConfirmations()
-})
-
-onBeforeUnmount(() => {
-  blink?.stop?.()
-  window.removeEventListener('keydown', onKeyDown)
-})
-
-function onKeyDown(e) {
-  const k = e.key?.toLowerCase?.()
-  const t = e.target
-  if (t instanceof HTMLTextAreaElement || t instanceof HTMLInputElement) return
-  if (k === 'e') {
-    editing.value = !editing.value
-  } else if (k === 'b') {
-    blink?.blinkNow?.()
-  } else if (k === 'c') {
-    copyConfig()
-  } else if (k === 'h') {
-    showHitbox.value = !showHitbox.value
-  }
+function onFocusOut(event) {
+  const nextTarget = event?.relatedTarget
+  if (nextTarget && event.currentTarget?.contains?.(nextTarget)) return
+  focused.value = false
 }
 
-async function copyConfig() {
-  const payload = {
-    version: 1,
-    eyeOverlay: { ...overlay }
-  }
-  try {
-    await navigator.clipboard.writeText(JSON.stringify(payload, null, 2))
-  } catch {
-    // ignore
-  }
+function togglePinned() {
+  pinned.value = !pinned.value
 }
 
-let drag = null
-let resize = null
 let windowDrag = null
 
-function onOverlayPointerDown(e) {
-  if (!editing.value) return
-  if (e.target?.classList?.contains?.('handle')) return
-  e.stopPropagation()
-  drag = {
-    startX: e.clientX,
-    startY: e.clientY,
-    baseX: overlay.x,
-    baseY: overlay.y
-  }
-  e.currentTarget.setPointerCapture?.(e.pointerId)
-}
-
-function onOverlayPointerMove(e) {
-  if (!editing.value || !drag) return
-  const dx = e.clientX - drag.startX
-  const dy = e.clientY - drag.startY
-  overlay.x = Math.round(drag.baseX + dx)
-  overlay.y = Math.round(drag.baseY + dy)
-}
-
-function onOverlayPointerUp() {
-  drag = null
-  resize = null
-}
-
-function onHandleDown(e) {
-  if (!editing.value) return
-  e.stopPropagation()
-  resize = {
-    startX: e.clientX,
-    startY: e.clientY,
-    baseW: overlay.w,
-    baseH: overlay.h
-  }
-  e.currentTarget.setPointerCapture?.(e.pointerId)
-}
-
-function onHandleMove(e) {
-  if (!editing.value || !resize) return
-  const dx = e.clientX - resize.startX
-  const dy = e.clientY - resize.startY
-  overlay.w = Math.max(10, Math.round(resize.baseW + dx))
-  overlay.h = Math.max(10, Math.round(resize.baseH + dy))
-}
-
-function canWindowDrag() {
-  return !editing.value && typeof window !== 'undefined' && window.cornieDesktop
+function canWindowDrag(target) {
+  if (typeof window === 'undefined' || !window.cornieDesktop) return false
+  const interactive = target?.closest?.('.petPanel, .petInputBar, .petMessages, button, input')
+  return !interactive
 }
 
 function onDragPointerDown(e) {
-  if (!canWindowDrag()) return
+  if (!canWindowDrag(e.target)) return
   if (e.button !== undefined && e.button !== 0) return
   windowDrag = { pointerId: e.pointerId }
   try {
@@ -200,7 +75,7 @@ function onDragPointerDown(e) {
 }
 
 function onDragPointerMove(e) {
-  if (!windowDrag || !canWindowDrag()) return
+  if (!windowDrag || !window.cornieDesktop) return
   window.cornieDesktop.dragMove({ screenX: e.screenX, screenY: e.screenY })
 }
 
@@ -212,566 +87,413 @@ function onDragPointerUp() {
   } catch {}
 }
 
-function shouldShowChat() {
-  if (editing.value) return false
-  return true
-}
-
-function onEnter() {
-  if (editing.value) return
-  hover.value = true
-}
-
-function onLeave() {
-  if (editing.value) return
-  hover.value = false
-}
-
-function togglePinned() {
-  pinned.value = !pinned.value
-}
-
-function pushChatItem(item) {
-  messages.value.push({
-    id: item.id || `${item.kind}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-    ...item
-  })
-}
-
-function setConfirmMessageState(id, patch) {
-  const target = messages.value.find((item) => item.id === id)
-  if (!target) return
-  Object.assign(target, patch)
-}
-
-function appendResponse(data) {
-  if (data?.cornieMessage?.content) {
-    pushChatItem({
-      kind: 'message',
-      role: 'cornie',
-      content: data.cornieMessage.content,
-      id: data.cornieMessage.id
-    })
-  }
-
-  if (data?.toolExecution?.used && Array.isArray(data.toolExecution.results) && data.toolExecution.results.length > 0) {
-    pushChatItem({
-      kind: 'tool_result',
-      results: data.toolExecution.results
-    })
-  }
-
-  const decision = data?.policyDecision?.decision
-  if (decision === 'confirm') {
-    pushChatItem({
-      kind: 'confirm',
-      request: data.policyDecision.confirmRequest || {},
-      pendingConfirmationId: data?.pendingConfirmation?.id || '',
-      status: data?.pendingConfirmation?.status || 'pending',
-      errorMessage: ''
-    })
-  } else if (decision === 'ask_back') {
-    pushChatItem({
-      kind: 'ask_back',
-      question: data.policyDecision.question || '',
-      reason: data.policyDecision.reason || ''
-    })
-  } else if (decision === 'deny') {
-    pushChatItem({
-      kind: 'error',
-      content: data.policyDecision.reason || '这个动作现在不能执行。'
-    })
-  }
-}
-
-async function restorePendingConfirmations() {
-  try {
-    const data = await listConfirmations({ date: today(), status: 'pending' })
-    for (const confirmation of data?.confirmations || []) {
-      const exists = messages.value.some(
-        (item) => item.kind === 'confirm' && item.pendingConfirmationId === confirmation.id
-      )
-      if (!exists) {
-        pushChatItem({
-          kind: 'confirm',
-          request: confirmation.confirmRequest || {},
-          pendingConfirmationId: confirmation.id,
-          status: confirmation.status || 'pending',
-          errorMessage: ''
-        })
-      }
-    }
-  } catch {
-    // ignore restore failure
-  }
-}
-
-async function handleConfirmAction(action, item) {
-  if (!item?.pendingConfirmationId || item.status !== 'pending') return
-
-  setConfirmMessageState(item.id, {
-    status: 'processing',
-    errorMessage: ''
-  })
-  scrollChatToBottom()
-
-  try {
-    const result = await submitConfirmationDecision(
-      item.pendingConfirmationId,
-      action === 'confirm' ? 'approve' : 'reject'
-    )
-
-    setConfirmMessageState(item.id, {
-      status: result?.confirmation?.status || (action === 'confirm' ? 'approved' : 'rejected'),
-      errorMessage: ''
-    })
-
-    if (
-      result?.toolExecution?.used &&
-      Array.isArray(result.toolExecution.results) &&
-      result.toolExecution.results.length > 0
-    ) {
-      pushChatItem({
-        kind: 'tool_result',
-        results: result.toolExecution.results
-      })
-    }
-
-    if (result?.cornieMessage?.content) {
-      pushChatItem({
-        kind: 'message',
-        role: 'cornie',
-        content: result.cornieMessage.content,
-        id: result.cornieMessage.id
-      })
-    }
-
-    if (result?.followupConfirmation?.id && result?.followupConfirmation?.confirmRequest) {
-      pushChatItem({
-        kind: 'confirm',
-        request: result.followupConfirmation.confirmRequest,
-        pendingConfirmationId: result.followupConfirmation.id,
-        status: result.followupConfirmation.status || 'pending',
-        errorMessage: ''
-      })
-    }
-  } catch (error) {
-    setConfirmMessageState(item.id, {
-      status: 'failed',
-      errorMessage: error?.message || '确认处理失败，请稍后再试。'
-    })
-  } finally {
-    scrollChatToBottom()
-  }
+async function scrollToLatest() {
+  await nextTick()
+  if (!chatListRef.value) return
+  chatListRef.value.scrollTop = chatListRef.value.scrollHeight
 }
 
 async function send() {
   const text = message.value.trim()
   if (!text || sending.value) return
-  message.value = ''
 
-  pushChatItem({ kind: 'message', role: 'user', content: text, id: Date.now().toString() })
-  scrollChatToBottom()
+  message.value = ''
+  focused.value = true
+  pinned.value = true
+
+  messages.value.push({
+    id: `user-${Date.now()}`,
+    role: 'user',
+    content: text
+  })
+  await scrollToLatest()
 
   sending.value = true
   try {
     const data = await sendMessage(text, today())
-    appendResponse(data)
+    if (data?.cornieMessage?.content) {
+      messages.value.push({
+        id: data.cornieMessage.id || `cornie-${Date.now()}`,
+        role: 'cornie',
+        content: data.cornieMessage.content
+      })
+    } else {
+      messages.value.push({
+        id: `cornie-empty-${Date.now()}`,
+        role: 'cornie',
+        content: '小铃湾刚刚愣了一下，不过还在这里陪你。'
+      })
+    }
   } catch {
-    pushChatItem({
-      kind: 'message',
+    messages.value.push({
+      id: `cornie-error-${Date.now()}`,
       role: 'cornie',
-      content: '唔...我好像走神了，能再说一遍吗？',
-      id: 'err-' + Date.now(),
-      error: true
+      content: '唔，我刚刚走神了一下。主人再说一遍，好不好？'
     })
   } finally {
     sending.value = false
-    scrollChatToBottom()
+    await scrollToLatest()
   }
 }
 
-async function scrollChatToBottom() {
-  await nextTick()
-  if (chatListRef.value) {
-    chatListRef.value.scrollTop = chatListRef.value.scrollHeight
-  }
-}
+onMounted(() => {
+  dragReady.value = typeof window !== 'undefined' && Boolean(window.cornieDesktop)
+})
 </script>
 
 <template>
   <div class="petRoot">
     <div
-      class="hitbox"
-      :class="{ ready: dragReady, editing, 'hitbox--debug': showHitbox }"
+      class="petShell"
+      :class="[petStateClass, { 'is-expanded': isExpanded, 'is-draggable': dragReady }]"
+      @mouseenter="onEnter"
+      @mouseleave="onLeave"
+      @focusin="onFocusIn"
+      @focusout="onFocusOut"
       @pointerdown="onDragPointerDown"
       @pointermove="onDragPointerMove"
       @pointerup="onDragPointerUp"
       @pointercancel="onDragPointerUp"
-      @mouseenter="onEnter"
-      @mouseleave="onLeave"
     >
-      <div class="hitboxPetArea">
-        <div class="stageWrap" :style="stageTransformStyle">
-          <div class="stage" :style="stageStyle">
+      <section v-if="isExpanded" class="petPanel">
+        <div class="petPanelAura"></div>
+
+        <div ref="chatListRef" class="petMessages">
+          <div v-if="messages.length === 0 && !sending" class="petEmpty">
+            <div class="petEmptyTitle">小铃湾在这里</div>
+            <div class="petEmptyHint">把今天想说的话，轻轻放过来吧。</div>
+          </div>
+
+          <template v-else>
             <div
-              v-for="p in parts"
-              :key="p.id"
-              class="part"
-              :class="[`p-${p.id}`, { headPart: p.id === 'head' }]"
-              :aria-label="p.label"
-              :style="
-                p.id === 'head'
-                  ? {
-                      transform: `translate(var(--head-x), var(--head-y)) rotate(var(--head-r)) scale(var(--head-s)) translateY(${headDipPx}px)`
-                    }
-                  : null
-              "
+              v-for="item in messages"
+              :key="item.id"
+              class="petMessageRow"
+              :class="item.role === 'user' ? 'is-user' : 'is-cornie'"
             >
-              <img :src="p.src" :alt="p.label" draggable="false" />
-
-              <div
-                v-if="p.id === 'head'"
-                class="eyeGroup"
-                :class="{ editing }"
-                :style="overlayStyle"
-                @pointerdown="onOverlayPointerDown"
-                @pointermove="onOverlayPointerMove"
-                @pointerup="onOverlayPointerUp"
-                @pointercancel="onOverlayPointerUp"
-                @pointerleave="onOverlayPointerUp"
-              >
-                <div v-if="editing" class="outline"></div>
-                <div v-if="editing" class="handle" @pointerdown="onHandleDown" @pointermove="onHandleMove" />
-
-                <img v-show="eyeLayer === 'half'" class="eyeLayer" :src="eyeHalfSrc" alt="eye half" />
-                <img v-show="eyeLayer === 'closed'" class="eyeLayer" :src="eyeClosedSrc" alt="eye closed" />
+              <div class="petMessageBubble" :class="item.role === 'user' ? 'is-user' : 'is-cornie'">
+                <div class="petMessageRole">{{ item.role === 'user' ? '主人' : '小铃湾' }}</div>
+                <div class="petMessageText">{{ item.content }}</div>
               </div>
             </div>
-          </div>
-        </div>
-      </div>
 
-      <div
-        v-if="shouldShowChat() && messages.length > 0"
-        ref="chatListRef"
-        class="chatBubbles"
-        @pointerdown.stop
-        @pointermove.stop
-        @pointerup.stop
-      >
-        <div
-          v-for="m in messages"
-          :key="m.id"
-          class="chatItem"
-          :class="[m.kind === 'message' && m.role === 'user' ? 'chatItemUser' : 'chatItemCornie']"
-        >
-          <template v-if="m.kind === 'message'">
-            <div class="bubble" :class="m.role === 'user' ? 'bubbleUser' : 'bubbleCornie'">
-              <div class="bubbleRole">{{ m.role === 'user' ? '主人' : 'Cornie' }}</div>
-              <div class="bubbleText">{{ m.content }}</div>
-            </div>
-          </template>
-
-          <template v-else-if="m.kind === 'tool_result'">
-            <ToolResultPanel :results="m.results" />
-          </template>
-
-          <template v-else-if="m.kind === 'confirm'">
-            <ConfirmCard
-              :request="m.request"
-              :status="m.status || 'pending'"
-              :error-message="m.errorMessage || ''"
-              @confirm="handleConfirmAction('confirm', m)"
-              @reject="handleConfirmAction('reject', m)"
-            />
-          </template>
-
-          <template v-else-if="m.kind === 'ask_back'">
-            <AskBackBubble :question="m.question" :reason="m.reason" />
-          </template>
-
-          <template v-else-if="m.kind === 'error'">
-            <div class="bubble bubbleError">
-              <div class="bubbleRole">系统提示</div>
-              <div class="bubbleText">{{ m.content }}</div>
+            <div v-if="sending" class="petMessageRow is-cornie">
+              <div class="petMessageBubble is-cornie">
+                <div class="petMessageRole">小铃湾</div>
+                <div class="petMessageText is-thinking">正在想你说的话……</div>
+              </div>
             </div>
           </template>
         </div>
 
-        <div v-if="sending" class="bubble bubbleCornie">
-          <div class="bubbleRole">Cornie</div>
-          <div class="bubbleText thinking">正在思考...</div>
+        <div class="petInputBar">
+          <input
+            v-model="message"
+            class="petInput"
+            type="text"
+            placeholder="和小铃湾说句话……"
+            @keydown.enter.prevent="send"
+          />
+          <button
+            type="button"
+            class="petPinButton"
+            :class="{ 'is-on': pinned }"
+            :title="pinned ? '取消停留' : '让她多陪一会儿'"
+            @click="togglePinned"
+          >
+            {{ pinned ? '停' : '留' }}
+          </button>
+          <button type="button" class="petSendButton" :disabled="!message.trim() || sending" @click="send">
+            说
+          </button>
         </div>
-      </div>
+      </section>
 
-      <div v-if="shouldShowChat()" class="chatBar" @pointerdown.stop @pointermove.stop @pointerup.stop>
-        <input
-          v-model="message"
-          type="text"
-          class="chatInputFlat"
-          placeholder="和 Cornie 说句话..."
-          @keydown.enter.prevent="send"
-        />
-        <button type="button" class="pinBtnSm" :class="{ on: pinned }" title="固定/解除" @click="togglePinned">
-          {{ pinned ? '固' : '钉' }}
-        </button>
-        <button type="button" class="sendBtnSm" :disabled="!message.trim()" @click="send">发</button>
-      </div>
+      <button type="button" class="petFace" :class="{ 'is-active': isExpanded }" @click="pinned = !pinned">
+        <span class="petFaceGlow"></span>
+        <span class="petFaceText">{{ mood }}</span>
+      </button>
     </div>
   </div>
 </template>
 
 <style scoped>
-.petRoot{
+.petRoot {
   width: 100vw;
   height: 100vh;
-  display: grid;
-  justify-items: center;
-  align-content: start;
-  padding-top: 6px;
-  padding-bottom: 10px;
-  box-sizing: border-box;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-end;
+  padding: 12px;
   background: transparent;
   overflow: hidden;
   -webkit-app-region: no-drag;
 }
-.hitbox{
+
+.petShell {
   position: relative;
-  z-index: 0;
-  box-sizing: border-box;
+  width: 100%;
+  max-width: 320px;
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  justify-content: flex-start;
-  gap: 8px;
-  width: 100%;
-  max-width: 268px;
-  padding: 12px;
-  padding-top: 10px;
-  padding-bottom: 12px;
-  border-radius: 18px;
-  -webkit-app-region: no-drag;
-  cursor: grab;
-}
-.hitboxPetArea{
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  width: 100%;
-  flex: 0 0 auto;
-  padding-top: 2px;
-}
-.hitbox--debug{
-  background: rgba(244, 114, 182, 0.14);
-  outline: 1px dashed rgba(244, 114, 182, 0.75);
-  outline-offset: 0;
-  box-shadow: inset 0 0 0 1px rgba(244, 114, 182, 0.25);
-}
-.hitbox:active{ cursor: grabbing; }
-.hitbox.editing{ cursor: default; }
-.stageWrap{
-  position: relative;
-  overflow: visible;
-  -webkit-app-region: no-drag;
-}
-.stage{
-  position: relative;
-  background: transparent;
-  overflow: visible;
-}
-.part{
-  position:absolute;
-  left:0;
-  top:0;
-  transform-origin: 0 0;
-}
-.part img{
-  display:block;
-  max-width:none;
-  pointer-events: none;
+  align-items: flex-end;
+  gap: 10px;
+  cursor: default;
   user-select: none;
 }
-.p-tail1{
-  z-index: var(--tail1-z);
-  opacity: var(--tail1-o);
-  transform: translate(var(--tail1-x), var(--tail1-y)) rotate(var(--tail1-r)) scale(var(--tail1-s));
-}
-.p-body{
-  z-index: var(--body-z);
-  opacity: var(--body-o);
-  transform: translate(var(--body-x), var(--body-y)) rotate(var(--body-r)) scale(var(--body-s));
-}
-.p-head{
-  z-index: var(--head-z);
-  opacity: var(--head-o);
-  transform: translate(var(--head-x), var(--head-y)) rotate(var(--head-r)) scale(var(--head-s));
-}
-.p-ring{
-  z-index: var(--ring-z);
-  opacity: var(--ring-o);
-  transform: translate(var(--ring-x), var(--ring-y)) rotate(var(--ring-r)) scale(var(--ring-s));
-}
-.eyeGroup{
-  position:absolute;
-  pointer-events: none;
-  -webkit-app-region: no-drag;
-}
-.eyeGroup.editing{
-  pointer-events: auto;
+
+.petShell.is-draggable {
   cursor: grab;
 }
-.eyeGroup.editing:active{
+
+.petShell.is-draggable:active {
   cursor: grabbing;
 }
-.eyeLayer{
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-  object-fit: contain;
-  pointer-events: none;
-  user-select: none;
+
+.petPanel {
+  position: relative;
+  width: min(320px, calc(100vw - 24px));
+  padding: 14px 14px 12px;
+  border-radius: 24px;
+  background: var(--pet-bg);
+  border: 1px solid var(--pet-border);
+  box-shadow: var(--pet-shadow-soft);
+  backdrop-filter: blur(10px);
+  -webkit-app-region: no-drag;
+  animation: petPanelIn var(--pet-transition-base);
+  overflow: hidden;
 }
-.outline{
-  position:absolute;
-  inset:0;
-  border: 1px dashed rgba(125,211,252,.75);
-  border-radius: 10px;
-  background: rgba(125,211,252,.06);
-}
-.handle{
-  position:absolute;
-  width: 10px;
-  height: 10px;
-  right: -6px;
-  bottom: -6px;
+
+.petPanelAura {
+  position: absolute;
+  inset: auto -12px -28px auto;
+  width: 124px;
+  height: 124px;
   border-radius: 999px;
-  background: rgba(125,211,252,.95);
-  border: 1px solid rgba(0,0,0,.35);
-  cursor: nwse-resize;
+  background:
+    radial-gradient(circle, rgba(247, 216, 202, 0.72) 0%, rgba(247, 216, 202, 0) 70%);
+  pointer-events: none;
 }
-.chatBubbles{
-  width: 100%;
-  max-height: 220px;
+
+.petMessages {
+  position: relative;
+  z-index: 1;
+  max-height: 136px;
+  min-height: 88px;
   overflow-y: auto;
+  padding-right: 2px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 4px 2px;
-  -webkit-app-region: no-drag;
+  gap: 10px;
   scroll-behavior: smooth;
 }
-.chatBubbles::-webkit-scrollbar{ width: 4px; }
-.chatBubbles::-webkit-scrollbar-thumb{ background: rgba(255,255,255,.15); border-radius: 999px; }
-.chatItem{
-  width: 100%;
-  display: flex;
+
+.petMessages::-webkit-scrollbar {
+  width: 4px;
 }
-.chatItemUser{
+
+.petMessages::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(161, 141, 128, 0.32);
+}
+
+.petEmpty {
+  min-height: 88px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 2px;
+}
+
+.petEmptyTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pet-text);
+}
+
+.petEmptyHint {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--pet-text-soft);
+}
+
+.petMessageRow {
+  display: flex;
+  width: 100%;
+}
+
+.petMessageRow.is-user {
   justify-content: flex-end;
 }
-.chatItemCornie{
+
+.petMessageRow.is-cornie {
   justify-content: flex-start;
 }
-.bubble{
-  max-width: 90%;
-  padding: 8px 12px;
-  border-radius: 14px;
-  font-size: 12px;
-  line-height: 1.5;
+
+.petMessageBubble {
+  max-width: 82%;
+  padding: 9px 12px 10px;
+  border-radius: 18px;
+  box-shadow: 0 6px 18px rgba(124, 93, 72, 0.06);
 }
-.bubbleUser{
-  align-self: flex-end;
-  background: rgba(125,211,252,.20);
-  border: 1px solid rgba(125,211,252,.30);
-  color: rgba(224,242,254,.96);
+
+.petMessageBubble.is-user {
+  background: var(--pet-user-bubble);
+  color: var(--pet-text);
 }
-.bubbleCornie{
-  align-self: flex-start;
-  background: rgba(255,255,255,.08);
-  border: 1px solid rgba(255,255,255,.12);
-  color: rgba(243,244,246,.92);
+
+.petMessageBubble.is-cornie {
+  background: var(--pet-cornie-bubble);
+  color: var(--pet-text);
 }
-.bubbleError{
-  max-width: 100%;
-  background: rgba(127,29,29,.28);
-  border: 1px solid rgba(248,113,113,.28);
-  color: rgba(254,226,226,.96);
-}
-.bubbleRole{
+
+.petMessageRole {
+  margin-bottom: 2px;
   font-size: 10px;
-  color: rgba(255,255,255,.45);
-  margin-bottom: 3px;
+  color: var(--pet-text-faint);
 }
-.bubbleText{
+
+.petMessageText {
+  font-size: 12px;
+  line-height: 1.55;
   white-space: pre-wrap;
   word-break: break-word;
 }
-.bubbleText.thinking{
-  color: rgba(255,255,255,.45);
+
+.petMessageText.is-thinking {
+  color: var(--pet-text-soft);
   font-style: italic;
 }
-.chatBar{
+
+.petInputBar {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
-  gap: 6px;
-  flex: 0 0 auto;
-  width: 100%;
-  padding: 4px 6px;
-  margin-top: 2px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.2);
-  background: rgba(17,24,39,.92);
-  box-shadow: 0 4px 14px rgba(0,0,0,.22);
-  -webkit-app-region: no-drag;
-  position: relative;
-  z-index: 2;
+  gap: 8px;
+  margin-top: 12px;
 }
-.chatInputFlat{
+
+.petInput {
   flex: 1 1 auto;
   min-width: 0;
-  height: 28px;
-  padding: 0 10px;
-  border: none;
+  height: 38px;
   border-radius: 999px;
-  background: rgba(255,255,255,.07);
-  color: rgba(243,244,246,.96);
-  font-size: 12px;
+  background: var(--pet-input-bg);
+  border: 1px solid rgba(196, 168, 146, 0.18);
+  color: var(--pet-text);
+  font-size: 13px;
+  padding: 0 14px;
+}
+
+.petInput:focus {
   outline: none;
+  border-color: rgba(223, 141, 112, 0.38);
+  box-shadow: 0 0 0 4px rgba(239, 179, 154, 0.16);
 }
-.chatInputFlat::placeholder{
-  color: rgba(156,163,175,.95);
+
+.petInput::placeholder {
+  color: var(--pet-text-faint);
 }
-.pinBtnSm{
+
+.petPinButton,
+.petSendButton {
   flex: 0 0 auto;
-  width: 28px;
-  height: 28px;
-  padding: 0;
+  height: 36px;
+  min-width: 36px;
+  padding: 0 12px;
   border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.08);
-  color: rgba(226,232,240,.9);
-  font-size: 11px;
-  cursor: pointer;
-}
-.pinBtnSm.on{
-  border-color: rgba(125,211,252,.45);
-  background: rgba(125,211,252,.18);
-}
-.sendBtnSm{
-  flex: 0 0 auto;
-  height: 28px;
-  padding: 0 10px;
-  border-radius: 999px;
-  border: 1px solid rgba(125,211,252,.35);
-  background: rgba(125,211,252,.14);
-  color: rgba(226,232,240,.98);
   font-size: 12px;
-  cursor: pointer;
+  border: 1px solid rgba(196, 168, 146, 0.18);
+  background: var(--pet-surface);
+  color: var(--pet-text-soft);
+  -webkit-app-region: no-drag;
 }
-.sendBtnSm:disabled{
-  opacity: .45;
+
+.petPinButton:hover,
+.petSendButton:hover {
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.petPinButton.is-on {
+  background: var(--pet-accent-soft);
+  color: var(--pet-accent-strong);
+}
+
+.petSendButton {
+  background: var(--pet-accent);
+  color: #fffaf5;
+  border-color: transparent;
+}
+
+.petSendButton:hover {
+  background: var(--pet-accent-strong);
+}
+
+.petSendButton:disabled {
+  opacity: 0.5;
   cursor: not-allowed;
+}
+
+.petFace {
+  position: relative;
+  min-width: 86px;
+  height: 48px;
+  padding: 0 16px;
+  border-radius: 20px;
+  border: 1px solid var(--pet-border);
+  background: var(--pet-bg-soft);
+  box-shadow: var(--pet-shadow-soft);
+  color: var(--pet-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  -webkit-app-region: no-drag;
+  animation: petBreath 3.8s ease-in-out infinite;
+}
+
+.petFace.is-active {
+  box-shadow: var(--pet-shadow-hover);
+}
+
+.petFaceGlow {
+  position: absolute;
+  inset: auto auto -18px -10px;
+  width: 92px;
+  height: 92px;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle, rgba(239, 179, 154, 0.28) 0%, rgba(239, 179, 154, 0) 72%);
+  pointer-events: none;
+}
+
+.petFaceText {
+  position: relative;
+  z-index: 1;
+  font-size: 18px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+
+@keyframes petPanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes petBreath {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
 }
 </style>

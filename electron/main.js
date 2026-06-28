@@ -39,8 +39,8 @@ function createMainWindow() {
 
 function createCornieWindow() {
   const win = new BrowserWindow({
-    width: 280,
-    height: 520,
+    width: 360,
+    height: 320,
     transparent: true,
     frame: false,
     resizable: false,

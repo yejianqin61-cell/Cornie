@@ -25,13 +25,37 @@
   --todo-tint: #FFF7EF;
   --schedule-tint: #FFF7EF;
   --memory-tint: #EFF4F9;
+
+  /* desk pet */
+  --pet-bg: rgba(255, 250, 242, 0.92);
+  --pet-bg-soft: rgba(255, 246, 236, 0.82);
+  --pet-surface: rgba(255, 255, 255, 0.72);
+  --pet-border: rgba(196, 168, 146, 0.24);
+  --pet-shadow-soft: 0 10px 30px rgba(124, 93, 72, 0.14);
+  --pet-shadow-hover: 0 14px 34px rgba(124, 93, 72, 0.18);
+
+  --pet-text: #5B4638;
+  --pet-text-soft: #826B5B;
+  --pet-text-faint: #A18D80;
+
+  --pet-accent: #EFB39A;
+  --pet-accent-strong: #DF8D70;
+  --pet-accent-soft: #F7D8CA;
+
+  --pet-user-bubble: #F6D3C4;
+  --pet-cornie-bubble: rgba(255, 255, 255, 0.78);
+  --pet-input-bg: rgba(255, 255, 255, 0.68);
+
+  --pet-transition-fast: 160ms ease;
+  --pet-transition-base: 220ms ease;
+  --pet-transition-slow: 320ms ease;
 }
 
 *{ box-sizing: border-box; }
 html, body { height: 100%; }
 body{
   margin:0;
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "PingFang SC", "Microsoft YaHei", Arial;
+  font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", ui-sans-serif, system-ui, -apple-system, Roboto, Arial;
   font-size: 14px;
   line-height: 1.6;
   color: var(--text);
