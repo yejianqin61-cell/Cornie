@@ -5,6 +5,7 @@ import {
   sendMessage,
   submitConfirmationDecision
 } from '../api'
+import { collectChangedDomains, emitDataChanged } from '../syncSignals'
 
 export function useChat() {
   const messages = ref([])
@@ -25,6 +26,12 @@ export function useChat() {
     const target = messages.value.find((item) => item.id === id)
     if (!target) return
     Object.assign(target, patch)
+  }
+
+  function notifyDataChanged(results, source) {
+    const changed = collectChangedDomains(results || [])
+    if (!Object.values(changed).some(Boolean)) return
+    emitDataChanged({ source, ...changed })
   }
 
   function appendResponse(data) {
@@ -65,6 +72,8 @@ export function useChat() {
         content: data.policyDecision.reason || '这个动作现在不能执行。'
       })
     }
+
+    notifyDataChanged(data?.toolExecution?.results, 'chat')
   }
 
   async function send(text) {
@@ -129,6 +138,8 @@ export function useChat() {
           errorMessage: ''
         })
       }
+
+      notifyDataChanged(result?.toolExecution?.results, 'confirmation')
     } catch (error) {
       setConfirmMessageState(item.id, {
         status: 'failed',

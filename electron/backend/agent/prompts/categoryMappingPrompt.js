@@ -48,13 +48,22 @@ const CATEGORY_DOMAIN_HINTS = `涉及类目映射的常见工具：
 - 需要新增类目：tool_call.arguments 中填 needsNewCategory=true + proposedCategoryName
 - 仍然不确定：优先输出 reply，向主人追问`
 
+const LEDGER_FIELD_RULES = `记账字段补全规则：
+- 对于 ledger.add_expense / ledger.add_income，除了金额和类目，还要尽量补全 item。
+- item 表示这笔钱“具体花在了什么/具体来自什么”，应该短、具体、可读，例如“午饭”“打车去公司”“工资”“卖闲置”。
+- 如果用户说了明确事项，必须优先写入 item，不要只写 categoryName。
+- 如果只能判断大类、无法判断具体事项，才允许 item 为空。
+- merchant 只有在用户明确提到店名、平台名、商户名时再填写，例如“瑞幸”“淘宝”“盒马”。
+- 不要把整句原话塞进 item；item 也不要只写“消费”“支出”“收入”这种空泛词。`
+
 export function buildCategoryMappingProtocol() {
   return [
     CATEGORY_DECISION_SCHEMA,
     CATEGORY_PRIORITY_RULES,
     CATEGORY_FIELD_RULES,
     CATEGORY_FALLBACK_RULES,
-    CATEGORY_DOMAIN_HINTS
+    CATEGORY_DOMAIN_HINTS,
+    LEDGER_FIELD_RULES
   ].join('\n\n')
 }
 

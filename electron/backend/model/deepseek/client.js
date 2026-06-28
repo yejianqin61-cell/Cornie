@@ -59,7 +59,9 @@ export async function chat({ messages, model, temperature = 0.8, maxTokens = 512
   )
 
   return {
-    content: data?.choices?.[0]?.message?.content || ''
+    content: data?.choices?.[0]?.message?.content || '',
+    finishReason: data?.choices?.[0]?.finish_reason || null,
+    usage: data?.usage || null
   }
 }
 

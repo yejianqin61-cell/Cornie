@@ -22,6 +22,38 @@ function buildMemoryText(memorySummary) {
   return memorySummary
 }
 
+async function generateDiaryDraft(prompt) {
+  let combined = ''
+
+  const first = await generate({ prompt, temperature: 0.7, maxTokens: 420 })
+  combined = String(first?.content || '').trim()
+
+  if (!combined) {
+    return ''
+  }
+
+  if (first?.finishReason !== 'length') {
+    return combined
+  }
+
+  const continuePrompt = [
+    '你刚才在写一篇 Cornie 日记，但上一段输出被截断了。',
+    '请从最后一句自然续写，不要重复前文，不要重新起标题。',
+    '如果上一句停在半句中间，就直接把那句话续完再继续。',
+    '',
+    '前文如下：',
+    combined
+  ].join('\n')
+
+  const second = await generate({ prompt: continuePrompt, temperature: 0.7, maxTokens: 220 })
+  const continuation = String(second?.content || '').trim()
+  if (!continuation) {
+    return combined
+  }
+
+  return `${combined}${combined.endsWith('\n') ? '' : ''}${continuation}`.trim()
+}
+
 export async function generateCornieDiary(store, { date, memorySummary = '' }) {
   const entry = getEntry(store, date)
   const observations = listObservationLogs(store, { date, limit: 20 })
@@ -48,8 +80,7 @@ export async function generateCornieDiary(store, { date, memorySummary = '' }) {
   ].join('\n')
 
   try {
-    const result = await generate({ prompt, temperature: 0.7, maxTokens: 280 })
-    const text = result.content.trim()
+    const text = await generateDiaryDraft(prompt)
     if (text) return text
   } catch (error) {
     console.error('DeepSeek diary generation error:', error)

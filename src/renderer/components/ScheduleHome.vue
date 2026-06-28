@@ -1,6 +1,7 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { cancelSchedule, createSchedule, deleteSchedule, listScheduleCategories, listSchedules, restoreSchedule } from '../api'
+import { listenDataChanged } from '../syncSignals'
 
 const schedules = ref([])
 const categories = ref([])
@@ -20,8 +21,8 @@ async function refresh() {
       listSchedules({ from: today }),
       listScheduleCategories()
     ])
-    schedules.value = schData?.schedules || []
-    categories.value = catData?.categories || []
+    schedules.value = schData?.items || []
+    categories.value = catData?.items || []
     todayCount.value = schedules.value.filter(s => s.startAt?.startsWith(today)).length
   } catch { /* ignore */ }
   finally { loading.value = false }
@@ -76,7 +77,18 @@ async function removeSchedule(id) {
   }
 }
 
-onMounted(refresh)
+let stopListening = () => {}
+
+onMounted(() => {
+  refresh()
+  stopListening = listenDataChanged((detail) => {
+    if (detail?.schedule) refresh()
+  })
+})
+
+onBeforeUnmount(() => {
+  stopListening()
+})
 </script>
 
 <template>
@@ -122,11 +134,17 @@ onMounted(refresh)
       <div v-else class="sitems">
         <div v-for="s in schedules" :key="s.id" class="sitem" :class="{ cancelled: s.status === 'cancelled' }">
           <span class="sitemTime">{{ s.startAt?.replace('T', ' ') }}</span>
-          <span class="sitemTitle">{{ s.title }}</span>
-          <span class="sitemCat" v-if="s.categoryName">{{ s.categoryName }}</span>
-          <span class="sitemLoc" v-if="s.location">{{ s.location }}</span>
-          <button class="ghost" @click="toggleStatus(s)">{{ s.status === 'cancelled' ? '恢复' : '取消' }}</button>
-          <button class="ghost sdel" @click="removeSchedule(s.id)">删除</button>
+          <div class="sitemMain">
+            <span class="sitemTitle">{{ s.title }}</span>
+            <div class="sitemMeta">
+              <span class="sitemCat" v-if="s.categoryName">{{ s.categoryName }}</span>
+              <span class="sitemLoc" v-if="s.location">{{ s.location }}</span>
+            </div>
+          </div>
+          <div class="sitemActions">
+            <button class="ghost" @click="toggleStatus(s)">{{ s.status === 'cancelled' ? '恢复' : '取消' }}</button>
+            <button class="ghost sdel" @click="removeSchedule(s.id)">删除</button>
+          </div>
         </div>
       </div>
     </div>
@@ -134,18 +152,22 @@ onMounted(refresh)
 </template>
 
 <style scoped>
-.shome{ height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding-right: 4px; }
+.shome{ height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-right: 4px; }
 .shome::-webkit-scrollbar{ width: 4px; }
 .shome::-webkit-scrollbar-thumb{ background: rgba(0,0,0,.08); border-radius: 999px; }
 
-.ssummary{ padding: 16px 20px; text-align: center; }
-.ssumText{ font-size: 16px; }
+.ssummary{ background: var(--schedule-tint); padding: 12px 20px; text-align: center; }
+.ssumText{ font-size: 15px; }
 
-.squick{ padding: 16px 20px; }
+.squick{ padding: 12px 20px; }
 .squickHead{ display: flex; justify-content: space-between; align-items: center; }
 .squickTitle{ font-weight: 700; }
-.squickForm{ margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
-.squickRow{ display: flex; gap: 10px; }
+.squickForm{ margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.squickForm > input:first-child,
+.squickForm > .squickRow:first-of-type,
+.squickForm > button,
+.squickForm > .serr{ grid-column: 1 / -1; }
+.squickRow{ display: flex; gap: 8px; }
 .serr{
   padding: 8px 12px; border-radius: 10px;
   border: 1px solid rgba(217,106,92,.25);
@@ -153,20 +175,28 @@ onMounted(refresh)
   color: var(--danger); font-size: 12px;
 }
 
-.slist{ padding: 14px 20px; }
-.slistHead{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.slist{ padding: 12px 20px; }
+.slistHead{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .slistTitle{ font-weight: 700; }
 .sempty{ color: var(--muted); font-size: 13px; padding: 10px 0; }
-.sitems{ display: flex; flex-direction: column; gap: 6px; }
+.sitems{ display: flex; flex-direction: column; gap: 4px; }
 .sitem{
-  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-  padding: 10px 12px; border-radius: 12px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px; border-radius: 10px;
   border: 1px solid var(--border); font-size: 13px;
 }
-.sitem.cancelled{ opacity: .45; }
+.sitem:hover{ background: var(--surface-2); }
+.sitem.cancelled{ opacity: .4; }
 .sitemTime{ color: var(--muted); font-size: 12px; white-space: nowrap; }
-.sitemTitle{ flex: 1; font-weight: 500; }
+.sitemMain{ min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.sitemTitle{ font-weight: 500; }
+.sitemMeta{ display: flex; gap: 6px; align-items: center; }
 .sitemCat{ font-size: 11px; color: var(--muted); padding: 2px 8px; border: 1px solid var(--border); border-radius: 999px; }
 .sitemLoc{ font-size: 11px; color: var(--muted); }
+.sitemActions{ display: flex; gap: 6px; opacity: 0; transition: opacity .15s; }
+.sitem:hover .sitemActions{ opacity: 1; }
 .sdel{ color: var(--danger); }
 </style>

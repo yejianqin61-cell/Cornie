@@ -1,6 +1,7 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { createExpenseEntry, createIncomeEntry, listLedgerEntries, listLedgerCategories } from '../api'
+import { listenDataChanged } from '../syncSignals'
 
 const entries = ref([])
 const categories = ref([])
@@ -20,14 +21,15 @@ async function refresh() {
       listLedgerEntries({}),
       listLedgerCategories({})
     ])
-    entries.value = (entryData?.entries || []).slice(0, 10)
-    categories.value = catData?.categories || []
+    const entryItems = entryData?.items || []
+    entries.value = entryItems.slice(0, 10)
+    categories.value = catData?.items || []
 
     // Calc monthly
     const now = new Date()
     const monthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
     let inc = 0, exp = 0
-    for (const e of (entryData?.entries || [])) {
+    for (const e of entryItems) {
       if (!e.occurredAt?.startsWith(monthPrefix)) continue
       if (e.type === 'income') inc += e.amount || 0
       else exp += e.amount || 0
@@ -64,7 +66,18 @@ async function submitEntry() {
   }
 }
 
-onMounted(refresh)
+let stopListening = () => {}
+
+onMounted(() => {
+  refresh()
+  stopListening = listenDataChanged((detail) => {
+    if (detail?.ledger) refresh()
+  })
+})
+
+onBeforeUnmount(() => {
+  stopListening()
+})
 </script>
 
 <template>
@@ -115,13 +128,15 @@ onMounted(refresh)
       </div>
       <div v-if="entries.length === 0" class="lrecentEmpty">还没有记录</div>
       <div v-else class="lrecentList">
-        <div v-for="e in entries.slice(0, 5)" :key="e.id" class="lrecentRow">
-          <span class="lrecentType">{{ e.type === 'income' ? '收入' : '支出' }}</span>
-          <span class="lrecentItem">{{ e.item || e.categoryName || '未分类' }}</span>
+        <div v-for="e in entries.slice(0, 6)" :key="e.id" class="lrecentRow">
+          <span class="lrecentType">{{ e.type === 'income' ? '📥' : '📤' }}</span>
+          <div class="lrecentMain">
+            <span class="lrecentItem">{{ e.item || e.categoryName || '未分类' }}</span>
+            <span class="lrecentCat">{{ e.occurredAt }}{{ e.categoryName && e.item ? ' · ' + e.categoryName : '' }}</span>
+          </div>
           <span class="lrecentAmt" :class="e.type === 'income' ? 'inc' : 'exp'">
             {{ e.type === 'income' ? '+' : '-' }}¥{{ e.amount?.toFixed(2) }}
           </span>
-          <span class="lrecentDate">{{ e.occurredAt }}</span>
         </div>
       </div>
     </div>
@@ -134,24 +149,33 @@ onMounted(refresh)
 </template>
 
 <style scoped>
-.lhome{ height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding-right: 4px; }
+.lhome{ height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-right: 4px; }
 .lhome::-webkit-scrollbar{ width: 4px; }
 .lhome::-webkit-scrollbar-thumb{ background: rgba(0,0,0,.08); border-radius: 999px; }
 
-.loverview{ background: var(--ledger-tint); padding: 20px; }
-.lovTitle{ font-weight: 800; font-size: 16px; margin-bottom: 12px; }
-.lovGrid{ display: flex; gap: 24px; }
-.lovItem{ display: flex; flex-direction: column; gap: 4px; }
-.lovLabel{ font-size: 12px; color: var(--muted); }
-.lovVal{ font-size: 20px; font-weight: 700; }
+.loverview{ background: var(--ledger-tint); padding: 16px 20px; }
+.lovTitle{ font-weight: 700; font-size: 14px; color: var(--muted); margin-bottom: 8px; }
+.lovGrid{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; }
+.lovItem{
+  text-align: center;
+  padding: 4px 0;
+  border-right: 1px solid var(--border);
+}
+.lovItem:last-child{ border-right: none; }
+.lovLabel{ font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px; }
+.lovVal{ font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .lovVal.inc{ color: #5B9A6B; }
 .lovVal.exp{ color: var(--danger); }
 
-.lquick{ padding: 16px 20px; }
+.lquick{ padding: 14px 20px; }
 .lquickHead{ display: flex; justify-content: space-between; align-items: center; }
 .lquickTitle{ font-weight: 700; }
-.lquickForm{ margin-top: 12px; display: flex; flex-direction: column; gap: 10px; }
-.lquickRow{ display: flex; gap: 10px; }
+.lquickForm{ margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.lquickForm > button,
+.lquickForm > .lquickRow,
+.lquickForm > input:nth-child(5),
+.lquickForm > .lquickError{ grid-column: 1 / -1; }
+.lquickRow{ display: flex; gap: 8px; }
 .lquickError{
   padding: 8px 12px;
   border-radius: 10px;
@@ -162,22 +186,39 @@ onMounted(refresh)
 }
 
 .lrecent{ padding: 14px 20px; }
-.lrecentHead{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.lrecentHead{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .lrecentTitle{ font-weight: 700; }
 .lrecentEmpty{ color: var(--muted); font-size: 13px; padding: 10px 0; }
-.lrecentList{ display: flex; flex-direction: column; gap: 6px; }
+.lrecentList{ display: flex; flex-direction: column; gap: 4px; }
 .lrecentRow{
-  display: flex; align-items: center; gap: 12px;
-  padding: 10px 12px; border-radius: 12px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 12px;
   border: 1px solid var(--border);
   font-size: 13px;
 }
-.lrecentType{ color: var(--muted); font-size: 12px; }
-.lrecentItem{ flex: 1; }
-.lrecentAmt{ font-weight: 600; font-variant-numeric: tabular-nums; }
+.lrecentType{
+  font-size: 20px;
+  line-height: 1;
+}
+.lrecentMain{ min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.lrecentItem{ font-weight: 500; }
+.lrecentCat{
+  font-size: 11px;
+  color: var(--muted);
+}
+.lrecentAmt{
+  font-weight: 700;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
 .lrecentAmt.inc{ color: #5B9A6B; }
 .lrecentAmt.exp{ color: var(--danger); }
-.lrecentDate{ color: var(--muted); font-size: 12px; white-space: nowrap; }
 
-.lcat{ padding: 14px 20px; text-align: center; }
+.lcat{ padding: 10px 20px; text-align: center; font-size: 13px; }
 </style>

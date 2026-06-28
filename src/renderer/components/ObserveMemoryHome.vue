@@ -1,11 +1,12 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { listMemoryWikiPages } from '../api'
+import { listenDataChanged } from '../syncSignals'
 
 const recentMemories = ref([])
 const loadingMemories = ref(false)
 
-onMounted(async () => {
+async function refreshMemories() {
   loadingMemories.value = true
   try {
     const data = await listMemoryWikiPages({ pageType: 'memory', limit: 5 })
@@ -15,6 +16,19 @@ onMounted(async () => {
   } finally {
     loadingMemories.value = false
   }
+}
+
+let stopListening = () => {}
+
+onMounted(() => {
+  refreshMemories()
+  stopListening = listenDataChanged((detail) => {
+    if (detail?.memory || detail?.observation) refreshMemories()
+  })
+})
+
+onBeforeUnmount(() => {
+  stopListening()
 })
 
 function truncated(text, maxLen = 80) {
@@ -90,7 +104,7 @@ function truncated(text, maxLen = 80) {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
   padding-right: 4px;
 }
 .omPage::-webkit-scrollbar{ width: 4px; }
@@ -99,77 +113,81 @@ function truncated(text, maxLen = 80) {
 /* ─── 引导区 ─── */
 .omIntro{
   background: var(--memory-tint);
-  padding: 28px 24px;
+  padding: 18px 24px;
   text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-}
-.omIntroIcon{ font-size: 40px; }
-.omIntroTitle{ font-size: 20px; font-weight: 800; }
-.omIntroText{
-  font-size: 14px;
-  color: var(--muted);
-  line-height: 1.7;
-  max-width: 500px;
-}
-
-/* ─── 快速记观察 ─── */
-.omQuick{ padding: 18px 20px; }
-.omQuickTitle{ font-weight: 700; font-size: 15px; margin-bottom: 8px; }
-.omQuickHint{ font-size: 13px; color: var(--muted); line-height: 1.6; }
-.omQuickHint a{ color: var(--accent); }
-
-/* ─── 记忆区 ─── */
-.omMemories{ padding: 16px 20px; }
-.omMemoriesHead{
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-.omMemoriesTitle{ font-weight: 700; }
-
-.omLoading{ text-align: center; color: var(--muted); padding: 20px; font-size: 13px; }
-.omEmpty{
-  text-align: center;
-  padding: 24px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 6px;
 }
-.omEmptyIcon{ font-size: 28px; }
-.omEmptyText{ font-size: 14px; color: var(--muted); }
+.omIntroIcon{ font-size: 32px; }
+.omIntroTitle{ font-size: 17px; font-weight: 800; }
+.omIntroText{
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.7;
+  max-width: 480px;
+}
+
+/* ─── 快速记观察 ─── */
+.omQuick{ padding: 14px 20px; }
+.omQuickTitle{ font-weight: 700; font-size: 14px; margin-bottom: 6px; }
+.omQuickHint{ font-size: 13px; color: var(--muted); line-height: 1.6; }
+.omQuickHint a{ color: var(--accent); }
+
+/* ─── 记忆区 ─── */
+.omMemories{ padding: 14px 20px; }
+.omMemoriesHead{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.omMemoriesTitle{ font-weight: 700; }
+
+.omLoading{ text-align: center; color: var(--muted); padding: 16px; font-size: 13px; }
+.omEmpty{
+  text-align: center;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.omEmptyIcon{ font-size: 24px; }
+.omEmptyText{ font-size: 13px; color: var(--muted); }
 .omEmptyHint{ font-size: 12px; color: var(--muted); }
 
-.omMemoryList{ display: flex; flex-direction: column; gap: 8px; }
+.omMemoryList{ display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .omMemoryCard{
-  padding: 14px;
+  padding: 12px 14px;
   border: 1px solid var(--border);
-  border-radius: 14px;
+  border-radius: 12px;
   cursor: pointer;
   transition: background .15s;
 }
 .omMemoryCard:hover{ background: var(--surface-2); }
-.omMemoryTitle{ font-weight: 600; font-size: 14px; }
+.omMemoryTitle{ font-weight: 600; font-size: 13px; }
 .omMemorySnippet{
-  font-size: 13px;
+  font-size: 12px;
   color: var(--muted);
   margin-top: 4px;
   line-height: 1.5;
 }
 
 /* ─── 观察区 ─── */
-.omObserve{ padding: 16px 20px; }
+.omObserve{ padding: 12px 20px; }
 .omObserveHead{
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
-.omObserveTitle{ font-weight: 700; }
+.omObserveTitle{ font-weight: 700; font-size: 14px; }
 .omObserveHint{ font-size: 13px; color: var(--muted); line-height: 1.6; }
 .omObserveHint a{ color: var(--accent); }
+
+@media (max-width: 760px){
+  .omMemoryList{ grid-template-columns: 1fr; }
+}
 </style>

@@ -193,12 +193,8 @@ onMounted(async () => {
     <!-- 右侧主区 -->
     <main class="mainPanel">
       <header class="topBar">
-        <div>
-          <div class="topTitle">{{ modeMeta.label }}</div>
-          <div class="topHint">{{ modeMeta.hint }}</div>
-        </div>
-        <div class="topActions">
-        </div>
+        <div class="topTitle">{{ modeMeta.label }}</div>
+        <div class="topHint">{{ modeMeta.hint }}</div>
       </header>
 
       <!-- 配网引导遮罩 -->
@@ -435,27 +431,20 @@ onMounted(async () => {
 
 .topBar{
   display:flex;
-  align-items:flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 16px 20px;
+  align-items: baseline;
+  gap: 14px;
+  padding: 10px 18px;
   border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: 14px;
   background: var(--surface);
 }
 .topTitle{
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 800;
 }
 .topHint{
-  margin-top: 4px;
   color: var(--muted);
-  font-size: 13px;
-}
-.topActions{
-  display:flex;
-  align-items:center;
-  gap: 10px;
+  font-size: 12px;
 }
 .monthInput{
   width: 160px;
@@ -511,164 +500,10 @@ onMounted(async () => {
   color: #5B9A6B;
   font-size: 13px;
 }
-.guideBannerReset{
-  display:flex;
-  align-items:center;
-  gap: 12px;
-  margin-top: 10px;
-  font-size: 13px;
-  color: var(--muted);
-}
-
-/* ─── 占位页 ─── */
-.placeholderPage{
-  flex:1;
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap: 12px;
-  color: var(--muted);
-  min-height: 400px;
-}
-.placeholderIcon{ font-size: 48px; }
-.placeholderTitle{ font-size: 20px; font-weight: 700; color: var(--text); }
-.placeholderHint{ font-size: 14px; }
-
 /* ─── 内容区 ─── */
 .contentFrame{
   flex:1;
   min-height: 0;
-}
-
-/* ─── 日记模块（task-005 前临时保留） ─── */
-.diaryGrid{
-  height: 100%;
-  display:grid;
-  grid-template-columns: 260px 1fr;
-  gap: 14px;
-}
-.sidebar{
-  display:flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-.sidebarHead{
-  padding: 14px 14px 10px;
-  border-bottom: 1px solid var(--border);
-}
-.sidebarTitle{ font-weight: 700; }
-.sidebarHint{ font-size: 12px; color: var(--muted); margin-top: 4px; }
-.list{
-  overflow: auto;
-  padding: 10px;
-  display:flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.row{
-  width:100%;
-  text-align:left;
-  display:flex;
-  justify-content: space-between;
-  align-items:center;
-  gap: 10px;
-  padding: 10px 12px;
-  border-radius: 14px;
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--text);
-  cursor: pointer;
-}
-.row:hover{ background: var(--surface-2); }
-.row.active{
-  border-color: rgba(232,133,106,.25);
-  background: rgba(232,133,106,.08);
-}
-.date{ font-variant-numeric: tabular-nums; font-size: 13px; }
-.meta{ display:flex; gap: 6px; }
-.pill{
-  font-size: 11px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  color: var(--muted);
-}
-.pill2{ border-color: rgba(232,133,106,.30); color: var(--accent); }
-.content{
-  display:flex;
-  flex-direction: column;
-  overflow:hidden;
-}
-.contentHead{
-  padding: 14px 16px;
-  display:flex;
-  align-items:flex-start;
-  justify-content: space-between;
-  gap: 10px;
-  border-bottom: 1px solid var(--border);
-}
-.contentTitle{ font-weight: 800; }
-.contentHint{ margin-top: 4px; font-size: 12px; color: var(--muted); }
-.contentActions{ display:flex; gap: 10px; }
-.grid{
-  padding: 16px;
-  display:grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-  overflow:auto;
-}
-.panel{
-  display:flex;
-  flex-direction: column;
-  gap: 10px;
-  min-width: 0;
-}
-.panelTitle{ font-weight: 700; }
-.panelHint{ font-weight: 500; font-size: 12px; color: var(--muted); margin-left: 8px; }
-.span2{ grid-column: 1 / -1; }
-.empty{
-  padding: 10px 12px;
-  border: 1px dashed var(--border);
-  border-radius: 12px;
-  color: var(--muted);
-}
-.otdList{ display:flex; flex-direction: column; gap: 10px; }
-.otdItem{
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 12px;
-}
-.otdDate{ font-weight: 700; font-variant-numeric: tabular-nums; margin-bottom: 8px; }
-.otdGrid{
-  display:grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  min-width: 0;
-}
-.otdCol{ min-width: 0; }
-.otdLabel{ font-size: 12px; color: var(--muted); margin-bottom: 6px; }
-.otdText{
-  white-space: pre-wrap;
-  line-height: 1.45;
-  max-height: 180px;
-  overflow: auto;
-  padding-right: 6px;
-}
-.otdError{
-  border: 1px solid rgba(217,106,92,.25);
-  background: rgba(217,106,92,.06);
-  color: var(--danger);
-  padding: 10px 12px;
-  border-radius: 12px;
-}
-.error{
-  margin: 12px 16px 0;
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(217,106,92,.25);
-  background: rgba(217,106,92,.06);
-  color: var(--danger);
 }
 
 /* ─── 响应式 ─── */
@@ -683,14 +518,10 @@ onMounted(async () => {
     display:grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .diaryGrid{ grid-template-columns: 1fr; }
 }
 @media (max-width: 760px){
   .navList{ grid-template-columns: 1fr; }
-  .topBar{ flex-direction: column; }
-  .topActions{ width: 100%; flex-wrap: wrap; }
-  .grid{ grid-template-columns: 1fr; }
-  .otdGrid{ grid-template-columns: 1fr; }
+  .topBar{ flex-direction: column; align-items: flex-start; }
   .guideBannerForm{ grid-template-columns: 1fr; }
 }
 </style>

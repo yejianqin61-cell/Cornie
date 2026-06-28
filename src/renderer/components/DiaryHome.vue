@@ -59,24 +59,18 @@ function emitGo(where) {
       </div>
     </div>
 
-    <!-- 我的日记预览 -->
-    <div class="previewCard card" v-if="hasWritten">
-      <div class="previewTitle">我今天写的</div>
-      <div class="previewText">{{ entry.userText }}</div>
-    </div>
-    <div class="previewCard card emptyPreview" v-else>
-      <div class="previewTitle">我今天写的</div>
-      <div class="previewHint">今天还没写日记，点击上方按钮开始写。</div>
-    </div>
-
-    <!-- Cornie 日记预览 -->
-    <div class="previewCard card" v-if="hasCornieWritten">
-      <div class="previewTitle">铃湾今天写的</div>
-      <div class="previewText corniePreview">{{ entry.cornieText }}</div>
-    </div>
-    <div class="previewCard card emptyPreview" v-else>
-      <div class="previewTitle">铃湾今天写的</div>
-      <div class="previewHint">铃湾还没为你写今天的日记。</div>
+    <!-- 双栏日记预览 -->
+    <div class="previewGrid">
+      <div class="previewCard card" :class="{ emptyPreview: !hasWritten }">
+        <div class="previewTitle">✏️ 我今天写的</div>
+        <div class="previewText" v-if="hasWritten">{{ entry.userText }}</div>
+        <div class="previewHint" v-else>还没写，点击上方写日记。</div>
+      </div>
+      <div class="previewCard card" :class="{ emptyPreview: !hasCornieWritten }">
+        <div class="previewTitle">🌸 铃湾今天写的</div>
+        <div class="previewText corniePreview" v-if="hasCornieWritten">{{ entry.cornieText }}</div>
+        <div class="previewHint" v-else>铃湾还没写今天的日记。</div>
+      </div>
     </div>
 
     <!-- 往年今日入口 -->
@@ -135,24 +129,33 @@ function emitGo(where) {
   margin-top: 6px;
 }
 
-/* ─── 预览卡片 ─── */
+/* ─── 双栏预览 ─── */
+.previewGrid{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
 .previewCard{
-  padding: 18px 20px;
+  padding: 16px 18px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
 }
-.previewTitle{ font-weight: 700; font-size: 15px; }
+.previewTitle{ font-weight: 700; font-size: 14px; }
 .previewText{
   white-space: pre-wrap;
   line-height: 1.6;
-  font-size: 14px;
-  max-height: 200px;
+  font-size: 13px;
+  max-height: 160px;
   overflow-y: auto;
 }
 .corniePreview{ color: #9B6B7A; }
-.emptyPreview{ opacity: .7; }
+.emptyPreview{ opacity: .65; background: var(--surface-2); }
 .previewHint{ color: var(--muted); font-size: 13px; }
+
+@media (max-width: 760px){
+  .previewGrid{ grid-template-columns: 1fr; }
+}
 
 /* ─── 往年今日 ─── */
 .otdCard{ padding: 16px 20px; }

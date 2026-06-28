@@ -68,9 +68,9 @@ onMounted(async () => {
   <div class="chatPage">
     <!-- 顶部陪伴区 -->
     <div class="chatCompanion">
-      <div class="chatGreeting">{{ greeting }}</div>
-      <div class="chatDate">{{ todayDate }}</div>
-      <div class="chatTagline">想和我聊点什么？我在听。</div>
+      <span class="chatGreeting">{{ greeting }}</span>
+      <span class="chatDate">{{ todayDate }}</span>
+      <span class="chatTagline">想和我聊点什么？</span>
     </div>
 
     <!-- 主对话区 -->
@@ -162,31 +162,35 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 0;
-  background: var(--chat-tint);
-  border-radius: 18px;
+  background: var(--surface);
+  border-radius: 16px;
   border: 1px solid var(--border);
   overflow: hidden;
 }
 
-/* ─── 顶部陪伴区 ─── */
+/* ─── 顶部陪伴区（压缩为一行） ─── */
 .chatCompanion{
-  padding: 20px 24px 16px;
-  text-align: center;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 8px 20px;
   border-bottom: 1px solid var(--border);
+  background: var(--chat-tint);
+  flex: 0 0 auto;
 }
 .chatGreeting{
-  font-size: 22px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--text);
+  white-space: nowrap;
 }
 .chatDate{
-  margin-top: 4px;
-  font-size: 13px;
+  font-size: 12px;
   color: var(--muted);
 }
 .chatTagline{
-  margin-top: 8px;
-  font-size: 14px;
+  margin-left: auto;
+  font-size: 12px;
   color: var(--muted);
 }
 
@@ -194,7 +198,7 @@ onMounted(async () => {
 .chatMessages{
   flex: 1;
   overflow-y: auto;
-  padding: 16px 20px;
+  padding: 14px 20px;
   scroll-behavior: smooth;
 }
 .chatMessages::-webkit-scrollbar{ width: 4px; }
@@ -212,14 +216,14 @@ onMounted(async () => {
   gap: 8px;
   color: var(--muted);
 }
-.chatEmptyIcon{ font-size: 40px; }
-.chatEmptyTitle{ font-size: 16px; font-weight: 600; color: var(--text); }
+.chatEmptyIcon{ font-size: 36px; }
+.chatEmptyTitle{ font-size: 15px; font-weight: 600; color: var(--text); }
 .chatEmptyHint{ font-size: 13px; }
 
 .chatList{
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .chatItem{ width: 100%; display: flex; }
@@ -228,9 +232,9 @@ onMounted(async () => {
 
 /* ─── 气泡 ─── */
 .bubble{
-  max-width: 70%;
-  padding: 10px 14px;
-  border-radius: 16px;
+  max-width: 75%;
+  padding: 8px 14px;
+  border-radius: 14px;
   font-size: 14px;
   line-height: 1.6;
 }
@@ -240,7 +244,7 @@ onMounted(async () => {
   border-bottom-right-radius: 6px;
 }
 .bubbleCornie{
-  background: var(--surface);
+  background: var(--surface-2);
   border: 1px solid var(--border);
   color: var(--text);
   border-bottom-left-radius: 6px;
@@ -254,7 +258,7 @@ onMounted(async () => {
 .bubbleRole{
   font-size: 11px;
   opacity: .6;
-  margin-bottom: 3px;
+  margin-bottom: 2px;
 }
 .bubbleText{
   white-space: pre-wrap;
@@ -269,18 +273,18 @@ onMounted(async () => {
 .chatInputBar{
   display: flex;
   align-items: flex-end;
-  gap: 10px;
-  padding: 14px 20px;
+  gap: 8px;
+  padding: 10px 16px;
   border-top: 1px solid var(--border);
   background: var(--surface);
 }
 .chatTextarea{
   flex: 1;
-  min-height: 40px;
+  min-height: 36px;
   max-height: 120px;
   resize: none;
   border-radius: 12px;
-  padding: 10px 14px;
+  padding: 8px 14px;
   font-size: 14px;
   line-height: 1.5;
   border: 1px solid var(--border);
@@ -296,18 +300,19 @@ onMounted(async () => {
 }
 .chatSendBtn{
   flex: 0 0 auto;
-  padding: 10px 20px;
-  border-radius: 12px;
+  padding: 8px 18px;
+  border-radius: 10px;
   white-space: nowrap;
+  font-size: 14px;
 }
 
 /* ─── 待确认提示 ─── */
 .chatPendingHint{
-  padding: 8px 20px;
+  padding: 6px 20px;
   text-align: center;
   font-size: 12px;
   color: var(--muted);
-  background: var(--surface);
+  background: var(--chat-tint);
   border-top: 1px solid var(--border);
 }
 </style>

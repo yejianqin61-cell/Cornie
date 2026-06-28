@@ -71,25 +71,30 @@ const statusClass = computed(() => {
 .settingsPage{
   height: 100%;
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
   padding-right: 4px;
+  align-content: start;
 }
 .settingsPage::-webkit-scrollbar{ width: 4px; }
 .settingsPage::-webkit-scrollbar-thumb{ background: rgba(0,0,0,.08); border-radius: 999px; }
 
-.sCard{ padding: 18px 20px; }
-.sCardTitle{ font-weight: 700; font-size: 16px; margin-bottom: 8px; }
-.sCardHint{ font-size: 13px; color: var(--muted); line-height: 1.6; }
+.sCard{ padding: 16px 20px; display: flex; flex-direction: column; }
+.sCardTitle{ font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+.sCardHint{ font-size: 13px; color: var(--muted); line-height: 1.6; flex: 1; }
 
 .sStatus{
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
   margin-bottom: 4px;
 }
 .sStatus.ok{ color: #5B9A6B; }
 .sStatus.warn{ color: #D9A55C; }
 .sStatus.off{ color: var(--muted); }
-.sStatusHint{ font-size: 13px; color: var(--muted); margin-top: 4px; }
+.sStatusHint{ font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+@media (max-width: 760px){
+  .settingsPage{ grid-template-columns: 1fr; }
+}
 </style>

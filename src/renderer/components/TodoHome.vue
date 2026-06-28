@@ -1,6 +1,7 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { completeTodo, createTodo, listTodoCategories, listTodos, reopenTodo, deleteTodo } from '../api'
+import { listenDataChanged } from '../syncSignals'
 
 const todos = ref([])
 const categories = ref([])
@@ -20,8 +21,8 @@ async function refresh() {
       listTodos({}),
       listTodoCategories()
     ])
-    todos.value = todoData?.todos || []
-    categories.value = catData?.categories || []
+    todos.value = todoData?.items || []
+    categories.value = catData?.items || []
     activeCount.value = todos.value.filter(t => t.status !== 'completed').length
     doneCount.value = todos.value.filter(t => t.status === 'completed').length
   } catch { /* ignore */ }
@@ -74,7 +75,18 @@ async function removeTodo(id) {
   }
 }
 
-onMounted(refresh)
+let stopListening = () => {}
+
+onMounted(() => {
+  refresh()
+  stopListening = listenDataChanged((detail) => {
+    if (detail?.todo) refresh()
+  })
+})
+
+onBeforeUnmount(() => {
+  stopListening()
+})
 </script>
 
 <template>
@@ -119,17 +131,17 @@ onMounted(refresh)
 </template>
 
 <style scoped>
-.thome{ height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding-right: 4px; }
+.thome{ height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-right: 4px; }
 .thome::-webkit-scrollbar{ width: 4px; }
 .thome::-webkit-scrollbar-thumb{ background: rgba(0,0,0,.08); border-radius: 999px; }
 
-.tsummary{ padding: 16px 20px; text-align: center; }
-.tsumText{ font-size: 16px; }
+.tsummary{ background: var(--todo-tint); padding: 12px 20px; text-align: center; }
+.tsumText{ font-size: 15px; }
 
-.tquick{ padding: 14px 20px; }
-.tquickRow{ display: flex; gap: 10px; align-items: center; }
+.tquick{ padding: 12px 20px; }
+.tquickRow{ display: flex; gap: 8px; align-items: center; }
 .tquickRow input{ flex: 1; }
-.tquickRow select{ width: 100px; }
+.tquickRow select{ width: 90px; }
 .terr{
   margin-top: 8px;
   padding: 8px 12px;
@@ -140,18 +152,21 @@ onMounted(refresh)
   font-size: 12px;
 }
 
-.tlist{ padding: 14px 20px; }
-.tlistHead{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.tlist{ padding: 12px 20px; }
+.tlistHead{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .tlistTitle{ font-weight: 700; }
 .tempty{ color: var(--muted); font-size: 13px; padding: 10px 0; }
-.titems{ display: flex; flex-direction: column; gap: 6px; }
+.titems{ display: flex; flex-direction: column; gap: 4px; }
 .titem{
   display: flex; align-items: center; gap: 10px;
-  padding: 10px 12px; border-radius: 12px;
+  padding: 10px 14px; border-radius: 10px;
   border: 1px solid var(--border);
 }
-.titem.done{ opacity: .5; }
+.titem:hover{ background: var(--surface-2); }
+.titem.done{ opacity: .45; }
+.titem input[type="checkbox"]{ width: auto; cursor: pointer; }
 .titemTitle{ flex: 1; font-size: 14px; }
 .titemCat{ font-size: 11px; color: var(--muted); padding: 2px 8px; border: 1px solid var(--border); border-radius: 999px; }
-.tdel{ font-size: 12px; }
+.tdel{ font-size: 12px; opacity: 0; transition: opacity .15s; }
+.titem:hover .tdel{ opacity: 1; }
 </style>
