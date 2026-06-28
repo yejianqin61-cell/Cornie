@@ -5,6 +5,7 @@ import { useChat } from './composables/useChat'
 const hover = ref(false)
 const pinned = ref(false)
 const focused = ref(false)
+const alwaysOnTop = ref(false)
 const message = ref('')
 const dragReady = ref(false)
 const chatListRef = ref(null)
@@ -95,6 +96,15 @@ function togglePinned() {
   pinned.value = !pinned.value
 }
 
+async function toggleAlwaysOnTop() {
+  try {
+    const nextValue = await window.cornieDesktop?.setAlwaysOnTop?.(!alwaysOnTop.value)
+    alwaysOnTop.value = Boolean(nextValue)
+  } catch {
+    alwaysOnTop.value = !alwaysOnTop.value
+  }
+}
+
 function openMainWindow() {
   try {
     window.cornieDesktop?.showMainWindow?.()
@@ -107,7 +117,7 @@ let windowDrag = null
 
 function canWindowDrag(target) {
   if (typeof window === 'undefined' || !window.cornieDesktop) return false
-  const interactive = target?.closest?.('.petPanel, .petInputBar, .petMessages, button, input')
+  const interactive = target?.closest?.('button, input')
   return !interactive
 }
 
@@ -161,6 +171,11 @@ watch(
 
 onMounted(async () => {
   dragReady.value = typeof window !== 'undefined' && Boolean(window.cornieDesktop)
+  try {
+    alwaysOnTop.value = Boolean(await window.cornieDesktop?.getAlwaysOnTop?.())
+  } catch {
+    alwaysOnTop.value = false
+  }
   const date = today()
   await loadConversation(date)
   await restorePendingConfirmations(date)
@@ -237,6 +252,15 @@ onBeforeUnmount(() => {
             placeholder="和小铃湾说句话……"
             @keydown.enter.prevent="send"
           />
+          <button
+            type="button"
+            class="petTopButton"
+            :class="{ 'is-on': alwaysOnTop }"
+            :title="alwaysOnTop ? '取消置于上方' : '置于所有页面上方'"
+            @click="toggleAlwaysOnTop"
+          >
+            {{ alwaysOnTop ? '顶' : '浮' }}
+          </button>
           <button
             type="button"
             class="petPinButton"
@@ -479,6 +503,7 @@ onBeforeUnmount(() => {
   color: var(--pet-text-faint);
 }
 
+.petTopButton,
 .petPinButton,
 .petSendButton {
   flex: 0 0 auto;
@@ -493,11 +518,13 @@ onBeforeUnmount(() => {
   -webkit-app-region: no-drag;
 }
 
+.petTopButton:hover,
 .petPinButton:hover,
 .petSendButton:hover {
   background: rgba(255, 255, 255, 0.88);
 }
 
+.petTopButton.is-on,
 .petPinButton.is-on {
   background: var(--pet-accent-soft);
   color: var(--pet-accent-strong);
