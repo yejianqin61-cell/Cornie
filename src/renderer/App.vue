@@ -16,6 +16,7 @@ import DiaryHome from './components/DiaryHome.vue'
 import DiaryEditor from './components/DiaryEditor.vue'
 import CornieDiaryReview from './components/CornieDiaryReview.vue'
 import OnThisDayPage from './components/OnThisDayPage.vue'
+import ObserveMemoryHome from './components/ObserveMemoryHome.vue'
 import LedgerWorkspace from './components/LedgerWorkspace.vue'
 import TodoWorkspace from './components/TodoWorkspace.vue'
 import ScheduleWorkspace from './components/ScheduleWorkspace.vue'
@@ -67,6 +68,10 @@ const modeMeta = computed(() => sections.find((item) => item.id === mode.value) 
 
 // Diary sub-view
 const diaryView = ref('home') // 'home' | 'editor' | 'cornie-review' | 'on-this-day'
+
+// Observe-Memory sub-view
+const omView = ref('home') // 'home' | 'observation-list' | 'observation-detail' | 'memory-list' | 'memory-detail'
+const omDetailId = ref('')
 
 const modelStatus = ref({ ok: false, configured: false, provider: 'deepseek', model: '', reason: '' })
 const modelSettings = ref({
@@ -247,6 +252,7 @@ function pickDate(date) {
 
 watch(mode, () => {
   diaryView.value = 'home'
+  omView.value = 'home'
 })
 
 onMounted(async () => {
@@ -368,13 +374,12 @@ onMounted(async () => {
         <ScheduleWorkspace />
       </section>
 
-      <!-- 观察与记忆（占位，task-006 构建） -->
+      <!-- 观察与记忆 -->
       <section v-else-if="mode === 'observe-memory'" class="contentFrame">
-        <div class="placeholderPage">
-          <div class="placeholderIcon">🌟</div>
-          <div class="placeholderTitle">观察与记忆</div>
-          <div class="placeholderHint">观察与记忆首页将在后续步骤构建。</div>
-        </div>
+        <ObserveMemoryHome
+          @go="(v, id) => { omView = v; omDetailId = id || '' }"
+          @goChat="mode = 'chat'"
+        />
       </section>
 
       <!-- 设置（占位，task-012 构建） -->
