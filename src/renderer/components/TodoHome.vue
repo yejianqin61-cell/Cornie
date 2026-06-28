@@ -14,6 +14,14 @@ const errorMsg = ref('')
 const activeCount = ref(0)
 const doneCount = ref(0)
 
+function isDone(todo) {
+  return todo?.status === 'done'
+}
+
+function isVisibleTodo(todo) {
+  return todo?.status !== 'cancelled'
+}
+
 async function refresh() {
   loading.value = true
   try {
@@ -21,10 +29,10 @@ async function refresh() {
       listTodos({}),
       listTodoCategories()
     ])
-    todos.value = todoData?.items || []
+    todos.value = (todoData?.items || []).filter(isVisibleTodo)
     categories.value = catData?.items || []
-    activeCount.value = todos.value.filter(t => t.status !== 'completed').length
-    doneCount.value = todos.value.filter(t => t.status === 'completed').length
+    activeCount.value = todos.value.filter(t => !isDone(t)).length
+    doneCount.value = todos.value.filter(isDone).length
   } catch { /* ignore */ }
   finally { loading.value = false }
 }
@@ -54,7 +62,7 @@ async function addTodo() {
 
 async function toggleTodo(todo) {
   try {
-    if (todo.status === 'completed') {
+    if (isDone(todo)) {
       await reopenTodo(todo.id)
     } else {
       await completeTodo(todo.id)
@@ -119,8 +127,8 @@ onBeforeUnmount(() => {
       </div>
       <div v-if="todos.length === 0 && !loading" class="tempty">还没有待办事项</div>
       <div v-else class="titems">
-        <div v-for="t in todos" :key="t.id" class="titem" :class="{ done: t.status === 'completed' }">
-          <input type="checkbox" :checked="t.status === 'completed'" @change="toggleTodo(t)" />
+        <div v-for="t in todos" :key="t.id" class="titem" :class="{ done: isDone(t) }">
+          <input type="checkbox" :checked="isDone(t)" @change="toggleTodo(t)" />
           <span class="titemTitle">{{ t.title }}</span>
           <span class="titemCat" v-if="t.categoryName">{{ t.categoryName }}</span>
           <button class="ghost tdel" @click="removeTodo(t.id)">删除</button>
@@ -167,6 +175,6 @@ onBeforeUnmount(() => {
 .titem input[type="checkbox"]{ width: auto; cursor: pointer; }
 .titemTitle{ flex: 1; font-size: 14px; }
 .titemCat{ font-size: 11px; color: var(--muted); padding: 2px 8px; border: 1px solid var(--border); border-radius: 999px; }
-.tdel{ font-size: 12px; opacity: 0; transition: opacity .15s; }
+.tdel{ font-size: 12px; opacity: .72; transition: opacity .15s; }
 .titem:hover .tdel{ opacity: 1; }
 </style>

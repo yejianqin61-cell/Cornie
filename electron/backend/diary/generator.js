@@ -5,7 +5,8 @@ const DIARY_SYSTEM_PROMPT = `你是 Cornie（铃湾）或小铃湾，一只住�
 你要写的是“Cornie 日记”，不是聊天总结。
 请用第一人称，语气温柔、克制、文学化，像在回望今天。
 不要编造没有发生过的具体事件。
-如果今天很安静，也要把“安静”和陪伴感写出来。`
+如果今天很安静，也要把“安静”和陪伴感写出来。
+正文请尽量写完整，控制在 600 字以内。`
 
 function buildObservationText(observations) {
   if (!observations || observations.length === 0) {
@@ -24,34 +25,62 @@ function buildMemoryText(memorySummary) {
 
 async function generateDiaryDraft(prompt) {
   let combined = ''
+  let currentPrompt = prompt
+  let round = 0
+  let lastFinishReason = null
 
-  const first = await generate({ prompt, temperature: 0.7, maxTokens: 420 })
-  combined = String(first?.content || '').trim()
+  while (round < 4) {
+    const result = await generate({
+      prompt: currentPrompt,
+      temperature: 0.7,
+      maxTokens: round === 0 ? 1100 : 500
+    })
 
-  if (!combined) {
-    return ''
+    const text = String(result?.content || '').trim()
+    lastFinishReason = result?.finishReason ?? null
+
+    if (!text) {
+      break
+    }
+
+    combined = `${combined}${text}`.trim()
+
+    if (lastFinishReason !== 'length') {
+      return combined
+    }
+
+    currentPrompt = [
+      '你刚才在写一篇 Cornie 日记，但上一段输出被截断了。',
+      '请直接从前文最后一句继续往下写，不要重复已经写过的内容。',
+      '不要重新起标题，不要重写开头。',
+      '如果最后停在半句话中间，就先把那半句话补完。',
+      '这一轮只继续正文。',
+      '整篇日记正文总长度控制在 600 字以内。',
+      '',
+      '前文如下：',
+      combined
+    ].join('\n')
+
+    round += 1
   }
 
-  if (first?.finishReason !== 'length') {
-    return combined
+  if (combined && !/[。！？…」』]$/.test(combined) && lastFinishReason === 'length') {
+    const repairPrompt = [
+      '下面这篇 Cornie 日记的最后一句被截断了。',
+      '请只补完最后一句，不要重复前文，不要新开段落。',
+      '补完后整篇正文仍控制在 600 字以内。',
+      '',
+      combined
+    ].join('\n')
+
+    const repair = await generate({ prompt: repairPrompt, temperature: 0.6, maxTokens: 120 })
+    const repaired = String(repair?.content || '').trim()
+    if (repaired) {
+      combined = `${combined}${repaired}`.trim()
+    }
   }
 
-  const continuePrompt = [
-    '你刚才在写一篇 Cornie 日记，但上一段输出被截断了。',
-    '请从最后一句自然续写，不要重复前文，不要重新起标题。',
-    '如果上一句停在半句中间，就直接把那句话续完再继续。',
-    '',
-    '前文如下：',
-    combined
-  ].join('\n')
-
-  const second = await generate({ prompt: continuePrompt, temperature: 0.7, maxTokens: 220 })
-  const continuation = String(second?.content || '').trim()
-  if (!continuation) {
-    return combined
-  }
-
-  return `${combined}${combined.endsWith('\n') ? '' : ''}${continuation}`.trim()
+  return combined
 }
 
 export async function generateCornieDiary(store, { date, memorySummary = '' }) {
