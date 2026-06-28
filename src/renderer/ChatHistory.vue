@@ -2,17 +2,9 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { getChatlog, listChatlogDates } from './api'
 
-function pad2(n) {
-  return String(n).padStart(2, '0')
-}
-
-function toISOMonth(d) {
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`
-}
-
-function toISODate(d) {
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
-}
+function pad2(n) { return String(n).padStart(2, '0') }
+function toISOMonth(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}` }
+function toISODate(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}` }
 
 const today = new Date()
 const selectedMonth = ref(toISOMonth(today))
@@ -55,17 +47,10 @@ async function refreshMessages(date) {
   }
 }
 
-function pickDate(date) {
-  selectedDate.value = date
-}
+function pickDate(date) { selectedDate.value = date }
 
-watch(selectedMonth, async () => {
-  await refreshDates()
-})
-
-watch(selectedDate, async (date) => {
-  await refreshMessages(date)
-})
+watch(selectedMonth, () => refreshDates())
+watch(selectedDate, (date) => refreshMessages(date))
 
 onMounted(async () => {
   await refreshDates()
@@ -75,12 +60,11 @@ onMounted(async () => {
 
 <template>
   <div class="history">
-    <aside class="historySidebar">
+    <aside class="historySidebar card">
       <div class="historyHead">
-        <div class="historyTitle">聊天历史</div>
+        <div class="historyTitle">聊天记录</div>
         <input v-model="selectedMonth" class="monthInput" type="month" />
       </div>
-
       <div class="historyList">
         <button
           v-for="item in entries"
@@ -92,15 +76,18 @@ onMounted(async () => {
           <span>{{ item.date }}</span>
           <span class="historyCount">{{ item.messageCount }}</span>
         </button>
+        <div v-if="entries.length === 0 && !loadingDates" class="historyEmptySm">
+          这里还没有聊天记录
+        </div>
       </div>
     </aside>
 
-    <section class="historyContent">
+    <section class="historyContent card">
       <div class="historyContentHead">
         <div>
           <div class="historyTitle">{{ selectedLabel }}</div>
           <div class="historyHint">
-            {{ loadingDates || loadingMessages ? '加载中…' : `${messages.length} 条消息` }}
+            {{ loadingMessages ? '加载中…' : `${messages.length} 条消息` }}
           </div>
         </div>
       </div>
@@ -113,13 +100,13 @@ onMounted(async () => {
 
       <div v-else class="historyMessages">
         <div
-          v-for="message in messages"
-          :key="message.id"
+          v-for="msg in messages"
+          :key="msg.id"
           class="historyBubble"
-          :class="message.role === 'user' ? 'historyBubbleUser' : 'historyBubbleCornie'"
+          :class="msg.role === 'user' ? 'historyBubbleUser' : 'historyBubbleCornie'"
         >
-          <div class="historyRole">{{ message.role === 'user' ? '主人' : '铃湾' }}</div>
-          <div class="historyText">{{ message.content }}</div>
+          <div class="historyRole">{{ msg.role === 'user' ? '你' : '铃湾' }}</div>
+          <div class="historyText">{{ msg.content }}</div>
         </div>
       </div>
     </section>
@@ -131,15 +118,15 @@ onMounted(async () => {
   display:grid;
   grid-template-columns: 240px 1fr;
   gap: 14px;
+  height: 100%;
   min-height: 0;
 }
 
 .historySidebar,
 .historyContent{
-  border: 1px solid var(--border);
-  border-radius: 18px;
-  background: rgba(255,255,255,.04);
   overflow: hidden;
+  display:flex;
+  flex-direction:column;
 }
 
 .historyHead,
@@ -148,27 +135,17 @@ onMounted(async () => {
   border-bottom: 1px solid var(--border);
 }
 
-.historyTitle{
-  font-weight: 700;
-}
-
-.historyHint{
-  margin-top: 4px;
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.monthInput{
-  margin-top: 10px;
-  width: 100%;
-}
+.historyTitle{ font-weight: 700; }
+.historyHint{ margin-top: 4px; font-size: 12px; color: var(--muted); }
+.monthInput{ margin-top: 10px; width: 100%; }
 
 .historyList{
   display:flex;
   flex-direction:column;
-  gap: 8px;
+  gap: 6px;
   padding: 10px;
   overflow:auto;
+  flex:1;
 }
 
 .historyRow{
@@ -179,11 +156,15 @@ onMounted(async () => {
   padding: 10px 12px;
   border-radius: 14px;
   text-align:left;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
 }
-
+.historyRow:hover{ background: var(--surface-2); }
 .historyRow.active{
-  border-color: rgba(125,211,252,.35);
-  background: rgba(125,211,252,.10);
+  border-color: rgba(232,133,106,.25);
+  background: rgba(232,133,106,.08);
 }
 
 .historyCount{
@@ -192,8 +173,6 @@ onMounted(async () => {
 }
 
 .historyContent{
-  display:flex;
-  flex-direction:column;
   min-height: 0;
 }
 
@@ -203,59 +182,59 @@ onMounted(async () => {
   gap: 10px;
   padding: 16px;
   overflow:auto;
+  flex:1;
 }
 
 .historyBubble{
-  max-width: 85%;
-  padding: 10px 12px;
+  max-width: 80%;
+  padding: 10px 14px;
   border-radius: 14px;
   line-height: 1.5;
+  font-size: 14px;
 }
-
 .historyBubbleUser{
   align-self:flex-end;
-  background: rgba(125,211,252,.14);
-  border: 1px solid rgba(125,211,252,.28);
+  background: var(--accent);
+  color: #FFFFFF;
+  border-bottom-right-radius: 6px;
 }
-
 .historyBubbleCornie{
   align-self:flex-start;
-  background: rgba(255,255,255,.06);
-  border: 1px solid rgba(255,255,255,.12);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 6px;
 }
 
 .historyRole{
-  font-size: 12px;
+  font-size: 11px;
+  opacity: .6;
+  margin-bottom: 3px;
+}
+.historyText{ white-space: pre-wrap; word-break: break-word; }
+
+.historyEmptySm{
+  padding: 20px 12px;
+  text-align: center;
+  font-size: 13px;
   color: var(--muted);
-  margin-bottom: 4px;
 }
-
-.historyText{
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
 .historyEmpty,
 .historyError{
   margin: 16px;
   padding: 12px;
   border-radius: 12px;
 }
-
 .historyEmpty{
   border: 1px dashed var(--border);
   color: var(--muted);
 }
-
 .historyError{
-  border: 1px solid rgba(248,113,113,.35);
-  background: rgba(248,113,113,.08);
-  color: rgba(254,226,226,.95);
+  border: 1px solid rgba(217,106,92,.25);
+  background: rgba(217,106,92,.06);
+  color: var(--danger);
 }
 
 @media (max-width: 980px){
-  .history{
-    grid-template-columns: 1fr;
-  }
+  .history{ grid-template-columns: 1fr; }
 }
 </style>
