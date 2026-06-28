@@ -8,6 +8,8 @@ const focused = ref(false)
 const message = ref('')
 const dragReady = ref(false)
 const chatListRef = ref(null)
+const dockState = ref({ side: null, hidden: false })
+let dockHideTimer = null
 
 const {
   messages,
@@ -72,6 +74,7 @@ function today() {
 
 function onEnter() {
   hover.value = true
+  revealDockIfNeeded()
 }
 
 function onLeave() {
@@ -79,6 +82,7 @@ function onLeave() {
   if (!pinned.value && !focused.value) {
     scrollToLatest()
   }
+  scheduleDockHide()
 }
 
 function onFocusIn() {
@@ -103,11 +107,56 @@ function openMainWindow() {
   }
 }
 
+function clearDockHideTimer() {
+  if (dockHideTimer) {
+    window.clearTimeout(dockHideTimer)
+    dockHideTimer = null
+  }
+}
+
+async function syncDockState() {
+  try {
+    const state = await window.cornieDesktop?.getDockState?.()
+    dockState.value = state || { side: null, hidden: false }
+  } catch {
+    dockState.value = { side: null, hidden: false }
+  }
+}
+
+async function revealDockIfNeeded() {
+  clearDockHideTimer()
+  await syncDockState()
+  if (!dockState.value.side || !dockState.value.hidden) return
+  try {
+    const state = await window.cornieDesktop?.revealDock?.()
+    dockState.value = state || { side: null, hidden: false }
+  } catch {
+    // ignore
+  }
+}
+
+function canAutoHideDock() {
+  return Boolean(dockState.value.side) && !pinned.value && !focused.value && !sending.value
+}
+
+function scheduleDockHide() {
+  clearDockHideTimer()
+  if (!canAutoHideDock()) return
+  dockHideTimer = window.setTimeout(async () => {
+    try {
+      const state = await window.cornieDesktop?.hideDock?.()
+      dockState.value = state || { side: null, hidden: false }
+    } catch {
+      // ignore
+    }
+  }, 420)
+}
+
 let windowDrag = null
 
 function canWindowDrag(target) {
   if (typeof window === 'undefined' || !window.cornieDesktop) return false
-  const interactive = target?.closest?.('.petPanel, .petInputBar, .petMessages, button, input')
+  const interactive = target?.closest?.('button, input')
   return !interactive
 }
 
@@ -132,6 +181,9 @@ function onDragPointerUp() {
   try {
     window.cornieDesktop.dragEnd()
   } catch {}
+  window.setTimeout(() => {
+    syncDockState()
+  }, 40)
 }
 
 async function scrollToLatest() {
@@ -159,8 +211,20 @@ watch(
   }
 )
 
+watch(
+  () => [pinned.value, focused.value, sending.value, dockState.value.side, dockState.value.hidden],
+  () => {
+    if (canAutoHideDock()) {
+      scheduleDockHide()
+      return
+    }
+    clearDockHideTimer()
+  }
+)
+
 onMounted(async () => {
   dragReady.value = typeof window !== 'undefined' && Boolean(window.cornieDesktop)
+  await syncDockState()
   const date = today()
   await loadConversation(date)
   await restorePendingConfirmations(date)
@@ -173,6 +237,7 @@ onMounted(async () => {
 })
 
 onBeforeUnmount(() => {
+  clearDockHideTimer()
   stopConversationSync()
 })
 </script>
