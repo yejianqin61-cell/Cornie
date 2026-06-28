@@ -21,7 +21,12 @@ import ObservationList from './components/ObservationList.vue'
 import ObservationDetail from './components/ObservationDetail.vue'
 import MemoryPageList from './components/MemoryPageList.vue'
 import MemoryPageDetail from './components/MemoryPageDetail.vue'
-import LedgerWorkspace from './components/LedgerWorkspace.vue'
+import LedgerHome from './components/LedgerHome.vue'
+import TodoHome from './components/TodoHome.vue'
+import ScheduleHome from './components/ScheduleHome.vue'
+import SettingsHome from './components/SettingsHome.vue'
+import DeepseekConfig from './components/DeepseekConfig.vue'
+import AdvancedSettings from './components/AdvancedSettings.vue'
 import TodoWorkspace from './components/TodoWorkspace.vue'
 import ScheduleWorkspace from './components/ScheduleWorkspace.vue'
 
@@ -74,8 +79,11 @@ const modeMeta = computed(() => sections.find((item) => item.id === mode.value) 
 const diaryView = ref('home') // 'home' | 'editor' | 'cornie-review' | 'on-this-day'
 
 // Observe-Memory sub-view
-const omView = ref('home') // 'home' | 'observation-list' | 'observation-detail' | 'memory-list' | 'memory-detail'
+const omView = ref('home')
 const omDetailId = ref('')
+
+// Settings sub-view
+const settingsView = ref('home') // 'home' | 'deepseek-config' | 'advanced'
 
 const modelStatus = ref({ ok: false, configured: false, provider: 'deepseek', model: '', reason: '' })
 const modelSettings = ref({
@@ -257,6 +265,7 @@ function pickDate(date) {
 watch(mode, () => {
   diaryView.value = 'home'
   omView.value = 'home'
+  settingsView.value = 'home'
 })
 
 onMounted(async () => {
@@ -365,17 +374,17 @@ onMounted(async () => {
 
       <!-- 收支模式 -->
       <section v-else-if="mode === 'ledger'" class="contentFrame">
-        <LedgerWorkspace />
+        <LedgerHome />
       </section>
 
       <!-- 待办模式 -->
       <section v-else-if="mode === 'todo'" class="contentFrame">
-        <TodoWorkspace />
+        <TodoHome />
       </section>
 
       <!-- 日程模式 -->
       <section v-else-if="mode === 'schedule'" class="contentFrame">
-        <ScheduleWorkspace />
+        <ScheduleHome />
       </section>
 
       <!-- 观察与记忆 -->
@@ -408,17 +417,23 @@ onMounted(async () => {
         />
       </section>
 
-      <!-- 设置（占位，task-012 构建） -->
+      <!-- 设置 -->
       <section v-else-if="mode === 'settings'" class="contentFrame">
-        <div class="placeholderPage">
-          <div class="placeholderIcon">⚙️</div>
-          <div class="placeholderTitle">设置</div>
-          <div class="placeholderHint">设置页将在后续步骤构建。</div>
-          <div v-if="modelStatus.configured" class="guideBannerReset">
-            <span>已保存钥匙：{{ modelSettings.maskedApiKey }}</span>
-            <button class="danger" :disabled="settingsSaving" @click="resetModelSettings">清空钥匙</button>
-          </div>
-        </div>
+        <SettingsHome
+          v-if="settingsView === 'home'"
+          :modelStatus="modelStatus"
+          :modelSettings="modelSettings"
+          @go="(v) => settingsView = v"
+        />
+        <DeepseekConfig
+          v-else-if="settingsView === 'deepseek-config'"
+          @back="settingsView = 'home'"
+          @updated="refreshModelState()"
+        />
+        <AdvancedSettings
+          v-else-if="settingsView === 'advanced'"
+          @back="settingsView = 'home'"
+        />
       </section>
     </main>
   </div>
