@@ -20,6 +20,35 @@ const {
 } = useChat()
 
 const displayMessages = computed(() => messages.value.filter((item) => item.kind === 'message'))
+const pendingCount = computed(
+  () => messages.value.filter((item) => item.kind === 'confirm' && item.status === 'pending').length
+)
+const latestAskBack = computed(() => [...messages.value].reverse().find((item) => item.kind === 'ask_back') || null)
+const latestError = computed(() => [...messages.value].reverse().find((item) => item.kind === 'error') || null)
+const latestNotice = computed(() => {
+  if (pendingCount.value > 0) {
+    return {
+      type: 'confirm',
+      text: `有 ${pendingCount.value} 件事，小铃湾想先和主人确认一下。`,
+      actionLabel: '去主窗口'
+    }
+  }
+  if (latestAskBack.value?.question) {
+    return {
+      type: 'ask_back',
+      text: latestAskBack.value.question,
+      actionLabel: ''
+    }
+  }
+  if (latestError.value?.content) {
+    return {
+      type: 'error',
+      text: latestError.value.content,
+      actionLabel: ''
+    }
+  }
+  return null
+})
 
 const mood = computed(() => {
   if (sending.value) return '( •_• )'
@@ -64,6 +93,14 @@ function onFocusOut(event) {
 
 function togglePinned() {
   pinned.value = !pinned.value
+}
+
+function openMainWindow() {
+  try {
+    window.cornieDesktop?.showMainWindow?.()
+  } catch {
+    // ignore
+  }
 }
 
 let windowDrag = null
@@ -183,6 +220,13 @@ onBeforeUnmount(() => {
               </div>
             </div>
           </template>
+        </div>
+
+        <div v-if="latestNotice" class="petNotice" :class="`is-${latestNotice.type}`">
+          <div class="petNoticeText">{{ latestNotice.text }}</div>
+          <button v-if="latestNotice.actionLabel" type="button" class="petNoticeAction" @click="openMainWindow">
+            {{ latestNotice.actionLabel }}
+          </button>
         </div>
 
         <div class="petInputBar">
@@ -372,6 +416,45 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
   margin-top: 12px;
+}
+
+.petNotice {
+  position: relative;
+  z-index: 1;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.66);
+  border: 1px solid rgba(196, 168, 146, 0.18);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.petNotice.is-confirm {
+  background: rgba(247, 216, 202, 0.54);
+}
+
+.petNotice.is-error {
+  background: rgba(246, 212, 208, 0.72);
+}
+
+.petNoticeText {
+  flex: 1 1 auto;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--pet-text-soft);
+}
+
+.petNoticeAction {
+  flex: 0 0 auto;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(196, 168, 146, 0.16);
+  background: rgba(255, 255, 255, 0.84);
+  color: var(--pet-text);
+  font-size: 12px;
 }
 
 .petInput {

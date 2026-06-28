@@ -122,6 +122,17 @@ app.whenReady().then(async () => {
   ipcMain.on('cornie:drag-end', () => {
     cornieDragState = null
   })
+  ipcMain.on('cornie:show-main', () => {
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      mainWindow = createMainWindow()
+      return
+    }
+    if (mainWindow.isMinimized()) {
+      mainWindow.restore()
+    }
+    mainWindow.show()
+    mainWindow.focus()
+  })
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
