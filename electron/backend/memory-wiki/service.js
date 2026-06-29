@@ -643,6 +643,18 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
         new Set((Array.isArray(relatedPageIds) ? relatedPageIds : []).map((item) => String(item).trim()).filter(Boolean))
       ).filter((item) => item !== pageId)
 
+      const missingRelatedPageIds = []
+      for (const relatedPageId of normalized) {
+        const relatedPage = await this.get(relatedPageId)
+        if (!relatedPage) {
+          missingRelatedPageIds.push(relatedPageId)
+        }
+      }
+
+      if (missingRelatedPageIds.length > 0) {
+        throw new Error(`memory wiki related pages not found: ${missingRelatedPageIds.join(', ')}`)
+      }
+
       return this.update({
         ...existing,
         pageId,
@@ -844,16 +856,36 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
       }
 
       const relatedPages = []
+      const relatedIssues = []
       for (const relatedPageId of page.relatedPageIds ?? []) {
         const relatedPage = await this.get(relatedPageId)
         if (relatedPage) {
           relatedPages.push(summarizePage(relatedPage))
+          const relatedBackRefs = Array.isArray(relatedPage.relatedPageIds) ? relatedPage.relatedPageIds : []
+          if (!relatedBackRefs.includes(page.pageId)) {
+            relatedIssues.push({
+              issueType: 'one_way_relation',
+              pageId: page.pageId,
+              relatedPageId,
+              title: relatedPage.title || relatedPageId,
+              message: `关联页面“${relatedPage.title || relatedPageId}”还没有反向关联回来。`
+            })
+          }
+        } else {
+          relatedIssues.push({
+            issueType: 'missing_related_page',
+            pageId: page.pageId,
+            relatedPageId,
+            title: relatedPageId,
+            message: `关联页面引用已失效：${relatedPageId}`
+          })
         }
       }
 
       return {
         page: summarizePage(page),
         relatedPages,
+        relatedIssues,
         sourceRefs,
         chatSources,
         observationSources

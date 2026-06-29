@@ -223,6 +223,9 @@ const identityRelationshipWarnings = computed(() => {
 
   return warnings
 })
+const relatedPageIssues = computed(() =>
+  Array.isArray(pageSourceTrace.value?.relatedIssues) ? pageSourceTrace.value.relatedIssues : []
+)
 
 async function refreshPages() {
   const data = await listMemoryWikiPages({
@@ -1045,6 +1048,19 @@ onMounted(refreshAll)
             <div class="evidenceTitle">治理提醒</div>
             <div class="suggestionList">
               <div v-for="item in identityRelationshipWarnings" :key="item" class="suggestionItem warningItem">{{ item }}</div>
+            </div>
+          </div>
+
+          <div v-if="relatedPageIssues.length > 0" class="detailSection">
+            <div class="evidenceTitle">关联异常</div>
+            <div class="suggestionList">
+              <div
+                v-for="item in relatedPageIssues"
+                :key="`${item.issueType}-${item.relatedPageId}`"
+                class="suggestionItem warningItem"
+              >
+                {{ item.message || `${item.issueType} · ${item.relatedPageId}` }}
+              </div>
             </div>
           </div>
         </div>
