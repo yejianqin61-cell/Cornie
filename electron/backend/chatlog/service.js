@@ -22,6 +22,14 @@ function normalizeCursor(value) {
   return parsed
 }
 
+function buildMessageSearchPreview(message, query) {
+  const content = normalizeString(message?.matchedPreview || message?.content)
+  if (!content) return ''
+  const normalizedQuery = normalizeString(query).toLowerCase()
+  if (!normalizedQuery) return content.slice(0, 90)
+  return content
+}
+
 function buildStorageMeta(repository) {
   return {
     driver: repository.driver ?? 'unknown',
@@ -43,22 +51,32 @@ export function createChatlogService(store, { repository } = {}) {
   const chatlogRepository = repository ?? createSqlJsChatlogRepository(store)
 
   return {
-    getByDate(date, { cursor, limit } = {}) {
+    getByDate(date, { cursor, limit, query } = {}) {
       const pageSize = normalizePageSize(limit)
       const offset = normalizeCursor(cursor)
-      const allMessages = chatlogRepository.getMessagesByDate(date)
+      const normalizedQuery = normalizeString(query).toLowerCase()
+      const allMessages = normalizedQuery
+        ? chatlogRepository.searchMessagesByDate(date, normalizedQuery)
+        : chatlogRepository.getMessagesByDate(date)
       const messages = allMessages.slice(offset, offset + pageSize)
       const nextCursor = offset + pageSize < allMessages.length ? String(offset + pageSize) : null
 
       return {
         date,
-        messages,
+        messages: messages.map((message) => ({
+          ...message,
+          matchedPreview: buildMessageSearchPreview(message, normalizedQuery)
+        })),
         pagination: {
           cursor: String(offset),
           nextCursor,
           hasMore: nextCursor !== null,
           pageSize,
           total: allMessages.length
+        },
+        searchMeta: {
+          query: normalizedQuery,
+          mode: normalizedQuery ? 'keyword' : 'browse'
         },
         storage: buildStorageMeta(chatlogRepository)
       }

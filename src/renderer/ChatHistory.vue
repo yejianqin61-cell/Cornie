@@ -15,6 +15,8 @@ const entries = ref([])
 const messages = ref([])
 const availableMonths = ref([])
 const datePagination = ref({ cursor: '0', nextCursor: null, hasMore: false, pageSize: 100, total: 0 })
+const messagePagination = ref({ cursor: '0', nextCursor: null, hasMore: false, pageSize: 100, total: 0 })
+const messageSearchMeta = ref({ query: '', mode: 'browse' })
 const loadingDates = ref(false)
 const loadingMessages = ref(false)
 const exporting = ref(false)
@@ -41,7 +43,9 @@ async function refreshDates() {
   try {
     const data = await listChatlogDates({
       month: selectedMonth.value || undefined,
-      query: searchQuery.value.trim() || undefined
+      query: searchQuery.value.trim() || undefined,
+      limit: 60,
+      cursor: 0
     })
     entries.value = data.entries || []
     availableMonths.value = data.availableMonths || []
@@ -69,11 +73,57 @@ async function refreshMessages(date) {
   loadingMessages.value = true
   errorMsg.value = ''
   try {
-    const data = await getChatlog(date)
+    const data = await getChatlog(date, {
+      limit: 80,
+      cursor: 0,
+      query: searchQuery.value.trim() || undefined
+    })
     messages.value = data.messages || []
+    messagePagination.value = data.pagination || { cursor: '0', nextCursor: null, hasMore: false, pageSize: 100, total: 0 }
+    messageSearchMeta.value = data.searchMeta || { query: '', mode: 'browse' }
   } catch (error) {
     errorMsg.value = error?.message || String(error)
     messages.value = []
+  } finally {
+    loadingMessages.value = false
+  }
+}
+
+async function loadMoreDates() {
+  if (loadingDates.value || !datePagination.value?.hasMore) return
+  loadingDates.value = true
+  errorMsg.value = ''
+  try {
+    const data = await listChatlogDates({
+      month: selectedMonth.value || undefined,
+      query: searchQuery.value.trim() || undefined,
+      limit: datePagination.value.pageSize || 60,
+      cursor: datePagination.value.nextCursor
+    })
+    entries.value = [...entries.value, ...(data.entries || [])]
+    datePagination.value = data.pagination || datePagination.value
+  } catch (error) {
+    errorMsg.value = error?.message || String(error)
+  } finally {
+    loadingDates.value = false
+  }
+}
+
+async function loadMoreMessages() {
+  if (loadingMessages.value || !messagePagination.value?.hasMore || !selectedDate.value) return
+  loadingMessages.value = true
+  errorMsg.value = ''
+  try {
+    const data = await getChatlog(selectedDate.value, {
+      limit: messagePagination.value.pageSize || 80,
+      cursor: messagePagination.value.nextCursor,
+      query: searchQuery.value.trim() || undefined
+    })
+    messages.value = [...messages.value, ...(data.messages || [])]
+    messagePagination.value = data.pagination || messagePagination.value
+    messageSearchMeta.value = data.searchMeta || messageSearchMeta.value
+  } catch (error) {
+    errorMsg.value = error?.message || String(error)
   } finally {
     loadingMessages.value = false
   }
@@ -175,6 +225,15 @@ onMounted(async () => {
         <div v-if="entries.length === 0 && !loadingDates" class="historyEmptySm">
           {{ searchQuery.trim() ? '没有找到相关聊天记录' : '这里还没有聊天记录' }}
         </div>
+        <button
+          v-if="datePagination.hasMore"
+          class="ghost historyMoreBtn"
+          type="button"
+          :disabled="loadingDates"
+          @click="loadMoreDates"
+        >
+          {{ loadingDates ? '加载中…' : '查看更多日期' }}
+        </button>
       </div>
     </aside>
 
@@ -183,7 +242,10 @@ onMounted(async () => {
         <div>
           <div class="historyTitle">{{ selectedLabel }}</div>
           <div class="historyHint">
-            {{ loadingMessages ? '加载中…' : `${messages.length} 条消息` }}
+            {{ loadingMessages ? '加载中…' : `${messagePagination.total || messages.length} 条消息` }}
+          </div>
+          <div v-if="messageSearchMeta.query" class="historyHint">
+            当前按“{{ messageSearchMeta.query }}”筛选这一天的命中消息
           </div>
         </div>
         <div class="historyActions">
@@ -229,7 +291,17 @@ onMounted(async () => {
         >
           <div class="historyRole">{{ msg.role === 'user' ? '你' : '铃湾' }}</div>
           <div class="historyText">{{ msg.content }}</div>
+          <div v-if="searchQuery.trim() && msg.matchedPreview" class="historyMatchedPreview">{{ msg.matchedPreview }}</div>
         </div>
+        <button
+          v-if="messagePagination.hasMore"
+          class="ghost historyMoreBtn historyMoreMsgBtn"
+          type="button"
+          :disabled="loadingMessages"
+          @click="loadMoreMessages"
+        >
+          {{ loadingMessages ? '加载中…' : '查看更多消息' }}
+        </button>
       </div>
     </section>
   </div>
@@ -332,6 +404,10 @@ onMounted(async () => {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.historyMoreBtn{
+  align-self: center;
+  margin-top: 8px;
+}
 
 .historyContent{
   min-height: 0;
@@ -372,6 +448,13 @@ onMounted(async () => {
   margin-bottom: 3px;
 }
 .historyText{ white-space: pre-wrap; word-break: break-word; }
+.historyMatchedPreview{
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
 
 .historyEmptySm{
   padding: 20px 12px;

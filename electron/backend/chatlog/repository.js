@@ -38,6 +38,21 @@ function buildMatchedPreview(message, keyword) {
   return `${prefix}${content.slice(start, end)}${suffix}`
 }
 
+function buildMessageMatchedPreview(message, keyword) {
+  const content = normalizeString(message?.content)
+  if (!content) return ''
+
+  const normalizedContent = content.toLowerCase()
+  const index = normalizedContent.indexOf(keyword)
+  if (index === -1) return ''
+
+  const start = Math.max(0, index - 24)
+  const end = Math.min(content.length, index + keyword.length + 40)
+  const prefix = start > 0 ? '…' : ''
+  const suffix = end < content.length ? '…' : ''
+  return `${prefix}${content.slice(start, end)}${suffix}`
+}
+
 function buildAvailableMonths(entries) {
   return Array.from(new Set(entries.map((item) => normalizeString(item.date).slice(0, 7)).filter(Boolean)))
 }
@@ -48,6 +63,19 @@ export function createSqlJsChatlogRepository(store) {
     queryContractVersion: 2,
     getMessagesByDate(date) {
       return getMessagesByDate(store, date)
+    },
+    searchMessagesByDate(date, keyword) {
+      const normalizedKeyword = normalizeString(keyword).toLowerCase()
+      if (!normalizedKeyword) {
+        return []
+      }
+
+      return getMessagesByDate(store, date)
+        .filter((message) => buildSearchText(message).includes(normalizedKeyword))
+        .map((message) => ({
+          ...message,
+          matchedPreview: buildMessageMatchedPreview(message, normalizedKeyword)
+        }))
     },
     listDateEntries({ month, query, limit, cursor } = {}) {
       const pageSize = normalizePageSize(limit)

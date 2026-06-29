@@ -22,9 +22,12 @@ export function chatlogRoutes({ chatlog }) {
     '/chatlogs/:date',
     asyncHandler(async (req, res) => {
       const date = requireISODate(req.params.date)
+      const query = req.query.q === undefined
+        ? undefined
+        : requireString(String(req.query.q), 'q', { maxLen: 200 })
       const limit = req.query.limit === undefined ? undefined : Number.parseInt(String(req.query.limit), 10)
       const cursor = req.query.cursor === undefined ? undefined : Number.parseInt(String(req.query.cursor), 10)
-      const result = chatlog.getByDate(date, { limit, cursor })
+      const result = chatlog.getByDate(date, { limit, cursor, query })
       res.json({
         ...result,
         meta: {
