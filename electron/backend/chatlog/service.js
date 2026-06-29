@@ -22,6 +22,10 @@ function normalizeCursor(value) {
   return parsed
 }
 
+function normalizeBeforeId(value) {
+  return normalizeString(value)
+}
+
 function buildMessageSearchPreview(message, query) {
   const content = normalizeString(message?.matchedPreview || message?.content)
   if (!content) return ''
@@ -43,6 +47,19 @@ function buildStorageMeta(repository) {
       exportMonth: true
     }
   }
+}
+
+function resolveOffsetFromBeforeId(messages, beforeId) {
+  const normalizedBeforeId = normalizeBeforeId(beforeId)
+  if (!normalizedBeforeId) {
+    return null
+  }
+
+  const index = messages.findIndex((item) => normalizeString(item?.id) === normalizedBeforeId)
+  if (index <= 0) {
+    return index === 0 ? 0 : null
+  }
+  return index
 }
 
 function buildPlainTextTranscript(date, messages = []) {
@@ -83,6 +100,45 @@ export function createChatlogService(store, { repository, driver, dbPath } = {})
           hasMore: nextCursor !== null,
           pageSize,
           total: allMessages.length
+        },
+        searchMeta: {
+          query: normalizedQuery,
+          mode: normalizedQuery ? 'keyword' : 'browse'
+        },
+        storage: buildStorageMeta(chatlogRepository)
+      }
+    },
+
+    getDayPage(date, { cursor, limit, query, beforeId } = {}) {
+      const pageSize = normalizePageSize(limit)
+      const normalizedQuery = normalizeString(query).toLowerCase()
+      const allMessages = normalizedQuery
+        ? chatlogRepository.searchMessagesByDate(date, normalizedQuery)
+        : chatlogRepository.getMessagesByDate(date)
+      const beforeOffset = resolveOffsetFromBeforeId(allMessages, beforeId)
+      const offset = beforeOffset != null ? beforeOffset : normalizeCursor(cursor)
+      const items = allMessages.slice(offset, offset + pageSize).map((message) => ({
+        ...message,
+        matchedPreview: buildMessageSearchPreview(message, normalizedQuery)
+      }))
+      const nextCursor = offset + pageSize < allMessages.length ? String(offset + pageSize) : null
+      const firstItemId = items[0]?.id ?? null
+      const lastItemId = items[items.length - 1]?.id ?? null
+
+      return {
+        date,
+        items,
+        nextCursor,
+        hasMore: nextCursor !== null,
+        context: {
+          date,
+          total: allMessages.length,
+          pageSize,
+          currentCursor: String(offset),
+          query: normalizedQuery,
+          beforeId: normalizeBeforeId(beforeId) || null,
+          firstItemId,
+          lastItemId
         },
         searchMeta: {
           query: normalizedQuery,

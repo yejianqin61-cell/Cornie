@@ -30,11 +30,19 @@ export function chatlogRoutes({ chatlog }) {
         : requireString(String(req.query.q), 'q', { maxLen: 200 })
       const limit = req.query.limit === undefined ? undefined : Number.parseInt(String(req.query.limit), 10)
       const cursor = req.query.cursor === undefined ? undefined : Number.parseInt(String(req.query.cursor), 10)
-      const result = chatlog.getByDate(date, { limit, cursor, query })
+      const beforeId = req.query.beforeId === undefined
+        ? undefined
+        : requireString(String(req.query.beforeId), 'beforeId', { maxLen: 128 })
+      const mode = req.query.mode === undefined
+        ? 'legacy'
+        : requireString(String(req.query.mode), 'mode', { maxLen: 32 })
+      const result = mode === 'page'
+        ? chatlog.getDayPage(date, { limit, cursor, query, beforeId })
+        : chatlog.getByDate(date, { limit, cursor, query })
       res.json({
         ...result,
         meta: {
-          responseType: 'chatlog_day_record',
+          responseType: mode === 'page' ? 'chatlog_day_page' : 'chatlog_day_record',
           storage: result.storage
         }
       })
