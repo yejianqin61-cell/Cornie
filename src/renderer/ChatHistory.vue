@@ -2,29 +2,55 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { getChatlog, listChatlogDates } from './api'
 
+const emit = defineEmits(['back', 'open-date'])
+
 function pad2(n) { return String(n).padStart(2, '0') }
-function toISOMonth(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}` }
 function toISODate(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}` }
 
 const today = new Date()
-const selectedMonth = ref(toISOMonth(today))
+const selectedMonth = ref('')
 const selectedDate = ref(toISODate(today))
+const searchQuery = ref('')
 const entries = ref([])
 const messages = ref([])
+const availableMonths = ref([])
+const datePagination = ref({ cursor: '0', nextCursor: null, hasMore: false, pageSize: 100, total: 0 })
 const loadingDates = ref(false)
 const loadingMessages = ref(false)
 const errorMsg = ref('')
 
-const selectedLabel = computed(() => selectedDate.value)
+const selectedLabel = computed(() => selectedDate.value || '未选择日期')
+const activeMonthValue = computed(() => (selectedMonth.value === '' ? '__all__' : selectedMonth.value))
+const selectedMonthLabel = computed(() => {
+  if (!selectedMonth.value) return '全部历史'
+  const [year, month] = selectedMonth.value.split('-')
+  return `${year}年${Number(month)}月`
+})
+const historySummary = computed(() => {
+  const total = Number(datePagination.value?.total ?? entries.value.length)
+  if (searchQuery.value.trim()) {
+    return `搜索“${searchQuery.value.trim()}”命中 ${total} 个聊天日期`
+  }
+  return `${selectedMonthLabel.value} · ${total} 个聊天日期`
+})
 
 async function refreshDates() {
   loadingDates.value = true
   errorMsg.value = ''
   try {
-    const data = await listChatlogDates({ month: selectedMonth.value })
+    const data = await listChatlogDates({
+      month: selectedMonth.value || undefined,
+      query: searchQuery.value.trim() || undefined
+    })
     entries.value = data.entries || []
+    availableMonths.value = data.availableMonths || []
+    datePagination.value = data.pagination || { cursor: '0', nextCursor: null, hasMore: false, pageSize: 100, total: entries.value.length }
+
     if (!entries.value.find((item) => item.date === selectedDate.value) && entries.value.length > 0) {
       selectedDate.value = entries.value[0].date
+    }
+    if (entries.value.length === 0) {
+      messages.value = []
     }
   } catch (error) {
     errorMsg.value = error?.message || String(error)
@@ -34,6 +60,11 @@ async function refreshDates() {
 }
 
 async function refreshMessages(date) {
+  if (!date) {
+    messages.value = []
+    return
+  }
+
   loadingMessages.value = true
   errorMsg.value = ''
   try {
@@ -47,14 +78,24 @@ async function refreshMessages(date) {
   }
 }
 
-function pickDate(date) { selectedDate.value = date }
+function pickDate(date) {
+  selectedDate.value = date
+}
+
+function openSelectedDate() {
+  if (!selectedDate.value) return
+  emit('open-date', selectedDate.value)
+}
 
 watch(selectedMonth, () => refreshDates())
 watch(selectedDate, (date) => refreshMessages(date))
+watch(searchQuery, () => refreshDates())
 
 onMounted(async () => {
   await refreshDates()
-  await refreshMessages(selectedDate.value)
+  if (selectedDate.value) {
+    await refreshMessages(selectedDate.value)
+  }
 })
 </script>
 
@@ -62,9 +103,20 @@ onMounted(async () => {
   <div class="history">
     <aside class="historySidebar card">
       <div class="historyHead">
-        <div class="historyTitle">聊天记录</div>
-        <input v-model="selectedMonth" class="monthInput" type="month" />
+        <div class="historyHeadTop">
+          <button class="ghost historyBackBtn" type="button" @click="emit('back')">← 返回聊天</button>
+          <div class="historyTitle">聊天记录</div>
+        </div>
+        <div class="historyToolbar">
+          <select v-model="activeMonthValue" class="monthInput" @change="selectedMonth = activeMonthValue === '__all__' ? '' : activeMonthValue">
+            <option value="__all__">全部历史</option>
+            <option v-for="month in availableMonths" :key="month" :value="month">{{ month }}</option>
+          </select>
+          <input v-model="searchQuery" class="historySearchInput" type="search" placeholder="搜索聊天关键词" />
+        </div>
+        <div class="historyFilterHint">{{ historySummary }}</div>
       </div>
+
       <div class="historyList">
         <button
           v-for="item in entries"
@@ -73,11 +125,16 @@ onMounted(async () => {
           :class="{ active: item.date === selectedDate }"
           @click="pickDate(item.date)"
         >
-          <span>{{ item.date }}</span>
-          <span class="historyCount">{{ item.messageCount }}</span>
+          <div class="historyRowMain">
+            <span>{{ item.date }}</span>
+            <span v-if="item.matchedPreview" class="historyPreview">{{ item.matchedPreview }}</span>
+          </div>
+          <span class="historyCount">
+            {{ item.matchedCount ? `${item.matchedCount} 命中` : `${item.messageCount} 条` }}
+          </span>
         </button>
         <div v-if="entries.length === 0 && !loadingDates" class="historyEmptySm">
-          这里还没有聊天记录
+          {{ searchQuery.trim() ? '没有找到相关聊天记录' : '这里还没有聊天记录' }}
         </div>
       </div>
     </aside>
@@ -90,6 +147,14 @@ onMounted(async () => {
             {{ loadingMessages ? '加载中…' : `${messages.length} 条消息` }}
           </div>
         </div>
+        <button
+          class="primary historyOpenBtn"
+          type="button"
+          :disabled="loadingMessages || !selectedDate"
+          @click="openSelectedDate"
+        >
+          查看这一天
+        </button>
       </div>
 
       <div v-if="errorMsg" class="historyError">{{ errorMsg }}</div>
@@ -116,7 +181,7 @@ onMounted(async () => {
 <style scoped>
 .history{
   display:grid;
-  grid-template-columns: 240px 1fr;
+  grid-template-columns: 280px 1fr;
   gap: 14px;
   height: 100%;
   min-height: 0;
@@ -135,9 +200,28 @@ onMounted(async () => {
   border-bottom: 1px solid var(--border);
 }
 
+.historyHeadTop{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+}
+
 .historyTitle{ font-weight: 700; }
 .historyHint{ margin-top: 4px; font-size: 12px; color: var(--muted); }
-.monthInput{ margin-top: 10px; width: 100%; }
+.historyToolbar{
+  margin-top: 10px;
+  display:flex;
+  gap: 8px;
+}
+.monthInput{ width: 140px; }
+.historySearchInput{ flex: 1; min-width: 0; }
+.historyFilterHint{
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.historyBackBtn{ padding: 6px 10px; }
+.historyOpenBtn{ flex: 0 0 auto; }
 
 .historyList{
   display:flex;
@@ -151,7 +235,7 @@ onMounted(async () => {
 .historyRow{
   display:flex;
   justify-content: space-between;
-  align-items:center;
+  align-items:flex-start;
   gap: 8px;
   padding: 10px 12px;
   border-radius: 14px;
@@ -170,6 +254,20 @@ onMounted(async () => {
 .historyCount{
   font-size: 12px;
   color: var(--muted);
+  white-space: nowrap;
+}
+.historyRowMain{
+  display:flex;
+  flex-direction:column;
+  gap: 4px;
+  min-width: 0;
+}
+.historyPreview{
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .historyContent{
@@ -236,5 +334,13 @@ onMounted(async () => {
 
 @media (max-width: 980px){
   .history{ grid-template-columns: 1fr; }
+}
+@media (max-width: 720px){
+  .historyToolbar{
+    flex-direction: column;
+  }
+  .monthInput{
+    width: 100%;
+  }
 }
 </style>

@@ -57,13 +57,22 @@ export async function deleteConversation(date) {
   return apiFetch(`/conversations/${encodeURIComponent(date)}`, { method: 'DELETE' })
 }
 
-export async function listChatlogDates({ month } = {}) {
-  const qs = month ? `?month=${encodeURIComponent(month)}` : ''
-  return apiFetch(`/chatlogs${qs}`)
+export async function listChatlogDates({ month, query, limit, cursor } = {}) {
+  const params = new URLSearchParams()
+  if (month) params.set('month', month)
+  if (query) params.set('q', query)
+  if (limit !== undefined) params.set('limit', String(limit))
+  if (cursor !== undefined && cursor !== null) params.set('cursor', String(cursor))
+  const qs = params.toString()
+  return apiFetch(`/chatlogs${qs ? `?${qs}` : ''}`)
 }
 
-export async function getChatlog(date) {
-  return apiFetch(`/chatlogs/${encodeURIComponent(date)}`)
+export async function getChatlog(date, { limit, cursor } = {}) {
+  const params = new URLSearchParams()
+  if (limit !== undefined) params.set('limit', String(limit))
+  if (cursor !== undefined && cursor !== null) params.set('cursor', String(cursor))
+  const qs = params.toString()
+  return apiFetch(`/chatlogs/${encodeURIComponent(date)}${qs ? `?${qs}` : ''}`)
 }
 
 // ─── model ───────────────────────────────────────────────────
