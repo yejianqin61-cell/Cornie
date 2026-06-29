@@ -57,9 +57,10 @@ export async function deleteConversation(date) {
   return apiFetch(`/conversations/${encodeURIComponent(date)}`, { method: 'DELETE' })
 }
 
-export async function listChatlogDates({ month, query, limit, cursor } = {}) {
+export async function listChatlogDates({ month, scope, query, limit, cursor } = {}) {
   const params = new URLSearchParams()
   if (month) params.set('month', month)
+  if (scope) params.set('scope', scope)
   if (query) params.set('q', query)
   if (limit !== undefined) params.set('limit', String(limit))
   if (cursor !== undefined && cursor !== null) params.set('cursor', String(cursor))
@@ -70,7 +71,8 @@ export async function listChatlogDates({ month, query, limit, cursor } = {}) {
     entries: Array.isArray(data?.entries) ? data.entries : [],
     availableMonths: Array.isArray(data?.availableMonths) ? data.availableMonths : [],
     pagination: data?.pagination || { cursor: '0', nextCursor: null, hasMore: false, pageSize: 100, total: 0 },
-    filters: data?.filters || { month: month || '', query: query || '' },
+    filters: data?.filters || { scope: scope || 'all', month: month || '', query: query || '' },
+    archiveScope: data?.archiveScope || { scope: scope || 'all', month: month || '', recentFromDate: '', recentToDate: '' },
     searchMeta: data?.searchMeta || { query: query || '', mode: query ? 'keyword' : 'browse' },
     storage: data?.storage || { driver: 'unknown', queryContractVersion: 1 }
   }

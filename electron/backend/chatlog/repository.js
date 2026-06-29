@@ -16,6 +16,28 @@ function normalizeCursor(value) {
   return parsed
 }
 
+function normalizeScope(value) {
+  const normalized = normalizeString(value).toLowerCase()
+  if (['all', 'recent_30_days', 'month'].includes(normalized)) {
+    return normalized
+  }
+  return 'all'
+}
+
+function resolveLatestDate(entries = []) {
+  const dates = entries.map((item) => normalizeString(item.date)).filter(Boolean).sort()
+  return dates.length > 0 ? dates[dates.length - 1] : ''
+}
+
+function shiftDateByDays(dateText, days) {
+  const value = normalizeString(dateText)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return ''
+  const base = new Date(`${value}T00:00:00Z`)
+  if (Number.isNaN(base.getTime())) return ''
+  base.setUTCDate(base.getUTCDate() + days)
+  return base.toISOString().slice(0, 10)
+}
+
 function buildSearchText(message) {
   return [message.role, message.content]
     .map((item) => normalizeString(item).toLowerCase())
@@ -77,12 +99,27 @@ export function createSqlJsChatlogRepository(store) {
           matchedPreview: buildMessageMatchedPreview(message, normalizedKeyword)
         }))
     },
-    listDateEntries({ month, query, limit, cursor } = {}) {
+    listDateEntries({ month, query, limit, cursor, scope } = {}) {
       const pageSize = normalizePageSize(limit)
       const offset = normalizeCursor(cursor)
-      const allEntries = listConversationDates(store, { month })
-      const availableMonths = buildAvailableMonths(listConversationDates(store))
+      const normalizedScope = normalizeScope(scope)
+      const allIndexedEntries = listConversationDates(store)
+      const availableMonths = buildAvailableMonths(allIndexedEntries)
       const normalizedQuery = normalizeString(query).toLowerCase()
+      const effectiveMonth = normalizedScope === 'month' ? normalizeString(month) : ''
+      const recentLatestDate = normalizedScope === 'recent_30_days' ? resolveLatestDate(allIndexedEntries) : ''
+      const recentFromDate = recentLatestDate ? shiftDateByDays(recentLatestDate, -29) : ''
+
+      const allEntries = allIndexedEntries.filter((item) => {
+        const date = normalizeString(item.date)
+        if (normalizedScope === 'month') {
+          return effectiveMonth ? date.startsWith(`${effectiveMonth}-`) : true
+        }
+        if (normalizedScope === 'recent_30_days') {
+          return recentFromDate ? date >= recentFromDate : true
+        }
+        return true
+      })
 
       const filteredEntries = normalizedQuery
         ? allEntries
@@ -113,6 +150,12 @@ export function createSqlJsChatlogRepository(store) {
       return {
         entries,
         availableMonths,
+        archiveScope: {
+          scope: normalizedScope,
+          month: effectiveMonth,
+          recentFromDate: normalizedScope === 'recent_30_days' ? recentFromDate : '',
+          recentToDate: normalizedScope === 'recent_30_days' ? recentLatestDate : ''
+        },
         pagination: {
           cursor: String(offset),
           nextCursor,

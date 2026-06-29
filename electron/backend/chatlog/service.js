@@ -34,7 +34,12 @@ function buildStorageMeta(repository) {
   return {
     driver: repository.driver ?? 'unknown',
     queryContractVersion: repository.queryContractVersion ?? 1,
-    migrationHint: 'chatlog_repository_contract_ready_for_storage_swap'
+    migrationHint: 'chatlog_repository_contract_ready_for_storage_swap',
+    capabilities: {
+      archiveScopes: ['all', 'recent_30_days', 'month'],
+      exportDay: true,
+      exportMonth: true
+    }
   }
 }
 
@@ -82,10 +87,11 @@ export function createChatlogService(store, { repository } = {}) {
       }
     },
 
-    listDates({ month, query, limit, cursor } = {}) {
+    listDates({ month, query, limit, cursor, scope } = {}) {
       const result = chatlogRepository.listDateEntries({
         month,
         query,
+        scope,
         limit: normalizePageSize(limit),
         cursor: normalizeCursor(cursor)
       })
@@ -93,8 +99,15 @@ export function createChatlogService(store, { repository } = {}) {
       return {
         entries: result.entries,
         filters: {
-          month: month || '',
+          scope: result.archiveScope?.scope || scope || 'all',
+          month: result.archiveScope?.month || month || '',
           query: result.searchMeta?.query ?? normalizeString(query).toLowerCase()
+        },
+        archiveScope: result.archiveScope || {
+          scope: scope || 'all',
+          month: month || '',
+          recentFromDate: '',
+          recentToDate: ''
         },
         availableMonths: result.availableMonths || [],
         pagination: result.pagination,
@@ -121,7 +134,7 @@ export function createChatlogService(store, { repository } = {}) {
         }
       }
 
-      const result = this.listDates({ month, query: normalizedKeyword, limit: 500, cursor: 0 })
+      const result = this.listDates({ month, scope: month ? 'month' : 'all', query: normalizedKeyword, limit: 500, cursor: 0 })
       return {
         keyword: normalizedKeyword,
         entries: result.entries,

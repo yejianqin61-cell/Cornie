@@ -9,12 +9,15 @@ export function chatlogRoutes({ chatlog }) {
     '/chatlogs',
     asyncHandler(async (req, res) => {
       const month = optionalISOMonth(req.query.month)
+      const scope = req.query.scope === undefined
+        ? undefined
+        : requireString(String(req.query.scope), 'scope', { maxLen: 32 })
       const query = req.query.q === undefined
         ? undefined
         : requireString(String(req.query.q), 'q', { maxLen: 200 })
       const limit = req.query.limit === undefined ? undefined : Number.parseInt(String(req.query.limit), 10)
       const cursor = req.query.cursor === undefined ? undefined : Number.parseInt(String(req.query.cursor), 10)
-      res.json(chatlog.listDates({ month, query, limit, cursor }))
+      res.json(chatlog.listDates({ month, scope, query, limit, cursor }))
     })
   )
 

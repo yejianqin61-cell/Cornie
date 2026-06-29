@@ -9,6 +9,7 @@ function toISODate(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${p
 
 const today = new Date()
 const selectedMonth = ref('')
+const selectedScope = ref('all')
 const selectedDate = ref(toISODate(today))
 const searchQuery = ref('')
 const entries = ref([])
@@ -29,12 +30,20 @@ const selectedMonthLabel = computed(() => {
   const [year, month] = selectedMonth.value.split('-')
   return `${year}年${Number(month)}月`
 })
+const selectedScopeLabel = computed(() => {
+  if (selectedScope.value === 'recent_30_days') return '最近30天'
+  if (selectedScope.value === 'month') return selectedMonthLabel.value
+  return '全部历史'
+})
 const historySummary = computed(() => {
   const total = Number(datePagination.value?.total ?? entries.value.length)
   if (searchQuery.value.trim()) {
     return `搜索“${searchQuery.value.trim()}”命中 ${total} 个聊天日期`
   }
-  return `${selectedMonthLabel.value} · ${total} 个聊天日期`
+  if (selectedScope.value === 'recent_30_days') {
+    return `${selectedScopeLabel.value} · ${total} 个聊天日期`
+  }
+  return `${selectedScopeLabel.value} · ${total} 个聊天日期`
 })
 
 async function refreshDates() {
@@ -43,6 +52,7 @@ async function refreshDates() {
   try {
     const data = await listChatlogDates({
       month: selectedMonth.value || undefined,
+      scope: selectedScope.value,
       query: searchQuery.value.trim() || undefined,
       limit: 60,
       cursor: 0
@@ -96,6 +106,7 @@ async function loadMoreDates() {
   try {
     const data = await listChatlogDates({
       month: selectedMonth.value || undefined,
+      scope: selectedScope.value,
       query: searchQuery.value.trim() || undefined,
       limit: datePagination.value.pageSize || 60,
       cursor: datePagination.value.nextCursor
@@ -177,6 +188,7 @@ async function exportSelectedMonth(format) {
 }
 
 watch(selectedMonth, () => refreshDates())
+watch(selectedScope, () => refreshDates())
 watch(selectedDate, (date) => refreshMessages(date))
 watch(searchQuery, () => refreshDates())
 
@@ -197,11 +209,19 @@ onMounted(async () => {
           <div class="historyTitle">聊天记录</div>
         </div>
         <div class="historyToolbar">
+          <select v-model="selectedScope" class="monthInput">
+            <option value="all">全部历史</option>
+            <option value="recent_30_days">最近30天</option>
+            <option value="month">指定月份</option>
+          </select>
           <select v-model="activeMonthValue" class="monthInput" @change="selectedMonth = activeMonthValue === '__all__' ? '' : activeMonthValue">
             <option value="__all__">全部历史</option>
             <option v-for="month in availableMonths" :key="month" :value="month">{{ month }}</option>
           </select>
           <input v-model="searchQuery" class="historySearchInput" type="search" placeholder="搜索聊天关键词" />
+        </div>
+        <div v-if="selectedScope === 'recent_30_days' && datePagination.total > 0" class="historyFilterHint">
+          当前视角：最近 30 天历史归档
         </div>
         <div class="historyFilterHint">{{ historySummary }}</div>
       </div>
