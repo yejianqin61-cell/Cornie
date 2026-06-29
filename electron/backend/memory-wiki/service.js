@@ -466,6 +466,53 @@ function normalizeObservationTraceItem(sourceRef, observation) {
   }
 }
 
+function normalizeDateValue(value) {
+  const normalized = normalizeString(value)
+  return /^\d{4}-\d{2}-\d{2}$/.test(normalized) ? normalized : ''
+}
+
+function buildPersonTimelineTrace({ page, chatSources, observationSources, relatedPages }) {
+  if (normalizeString(page?.pageType) !== IDENTITY_PERSON_PAGE_TYPE) {
+    return null
+  }
+
+  const chatDates = Array.from(
+    new Set(chatSources.map((item) => normalizeDateValue(item?.date)).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b, 'zh-CN'))
+
+  const observationDates = Array.from(
+    new Set(observationSources.map((item) => normalizeDateValue(item?.date)).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b, 'zh-CN'))
+
+  const timelineDates = Array.from(
+    new Set([
+      ...chatDates,
+      ...observationDates,
+      normalizeDateValue(page?.lastMentionedAt)
+    ].filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b, 'zh-CN'))
+
+  const timeline = timelineDates.map((date) => ({
+    date,
+    hasChatSource: chatDates.includes(date),
+    hasObservationSource: observationDates.includes(date)
+  }))
+
+  return {
+    personName: normalizeString(page.personName) || normalizeString(page.title),
+    relationshipToUser: normalizeString(page.relationshipToUser),
+    chatDates,
+    observationDates,
+    timeline,
+    relatedMemoryPages: relatedPages.map((item) => ({
+      pageId: item.pageId,
+      pageType: item.pageType,
+      title: item.title,
+      summary: item.summary
+    }))
+  }
+}
+
 function buildGovernanceRequestFromBrokenLinkIssue(issue) {
   const pageIds = [issue.pageId, issue.relatedPageId].filter(Boolean)
   const topicKeys = [issue.normalizedKey].filter(Boolean)
@@ -902,7 +949,13 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
         relatedIssues,
         sourceRefs,
         chatSources,
-        observationSources
+        observationSources,
+        personTimelineTrace: buildPersonTimelineTrace({
+          page,
+          chatSources,
+          observationSources,
+          relatedPages
+        })
       }
     },
 
