@@ -21,7 +21,6 @@ import { createScheduleService } from './backend/schedule/service.js'
 import { scheduleRoutes } from './backend/schedule/routes.js'
 import { observationRoutes } from './backend/observation/routes.js'
 import { registerObservationTools } from './backend/observation/tools.js'
-import { registerMemoryTools } from './backend/memory/tools.js'
 import { registerSystemTools } from './backend/system/tools.js'
 import { createMemoryWikiService, createTopicIndexStore } from './backend/memory-wiki/index.js'
 import { memoryWikiRoutes } from './backend/memory-wiki/routes.js'
@@ -103,7 +102,6 @@ export function createServer({ store }) {
   registerTodoTools(store, { registerTool })
   registerScheduleTools(store, { registerTool })
   registerObservationTools(store, { registerTool })
-  registerMemoryTools(store, { registerTool })
   registerSystemTools(store, { registerTool })
 
   const confirm = createConfirmService(store)
@@ -121,4 +119,3 @@ export function createServer({ store }) {
 
   return app
 }
-

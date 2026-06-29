@@ -9,10 +9,9 @@ import { registerLedgerTools } from '../../electron/backend/ledger/tools.js'
 import { registerTodoTools } from '../../electron/backend/todo/tools.js'
 import { registerScheduleTools } from '../../electron/backend/schedule/tools.js'
 import { registerObservationTools } from '../../electron/backend/observation/tools.js'
-import { registerMemoryTools } from '../../electron/backend/memory/tools.js'
 import { registerSystemTools } from '../../electron/backend/system/tools.js'
 import { registerMemoryWikiTools } from '../../electron/backend/memory-wiki/tools.js'
-import { registerTool } from '../../electron/backend/tools/registry.js'
+import { clearTools, registerTool } from '../../electron/backend/tools/registry.js'
 import { cleanupSqliteFile, createRuntimeSqlitePath } from '../../scripts/tmp-artifacts.mjs'
 
 export function assert(condition, message, details = null) {
@@ -33,12 +32,12 @@ export async function createServiceHarness(caseName, options = {}) {
 
   cleanupSqliteFile(dbPath)
   const store = await openDb(dbPath)
+  clearTools()
 
   registerLedgerTools(store, { registerTool })
   registerTodoTools(store, { registerTool })
   registerScheduleTools(store, { registerTool })
   registerObservationTools(store, { registerTool })
-  registerMemoryTools(store, { registerTool })
   registerSystemTools(store, { registerTool })
   await registerMemoryWikiTools({ baseDir, store }, { registerTool })
 

@@ -15,3 +15,7 @@ export function getTool(name) {
 export function listTools() {
   return [...toolRegistry.values()].map(({ handler, ...tool }) => tool)
 }
+
+export function clearTools() {
+  toolRegistry.clear()
+}
