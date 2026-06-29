@@ -5,6 +5,7 @@ import { createMemoryWikiInspector } from './inspector.js'
 import { createTopicIndexStore } from './topicIndex.js'
 import { createMemoryWikiGovernanceStore } from './governanceStore.js'
 import { normalizePageStatus } from './pageModel.js'
+import { getMessagesByDate, getObservationLog } from '../../db.js'
 
 const IDENTITY_PREFERENCE_PAGE_TYPE = 'identity_preference'
 const IDENTITY_TRAIT_PAGE_TYPE = 'identity_trait'
@@ -258,6 +259,30 @@ function summarizePage(page) {
     relatedPageIds: Array.isArray(page.relatedPageIds) ? page.relatedPageIds : [],
     filePath: page.filePath,
     updatedAt: page.lastUpdatedAt
+  }
+}
+
+function normalizeChatTraceItem(sourceRef, message) {
+  return {
+    kind: 'chat',
+    date: sourceRef.date,
+    messageId: sourceRef.messageId,
+    role: sourceRef.role || message?.role || '',
+    exists: Boolean(message),
+    preview: message?.content ? String(message.content).slice(0, 120) : '',
+    title: sourceRef.date ? `${sourceRef.date} 对话` : '聊天记录'
+  }
+}
+
+function normalizeObservationTraceItem(sourceRef, observation) {
+  return {
+    kind: 'observation',
+    date: sourceRef.date || observation?.date || '',
+    observationId: sourceRef.observationId,
+    type: sourceRef.type || observation?.type || '',
+    title: observation?.title || sourceRef.title || '观察记录',
+    exists: Boolean(observation),
+    preview: observation?.content ? String(observation.content).slice(0, 120) : ''
   }
 }
 
@@ -619,6 +644,89 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
     async listSummaries(filters = {}) {
       const pages = await this.list(filters)
       return pages.map((item) => summarizePage(item))
+    },
+
+    async getPageSourceTrace(pageId) {
+      if (!pageId) throw new Error('memory wiki pageId is required')
+      const page = await this.get(pageId)
+      if (!page) {
+        throw new Error(`memory wiki page not found: ${pageId}`)
+      }
+
+      const sourceRefs = Array.isArray(page.sourceRefs) ? page.sourceRefs : []
+      const chatSources = []
+      const observationSources = []
+
+      for (const sourceRef of sourceRefs) {
+        if (sourceRef?.kind === 'chat') {
+          const messages = sourceRef.date ? getMessagesByDate(store, sourceRef.date) : []
+          const message = messages.find((item) => item.id === sourceRef.messageId) ?? null
+          chatSources.push(normalizeChatTraceItem(sourceRef, message))
+          continue
+        }
+
+        if (sourceRef?.kind === 'observation') {
+          const observation = sourceRef.observationId ? getObservationLog(store, sourceRef.observationId) : null
+          observationSources.push(normalizeObservationTraceItem(sourceRef, observation))
+        }
+      }
+
+      const relatedPages = []
+      for (const relatedPageId of page.relatedPageIds ?? []) {
+        const relatedPage = await this.get(relatedPageId)
+        if (relatedPage) {
+          relatedPages.push(summarizePage(relatedPage))
+        }
+      }
+
+      return {
+        page: summarizePage(page),
+        relatedPages,
+        sourceRefs,
+        chatSources,
+        observationSources
+      }
+    },
+
+    async getTopicSourceTrace(normalizedKey) {
+      const topic = await topicIndex.get(normalizedKey)
+      if (!topic) {
+        throw new Error(`topic index entry not found: ${normalizedKey}`)
+      }
+
+      const relatedPages = []
+      for (const pageId of topic.memoryPageIds ?? []) {
+        const page = await this.get(pageId)
+        if (page) {
+          relatedPages.push(summarizePage(page))
+        }
+      }
+
+      const chatSources = (topic.chatRefs ?? []).map((chatRef) => ({
+        kind: 'chat',
+        date: chatRef,
+        title: chatRef ? `${chatRef} 对话` : '聊天记录'
+      }))
+
+      const observationSources = (topic.observationRefs ?? []).map((observationRef) => {
+        const observation = getObservationLog(store, observationRef)
+        return {
+          kind: 'observation',
+          observationId: observationRef,
+          date: observation?.date || '',
+          type: observation?.type || '',
+          title: observation?.title || observationRef,
+          exists: Boolean(observation),
+          preview: observation?.content ? String(observation.content).slice(0, 120) : ''
+        }
+      })
+
+      return {
+        topic,
+        relatedPages,
+        chatSources,
+        observationSources
+      }
     },
 
     async listVersions(pageId) {

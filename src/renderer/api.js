@@ -409,6 +409,10 @@ export async function getMemoryWikiPage(pageId) {
   return data?.page ? { ...data, page } : page
 }
 
+export async function getMemoryWikiPageSourceTrace(pageId) {
+  return apiFetch(`/memory-wiki/pages/${encodeURIComponent(pageId)}/source-trace`)
+}
+
 export async function listMemoryWikiPageVersions(pageId) {
   return apiFetch(`/memory-wiki/pages/${encodeURIComponent(pageId)}/versions`)
 }
@@ -507,6 +511,10 @@ export async function listTopicIndexItems() {
 
 export async function getTopicIndexItem(normalizedKey) {
   return apiFetch(`/memory-wiki/topic-index/${encodeURIComponent(normalizedKey)}`)
+}
+
+export async function getTopicIndexSourceTrace(normalizedKey) {
+  return apiFetch(`/memory-wiki/topic-index/${encodeURIComponent(normalizedKey)}/source-trace`)
 }
 
 export async function updateTopicIndexAliases(normalizedKey, aliases) {

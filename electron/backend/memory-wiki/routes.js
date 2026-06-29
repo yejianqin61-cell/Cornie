@@ -24,6 +24,14 @@ export function memoryWikiRoutes({ memoryWiki, topicIndex }) {
   )
 
   r.get(
+    '/memory-wiki/pages/:pageId/source-trace',
+    asyncHandler(async (req, res) => {
+      const pageId = requireString(req.params.pageId, 'pageId', { maxLen: 256 })
+      res.json({ trace: await memoryWiki.getPageSourceTrace(pageId) })
+    })
+  )
+
+  r.get(
     '/memory-wiki/pages/:pageId/versions',
     asyncHandler(async (req, res) => {
       const pageId = requireString(req.params.pageId, 'pageId', { maxLen: 256 })
@@ -60,6 +68,14 @@ export function memoryWikiRoutes({ memoryWiki, topicIndex }) {
       const normalizedKey = requireString(req.params.normalizedKey, 'normalizedKey', { maxLen: 256 })
       const item = await topicIndex.get(normalizedKey)
       res.json({ item })
+    })
+  )
+
+  r.get(
+    '/memory-wiki/topic-index/:normalizedKey/source-trace',
+    asyncHandler(async (req, res) => {
+      const normalizedKey = requireString(req.params.normalizedKey, 'normalizedKey', { maxLen: 256 })
+      res.json({ trace: await memoryWiki.getTopicSourceTrace(normalizedKey) })
     })
   )
 

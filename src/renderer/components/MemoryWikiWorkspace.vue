@@ -5,9 +5,11 @@ import {
   createMemoryWikiPage,
   enqueueMemoryWikiInspectionScan,
   getMemoryWikiPage,
+  getMemoryWikiPageSourceTrace,
   getMemoryWikiPageVersionDiff,
   getMemoryWikiGovernanceRequest,
   getTopicIndexItem,
+  getTopicIndexSourceTrace,
   linkMemoryWikiPageToTopic,
   listConfirmations,
   listMemoryWikiPageVersions,
@@ -37,6 +39,8 @@ const confirmations = ref([])
 const pageVersions = ref([])
 const selectedVersionId = ref('')
 const versionDiff = ref(null)
+const pageSourceTrace = ref(null)
+const topicSourceTrace = ref(null)
 
 const selectedPageId = ref('')
 const selectedTopicKey = ref('')
@@ -166,6 +170,7 @@ async function selectPage(pageId) {
     pageVersions.value = versionData.items || []
     selectedVersionId.value = ''
     versionDiff.value = null
+    pageSourceTrace.value = null
     pageForm.value = {
       pageId: page.pageId,
       pageType: page.pageType ?? 'topic',
@@ -189,6 +194,8 @@ async function selectPage(pageId) {
     pageTopicKeyword.value = page.title ?? ''
     pageTopicAliasesText.value = Array.isArray(page.aliases) ? page.aliases.join(', ') : ''
     pageTopicNote.value = page.summary ?? ''
+    const traceData = await getMemoryWikiPageSourceTrace(pageId)
+    pageSourceTrace.value = traceData.trace || null
   } catch (error) {
     errorMsg.value = error?.message || String(error)
   } finally {
@@ -202,10 +209,12 @@ async function selectTopic(normalizedKey) {
   try {
     selectedTopicKey.value = normalizedKey
     const data = await getTopicIndexItem(normalizedKey)
+    const traceData = await getTopicIndexSourceTrace(normalizedKey)
     topicDetail.value = {
       ...data.item,
       aliasesText: Array.isArray(data.item?.aliases) ? data.item.aliases.join(', ') : ''
     }
+    topicSourceTrace.value = traceData.trace || null
   } catch (error) {
     errorMsg.value = error?.message || String(error)
   } finally {
@@ -236,6 +245,7 @@ function resetPageForm() {
   pageTopicKeyword.value = ''
   pageTopicAliasesText.value = ''
   pageTopicNote.value = ''
+  pageSourceTrace.value = null
 }
 
 async function selectVersion(versionId) {
@@ -737,6 +747,31 @@ onMounted(refreshAll)
           </button>
         </div>
 
+        <div v-if="pageSourceTrace && pageForm.pageId" class="detailSection">
+          <div class="evidenceTitle">来源追溯</div>
+          <div class="detailMeta">关联页面：{{ (pageSourceTrace.relatedPages || []).map((item) => item.title).join(', ') || '无' }}</div>
+          <div class="detailMeta">聊天来源：{{ (pageSourceTrace.chatSources || []).map((item) => item.date).join(', ') || '无' }}</div>
+          <div class="detailMeta">观察来源：{{ (pageSourceTrace.observationSources || []).map((item) => item.title).join(', ') || '无' }}</div>
+          <div v-if="(pageSourceTrace.chatSources || []).length > 0" class="evidenceBlock">
+            <div class="evidenceTitle">聊天片段</div>
+            <div class="evidenceCards">
+              <div v-for="item in pageSourceTrace.chatSources" :key="`${item.date}-${item.messageId}`" class="evidenceCard">
+                <div class="evidenceSummary">{{ item.title }}</div>
+                <div class="detailMeta">{{ item.preview || '原消息已不可读' }}</div>
+              </div>
+            </div>
+          </div>
+          <div v-if="(pageSourceTrace.observationSources || []).length > 0" class="evidenceBlock">
+            <div class="evidenceTitle">观察记录</div>
+            <div class="evidenceCards">
+              <div v-for="item in pageSourceTrace.observationSources" :key="item.observationId" class="evidenceCard">
+                <div class="evidenceSummary">{{ item.title }}</div>
+                <div class="detailMeta">{{ item.preview || '原观察记录已不可读' }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div v-if="pageForm.pageId && pageForm.pageType === 'identity_person'" class="detailSection">
           <div class="evidenceTitle">人物页联动 Topic</div>
           <div class="cardSubhint">
@@ -860,6 +895,8 @@ onMounted(refreshAll)
             <div class="detailMeta">主题热度：{{ topicDetail.heatScore ?? 0 }}</div>
             <div class="detailMeta">相关日期：{{ (topicDetail.dates || []).join(', ') || '无' }}</div>
             <div class="detailMeta">关联页面：{{ (topicDetail.pageIds || topicDetail.memoryPageIds || []).join(', ') || '无' }}</div>
+            <div class="detailMeta">聊天来源：{{ (topicSourceTrace?.chatSources || []).map((item) => item.date).join(', ') || '无' }}</div>
+            <div class="detailMeta">观察来源：{{ (topicSourceTrace?.observationSources || []).map((item) => item.title).join(', ') || '无' }}</div>
             <label class="topicAliases">
               <span>别名（逗号分隔）</span>
               <input v-model="topicDetail.aliasesText" />
