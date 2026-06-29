@@ -17,6 +17,12 @@
 
   /* 危险 — 低饱和暖红 */
   --danger: #D96A5C;
+  --success: #5B9A6B;
+  --success-soft: #EEF6F0;
+  --warning: #E4A35E;
+  --warning-soft: #FFF7EA;
+  --danger-soft: #FBEDEA;
+  --info-soft: #F5F8FB;
 
   /* 模块专属浅底色 */
   --chat-tint: #FFF4F0;

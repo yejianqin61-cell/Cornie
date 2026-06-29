@@ -6,14 +6,24 @@ const props = defineProps({
   }
 })
 
+function getToolLabel(name) {
+  if (!name) return '这件小事'
+  if (name.includes('ledger')) return '记账'
+  if (name.includes('todo')) return '待办'
+  if (name.includes('schedule')) return '日程'
+  if (name.includes('category')) return '类目'
+  if (name.includes('memory')) return '记忆'
+  return '这件小事'
+}
+
 function getToolTitle(name) {
-  if (!name) return '工具调用'
-  return name.replaceAll('_', ' ')
+  if (!name) return '铃湾的处理结果'
+  return name.replaceAll('_', ' ').replaceAll('-', ' ')
 }
 
 function getSummary(item) {
   if (item?.ok === false) {
-    return item?.error || '执行失败'
+    return item?.error || '这次没有顺利处理好'
   }
   if (typeof item?.summary === 'string' && item.summary.trim()) {
     return item.summary
@@ -29,7 +39,7 @@ function getSummary(item) {
       return item.result.summary
     }
   }
-  return item?.ok === false ? '执行失败' : '执行完成'
+  return item?.ok === false ? '这次没有顺利处理好' : '已经帮你处理好了'
 }
 
 function getSourceText(item) {
@@ -41,10 +51,17 @@ function getSourceText(item) {
   }
   return ''
 }
+
+function getCardTitle(item) {
+  return item?.ok === false
+    ? `铃湾刚刚处理 ${getToolLabel(item?.tool_name)} 时出了点小岔子`
+    : `铃湾已经帮你处理好 ${getToolLabel(item?.tool_name)} 了`
+}
 </script>
 
 <template>
   <div class="toolPanel">
+    <div class="toolPanelIntro">这轮对话里，铃湾已经动手帮你做了这些事</div>
     <div
       v-for="(item, index) in props.results"
       :key="`${item.tool_name || 'tool'}-${index}`"
@@ -52,11 +69,17 @@ function getSourceText(item) {
       :class="item?.ok === false ? 'toolCardError' : 'toolCardSuccess'"
     >
       <div class="toolHead">
-        <div class="toolName">{{ getToolTitle(item.tool_name) }}</div>
-        <div class="toolBadge">{{ item?.ok === false ? '失败' : '完成' }}</div>
+        <div class="toolHeadMain">
+          <div class="toolIcon">{{ item?.ok === false ? '!' : '✓' }}</div>
+          <div class="toolHeadText">
+            <div class="toolLabel">{{ getCardTitle(item) }}</div>
+            <div class="toolName">{{ getToolTitle(item.tool_name) }}</div>
+          </div>
+        </div>
+        <div class="toolBadge">{{ item?.ok === false ? '这次没办成' : '已经写好了' }}</div>
       </div>
       <div class="toolSummary">{{ getSummary(item) }}</div>
-      <div v-if="getSourceText(item)" class="toolSource">来源：{{ getSourceText(item) }}</div>
+      <div v-if="getSourceText(item)" class="toolSource">你刚才说的是：{{ getSourceText(item) }}</div>
     </div>
   </div>
 </template>
@@ -66,52 +89,93 @@ function getSourceText(item) {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
+}
+
+.toolPanelIntro{
+  font-size: 12px;
+  color: var(--muted);
+  padding-left: 4px;
 }
 
 .toolCard{
-  border-radius: 14px;
-  padding: 10px 12px;
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(255,255,255,.06);
+  border-radius: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
 }
 
 .toolCardSuccess{
-  box-shadow: inset 0 0 0 1px rgba(74,222,128,.12);
+  border-color: rgba(91,154,107,.22);
+  background: var(--success-soft);
 }
 
 .toolCardError{
-  border-color: rgba(248,113,113,.28);
-  background: rgba(127,29,29,.22);
+  border-color: rgba(217,106,92,.22);
+  background: var(--danger-soft);
 }
 
 .toolHead{
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
+}
+
+.toolHeadMain{
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.toolIcon{
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  flex: 0 0 auto;
+  color: var(--text);
+  background: rgba(255,255,255,.72);
+}
+
+.toolHeadText{
+  min-width: 0;
+}
+
+.toolLabel{
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.5;
 }
 
 .toolName{
-  font-size: 12px;
-  font-weight: 700;
-  color: rgba(255,255,255,.92);
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--muted);
 }
 
 .toolBadge{
   flex: 0 0 auto;
-  padding: 2px 8px;
+  padding: 4px 9px;
   border-radius: 999px;
   font-size: 10px;
-  color: rgba(255,255,255,.72);
-  background: rgba(255,255,255,.08);
+  color: var(--text);
+  background: rgba(255,255,255,.78);
+  border: 1px solid rgba(0,0,0,.06);
+  white-space: nowrap;
 }
 
 .toolSummary{
   margin-top: 6px;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.5;
-  color: rgba(243,244,246,.9);
+  color: var(--text);
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -119,7 +183,7 @@ function getSourceText(item) {
 .toolSource{
   margin-top: 6px;
   font-size: 11px;
-  color: rgba(255,255,255,.48);
+  color: var(--muted);
   white-space: pre-wrap;
   word-break: break-word;
 }
