@@ -1,6 +1,5 @@
 import { getMessagesByDate, listObservationLogs, listScheduleEntries, listTodoEntries } from '../../db.js'
 import { buildCategorySummaryPayload } from './categorySummary.js'
-import { buildMemorySearchSummary } from '../memory/search.js'
 import { listTools } from '../tools/registry.js'
 import { buildWikiContext } from './wikiContext.js'
 
@@ -54,10 +53,6 @@ function summarizeObservations(store, date) {
 export async function buildConversationContext(store, { date, baseDir = process.cwd() }) {
   const messages = getMessagesByDate(store, date)
   const recentConversationSummary = summarizeRecentConversation(messages)
-  const legacyMemorySummary = buildMemorySearchSummary(store, {
-    query: messages.slice(-3).map((item) => item.content).join(' '),
-    limit: 5
-  })
   const wikiContext = await buildWikiContext(store, {
     date,
     baseDir,
@@ -89,7 +84,6 @@ export async function buildConversationContext(store, { date, baseDir = process.
     topicSummary: wikiContext.topicSummary,
     chatRecallSummary: wikiContext.chatSummary,
     observationRecallSummary: wikiContext.observationSummary,
-    legacyMemorySummary,
     toolSummary,
     contextMeta: {
       recentConversationChars: recentConversationSummary.length,
@@ -101,7 +95,6 @@ export async function buildConversationContext(store, { date, baseDir = process.
       topicSummaryChars: wikiContext.topicSummary.length,
       chatRecallSummaryChars: wikiContext.chatSummary.length,
       observationRecallSummaryChars: wikiContext.observationSummary.length,
-      legacyMemorySummaryChars: legacyMemorySummary.length,
       toolSummaryChars: toolSummary.length,
       categoryCounts: categorySummary.counts,
       todoCount: todoItems.length,

@@ -12,7 +12,6 @@ import { evaluateToolCalls } from '../policy/toolPolicy.js'
 import { chat } from '../model/deepseek/client.js'
 import { executeToolCalls } from '../tools/gateway.js'
 import { createObservationService } from '../observation/service.js'
-import { createMemoryService } from '../memory/service.js'
 import { createConfirmService } from '../confirm/service.js'
 import {
   attachContextTelemetry,
@@ -178,7 +177,6 @@ function logLookupAudit(message, lookupContexts) {
 
 export function createConversationOrchestrator(store) {
   const observation = createObservationService(store)
-  const memory = createMemoryService(store)
   const confirm = createConfirmService(store)
 
   return {
@@ -371,16 +369,8 @@ export function createConversationOrchestrator(store) {
           userMessage: message,
           cornieMessage: finalReply
         })
-        const memoryEntry = memory.deriveFromConversation({
-          date,
-          userMessage: message,
-          cornieMessage: finalReply
-        })
-        if (memoryEntry) {
-          memory.create(memoryEntry)
-        }
       } catch (error) {
-        console.error('Observation/memory write error:', error)
+        console.error('Observation write error:', error)
       }
 
       return {
