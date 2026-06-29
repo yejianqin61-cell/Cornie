@@ -232,12 +232,14 @@ function buildIdentityPersonSummaryLine(page) {
   const relationshipToUser = normalizeString(page.relationshipToUser)
   const roleSummary = normalizeString(page.roleSummary)
   const personalitySummary = normalizeString(page.personalitySummary)
+  const meaningToUser = normalizeString(page.meaningToUser)
   const sharedExperienceSummary = normalizeString(page.sharedExperienceSummary) || normalizeString(page.summary)
 
   return `- [person] ${personName}: ${[
     relationshipToUser && `关系：${relationshipToUser}`,
     roleSummary,
     personalitySummary,
+    meaningToUser && `意义：${meaningToUser}`,
     sharedExperienceSummary
   ].filter(Boolean).join('；') || '暂无人物摘要'}`
 }

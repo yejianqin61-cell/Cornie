@@ -106,6 +106,7 @@ export function createPageModel(input = {}) {
     relationshipToUser: normalizeString(input.relationshipToUser ?? input.relationship_to_user),
     roleSummary: normalizeString(input.roleSummary ?? input.role_summary),
     personalitySummary: normalizeString(input.personalitySummary ?? input.personality_summary),
+    meaningToUser: normalizeString(input.meaningToUser ?? input.meaning_to_user),
     sharedExperienceSummary: normalizeString(input.sharedExperienceSummary ?? input.shared_experience_summary),
     emotionalWeight: normalizeString(input.emotionalWeight ?? input.emotional_weight),
     timelineSummary: normalizeString(input.timelineSummary ?? input.timeline_summary),

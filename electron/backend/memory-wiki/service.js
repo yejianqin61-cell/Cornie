@@ -99,6 +99,7 @@ function buildIdentityPersonSummary(input) {
   const relationshipToUser = normalizeString(input.relationshipToUser ?? input.relationship_to_user)
   const roleSummary = normalizeString(input.roleSummary ?? input.role_summary)
   const personalitySummary = normalizeString(input.personalitySummary ?? input.personality_summary)
+  const meaningToUser = normalizeString(input.meaningToUser ?? input.meaning_to_user)
   const sharedExperienceSummary = normalizeString(input.sharedExperienceSummary ?? input.shared_experience_summary)
 
   return [
@@ -106,6 +107,7 @@ function buildIdentityPersonSummary(input) {
     relationshipToUser && `关系：${relationshipToUser}`,
     roleSummary,
     personalitySummary,
+    meaningToUser,
     sharedExperienceSummary
   ]
     .filter(Boolean)
@@ -117,6 +119,7 @@ function buildIdentityPersonBody(input) {
   const relationshipToUser = normalizeString(input.relationshipToUser ?? input.relationship_to_user) || '待补充'
   const roleSummary = normalizeString(input.roleSummary ?? input.role_summary) || '待补充'
   const personalitySummary = normalizeString(input.personalitySummary ?? input.personality_summary) || '待补充'
+  const meaningToUser = normalizeString(input.meaningToUser ?? input.meaning_to_user) || '待补充'
   const sharedExperienceSummary = normalizeString(input.sharedExperienceSummary ?? input.shared_experience_summary) || '待补充'
   const emotionalWeight = normalizeString(input.emotionalWeight ?? input.emotional_weight) || '待补充'
   const timelineSummary = normalizeString(input.timelineSummary ?? input.timeline_summary) || '待补充'
@@ -134,6 +137,9 @@ function buildIdentityPersonBody(input) {
     '## 性格',
     `- 性格摘要：${personalitySummary}`,
     `- 情感权重：${emotionalWeight}`,
+    '',
+    '## 对用户的意义',
+    `- 意义摘要：${meaningToUser}`,
     '',
     '## 和用户的共同经历',
     `- 共同经历：${sharedExperienceSummary}`,
@@ -279,6 +285,7 @@ function normalizeStructuredPageInput(input) {
       relationshipToUser: normalizeString(input.relationshipToUser ?? input.relationship_to_user),
       roleSummary: normalizeString(input.roleSummary ?? input.role_summary),
       personalitySummary: normalizeString(input.personalitySummary ?? input.personality_summary),
+      meaningToUser: normalizeString(input.meaningToUser ?? input.meaning_to_user),
       sharedExperienceSummary: normalizeString(input.sharedExperienceSummary ?? input.shared_experience_summary),
       emotionalWeight: normalizeString(input.emotionalWeight ?? input.emotional_weight),
       timelineSummary: normalizeString(input.timelineSummary ?? input.timeline_summary),
@@ -415,6 +422,7 @@ function summarizePage(page) {
     relationshipToUser: page.relationshipToUser ?? '',
     roleSummary: page.roleSummary ?? '',
     personalitySummary: page.personalitySummary ?? '',
+    meaningToUser: page.meaningToUser ?? '',
     sharedExperienceSummary: page.sharedExperienceSummary ?? '',
     emotionalWeight: page.emotionalWeight ?? '',
     timelineSummary: page.timelineSummary ?? '',

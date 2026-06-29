@@ -100,6 +100,47 @@ function buildRoleSummary(relationshipToUser) {
   return map.get(relationship) || ''
 }
 
+function extractPersonalitySummary(text) {
+  const normalized = normalizeString(text)
+  if (!normalized) return ''
+
+  const explicitPersonalityMatch = normalized.match(
+    /(?:她|他|对方|这个人)[^。！？!?]{0,12}(?:很|比较|挺)?(温柔|害羞|内向|外向|冷静|可靠|开朗|细腻|敏感)/
+  )
+  if (explicitPersonalityMatch?.[1]) {
+    return explicitPersonalityMatch[1]
+  }
+
+  const directStatementMatch = normalized.match(
+    /([^\s，。！？!?]{2,24})[^。！？!?]{0,12}(?:很|比较|挺)?(温柔|害羞|内向|外向|冷静|可靠|开朗|细腻|敏感)/
+  )
+  if (directStatementMatch?.[2]) {
+    return directStatementMatch[2]
+  }
+
+  return ''
+}
+
+function extractMeaningToUser(text) {
+  const normalized = normalizeString(text)
+  if (!normalized) return ''
+
+  const patterns = [
+    /(?:她|他|对方|这个人)[^。！？!?]{0,18}(?:对我很重要|很重要)/,
+    /(?:她|他|对方|这个人)[^。！？!?]{0,24}(?:是我前进的动力|给过我很多力量|给过我安慰|是重要回忆)/,
+    /(?:我觉得|我认为)?[^\n。！？!?]{0,32}(?:她|他|对方|这个人)[^\n。！？!?]{0,24}(?:很重要|是我前进的动力|给过我很多力量|给过我安慰|是重要回忆)/
+  ]
+
+  for (const pattern of patterns) {
+    const match = normalized.match(pattern)
+    if (match?.[0]) {
+      return stripTrailingParticles(match[0])
+    }
+  }
+
+  return ''
+}
+
 function buildEmotionalWeight(relationshipToUser) {
   const relationship = normalizeRelationship(relationshipToUser)
   if (relationship === '初恋' || relationship === '前任' || relationship === '恋人') {
@@ -166,6 +207,8 @@ function buildCandidate(userMessage) {
       personName,
       relationshipToUser,
       roleSummary: buildRoleSummary(relationshipToUser),
+      personalitySummary: extractPersonalitySummary(text),
+      meaningToUser: extractMeaningToUser(text),
       sharedExperienceSummary: extractExperienceSummary(text),
       timelineSummary: extractTimelineSummary(text),
       emotionalWeight: buildEmotionalWeight(relationshipToUser),
@@ -293,6 +336,50 @@ async function ensurePersonTopicLink({ baseDir, page, date, messageId, personNam
   return topicIndex.get(normalizedKey)
 }
 
+async function ensurePersonMeaningGovernanceCandidate(memoryWiki, page, candidate) {
+  const hasLowConfidenceMeaning = normalizeString(candidate?.meaningToUser)
+  const hasLowConfidencePersonality = normalizeString(candidate?.personalitySummary)
+
+  if (!page?.pageId || (!hasLowConfidenceMeaning && !hasLowConfidencePersonality)) {
+    return
+  }
+
+  const governanceRequests = await memoryWiki.listGovernanceRequests({
+    requestType: 'identity_person_review',
+    queueSection: 'identity_person_reviews'
+  })
+  const duplicated = governanceRequests.some((item) =>
+    (item.status === 'pending' || item.status === 'deferred') &&
+    Array.isArray(item.pageIds) &&
+    item.pageIds.includes(page.pageId)
+  )
+  if (duplicated) {
+    return
+  }
+
+  await memoryWiki.createGovernanceRequest({
+    requestType: 'identity_person_review',
+    triggerSource: 'conversation_upsert',
+    queueSection: 'identity_person_reviews',
+    riskLevel: 'high',
+    pageIds: [page.pageId],
+    title: page.title || page.pageId,
+    reason: '重要人物页出现了“人物性格”或“对用户的意义”这类高风险归纳，建议进入治理审核后再正式固化。',
+    evidence: [
+      {
+        pageId: page.pageId,
+        candidatePersonalitySummary: candidate?.personalitySummary ?? '',
+        candidateMeaningToUser: candidate?.meaningToUser ?? ''
+      }
+    ],
+    payload: {
+      action: 'review_identity_person',
+      personalitySummary: candidate?.personalitySummary ?? '',
+      meaningToUser: candidate?.meaningToUser ?? ''
+    }
+  })
+}
+
 export function extractIdentityPersonCandidate(userMessage) {
   return buildCandidate(userMessage)
 }
@@ -322,7 +409,9 @@ export async function upsertIdentityPersonFromConversation(
       personName: candidate.personName,
       relationshipToUser: candidate.relationshipToUser,
       roleSummary: candidate.roleSummary,
+      personalitySummary: candidate.personalitySummary,
       sharedExperienceSummary: candidate.sharedExperienceSummary,
+      meaningToUser: candidate.meaningToUser,
       timelineSummary: candidate.timelineSummary,
       emotionalWeight: candidate.emotionalWeight,
       firstKnownPeriod: candidate.firstKnownPeriod,
@@ -341,6 +430,7 @@ export async function upsertIdentityPersonFromConversation(
       messageId,
       personName: candidate.personName
     })
+    await ensurePersonMeaningGovernanceCandidate(memoryWiki, created, candidate)
 
     return {
       action: 'created',
@@ -360,6 +450,12 @@ export async function upsertIdentityPersonFromConversation(
   compareField(existingPage.roleSummary, candidate.roleSummary, 'roleSummary', conflicts, updates)
   compareField(existingPage.emotionalWeight, candidate.emotionalWeight, 'emotionalWeight', conflicts, updates)
 
+  if (!normalizeString(existingPage.personalitySummary) && normalizeString(candidate.personalitySummary)) {
+    updates.personalitySummary = candidate.personalitySummary
+  }
+  if (!normalizeString(existingPage.meaningToUser) && normalizeString(candidate.meaningToUser)) {
+    updates.meaningToUser = candidate.meaningToUser
+  }
   if (!normalizeString(existingPage.sharedExperienceSummary) && normalizeString(candidate.sharedExperienceSummary)) {
     updates.sharedExperienceSummary = candidate.sharedExperienceSummary
   }
@@ -400,6 +496,8 @@ export async function upsertIdentityPersonFromConversation(
       baseDir,
       page: {
         ...existingPage,
+        personalitySummary: existingPage.personalitySummary ?? candidate.personalitySummary,
+        meaningToUser: existingPage.meaningToUser ?? candidate.meaningToUser,
         sourceRefs: updates.sourceRefs,
         lastMentionedAt: date
       },
@@ -407,6 +505,7 @@ export async function upsertIdentityPersonFromConversation(
       messageId,
       personName: candidate.personName
     })
+    await ensurePersonMeaningGovernanceCandidate(memoryWiki, existingPage, candidate)
 
     return {
       action: 'conflict',
@@ -430,6 +529,7 @@ export async function upsertIdentityPersonFromConversation(
     messageId,
     personName: candidate.personName
   })
+  await ensurePersonMeaningGovernanceCandidate(memoryWiki, updated, candidate)
 
   return {
     action: hasSameSource ? 'noop' : 'updated',
