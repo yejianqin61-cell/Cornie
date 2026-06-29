@@ -94,6 +94,14 @@ export function createPageModel(input = {}) {
   const metadata = createDefaultPageMetadata(input)
   return {
     ...metadata,
+    userName: normalizeString(input.userName ?? input.user_name),
+    preferredName: normalizeString(input.preferredName ?? input.preferred_name),
+    cornieRelationship: normalizeString(input.cornieRelationship ?? input.cornie_relationship),
+    identitySummary: normalizeString(input.identitySummary ?? input.identity_summary),
+    lifeStageSummary: normalizeString(input.lifeStageSummary ?? input.life_stage_summary),
+    currentFocus: normalizeString(input.currentFocus ?? input.current_focus),
+    stressors: normalizeString(input.stressors),
+    communicationPreference: normalizeString(input.communicationPreference ?? input.communication_preference),
     preferenceType: normalizeString(input.preferenceType ?? input.preference_type),
     stance: normalizeString(input.stance),
     stabilityLevel: normalizeString(input.stabilityLevel ?? input.stability_level),

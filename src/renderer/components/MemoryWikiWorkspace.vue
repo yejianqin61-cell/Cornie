@@ -68,6 +68,14 @@ function createEmptyPageForm() {
     pageId: '',
     pageType: 'topic',
     title: '',
+    userName: '',
+    preferredName: '',
+    cornieRelationship: '',
+    identitySummary: '',
+    lifeStageSummary: '',
+    currentFocus: '',
+    stressors: '',
+    communicationPreference: '',
     preferenceType: '',
     stance: '',
     stabilityLevel: 'medium',
@@ -271,6 +279,14 @@ async function selectPage(pageId) {
       pageId: page.pageId,
       pageType: page.pageType ?? 'topic',
       title: page.title ?? '',
+      userName: page.userName ?? '',
+      preferredName: page.preferredName ?? '',
+      cornieRelationship: page.cornieRelationship ?? '',
+      identitySummary: page.identitySummary ?? '',
+      lifeStageSummary: page.lifeStageSummary ?? '',
+      currentFocus: page.currentFocus ?? '',
+      stressors: page.stressors ?? '',
+      communicationPreference: page.communicationPreference ?? '',
       preferenceType: page.preferenceType ?? '',
       stance: page.stance ?? '',
       stabilityLevel: page.stabilityLevel ?? 'medium',
@@ -371,6 +387,14 @@ async function savePage() {
     const payload = {
       pageType: pageForm.value.pageType,
       title: pageForm.value.title,
+      userName: pageForm.value.userName,
+      preferredName: pageForm.value.preferredName,
+      cornieRelationship: pageForm.value.cornieRelationship,
+      identitySummary: pageForm.value.identitySummary,
+      lifeStageSummary: pageForm.value.lifeStageSummary,
+      currentFocus: pageForm.value.currentFocus,
+      stressors: pageForm.value.stressors,
+      communicationPreference: pageForm.value.communicationPreference,
       preferenceType: pageForm.value.preferenceType,
       stance: pageForm.value.stance,
       stabilityLevel: pageForm.value.stabilityLevel,
@@ -732,6 +756,40 @@ onMounted(refreshAll)
             <span>标题</span>
             <input v-model="pageForm.title" placeholder="输入页面标题" />
           </label>
+          <template v-if="pageForm.pageType === 'identity_profile'">
+            <label>
+              <span>用户名字</span>
+              <input v-model="pageForm.userName" placeholder="例如：叶健钦" />
+            </label>
+            <label>
+              <span>偏好称呼</span>
+              <input v-model="pageForm.preferredName" placeholder="例如：爸爸" />
+            </label>
+            <label class="span2">
+              <span>与 Cornie 的关系</span>
+              <input v-model="pageForm.cornieRelationship" placeholder="例如：用户是 Cornie 的创造者，也是 Cornie 的爸爸" />
+            </label>
+            <label class="span2">
+              <span>身份摘要</span>
+              <textarea v-model="pageForm.identitySummary" rows="3" placeholder="例如：当前处于项目、考试、实习与求职压力交织阶段。" />
+            </label>
+            <label class="span2">
+              <span>阶段概况</span>
+              <textarea v-model="pageForm.lifeStageSummary" rows="3" placeholder="例如：学业推进中，同时承担多个个人项目与求职任务。" />
+            </label>
+            <label>
+              <span>当前关注</span>
+              <input v-model="pageForm.currentFocus" placeholder="例如：项目推进、考试、实习" />
+            </label>
+            <label>
+              <span>主要压力</span>
+              <input v-model="pageForm.stressors" placeholder="例如：时间压力、项目并行、求职焦虑" />
+            </label>
+            <label class="span2">
+              <span>沟通偏好</span>
+              <textarea v-model="pageForm.communicationPreference" rows="2" placeholder="例如：希望被温柔、克制、记得上下文地陪伴。" />
+            </label>
+          </template>
           <template v-if="pageForm.pageType === 'identity_preference'">
             <label>
               <span>偏好类型</span>

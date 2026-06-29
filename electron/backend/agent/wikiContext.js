@@ -167,8 +167,23 @@ function buildPageSummaryLine(page) {
 }
 
 function buildIdentityProfileSummaryLine(page) {
-  const summary = normalizeString(page.summary) || '暂无主身份摘要'
-  return `- [identity] ${page.title}: ${summary}`
+  const userName = normalizeString(page.userName) || normalizeString(page.title) || '未命名用户'
+  const preferredName = normalizeString(page.preferredName)
+  const relationship = normalizeString(page.cornieRelationship)
+  const identitySummary = normalizeString(page.identitySummary) || normalizeString(page.summary)
+  const lifeStageSummary = normalizeString(page.lifeStageSummary)
+  const currentFocus = normalizeString(page.currentFocus)
+
+  const parts = [
+    `名字：${userName}`,
+    preferredName && `称呼：${preferredName}`,
+    relationship && `关系：${relationship}`,
+    identitySummary,
+    lifeStageSummary,
+    currentFocus && `当前关注：${currentFocus}`
+  ].filter(Boolean)
+
+  return `- [identity] ${userName}: ${parts.join('；') || '暂无主身份摘要'}`
 }
 
 function buildIdentityPreferenceSummaryLine(page) {

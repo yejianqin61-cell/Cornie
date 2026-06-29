@@ -7,6 +7,7 @@ import { createMemoryWikiGovernanceStore } from './governanceStore.js'
 import { normalizePageStatus } from './pageModel.js'
 import { getMessagesByDate, getObservationLog } from '../../db.js'
 
+const IDENTITY_PROFILE_PAGE_TYPE = 'identity_profile'
 const IDENTITY_PREFERENCE_PAGE_TYPE = 'identity_preference'
 const IDENTITY_TRAIT_PAGE_TYPE = 'identity_trait'
 
@@ -31,6 +32,61 @@ function isIdentityPreferencePageInput(input) {
 
 function isIdentityTraitPageInput(input) {
   return normalizeString(input?.pageType ?? input?.page_type) === IDENTITY_TRAIT_PAGE_TYPE
+}
+
+function isIdentityProfilePageInput(input) {
+  return normalizeString(input?.pageType ?? input?.page_type) === IDENTITY_PROFILE_PAGE_TYPE
+}
+
+function buildIdentityProfileSummary(input) {
+  const userName = normalizeString(input.userName ?? input.user_name) || normalizeString(input.title)
+  const preferredName = normalizeString(input.preferredName ?? input.preferred_name)
+  const cornieRelationship = normalizeString(input.cornieRelationship ?? input.cornie_relationship)
+  const identitySummary = normalizeString(input.identitySummary ?? input.identity_summary)
+  const lifeStageSummary = normalizeString(input.lifeStageSummary ?? input.life_stage_summary)
+  const currentFocus = normalizeString(input.currentFocus ?? input.current_focus)
+
+  return [
+    userName && `名字：${userName}`,
+    preferredName && `称呼：${preferredName}`,
+    cornieRelationship && `关系：${cornieRelationship}`,
+    identitySummary,
+    lifeStageSummary,
+    currentFocus && `当前关注：${currentFocus}`
+  ]
+    .filter(Boolean)
+    .join('；')
+}
+
+function buildIdentityProfileBody(input) {
+  const userName = normalizeString(input.userName ?? input.user_name) || normalizeString(input.title) || '待确认'
+  const preferredName = normalizeString(input.preferredName ?? input.preferred_name) || '待确认'
+  const cornieRelationship = normalizeString(input.cornieRelationship ?? input.cornie_relationship) || '待确认'
+  const identitySummary = normalizeString(input.identitySummary ?? input.identity_summary) || '待补充'
+  const lifeStageSummary = normalizeString(input.lifeStageSummary ?? input.life_stage_summary) || '待补充'
+  const currentFocus = normalizeString(input.currentFocus ?? input.current_focus) || '待补充'
+  const stressors = normalizeString(input.stressors) || '待补充'
+  const communicationPreference = normalizeString(input.communicationPreference ?? input.communication_preference) || '待补充'
+
+  return [
+    '## 基本身份',
+    `- 用户名字：${userName}`,
+    `- 偏好称呼：${preferredName}`,
+    '',
+    '## 与 Cornie 的关系',
+    `- 关系定义：${cornieRelationship}`,
+    '',
+    '## 当前阶段画像',
+    `- 身份摘要：${identitySummary}`,
+    `- 阶段概况：${lifeStageSummary}`,
+    '',
+    '## 长期关注点',
+    `- 当前关注：${currentFocus}`,
+    `- 主要压力：${stressors}`,
+    '',
+    '## 沟通与陪伴偏好',
+    `- 沟通偏好：${communicationPreference}`
+  ].join('\n')
 }
 
 function buildIdentityPreferenceSummary(input) {
@@ -140,6 +196,30 @@ function shouldCreateTraitGovernanceCandidate(input) {
 }
 
 function normalizeStructuredPageInput(input) {
+  if (isIdentityProfilePageInput(input)) {
+    const normalized = {
+      ...input,
+      userName: normalizeString(input.userName ?? input.user_name),
+      preferredName: normalizeString(input.preferredName ?? input.preferred_name),
+      cornieRelationship: normalizeString(input.cornieRelationship ?? input.cornie_relationship),
+      identitySummary: normalizeString(input.identitySummary ?? input.identity_summary),
+      lifeStageSummary: normalizeString(input.lifeStageSummary ?? input.life_stage_summary),
+      currentFocus: normalizeString(input.currentFocus ?? input.current_focus),
+      stressors: normalizeString(input.stressors),
+      communicationPreference: normalizeString(input.communicationPreference ?? input.communication_preference)
+    }
+
+    if (!normalizeString(normalized.summary)) {
+      normalized.summary = buildIdentityProfileSummary(normalized)
+    }
+
+    if (!normalizeString(normalized.body)) {
+      normalized.body = buildIdentityProfileBody(normalized)
+    }
+
+    return normalized
+  }
+
   if (isIdentityPreferencePageInput(input)) {
     const normalized = {
       ...input,
@@ -247,6 +327,14 @@ function summarizePage(page) {
     status: page.status,
     importance: page.importance,
     ownerConfirmed: page.ownerConfirmed,
+    userName: page.userName ?? '',
+    preferredName: page.preferredName ?? '',
+    cornieRelationship: page.cornieRelationship ?? '',
+    identitySummary: page.identitySummary ?? '',
+    lifeStageSummary: page.lifeStageSummary ?? '',
+    currentFocus: page.currentFocus ?? '',
+    stressors: page.stressors ?? '',
+    communicationPreference: page.communicationPreference ?? '',
     preferenceType: page.preferenceType ?? '',
     stance: page.stance ?? '',
     stabilityLevel: page.stabilityLevel ?? '',
