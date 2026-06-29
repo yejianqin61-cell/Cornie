@@ -28,6 +28,8 @@ function truncated(text, maxLen = 100) {
 }
 
 const observations = ref([])
+const observationPolicy = ref(null)
+const observationPolicySummary = ref('')
 const loading = ref(false)
 const errorMsg = ref('')
 
@@ -73,6 +75,8 @@ async function refresh() {
     if (activeTab.value === 'today') {
       const data = await listObservations({ date: getTodayDate(), limit: 100 })
       observations.value = data?.observations || []
+      observationPolicy.value = data?.policy || null
+      observationPolicySummary.value = data?.policySummary || ''
       selectedDate.value = getTodayDate()
       return
     }
@@ -88,6 +92,8 @@ async function refresh() {
       limit: 200
     })
     observations.value = data?.observations || []
+    observationPolicy.value = data?.policy || null
+    observationPolicySummary.value = data?.policySummary || ''
   } catch (e) {
     errorMsg.value = e?.message || '加载失败'
   } finally {
@@ -169,6 +175,12 @@ onMounted(refresh)
       <div class="olistPolicyTitle">使用边界</div>
       <div class="olistPolicyText">
         观察日志更像事实档案，不是“每条都永久记住”。今天页服务当下对话，历史页用于你或铃湾按主题、类型、日期回查。
+      </div>
+      <div v-if="observationPolicySummary" class="olistPolicySubtext">{{ observationPolicySummary }}</div>
+      <div v-if="observationPolicy" class="olistPolicyMeta">
+        <span>聊天默认 {{ observationPolicy.conversationTodaySummaryLimit }} 条</span>
+        <span>Wiki 补查 {{ observationPolicy.wikiRecallTodayLimit }} 条</span>
+        <span>日记生成 {{ observationPolicy.diaryTodayDetailLimit }} 条</span>
       </div>
     </div>
 
@@ -349,6 +361,24 @@ onMounted(refresh)
   font-size: 13px;
   color: var(--muted);
   line-height: 1.6;
+}
+.olistPolicySubtext{
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+.olistPolicyMeta{
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.olistPolicyMeta span{
+  font-size: 12px;
+  color: var(--accent-strong);
+  background: rgba(232,133,106,.1);
+  border-radius: 999px;
+  padding: 4px 8px;
 }
 
 .olistError{

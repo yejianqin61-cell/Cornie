@@ -20,7 +20,11 @@ export function observationRoutes({ store }) {
           limit: limit ? Number(limit) : 50
         })
       }
-      res.json({ observations: result })
+      res.json({
+        observations: result,
+        policy: observation.getPromptPolicy(),
+        policySummary: observation.getPromptPolicySummary()
+      })
     } catch (error) { next(error) }
   })
 

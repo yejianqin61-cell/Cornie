@@ -6,6 +6,18 @@ export const OBSERVATION_PROMPT_POLICY = Object.freeze({
   todayArchiveDefaultLimit: 200
 })
 
+export function getObservationPromptPolicy() {
+  return {
+    archiveMode: 'by_day',
+    historyInjection: 'on_demand_only',
+    conversationTodaySummaryLimit: OBSERVATION_PROMPT_POLICY.conversationTodaySummaryLimit,
+    wikiRecallTodayLimit: OBSERVATION_PROMPT_POLICY.wikiRecallTodayLimit,
+    diaryTodayDetailLimit: OBSERVATION_PROMPT_POLICY.diaryTodayDetailLimit,
+    historyListDefaultLimit: OBSERVATION_PROMPT_POLICY.historyListDefaultLimit,
+    todayArchiveDefaultLimit: OBSERVATION_PROMPT_POLICY.todayArchiveDefaultLimit
+  }
+}
+
 export function buildObservationPromptPolicySummary() {
   return [
     '观察日志按自然日归档保存，不会每天清空。',

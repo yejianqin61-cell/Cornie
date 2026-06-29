@@ -1,5 +1,5 @@
 import { deleteObservationLog, getObservationLog, listObservationLogs, saveObservationLog, updateObservationLog } from '../../db.js'
-import { buildObservationPromptPolicySummary, OBSERVATION_PROMPT_POLICY } from './policy.js'
+import { buildObservationPromptPolicySummary, getObservationPromptPolicy, OBSERVATION_PROMPT_POLICY } from './policy.js'
 
 function normalizeObservationInput(input = {}) {
   return {
@@ -238,6 +238,7 @@ export function createObservationService(store) {
       date,
       limit: OBSERVATION_PROMPT_POLICY.diaryTodayDetailLimit
     }),
+    getPromptPolicy: () => getObservationPromptPolicy(),
     getPromptPolicySummary: () => buildObservationPromptPolicySummary(),
     prepareNote,
     addNoteSmart,
