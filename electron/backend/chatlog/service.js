@@ -1,4 +1,4 @@
-import { createSqlJsChatlogRepository } from './repository.js'
+import { CHATLOG_REPOSITORY_DRIVERS, createChatlogRepository } from './repository.js'
 
 const DEFAULT_CHATLOG_PAGE_SIZE = 100
 
@@ -35,6 +35,8 @@ function buildStorageMeta(repository) {
     driver: repository.driver ?? 'unknown',
     queryContractVersion: repository.queryContractVersion ?? 1,
     migrationHint: 'chatlog_repository_contract_ready_for_storage_swap',
+    driverCapabilities: repository.capabilities ?? null,
+    availableDrivers: repository.availableDrivers ?? Object.values(CHATLOG_REPOSITORY_DRIVERS),
     capabilities: {
       archiveScopes: ['all', 'recent_30_days', 'month'],
       exportDay: true,
@@ -53,7 +55,9 @@ function buildPlainTextTranscript(date, messages = []) {
 }
 
 export function createChatlogService(store, { repository } = {}) {
-  const chatlogRepository = repository ?? createSqlJsChatlogRepository(store)
+  const chatlogRepository = repository ?? createChatlogRepository(store, {
+    driver: CHATLOG_REPOSITORY_DRIVERS.sqljs
+  })
 
   return {
     getByDate(date, { cursor, limit, query } = {}) {

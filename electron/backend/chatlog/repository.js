@@ -1,5 +1,10 @@
 import { getMessagesByDate, listConversationDates } from '../../db.js'
 
+export const CHATLOG_REPOSITORY_DRIVERS = Object.freeze({
+  sqljs: 'sql.js',
+  betterSqlite3: 'better-sqlite3'
+})
+
 function normalizeString(value) {
   return String(value ?? '').trim()
 }
@@ -79,10 +84,47 @@ function buildAvailableMonths(entries) {
   return Array.from(new Set(entries.map((item) => normalizeString(item.date).slice(0, 7)).filter(Boolean)))
 }
 
-export function createSqlJsChatlogRepository(store) {
+function buildRepositoryCapabilities({
+  supportsNativePaging = false,
+  supportsNativeKeywordSearch = false,
+  migrationReady = false,
+  status = 'active'
+} = {}) {
   return {
-    driver: 'sql.js',
-    queryContractVersion: 2,
+    supportsNativePaging,
+    supportsNativeKeywordSearch,
+    migrationReady,
+    status
+  }
+}
+
+function createRepositoryDescriptor({
+  driver,
+  queryContractVersion = 2,
+  capabilities,
+  availableDrivers = Object.values(CHATLOG_REPOSITORY_DRIVERS)
+} = {}) {
+  return {
+    driver,
+    queryContractVersion,
+    capabilities: capabilities ?? buildRepositoryCapabilities(),
+    availableDrivers
+  }
+}
+
+export function createSqlJsChatlogRepository(store) {
+  const descriptor = createRepositoryDescriptor({
+    driver: CHATLOG_REPOSITORY_DRIVERS.sqljs,
+    capabilities: buildRepositoryCapabilities({
+      supportsNativePaging: false,
+      supportsNativeKeywordSearch: false,
+      migrationReady: true,
+      status: 'active'
+    })
+  })
+
+  return {
+    ...descriptor,
     getMessagesByDate(date) {
       return getMessagesByDate(store, date)
     },
@@ -170,4 +212,41 @@ export function createSqlJsChatlogRepository(store) {
       }
     }
   }
+}
+
+export function createBetterSqlite3ChatlogRepositorySkeleton() {
+  const descriptor = createRepositoryDescriptor({
+    driver: CHATLOG_REPOSITORY_DRIVERS.betterSqlite3,
+    capabilities: buildRepositoryCapabilities({
+      supportsNativePaging: true,
+      supportsNativeKeywordSearch: true,
+      migrationReady: false,
+      status: 'planned'
+    })
+  })
+
+  const notImplemented = () => {
+    throw new Error('better-sqlite3 chatlog repository is not implemented yet')
+  }
+
+  return {
+    ...descriptor,
+    getMessagesByDate: notImplemented,
+    searchMessagesByDate: notImplemented,
+    listDateEntries: notImplemented
+  }
+}
+
+export function createChatlogRepository(store, { driver } = {}) {
+  const normalizedDriver = normalizeString(driver)
+
+  if (!normalizedDriver || normalizedDriver === CHATLOG_REPOSITORY_DRIVERS.sqljs) {
+    return createSqlJsChatlogRepository(store)
+  }
+
+  if (normalizedDriver === CHATLOG_REPOSITORY_DRIVERS.betterSqlite3) {
+    return createBetterSqlite3ChatlogRepositorySkeleton()
+  }
+
+  throw new Error(`unsupported chatlog repository driver: ${normalizedDriver}`)
 }
