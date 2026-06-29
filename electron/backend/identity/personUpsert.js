@@ -1,4 +1,4 @@
-import { createMemoryWikiService } from '../memory-wiki/index.js'
+import { createMemoryWikiService, createTopicIndexStore } from '../memory-wiki/index.js'
 
 const IDENTITY_PERSON_PAGE_TYPE = 'identity_person'
 const IDENTITY_PROFILE_PAGE_TYPE = 'identity_profile'
@@ -19,6 +19,10 @@ function dedupeStrings(items = []) {
   return Array.from(new Set(items.map((item) => normalizeString(item)).filter(Boolean)))
 }
 
+function normalizeKey(value) {
+  return normalizeString(value).toLowerCase()
+}
+
 function buildSourceRef({ date, messageId, userMessage }) {
   return {
     kind: 'chat',
@@ -27,6 +31,10 @@ function buildSourceRef({ date, messageId, userMessage }) {
     title: stripTrailingParticles(normalizeString(userMessage).slice(0, 24)) || '人物记忆来源',
     excerpt: normalizeString(userMessage).slice(0, 120)
   }
+}
+
+function buildChatRef({ date, messageId }) {
+  return `${normalizeString(date)}#${normalizeString(messageId)}`
 }
 
 function cleanupPersonName(value) {
@@ -243,6 +251,48 @@ async function ensureProfileLink(memoryWiki, personPageId) {
   }
 }
 
+async function ensurePersonTopicLink({ baseDir, page, date, messageId, personName }) {
+  if (!page?.pageId) {
+    return null
+  }
+
+  const keyword = normalizeString(personName) || normalizeString(page.personName) || normalizeString(page.title)
+  const normalizedKey = normalizeKey(keyword)
+  if (!normalizedKey) {
+    return null
+  }
+
+  const topicIndex = await createTopicIndexStore(baseDir)
+  const existing = await topicIndex.get(normalizedKey)
+  const aliases = dedupeStrings([
+    keyword,
+    page.title,
+    page.personName,
+    ...(Array.isArray(page.aliases) ? page.aliases : [])
+  ])
+
+  await topicIndex.upsert({
+    ...(existing ?? {}),
+    keyword: existing?.keyword || keyword,
+    normalizedKey,
+    aliases: dedupeStrings([...(existing?.aliases ?? []), ...aliases]),
+    importance: page.importance || existing?.importance || 'medium',
+    note: page.summary || existing?.note || '',
+    lastMentionedAt: normalizeString(date) || existing?.lastMentionedAt || ''
+  })
+
+  if (normalizeString(date)) {
+    await topicIndex.addDateRef(normalizedKey, date)
+  }
+
+  if (normalizeString(date) && normalizeString(messageId)) {
+    await topicIndex.addChatRef(normalizedKey, buildChatRef({ date, messageId }))
+  }
+
+  await topicIndex.linkPage(normalizedKey, page.pageId)
+  return topicIndex.get(normalizedKey)
+}
+
 export function extractIdentityPersonCandidate(userMessage) {
   return buildCandidate(userMessage)
 }
@@ -284,6 +334,13 @@ export async function upsertIdentityPersonFromConversation(
     })
 
     await ensureProfileLink(memoryWiki, created.pageId)
+    await ensurePersonTopicLink({
+      baseDir,
+      page: created,
+      date,
+      messageId,
+      personName: candidate.personName
+    })
 
     return {
       action: 'created',
@@ -339,6 +396,17 @@ export async function upsertIdentityPersonFromConversation(
       })
     }
     await ensureProfileLink(memoryWiki, existingPage.pageId)
+    await ensurePersonTopicLink({
+      baseDir,
+      page: {
+        ...existingPage,
+        sourceRefs: updates.sourceRefs,
+        lastMentionedAt: date
+      },
+      date,
+      messageId,
+      personName: candidate.personName
+    })
 
     return {
       action: 'conflict',
@@ -355,6 +423,13 @@ export async function upsertIdentityPersonFromConversation(
   })
 
   await ensureProfileLink(memoryWiki, updated.pageId)
+  await ensurePersonTopicLink({
+    baseDir,
+    page: updated,
+    date,
+    messageId,
+    personName: candidate.personName
+  })
 
   return {
     action: hasSameSource ? 'noop' : 'updated',
