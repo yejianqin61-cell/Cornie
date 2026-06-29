@@ -1,4 +1,5 @@
 import { deleteObservationLog, getObservationLog, listObservationLogs, saveObservationLog, updateObservationLog } from '../../db.js'
+import { buildObservationPromptPolicySummary, OBSERVATION_PROMPT_POLICY } from './policy.js'
 
 function normalizeObservationInput(input = {}) {
   return {
@@ -115,7 +116,7 @@ function deriveConversationObservation({ date, userMessage, cornieMessage }) {
 
 export function createObservationService(store) {
   function listByDate(date) {
-    return listObservationLogs(store, { date, limit: 200 })
+    return listObservationLogs(store, { date, limit: OBSERVATION_PROMPT_POLICY.todayArchiveDefaultLimit })
   }
 
   function findDuplicateNote(note, items = []) {
@@ -225,6 +226,19 @@ export function createObservationService(store) {
     listByDate,
     listToday: (date = new Date().toISOString().slice(0, 10)) => listObservationLogs(store, { date }),
     listByRange: ({ from, to, type, limit }) => listObservationLogs(store, { from, to, type, limit }),
+    listTodayForConversation: (date) => listObservationLogs(store, {
+      date,
+      limit: OBSERVATION_PROMPT_POLICY.conversationTodaySummaryLimit
+    }),
+    listTodayForWikiRecall: (date) => listObservationLogs(store, {
+      date,
+      limit: OBSERVATION_PROMPT_POLICY.wikiRecallTodayLimit
+    }),
+    listTodayForDiary: (date) => listObservationLogs(store, {
+      date,
+      limit: OBSERVATION_PROMPT_POLICY.diaryTodayDetailLimit
+    }),
+    getPromptPolicySummary: () => buildObservationPromptPolicySummary(),
     prepareNote,
     addNoteSmart,
     recordConversationTurn: ({ date, userMessage, cornieMessage }) => {

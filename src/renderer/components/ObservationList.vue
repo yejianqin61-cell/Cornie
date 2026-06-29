@@ -53,7 +53,7 @@ async function removeObservation(id) {
 
 function truncated(text, maxLen = 100) {
   if (!text) return ''
-  return text.length > maxLen ? text.slice(0, maxLen) + '…' : text
+  return text.length > maxLen ? `${text.slice(0, maxLen)}…` : text
 }
 
 onMounted(refresh)
@@ -65,16 +65,22 @@ onMounted(refresh)
       <button class="ghost" @click="$emit('back')">← 返回观察与记忆</button>
       <div>
         <div class="olistTitle">观察记录</div>
-        <div class="olistHint">生活里的小事，铃湾帮你记下来</div>
+        <div class="olistHint">按天归档的事实小档案，铃湾平时主要参考今天这一页。</div>
       </div>
       <button class="primary" @click="showAdd = !showAdd">
         {{ showAdd ? '取消' : '记一件小事' }}
       </button>
     </header>
 
+    <div class="olistPolicy card">
+      <div class="olistPolicyTitle">归档说明</div>
+      <div class="olistPolicyText">
+        观察日志会按自然日保存，不会每天清空。聊天时默认只高频参考今天的记录，历史内容会在需要时再按主题或日期调取。
+      </div>
+    </div>
+
     <div v-if="errorMsg" class="olistError">{{ errorMsg }}</div>
 
-    <!-- 快速新增 -->
     <div v-if="showAdd" class="olistAdd card">
       <input v-model="newForm.title" placeholder="一句话标题" />
       <textarea v-model="newForm.content" placeholder="详细内容（可选）" rows="3" />
@@ -86,7 +92,7 @@ onMounted(refresh)
     <div v-if="loading" class="olistLoading">加载中…</div>
 
     <div v-else-if="observations.length === 0" class="olistEmpty">
-      <div class="olistEmptyIcon">📋</div>
+      <div class="olistEmptyIcon">📝</div>
       <div>还没有记录什么小事</div>
     </div>
 
@@ -127,6 +133,22 @@ onMounted(refresh)
 }
 .olistTitle{ font-size: 18px; font-weight: 800; }
 .olistHint{ font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+.olistPolicy{
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.olistPolicyTitle{
+  font-size: 13px;
+  font-weight: 700;
+}
+.olistPolicyText{
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+}
 
 .olistError{
   padding: 10px 14px;

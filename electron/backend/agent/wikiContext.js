@@ -137,7 +137,7 @@ export async function buildWikiContext(
   const chatHits = normalizedQuery
     ? chatlog.searchDatesByKeyword(normalizedQuery).entries.slice(0, DEFAULT_MESSAGE_HIT_LIMIT)
     : []
-  const todayObservations = observation.listByDate(date).slice(0, DEFAULT_OBSERVATION_LIMIT)
+  const todayObservations = observation.listTodayForWikiRecall(date)
 
   const memorySummaryLines = []
   if (primaryIdentityProfile) {

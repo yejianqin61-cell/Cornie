@@ -2,6 +2,7 @@ import { getMessagesByDate, listObservationLogs, listScheduleEntries, listTodoEn
 import { buildCategorySummaryPayload } from './categorySummary.js'
 import { listTools } from '../tools/registry.js'
 import { buildWikiContext } from './wikiContext.js'
+import { createObservationService } from '../observation/service.js'
 
 function summarizeRecentConversation(messages, limit = 8) {
   if (!Array.isArray(messages) || messages.length === 0) {
@@ -51,6 +52,7 @@ function summarizeObservations(store, date) {
 }
 
 export async function buildConversationContext(store, { date, baseDir = process.cwd() }) {
+  const observation = createObservationService(store)
   const messages = getMessagesByDate(store, date)
   const recentConversationSummary = summarizeRecentConversation(messages)
   const wikiContext = await buildWikiContext(store, {
@@ -61,7 +63,7 @@ export async function buildConversationContext(store, { date, baseDir = process.
   const categorySummary = buildCategorySummaryPayload(store)
   const todoItems = listTodoEntries(store, { status: 'pending' })
   const scheduleItems = listScheduleEntries(store, { status: 'scheduled' })
-  const observationItems = listObservationLogs(store, { date, limit: 5 })
+  const observationItems = observation.listTodayForConversation(date)
   const todoSummary = todoItems.length === 0
     ? '当前没有未完成待办。'
     : todoItems.slice(0, 5).map((item) => `- ${item.title}${item.dueAt ? `（${item.dueAt}）` : ''}`).join('\n')
@@ -100,6 +102,7 @@ export async function buildConversationContext(store, { date, baseDir = process.
       todoCount: todoItems.length,
       scheduleCount: scheduleItems.length,
       observationCount: observationItems.length,
+      observationPromptPolicy: observation.getPromptPolicySummary(),
       memoryHitCount: wikiContext.selectedPages.length,
       topicHitCount: wikiContext.selectedTopics.length,
       chatRecallHitCount: wikiContext.chatHits.length

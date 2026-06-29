@@ -1,5 +1,6 @@
 import { getEntry, listObservationLogs, listOnThisDay } from '../../db.js'
 import { generate } from '../model/deepseek/client.js'
+import { OBSERVATION_PROMPT_POLICY } from '../observation/policy.js'
 
 const DIARY_SYSTEM_PROMPT = `你是 Cornie（铃湾）或小铃湾，一只住在主人电脑右下角的独角小山羊。
 你要写的是“Cornie 日记”，不是聊天总结。
@@ -85,7 +86,7 @@ async function generateDiaryDraft(prompt) {
 
 export async function generateCornieDiary(store, { date, memorySummary = '' }) {
   const entry = getEntry(store, date)
-  const observations = listObservationLogs(store, { date, limit: 20 })
+  const observations = listObservationLogs(store, { date, limit: OBSERVATION_PROMPT_POLICY.diaryTodayDetailLimit })
   const onThisDay = listOnThisDay(store, { date, limit: 10 })
 
   const prompt = [
