@@ -235,8 +235,14 @@ export async function buildWikiContext(
   const normalizedQuery = normalizeString(query).toLowerCase()
   const queryTerms = splitQueryTerms(normalizedQuery)
 
-  const pageSummaries = await memoryWiki.listSummaries({ status: 'active' })
-  const primaryIdentityProfile = selectPrimaryIdentityProfile(pageSummaries)
+  const activePageSummaries = await memoryWiki.listSummaries({ status: 'active' })
+  const reviewTraitSummaries = await memoryWiki.listSummaries({ pageType: IDENTITY_TRAIT_PAGE_TYPE, status: 'review' })
+  const pageSummaries = [
+    ...activePageSummaries,
+    ...reviewTraitSummaries.filter((item) => normalizeString(item?.pageId))
+  ]
+
+  const primaryIdentityProfile = selectPrimaryIdentityProfile(activePageSummaries)
   const matchedPreferencePages = queryTerms.length === 0
     ? []
     : pageSummaries
@@ -256,6 +262,12 @@ export async function buildWikiContext(
     .filter((page) => !primaryIdentityProfile || getPageStableId(page) !== getPageStableId(primaryIdentityProfile))
     .filter((page) => !matchedPreferenceIds.has(getPageStableId(page)))
     .filter((page) => !matchedTraitIds.has(getPageStableId(page)))
+    .filter((page) => {
+      if (queryTerms.length === 0 && isIdentityTraitPage(page) && normalizeString(page.status) === 'review') {
+        return false
+      }
+      return true
+    })
     .sort((a, b) => comparePages(a, b, { normalizedQuery, queryTerms }))
 
   const selectedPages = [

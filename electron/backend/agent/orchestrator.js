@@ -15,6 +15,7 @@ import { createObservationService } from '../observation/service.js'
 import { createConfirmService } from '../confirm/service.js'
 import { upsertIdentityProfileFromConversation } from '../identity/profileUpsert.js'
 import { upsertIdentityPreferenceFromConversation } from '../identity/preferenceUpsert.js'
+import { upsertIdentityTraitFromConversation } from '../identity/traitUpsert.js'
 import {
   attachContextTelemetry,
   captureInitialPromptTelemetry,
@@ -399,6 +400,17 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd() 
         })
       } catch (error) {
         console.error('Identity preference upsert error:', error)
+      }
+
+      try {
+        await upsertIdentityTraitFromConversation(store, {
+          baseDir,
+          date,
+          messageId: userMessage.id,
+          userMessage: message
+        })
+      } catch (error) {
+        console.error('Identity trait upsert error:', error)
       }
 
       return {
