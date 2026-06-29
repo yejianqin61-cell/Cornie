@@ -13,6 +13,7 @@ import { chat } from '../model/deepseek/client.js'
 import { executeToolCalls } from '../tools/gateway.js'
 import { createObservationService } from '../observation/service.js'
 import { createConfirmService } from '../confirm/service.js'
+import { upsertIdentityProfileFromConversation } from '../identity/profileUpsert.js'
 import {
   attachContextTelemetry,
   captureInitialPromptTelemetry,
@@ -175,7 +176,7 @@ function logLookupAudit(message, lookupContexts) {
   }
 }
 
-export function createConversationOrchestrator(store) {
+export function createConversationOrchestrator(store, { baseDir = process.cwd() } = {}) {
   const observation = createObservationService(store)
   const confirm = createConfirmService(store)
 
@@ -194,7 +195,7 @@ export function createConversationOrchestrator(store) {
       })
 
       const history = getMessagesByDate(store, date)
-      const context = await buildConversationContext(store, { date })
+      const context = await buildConversationContext(store, { date, baseDir })
       const baseMessages = buildBaseMessages(history, context)
       attachContextTelemetry(telemetry, context)
       captureInitialPromptTelemetry(telemetry, baseMessages)
@@ -371,6 +372,21 @@ export function createConversationOrchestrator(store) {
         })
       } catch (error) {
         console.error('Observation write error:', error)
+      }
+
+      try {
+        const identityWrite = await upsertIdentityProfileFromConversation(store, {
+          baseDir,
+          date,
+          messageId: userMessage.id,
+          userMessage: message
+        })
+
+        if (identityWrite?.action === 'conflict') {
+          console.warn('Identity profile conflict detected:', identityWrite.conflicts)
+        }
+      } catch (error) {
+        console.error('Identity profile upsert error:', error)
       }
 
       return {
