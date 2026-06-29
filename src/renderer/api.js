@@ -64,7 +64,16 @@ export async function listChatlogDates({ month, query, limit, cursor } = {}) {
   if (limit !== undefined) params.set('limit', String(limit))
   if (cursor !== undefined && cursor !== null) params.set('cursor', String(cursor))
   const qs = params.toString()
-  return apiFetch(`/chatlogs${qs ? `?${qs}` : ''}`)
+  const data = await apiFetch(`/chatlogs${qs ? `?${qs}` : ''}`)
+  return {
+    ...data,
+    entries: Array.isArray(data?.entries) ? data.entries : [],
+    availableMonths: Array.isArray(data?.availableMonths) ? data.availableMonths : [],
+    pagination: data?.pagination || { cursor: '0', nextCursor: null, hasMore: false, pageSize: 100, total: 0 },
+    filters: data?.filters || { month: month || '', query: query || '' },
+    searchMeta: data?.searchMeta || { query: query || '', mode: query ? 'keyword' : 'browse' },
+    storage: data?.storage || { driver: 'unknown', queryContractVersion: 1 }
+  }
 }
 
 export async function getChatlog(date, { limit, cursor } = {}) {
@@ -72,7 +81,13 @@ export async function getChatlog(date, { limit, cursor } = {}) {
   if (limit !== undefined) params.set('limit', String(limit))
   if (cursor !== undefined && cursor !== null) params.set('cursor', String(cursor))
   const qs = params.toString()
-  return apiFetch(`/chatlogs/${encodeURIComponent(date)}${qs ? `?${qs}` : ''}`)
+  const data = await apiFetch(`/chatlogs/${encodeURIComponent(date)}${qs ? `?${qs}` : ''}`)
+  return {
+    ...data,
+    messages: Array.isArray(data?.messages) ? data.messages : [],
+    pagination: data?.pagination || { cursor: '0', nextCursor: null, hasMore: false, pageSize: 100, total: 0 },
+    storage: data?.storage || data?.meta?.storage || { driver: 'unknown', queryContractVersion: 1 }
+  }
 }
 
 // ─── model ───────────────────────────────────────────────────

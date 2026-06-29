@@ -24,7 +24,14 @@ export function chatlogRoutes({ chatlog }) {
       const date = requireISODate(req.params.date)
       const limit = req.query.limit === undefined ? undefined : Number.parseInt(String(req.query.limit), 10)
       const cursor = req.query.cursor === undefined ? undefined : Number.parseInt(String(req.query.cursor), 10)
-      res.json(chatlog.getByDate(date, { limit, cursor }))
+      const result = chatlog.getByDate(date, { limit, cursor })
+      res.json({
+        ...result,
+        meta: {
+          responseType: 'chatlog_day_record',
+          storage: result.storage
+        }
+      })
     })
   )
 
