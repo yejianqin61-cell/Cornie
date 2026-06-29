@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
+import { computed, nextTick, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { useChat } from '../composables/useChat'
 import ConfirmCard from './ConfirmCard.vue'
 import AskBackBubble from './AskBackBubble.vue'
@@ -13,12 +13,15 @@ const {
   restorePendingConfirmations,
   loadConversation,
   startConversationSync,
-  stopConversationSync,
-  scrollChatToBottom
+  stopConversationSync
 } = useChat()
 
 const message = ref('')
 const chatListRef = ref(null)
+const isPinnedToBottom = ref(true)
+const hasUnreadBelow = ref(false)
+const hasInitializedScroll = ref(false)
+const autoStickThreshold = 36
 
 const todayDate = computed(() => {
   const d = new Date()
@@ -39,12 +42,47 @@ const pendingCount = computed(() =>
   messages.value.filter((m) => m.kind === 'confirm' && m.status === 'pending').length
 )
 
+function getDistanceFromBottom(el) {
+  return el.scrollHeight - el.scrollTop - el.clientHeight
+}
+
+function isNearBottom(el) {
+  return getDistanceFromBottom(el) <= autoStickThreshold
+}
+
+function updatePinnedState() {
+  const el = chatListRef.value
+  if (!el) return
+  const pinned = isNearBottom(el)
+  isPinnedToBottom.value = pinned
+  if (pinned) {
+    hasUnreadBelow.value = false
+  }
+}
+
+function handleChatScroll() {
+  updatePinnedState()
+}
+
+async function scrollToBottom(force = false) {
+  await nextTick()
+  const el = chatListRef.value
+  if (!el) return
+  if (!force && !isPinnedToBottom.value) {
+    hasUnreadBelow.value = true
+    return
+  }
+  el.scrollTop = el.scrollHeight
+  isPinnedToBottom.value = true
+  hasUnreadBelow.value = false
+}
+
 async function onSend() {
   const text = message.value.trim()
   if (!text || sending.value) return
   message.value = ''
   await send(text)
-  await scrollChatToBottom(chatListRef)
+  await scrollToBottom()
 }
 
 function autoResize(e) {
@@ -55,17 +93,22 @@ function autoResize(e) {
 
 async function onConfirm(action, item) {
   await handleConfirmAction(action, item)
-  await scrollChatToBottom(chatListRef)
+  await scrollToBottom()
+}
+
+async function jumpToBottom() {
+  await scrollToBottom(true)
 }
 
 onMounted(async () => {
   const date = new Date().toISOString().slice(0, 10)
   await loadConversation(date)
   await restorePendingConfirmations(date)
-  await scrollChatToBottom(chatListRef)
+  await scrollToBottom(true)
+  hasInitializedScroll.value = true
   startConversationSync(date, {
     onAfterSync: async () => {
-      await scrollChatToBottom(chatListRef)
+      await scrollToBottom()
     }
   })
 })
@@ -73,6 +116,14 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   stopConversationSync()
 })
+
+watch(
+  () => messages.value.length,
+  async (current, previous) => {
+    if (!hasInitializedScroll.value || current <= previous) return
+    await scrollToBottom()
+  }
+)
 </script>
 
 <template>
@@ -85,7 +136,7 @@ onBeforeUnmount(() => {
     </div>
 
     <!-- 主对话区 -->
-    <div class="chatMessages" ref="chatListRef">
+    <div class="chatMessages" ref="chatListRef" @scroll="handleChatScroll">
       <div v-if="messages.length === 0 && !sending" class="chatEmpty">
         <div class="chatEmptyIcon">💬</div>
         <div class="chatEmptyTitle">还没有消息</div>
@@ -139,6 +190,15 @@ onBeforeUnmount(() => {
           <div class="bubbleText thinking">正在思考...</div>
         </div>
       </div>
+
+      <button
+        v-if="hasUnreadBelow"
+        class="chatJumpBottom"
+        type="button"
+        @click="jumpToBottom"
+      >
+        回到底部
+      </button>
     </div>
 
     <!-- 输入区 -->
@@ -211,6 +271,7 @@ onBeforeUnmount(() => {
   overflow-y: auto;
   padding: 14px 20px;
   scroll-behavior: smooth;
+  position: relative;
 }
 .chatMessages::-webkit-scrollbar{ width: 4px; }
 .chatMessages::-webkit-scrollbar-thumb{
@@ -278,6 +339,29 @@ onBeforeUnmount(() => {
 .bubbleText.thinking{
   font-style: italic;
   opacity: .6;
+}
+
+.chatJumpBottom{
+  position: sticky;
+  left: 100%;
+  bottom: 10px;
+  margin-top: 12px;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border: 1px solid rgba(0,0,0,.08);
+  border-radius: 999px;
+  background: rgba(255,255,255,.92);
+  color: var(--text);
+  font-size: 12px;
+  box-shadow: 0 8px 20px rgba(0,0,0,.08);
+  backdrop-filter: blur(6px);
+}
+
+.chatJumpBottom:hover{
+  background: #fff;
 }
 
 /* ─── 输入区 ─── */
