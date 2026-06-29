@@ -4,6 +4,17 @@ import { listTools } from '../tools/registry.js'
 import { buildWikiContext } from './wikiContext.js'
 import { createObservationService } from '../observation/service.js'
 
+export const CONVERSATION_CONTEXT_BUDGETS = Object.freeze({
+  recentConversationMessages: 8,
+  todoSummaryItems: 5,
+  scheduleSummaryItems: 5,
+  observationSummaryItems: 5,
+  memoryPageLimit: 4,
+  topicLimit: 4,
+  chatRecallDateLimit: 3,
+  observationRecallLimit: 3
+})
+
 function summarizeRecentConversation(messages, limit = 8) {
   if (!Array.isArray(messages) || messages.length === 0) {
     return '暂无最近对话摘要。'
@@ -54,11 +65,13 @@ function summarizeObservations(store, date) {
 export async function buildConversationContext(store, { date, baseDir = process.cwd() }) {
   const observation = createObservationService(store)
   const messages = getMessagesByDate(store, date)
-  const recentConversationSummary = summarizeRecentConversation(messages)
+  const recentConversationSummary = summarizeRecentConversation(messages, CONVERSATION_CONTEXT_BUDGETS.recentConversationMessages)
   const wikiContext = await buildWikiContext(store, {
     date,
     baseDir,
-    query: messages.slice(-3).map((item) => item.content).join(' ')
+    query: messages.slice(-3).map((item) => item.content).join(' '),
+    pageLimit: CONVERSATION_CONTEXT_BUDGETS.memoryPageLimit,
+    topicLimit: CONVERSATION_CONTEXT_BUDGETS.topicLimit
   })
   const categorySummary = buildCategorySummaryPayload(store)
   const todoItems = listTodoEntries(store, { status: 'pending' })
@@ -66,10 +79,16 @@ export async function buildConversationContext(store, { date, baseDir = process.
   const observationItems = observation.listTodayForConversation(date)
   const todoSummary = todoItems.length === 0
     ? '当前没有未完成待办。'
-    : todoItems.slice(0, 5).map((item) => `- ${item.title}${item.dueAt ? `（${item.dueAt}）` : ''}`).join('\n')
+    : todoItems
+        .slice(0, CONVERSATION_CONTEXT_BUDGETS.todoSummaryItems)
+        .map((item) => `- ${item.title}${item.dueAt ? `（${item.dueAt}）` : ''}`)
+        .join('\n')
   const scheduleSummary = scheduleItems.length === 0
     ? '当前没有近期日程。'
-    : scheduleItems.slice(0, 5).map((item) => `- ${item.title} @ ${item.startAt}`).join('\n')
+    : scheduleItems
+        .slice(0, CONVERSATION_CONTEXT_BUDGETS.scheduleSummaryItems)
+        .map((item) => `- ${item.title} @ ${item.startAt}`)
+        .join('\n')
   const observationSummary = observationItems.length === 0
     ? '当前没有观察日志。'
     : observationItems.map((item) => `- [${item.type}] ${item.title}`).join('\n')
@@ -87,6 +106,23 @@ export async function buildConversationContext(store, { date, baseDir = process.
     chatRecallSummary: wikiContext.chatSummary,
     observationRecallSummary: wikiContext.observationSummary,
     toolSummary,
+    loadPolicy: {
+      defaultInjectedLayers: [
+        'recent_conversation_summary',
+        'category_summary',
+        'todo_summary',
+        'schedule_summary',
+        'today_observation_summary',
+        'memory_summary',
+        'topic_summary',
+        'tool_summary'
+      ],
+      recallOnlyLayers: [
+        'chat_recall_summary',
+        'observation_recall_summary'
+      ],
+      budgets: CONVERSATION_CONTEXT_BUDGETS
+    },
     contextMeta: {
       recentConversationChars: recentConversationSummary.length,
       categorySummaryChars: categorySummary.text.length,
@@ -105,7 +141,8 @@ export async function buildConversationContext(store, { date, baseDir = process.
       observationPromptPolicy: observation.getPromptPolicySummary(),
       memoryHitCount: wikiContext.selectedPages.length,
       topicHitCount: wikiContext.selectedTopics.length,
-      chatRecallHitCount: wikiContext.chatHits.length
+      chatRecallHitCount: wikiContext.chatHits.length,
+      observationRecallHitCount: wikiContext.todayObservations.length
     }
   }
 }

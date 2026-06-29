@@ -25,8 +25,18 @@ const JSON_PROTOCOL = `你必须严格使用 JSON 协议回复，只能输出一
 const CATEGORY_MAPPING_PROTOCOL = buildCategoryMappingProtocol()
 
 function buildContextSection(context) {
+  const loadPolicyBlock = context.loadPolicy
+    ? [
+        '上下文装载边界：',
+        `- 默认注入层：${(context.loadPolicy.defaultInjectedLayers || []).join(', ') || '无'}`,
+        `- 仅补查层：${(context.loadPolicy.recallOnlyLayers || []).join(', ') || '无'}`,
+        `- 预算：${JSON.stringify(context.loadPolicy.budgets || {})}`
+      ].join('\n')
+    : ''
+
   return [
     `今天日期：${context.date}`,
+    loadPolicyBlock,
     `最近对话摘要：\n${context.recentConversationSummary}`,
     `类目摘要：\n${context.categorySummary}`,
     `待办摘要：\n${context.todoSummary}`,
@@ -37,7 +47,7 @@ function buildContextSection(context) {
     `历史聊天命中摘要：\n${context.chatRecallSummary}`,
     `观察补查摘要：\n${context.observationRecallSummary}`,
     `可用工具摘要：\n${context.toolSummary}`
-  ].join('\n\n')
+  ].filter(Boolean).join('\n\n')
 }
 
 function summarizeLookupToolResult(toolResult) {
