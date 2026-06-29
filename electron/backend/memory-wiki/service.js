@@ -12,10 +12,12 @@ function summarizePage(page) {
     pageType: page.pageType,
     title: page.title,
     slug: page.slug,
+    aliases: Array.isArray(page.aliases) ? page.aliases : [],
     summary: page.summary,
     status: page.status,
     importance: page.importance,
     ownerConfirmed: page.ownerConfirmed,
+    relatedPageIds: Array.isArray(page.relatedPageIds) ? page.relatedPageIds : [],
     filePath: page.filePath,
     updatedAt: page.lastUpdatedAt
   }
@@ -209,6 +211,57 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
         pageId,
         relatedPageIds: normalized
       })
+    },
+
+    async linkPageToTopic({ pageId, keyword, aliases, importance, note, relatedPageIds } = {}) {
+      if (!pageId) {
+        throw new Error('memory wiki pageId is required')
+      }
+
+      const page = await this.get(pageId)
+      if (!page) {
+        throw new Error(`memory wiki page not found: ${pageId}`)
+      }
+
+      const normalizedKeyword = String(keyword ?? '').trim()
+      if (!normalizedKeyword) {
+        throw new Error('memory wiki topic keyword is required')
+      }
+
+      const mergedAliases = Array.from(
+        new Set([normalizedKeyword, page.title, ...(page.aliases ?? []), ...(Array.isArray(aliases) ? aliases : [])].map((item) => String(item).trim()).filter(Boolean))
+      )
+
+      const topicEntry = await topicIndex.upsert({
+        ...(await topicIndex.get(normalizedKeyword.toLowerCase())),
+        keyword: normalizedKeyword,
+        normalizedKey: normalizedKeyword.toLowerCase(),
+        aliases: mergedAliases,
+        importance: importance ?? page.importance ?? 'medium',
+        note: note ?? page.summary ?? ''
+      })
+
+      const linkedTopic = await topicIndex.linkPage(topicEntry.normalizedKey, pageId)
+      const updatedPage = await this.linkRelatedPages(pageId, [
+        ...(page.relatedPageIds ?? []),
+        ...(Array.isArray(relatedPageIds) ? relatedPageIds : [])
+      ])
+
+      await writeAudit({
+        eventType: 'page_topic_linked',
+        pageId,
+        status: updatedPage.status,
+        importance: updatedPage.importance,
+        details: {
+          topicKey: linkedTopic.normalizedKey,
+          keyword: linkedTopic.keyword
+        }
+      })
+
+      return {
+        page: updatedPage,
+        topic: linkedTopic
+      }
     },
 
     async mergePages({ targetPageId, sourcePageId }) {

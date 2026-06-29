@@ -7,6 +7,7 @@ const DEFAULT_TOPIC_LIMIT = 4
 const DEFAULT_MESSAGE_HIT_LIMIT = 3
 const DEFAULT_OBSERVATION_LIMIT = 3
 const IDENTITY_PROFILE_PAGE_TYPE = 'identity_profile'
+const IDENTITY_PERSON_PAGE_TYPE = 'identity_person'
 
 const IMPORTANCE_WEIGHT = {
   critical: 4,
@@ -30,7 +31,42 @@ function isIdentityProfilePage(page) {
   return normalizeString(page?.pageType) === IDENTITY_PROFILE_PAGE_TYPE
 }
 
-function comparePages(a, b) {
+function isIdentityPersonPage(page) {
+  return normalizeString(page?.pageType) === IDENTITY_PERSON_PAGE_TYPE
+}
+
+function getPageStableId(page) {
+  return normalizeString(page?.pageId ?? page?.id)
+}
+
+function pageMatchesQuery(page, normalizedQuery) {
+  if (!normalizedQuery) return false
+
+  const haystack = [
+    page?.title,
+    page?.summary,
+    ...(Array.isArray(page?.aliases) ? page.aliases : [])
+  ]
+    .map((item) => normalizeString(item).toLowerCase())
+    .filter(Boolean)
+    .join(' ')
+
+  return haystack.includes(normalizedQuery)
+}
+
+function comparePages(a, b, { normalizedQuery = '' } = {}) {
+  const identityPersonQueryHitA = isIdentityPersonPage(a) && pageMatchesQuery(a, normalizedQuery) ? 1 : 0
+  const identityPersonQueryHitB = isIdentityPersonPage(b) && pageMatchesQuery(b, normalizedQuery) ? 1 : 0
+  if (identityPersonQueryHitA !== identityPersonQueryHitB) {
+    return identityPersonQueryHitB - identityPersonQueryHitA
+  }
+
+  const queryHitA = pageMatchesQuery(a, normalizedQuery) ? 1 : 0
+  const queryHitB = pageMatchesQuery(b, normalizedQuery) ? 1 : 0
+  if (queryHitA !== queryHitB) {
+    return queryHitB - queryHitA
+  }
+
   return scorePage(b) - scorePage(a) || String(a.title).localeCompare(String(b.title), 'zh-CN')
 }
 
@@ -40,7 +76,7 @@ function selectPrimaryIdentityProfile(pages) {
     return null
   }
 
-  return [...identityPages].sort(comparePages)[0] ?? null
+  return [...identityPages].sort((a, b) => comparePages(a, b))[0] ?? null
 }
 
 function scoreTopic(item) {
@@ -76,19 +112,19 @@ export async function buildWikiContext(
   const topicIndex = await createTopicIndexStore(baseDir)
   const chatlog = createChatlogService(store)
   const observation = createObservationService(store)
+  const normalizedQuery = normalizeString(query).toLowerCase()
 
   const pageSummaries = await memoryWiki.listSummaries({ status: 'active' })
   const primaryIdentityProfile = selectPrimaryIdentityProfile(pageSummaries)
   const otherPages = [...pageSummaries]
-    .filter((page) => !primaryIdentityProfile || page.id !== primaryIdentityProfile.id)
-    .sort(comparePages)
+    .filter((page) => !primaryIdentityProfile || getPageStableId(page) !== getPageStableId(primaryIdentityProfile))
+    .sort((a, b) => comparePages(a, b, { normalizedQuery }))
   const selectedPages = [
     ...(primaryIdentityProfile ? [primaryIdentityProfile] : []),
     ...otherPages.slice(0, Math.max(pageLimit - (primaryIdentityProfile ? 1 : 0), 0))
   ]
 
   const topics = await topicIndex.list()
-  const normalizedQuery = normalizeString(query).toLowerCase()
   const selectedTopics = [...topics]
     .sort((a, b) => {
       const queryHitA = normalizedQuery && normalizeString(`${a.keyword} ${(a.aliases ?? []).join(' ')} ${a.note}`).toLowerCase().includes(normalizedQuery) ? 1 : 0
@@ -110,7 +146,7 @@ export async function buildWikiContext(
 
   memorySummaryLines.push(
     ...selectedPages
-      .filter((page) => !primaryIdentityProfile || page.id !== primaryIdentityProfile.id)
+      .filter((page) => !primaryIdentityProfile || getPageStableId(page) !== getPageStableId(primaryIdentityProfile))
       .map(buildPageSummaryLine)
   )
 

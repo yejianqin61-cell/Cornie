@@ -8,6 +8,7 @@ import {
   getMemoryWikiPageVersionDiff,
   getMemoryWikiGovernanceRequest,
   getTopicIndexItem,
+  linkMemoryWikiPageToTopic,
   listConfirmations,
   listMemoryWikiPageVersions,
   listMemoryWikiGovernanceRequests,
@@ -50,6 +51,9 @@ const confirmationFilterStatus = ref('pending')
 const pageForm = ref(createEmptyPageForm())
 const topicDetail = ref(null)
 const governanceDetail = ref(null)
+const pageTopicKeyword = ref('')
+const pageTopicAliasesText = ref('')
+const pageTopicNote = ref('')
 const confirmStatusMap = ref({})
 const confirmErrorMap = ref({})
 
@@ -162,6 +166,9 @@ async function selectPage(pageId) {
       status: page.status ?? 'active',
       importance: page.importance ?? 'medium'
     }
+    pageTopicKeyword.value = page.title ?? ''
+    pageTopicAliasesText.value = Array.isArray(page.aliases) ? page.aliases.join(', ') : ''
+    pageTopicNote.value = page.summary ?? ''
   } catch (error) {
     errorMsg.value = error?.message || String(error)
   } finally {
@@ -206,6 +213,9 @@ function resetPageForm() {
   selectedVersionId.value = ''
   versionDiff.value = null
   pageForm.value = createEmptyPageForm()
+  pageTopicKeyword.value = ''
+  pageTopicAliasesText.value = ''
+  pageTopicNote.value = ''
 }
 
 async function selectVersion(versionId) {
@@ -325,6 +335,35 @@ async function saveTopicAliases() {
     await updateTopicIndexAliases(topicDetail.value.normalizedKey, aliases)
     await refreshTopicItems()
     await selectTopic(topicDetail.value.normalizedKey)
+  } catch (error) {
+    errorMsg.value = error?.message || String(error)
+  } finally {
+    saving.value = false
+  }
+}
+
+async function linkSelectedPageToTopic() {
+  if (!pageForm.value.pageId || !pageTopicKeyword.value.trim()) return
+
+  saving.value = true
+  errorMsg.value = ''
+  try {
+    const aliases = pageTopicAliasesText.value
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean)
+
+    await linkMemoryWikiPageToTopic(pageForm.value.pageId, {
+      keyword: pageTopicKeyword.value.trim(),
+      aliases,
+      note: pageTopicNote.value.trim(),
+      importance: pageForm.value.importance
+    })
+
+    await refreshPages()
+    await refreshTopicItems()
+    await selectPage(pageForm.value.pageId)
+    await selectTopic(pageTopicKeyword.value.trim().toLowerCase())
   } catch (error) {
     errorMsg.value = error?.message || String(error)
   } finally {
@@ -569,6 +608,36 @@ onMounted(refreshAll)
           <button v-if="pageForm.pageId" :disabled="saving || !selectedVersionId" @click="rollbackPage">
             {{ selectedVersionId ? '回滚到当前选中版本' : '先选择版本再回滚' }}
           </button>
+        </div>
+
+        <div v-if="pageForm.pageId && pageForm.pageType === 'identity_person'" class="detailSection">
+          <div class="evidenceTitle">人物页联动 Topic</div>
+          <div class="cardSubhint">
+            给重要人物页挂上一个主题索引键。以后主人提到这个名字、别名，或相关人物线索时，铃湾就更容易优先召回这页人物记忆。
+          </div>
+          <div class="formGrid topicLinkGrid">
+            <label>
+              <span>主题关键词</span>
+              <input v-model="pageTopicKeyword" placeholder="例如：钟奕菲" />
+            </label>
+            <label>
+              <span>沿用重要性</span>
+              <input :value="pageForm.importance" disabled />
+            </label>
+            <label class="span2">
+              <span>主题别名（逗号分隔）</span>
+              <input v-model="pageTopicAliasesText" placeholder="例如：奕菲, 钟同学" />
+            </label>
+            <label class="span2">
+              <span>索引备注</span>
+              <textarea v-model="pageTopicNote" rows="3" placeholder="给这个人物主题留一句简短备注" />
+            </label>
+          </div>
+          <div class="actionRow">
+            <button :disabled="saving || !pageTopicKeyword.trim()" @click="linkSelectedPageToTopic">
+              {{ saving ? '联动中…' : '联动到 Topic Index' }}
+            </button>
+          </div>
         </div>
       </section>
 

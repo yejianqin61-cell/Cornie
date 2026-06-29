@@ -510,6 +510,13 @@ export async function linkTopicIndexPage(normalizedKey, pageId) {
   })
 }
 
+export async function linkMemoryWikiPageToTopic(pageId, payload) {
+  return apiFetch(`/memory-wiki/pages/${encodeURIComponent(pageId)}/link-topic`, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  })
+}
+
 export async function listMemoryWikiGovernanceRequests({ status, requestType, triggerSource, queueSection } = {}) {
   const params = new URLSearchParams()
   if (status) params.set('status', status)

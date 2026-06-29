@@ -223,6 +223,31 @@ export function memoryWikiRoutes({ memoryWiki, topicIndex }) {
     })
   )
 
+  r.post(
+    '/memory-wiki/pages/:pageId/link-topic',
+    asyncHandler(async (req, res) => {
+      const pageId = requireString(req.params.pageId, 'pageId', { maxLen: 256 })
+      const keyword = requireString(req.body?.keyword ?? '', 'keyword', { maxLen: 256 })
+      const note = req.body?.note === undefined ? undefined : requireString(req.body.note, 'note', { maxLen: 2000 })
+      const importance = req.body?.importance === undefined
+        ? undefined
+        : requireString(req.body.importance, 'importance', { maxLen: 64 })
+      const aliases = Array.isArray(req.body?.aliases) ? req.body.aliases : []
+      const relatedPageIds = Array.isArray(req.body?.relatedPageIds) ? req.body.relatedPageIds : []
+
+      res.json({
+        result: await memoryWiki.linkPageToTopic({
+          pageId,
+          keyword,
+          note,
+          importance,
+          aliases,
+          relatedPageIds
+        })
+      })
+    })
+  )
+
   r.put(
     '/memory-wiki/governance/:requestId/status',
     asyncHandler(async (req, res) => {
