@@ -346,7 +346,7 @@ export async function openDb(dbPath) {
 
   persist()
 
-  return { db, persist, close: () => db.close() }
+  return { db, persist, close: () => db.close(), dbPath }
 }
 
 export function getAppSetting(store, key) {
