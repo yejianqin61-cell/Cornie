@@ -378,7 +378,8 @@ export async function listMemoryWikiPages({ pageType, status } = {}) {
         pageId: item?.pageId ?? item?.id ?? '',
         content: item?.content ?? item?.body ?? '',
         updatedAt: item?.updatedAt ?? item?.lastUpdatedAt ?? '',
-        triggerKeywords: Array.isArray(item?.triggerKeywords) ? item.triggerKeywords : []
+        triggerKeywords: Array.isArray(item?.triggerKeywords) ? item.triggerKeywords : [],
+        ownerConfirmed: item?.ownerConfirmed === true
       }))
     : []
 
@@ -400,7 +401,8 @@ export async function getMemoryWikiPage(pageId) {
         content: rawPage?.content ?? rawPage?.body ?? '',
         body: rawPage?.body ?? rawPage?.content ?? '',
         updatedAt: rawPage?.updatedAt ?? rawPage?.lastUpdatedAt ?? '',
-        triggerKeywords: Array.isArray(rawPage?.triggerKeywords) ? rawPage.triggerKeywords : []
+        triggerKeywords: Array.isArray(rawPage?.triggerKeywords) ? rawPage.triggerKeywords : [],
+        ownerConfirmed: rawPage?.ownerConfirmed === true
       }
     : null
 

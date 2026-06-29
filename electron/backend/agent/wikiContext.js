@@ -8,6 +8,7 @@ const DEFAULT_MESSAGE_HIT_LIMIT = 3
 const IDENTITY_PROFILE_PAGE_TYPE = 'identity_profile'
 const IDENTITY_PERSON_PAGE_TYPE = 'identity_person'
 const IDENTITY_PREFERENCE_PAGE_TYPE = 'identity_preference'
+const IDENTITY_TRAIT_PAGE_TYPE = 'identity_trait'
 
 const IMPORTANCE_WEIGHT = {
   critical: 4,
@@ -37,6 +38,10 @@ function isIdentityPersonPage(page) {
 
 function isIdentityPreferencePage(page) {
   return normalizeString(page?.pageType) === IDENTITY_PREFERENCE_PAGE_TYPE
+}
+
+function isIdentityTraitPage(page) {
+  return normalizeString(page?.pageType) === IDENTITY_TRAIT_PAGE_TYPE
 }
 
 function getPageStableId(page) {
@@ -84,7 +89,40 @@ function pageMatchesAnyKeyword(page, queryTerms) {
   return queryTerms.some((term) => haystack.includes(term))
 }
 
+function traitMatchesEmotionalScene(page, queryTerms) {
+  if (!Array.isArray(queryTerms) || queryTerms.length === 0) return false
+
+  const emotionalTerms = new Set([
+    '累', '难过', '焦虑', '紧张', '压力', '崩溃', '痛苦', '伤心', '情绪', '安慰',
+    '关系', '初恋', '失恋', '回忆', '喜欢', '讨厌', '害怕', '孤独', '疲惫', '委屈'
+  ])
+  const queryHasEmotionalTerm = queryTerms.some((item) => emotionalTerms.has(item))
+  if (!queryHasEmotionalTerm) {
+    return false
+  }
+
+  const haystack = [
+    page?.title,
+    page?.summary,
+    page?.traitType,
+    page?.traitSummary,
+    ...(Array.isArray(page?.aliases) ? page.aliases : []),
+    ...(Array.isArray(page?.triggerKeywords) ? page.triggerKeywords : [])
+  ]
+    .map((item) => normalizeString(item).toLowerCase())
+    .filter(Boolean)
+    .join(' ')
+
+  return queryTerms.some((term) => haystack.includes(term)) || queryHasEmotionalTerm
+}
+
 function comparePages(a, b, { normalizedQuery = '', queryTerms = [] } = {}) {
+  const identityTraitQueryHitA = isIdentityTraitPage(a) && traitMatchesEmotionalScene(a, queryTerms) ? 1 : 0
+  const identityTraitQueryHitB = isIdentityTraitPage(b) && traitMatchesEmotionalScene(b, queryTerms) ? 1 : 0
+  if (identityTraitQueryHitA !== identityTraitQueryHitB) {
+    return identityTraitQueryHitB - identityTraitQueryHitA
+  }
+
   const identityPreferenceQueryHitA = isIdentityPreferencePage(a) && pageMatchesAnyKeyword(a, queryTerms) ? 1 : 0
   const identityPreferenceQueryHitB = isIdentityPreferencePage(b) && pageMatchesAnyKeyword(b, queryTerms) ? 1 : 0
   if (identityPreferenceQueryHitA !== identityPreferenceQueryHitB) {
@@ -141,6 +179,14 @@ function buildIdentityPreferenceSummaryLine(page) {
   return `- [preference/${preferenceType}/${stabilityLevel}] ${page.title}: ${stance}；${summary}`
 }
 
+function buildIdentityTraitSummaryLine(page) {
+  const traitType = normalizeString(page.traitType) || '未分类'
+  const confidenceLevel = normalizeString(page.confidenceLevel) || 'low'
+  const stabilityLevel = normalizeString(page.stabilityLevel) || 'low'
+  const summary = normalizeString(page.traitSummary) || normalizeString(page.summary) || '暂无侧写摘要'
+  return `- [trait/${traitType}/${confidenceLevel}/${stabilityLevel}] ${page.title}: ${summary}`
+}
+
 function buildTopicSummaryLine(item) {
   const dates = Array.isArray(item.dates) ? item.dates.slice(-2).join(' / ') : ''
   const note = normalizeString(item.note)
@@ -167,16 +213,25 @@ export async function buildWikiContext(
         .filter(isIdentityPreferencePage)
         .filter((page) => pageMatchesAnyKeyword(page, queryTerms))
         .sort((a, b) => comparePages(a, b, { normalizedQuery, queryTerms }))
+  const matchedTraitPages = queryTerms.length === 0
+    ? []
+    : pageSummaries
+        .filter((page) => isIdentityTraitPage(page) && page.status !== 'archived')
+        .filter((page) => traitMatchesEmotionalScene(page, queryTerms))
+        .sort((a, b) => comparePages(a, b, { normalizedQuery, queryTerms }))
 
   const matchedPreferenceIds = new Set(matchedPreferencePages.map((item) => getPageStableId(item)).filter(Boolean))
+  const matchedTraitIds = new Set(matchedTraitPages.map((item) => getPageStableId(item)).filter(Boolean))
   const otherPages = [...pageSummaries]
     .filter((page) => !primaryIdentityProfile || getPageStableId(page) !== getPageStableId(primaryIdentityProfile))
     .filter((page) => !matchedPreferenceIds.has(getPageStableId(page)))
+    .filter((page) => !matchedTraitIds.has(getPageStableId(page)))
     .sort((a, b) => comparePages(a, b, { normalizedQuery, queryTerms }))
 
   const selectedPages = [
     ...(primaryIdentityProfile ? [primaryIdentityProfile] : []),
     ...matchedPreferencePages,
+    ...matchedTraitPages,
     ...otherPages
   ].slice(0, pageLimit)
 
@@ -203,7 +258,11 @@ export async function buildWikiContext(
   memorySummaryLines.push(
     ...selectedPages
       .filter((page) => !primaryIdentityProfile || getPageStableId(page) !== getPageStableId(primaryIdentityProfile))
-      .map((page) => (isIdentityPreferencePage(page) ? buildIdentityPreferenceSummaryLine(page) : buildPageSummaryLine(page)))
+      .map((page) => {
+        if (isIdentityPreferencePage(page)) return buildIdentityPreferenceSummaryLine(page)
+        if (isIdentityTraitPage(page)) return buildIdentityTraitSummaryLine(page)
+        return buildPageSummaryLine(page)
+      })
   )
 
   const memorySummary = memorySummaryLines.length === 0

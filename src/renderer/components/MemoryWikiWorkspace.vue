@@ -65,7 +65,11 @@ function createEmptyPageForm() {
     preferenceType: '',
     stance: '',
     stabilityLevel: 'medium',
+    traitType: '',
+    confidenceLevel: 'low',
+    traitSummary: '',
     evidenceCount: 0,
+    ownerConfirmed: false,
     lastConfirmedAt: '',
     triggerKeywordsText: '',
     summary: '',
@@ -169,7 +173,11 @@ async function selectPage(pageId) {
       preferenceType: page.preferenceType ?? '',
       stance: page.stance ?? '',
       stabilityLevel: page.stabilityLevel ?? 'medium',
+      traitType: page.traitType ?? '',
+      confidenceLevel: page.confidenceLevel ?? 'low',
+      traitSummary: page.traitSummary ?? '',
       evidenceCount: page.evidenceCount ?? 0,
+      ownerConfirmed: page.ownerConfirmed === true,
       lastConfirmedAt: page.lastConfirmedAt ?? '',
       triggerKeywordsText: Array.isArray(page.triggerKeywords) ? page.triggerKeywords.join(', ') : '',
       summary: page.summary ?? '',
@@ -258,7 +266,11 @@ async function savePage() {
       preferenceType: pageForm.value.preferenceType,
       stance: pageForm.value.stance,
       stabilityLevel: pageForm.value.stabilityLevel,
+      traitType: pageForm.value.traitType,
+      confidenceLevel: pageForm.value.confidenceLevel,
+      traitSummary: pageForm.value.traitSummary,
       evidenceCount: Number(pageForm.value.evidenceCount) || 0,
+      ownerConfirmed: pageForm.value.ownerConfirmed === true,
       lastConfirmedAt: pageForm.value.lastConfirmedAt,
       triggerKeywords: pageForm.value.triggerKeywordsText
         .split(',')
@@ -635,6 +647,58 @@ onMounted(refreshAll)
             <label class="span2">
               <span>触发关键词（逗号分隔）</span>
               <input v-model="pageForm.triggerKeywordsText" placeholder="例如：奶茶, 咖啡, 甜度" />
+            </label>
+          </template>
+          <template v-if="pageForm.pageType === 'identity_trait'">
+            <label>
+              <span>侧写类型</span>
+              <select v-model="pageForm.traitType">
+                <option value="">未分类</option>
+                <option value="性格倾向">性格倾向</option>
+                <option value="情绪模式">情绪模式</option>
+                <option value="沟通风格">沟通风格</option>
+                <option value="压力反应">压力反应</option>
+                <option value="关系状态">关系状态</option>
+              </select>
+            </label>
+            <label>
+              <span>置信度</span>
+              <select v-model="pageForm.confidenceLevel">
+                <option value="low">low</option>
+                <option value="medium">medium</option>
+                <option value="high">high</option>
+              </select>
+            </label>
+            <label>
+              <span>稳定性</span>
+              <select v-model="pageForm.stabilityLevel">
+                <option value="low">low</option>
+                <option value="medium">medium</option>
+                <option value="high">high</option>
+              </select>
+            </label>
+            <label>
+              <span>主人确认</span>
+              <select v-model="pageForm.ownerConfirmed">
+                <option :value="false">未确认</option>
+                <option :value="true">已确认</option>
+              </select>
+            </label>
+            <label class="span2">
+              <span>侧写摘要</span>
+              <textarea v-model="pageForm.traitSummary" rows="3" placeholder="例如：高压时容易疲惫，但会努力把情绪转成行动。" />
+            </label>
+            <label>
+              <span>证据计数</span>
+              <input v-model="pageForm.evidenceCount" type="number" min="0" />
+            </label>
+            <label>
+              <span>最近确认时间</span>
+              <input v-model="pageForm.lastConfirmedAt" placeholder="例如：2026-06-29" />
+            </label>
+            <label class="span2">
+              <span>触发关键词（逗号分隔）</span>
+              <input v-model="pageForm.triggerKeywordsText" placeholder="例如：压力, 焦虑, 安慰, 累" />
             </label>
           </template>
           <label class="span2">

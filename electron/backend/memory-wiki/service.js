@@ -7,6 +7,7 @@ import { createMemoryWikiGovernanceStore } from './governanceStore.js'
 import { normalizePageStatus } from './pageModel.js'
 
 const IDENTITY_PREFERENCE_PAGE_TYPE = 'identity_preference'
+const IDENTITY_TRAIT_PAGE_TYPE = 'identity_trait'
 
 function normalizeString(value) {
   return String(value ?? '').trim()
@@ -25,6 +26,10 @@ function normalizeInteger(value, fallback = 0) {
 
 function isIdentityPreferencePageInput(input) {
   return normalizeString(input?.pageType ?? input?.page_type) === IDENTITY_PREFERENCE_PAGE_TYPE
+}
+
+function isIdentityTraitPageInput(input) {
+  return normalizeString(input?.pageType ?? input?.page_type) === IDENTITY_TRAIT_PAGE_TYPE
 }
 
 function buildIdentityPreferenceSummary(input) {
@@ -72,30 +77,162 @@ function buildIdentityPreferenceBody(input) {
   return lines.join('\n')
 }
 
+function buildIdentityTraitSummary(input) {
+  const title = normalizeString(input.title)
+  const traitType = normalizeString(input.traitType ?? input.trait_type)
+  const confidenceLevel = normalizeString(input.confidenceLevel ?? input.confidence_level)
+  const stabilityLevel = normalizeString(input.stabilityLevel ?? input.stability_level)
+  const segments = [traitType, title].filter(Boolean)
+  if (segments.length === 0) {
+    return ''
+  }
+
+  const suffix = [confidenceLevel && `置信度：${confidenceLevel}`, stabilityLevel && `稳定性：${stabilityLevel}`]
+    .filter(Boolean)
+    .join('，')
+  return suffix ? `${segments.join(' / ')}（${suffix}）` : segments.join(' / ')
+}
+
+function buildIdentityTraitBody(input) {
+  const title = normalizeString(input.title)
+  const traitType = normalizeString(input.traitType ?? input.trait_type) || '未分类'
+  const confidenceLevel = normalizeString(input.confidenceLevel ?? input.confidence_level) || 'low'
+  const stabilityLevel = normalizeString(input.stabilityLevel ?? input.stability_level) || 'low'
+  const traitSummary = normalizeString(input.traitSummary ?? input.trait_summary) || normalizeString(input.summary) || buildIdentityTraitSummary(input) || '暂无结论'
+  const evidenceCount = normalizeInteger(input.evidenceCount ?? input.evidence_count)
+  const ownerConfirmed = input.ownerConfirmed === true || input.owner_confirmed === true ? '是' : '否'
+  const lastConfirmedAt = normalizeString(input.lastConfirmedAt ?? input.last_confirmed_at) || '待确认'
+  const keywords = normalizeStringArray(input.triggerKeywords ?? input.trigger_keywords)
+
+  const lines = [
+    '## 特征倾向',
+    `- 标题：${title || '未命名侧写'}`,
+    `- 类型：${traitType}`,
+    `- 侧写摘要：${traitSummary}`,
+    '',
+    '## 证据与置信',
+    `- 置信度：${confidenceLevel}`,
+    `- 稳定性：${stabilityLevel}`,
+    `- 证据计数：${evidenceCount}`,
+    `- 主人确认：${ownerConfirmed}`,
+    `- 最近确认：${lastConfirmedAt}`,
+    '',
+    '## 触发关键词',
+    ...(keywords.length > 0 ? keywords.map((item) => `- ${item}`) : ['- 暂无']),
+    '',
+    '## 使用注意',
+    '- 这是一条倾向性侧写，不应在无关场景高频注入。'
+  ]
+
+  return lines.join('\n')
+}
+
+function shouldCreateTraitGovernanceCandidate(input) {
+  if (!isIdentityTraitPageInput(input)) {
+    return false
+  }
+
+  const ownerConfirmed = input.ownerConfirmed === true || input.owner_confirmed === true
+  const evidenceCount = normalizeInteger(input.evidenceCount ?? input.evidence_count)
+  const confidenceLevel = normalizeString(input.confidenceLevel ?? input.confidence_level).toLowerCase()
+  return !ownerConfirmed || evidenceCount < 2 || !['medium', 'high'].includes(confidenceLevel)
+}
+
 function normalizeStructuredPageInput(input) {
-  if (!isIdentityPreferencePageInput(input)) {
-    return input
+  if (isIdentityPreferencePageInput(input)) {
+    const normalized = {
+      ...input,
+      preferenceType: normalizeString(input.preferenceType ?? input.preference_type),
+      stance: normalizeString(input.stance),
+      stabilityLevel: normalizeString(input.stabilityLevel ?? input.stability_level) || 'medium',
+      evidenceCount: normalizeInteger(input.evidenceCount ?? input.evidence_count),
+      lastConfirmedAt: normalizeString(input.lastConfirmedAt ?? input.last_confirmed_at),
+      triggerKeywords: normalizeStringArray(input.triggerKeywords ?? input.trigger_keywords)
+    }
+
+    if (!normalizeString(normalized.summary)) {
+      normalized.summary = buildIdentityPreferenceSummary(normalized)
+    }
+
+    if (!normalizeString(normalized.body)) {
+      normalized.body = buildIdentityPreferenceBody(normalized)
+    }
+
+    return normalized
   }
 
-  const normalized = {
-    ...input,
-    preferenceType: normalizeString(input.preferenceType ?? input.preference_type),
-    stance: normalizeString(input.stance),
-    stabilityLevel: normalizeString(input.stabilityLevel ?? input.stability_level) || 'medium',
-    evidenceCount: normalizeInteger(input.evidenceCount ?? input.evidence_count),
-    lastConfirmedAt: normalizeString(input.lastConfirmedAt ?? input.last_confirmed_at),
-    triggerKeywords: normalizeStringArray(input.triggerKeywords ?? input.trigger_keywords)
+  if (isIdentityTraitPageInput(input)) {
+    const normalized = {
+      ...input,
+      traitType: normalizeString(input.traitType ?? input.trait_type),
+      confidenceLevel: normalizeString(input.confidenceLevel ?? input.confidence_level) || 'low',
+      stabilityLevel: normalizeString(input.stabilityLevel ?? input.stability_level) || 'low',
+      traitSummary: normalizeString(input.traitSummary ?? input.trait_summary),
+      evidenceCount: normalizeInteger(input.evidenceCount ?? input.evidence_count),
+      lastConfirmedAt: normalizeString(input.lastConfirmedAt ?? input.last_confirmed_at),
+      triggerKeywords: normalizeStringArray(input.triggerKeywords ?? input.trigger_keywords),
+      status: normalizeString(input.status) || 'review'
+    }
+
+    if (!normalizeString(normalized.summary)) {
+      normalized.summary = normalized.traitSummary || buildIdentityTraitSummary(normalized)
+    }
+
+    if (!normalizeString(normalized.body)) {
+      normalized.body = buildIdentityTraitBody(normalized)
+    }
+
+    return normalized
   }
 
-  if (!normalizeString(normalized.summary)) {
-    normalized.summary = buildIdentityPreferenceSummary(normalized)
+  return input
+}
+
+async function ensureIdentityTraitGovernanceCandidate(governanceStore, page) {
+  if (!page || normalizeString(page.pageType) !== IDENTITY_TRAIT_PAGE_TYPE) {
+    return
   }
 
-  if (!normalizeString(normalized.body)) {
-    normalized.body = buildIdentityPreferenceBody(normalized)
+  if (!shouldCreateTraitGovernanceCandidate(page)) {
+    return
   }
 
-  return normalized
+  const existing = await governanceStore.list({
+    requestType: 'identity_trait_review',
+    queueSection: 'identity_trait_reviews'
+  })
+  const duplicated = existing.some((item) =>
+    (item.status === 'pending' || item.status === 'deferred') &&
+    Array.isArray(item.pageIds) &&
+    item.pageIds.includes(page.pageId)
+  )
+  if (duplicated) {
+    return
+  }
+
+  await governanceStore.create({
+    requestType: 'identity_trait_review',
+    triggerSource: 'page_write',
+    queueSection: 'identity_trait_reviews',
+    riskLevel: 'high',
+    pageIds: [page.pageId],
+    title: page.title || page.pageId,
+    reason: 'Identity trait 页面仍缺少足够证据或主人确认，建议进入治理审核后再视为稳定长期记忆。',
+    evidence: [
+      {
+        pageId: page.pageId,
+        confidenceLevel: page.confidenceLevel,
+        stabilityLevel: page.stabilityLevel,
+        evidenceCount: page.evidenceCount,
+        ownerConfirmed: page.ownerConfirmed
+      }
+    ],
+    payload: {
+      action: 'review_identity_trait',
+      confidenceLevel: page.confidenceLevel,
+      stabilityLevel: page.stabilityLevel
+    }
+  })
 }
 
 function summarizePage(page) {
@@ -112,6 +249,9 @@ function summarizePage(page) {
     preferenceType: page.preferenceType ?? '',
     stance: page.stance ?? '',
     stabilityLevel: page.stabilityLevel ?? '',
+    traitType: page.traitType ?? '',
+    confidenceLevel: page.confidenceLevel ?? '',
+    traitSummary: page.traitSummary ?? '',
     evidenceCount: page.evidenceCount ?? 0,
     lastConfirmedAt: page.lastConfirmedAt ?? '',
     triggerKeywords: Array.isArray(page.triggerKeywords) ? page.triggerKeywords : [],
@@ -171,6 +311,7 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
   return {
     async create(input) {
       const page = await storage.createPage(normalizeStructuredPageInput(input))
+      await ensureIdentityTraitGovernanceCandidate(governanceStore, page)
       await writeAudit({
         eventType: 'page_created',
         pageId: page.pageId,
@@ -205,6 +346,7 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
         ...normalizeStructuredPageInput(input),
         pageId: existing.pageId
       })
+      await ensureIdentityTraitGovernanceCandidate(governanceStore, updated)
       await writeAudit({
         eventType: 'page_updated',
         pageId: existing.pageId,
