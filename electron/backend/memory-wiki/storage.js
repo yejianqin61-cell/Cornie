@@ -73,7 +73,13 @@ function serializeMetadata(page) {
     last_updated_at: page.lastUpdatedAt,
     last_mentioned_at: page.lastMentionedAt ?? '',
     importance: page.importance,
-    owner_confirmed: page.ownerConfirmed === true
+    owner_confirmed: page.ownerConfirmed === true,
+    preference_type: page.preferenceType ?? '',
+    stance: page.stance ?? '',
+    stability_level: page.stabilityLevel ?? '',
+    evidence_count: page.evidenceCount ?? 0,
+    last_confirmed_at: page.lastConfirmedAt ?? '',
+    trigger_keywords: Array.isArray(page.triggerKeywords) ? page.triggerKeywords : []
   }
 
   const lines = [FRONTMATTER_BOUNDARY]
@@ -158,6 +164,12 @@ function toPageInput(parsed, filePath) {
     last_mentioned_at: parsed.metadata.last_mentioned_at,
     importance: parsed.metadata.importance,
     owner_confirmed: parsed.metadata.owner_confirmed,
+    preference_type: parsed.metadata.preference_type,
+    stance: parsed.metadata.stance,
+    stability_level: parsed.metadata.stability_level,
+    evidence_count: parsed.metadata.evidence_count,
+    last_confirmed_at: parsed.metadata.last_confirmed_at,
+    trigger_keywords: parsed.metadata.trigger_keywords,
     body: parsed.body.trimEnd(),
     filePath
   }

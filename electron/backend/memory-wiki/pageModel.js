@@ -13,6 +13,12 @@ function normalizeStringArray(value) {
   return value.map((item) => normalizeString(item)).filter(Boolean)
 }
 
+function normalizeInteger(value, fallback = 0) {
+  if (value === '' || value === null || value === undefined) return fallback
+  const parsed = Number.parseInt(String(value), 10)
+  return Number.isFinite(parsed) ? parsed : fallback
+}
+
 function slugifySegment(value) {
   const normalized = normalizeString(value)
     .toLowerCase()
@@ -88,6 +94,12 @@ export function createPageModel(input = {}) {
   const metadata = createDefaultPageMetadata(input)
   return {
     ...metadata,
+    preferenceType: normalizeString(input.preferenceType ?? input.preference_type),
+    stance: normalizeString(input.stance),
+    stabilityLevel: normalizeString(input.stabilityLevel ?? input.stability_level),
+    evidenceCount: normalizeInteger(input.evidenceCount ?? input.evidence_count),
+    lastConfirmedAt: normalizeString(input.lastConfirmedAt ?? input.last_confirmed_at),
+    triggerKeywords: normalizeStringArray(input.triggerKeywords ?? input.trigger_keywords),
     body: normalizeString(input.body),
     directoryName: getPageDirectoryName(metadata.pageType),
     filename: `${metadata.slug}.md`

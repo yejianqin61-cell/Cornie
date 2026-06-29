@@ -62,6 +62,12 @@ function createEmptyPageForm() {
     pageId: '',
     pageType: 'topic',
     title: '',
+    preferenceType: '',
+    stance: '',
+    stabilityLevel: 'medium',
+    evidenceCount: 0,
+    lastConfirmedAt: '',
+    triggerKeywordsText: '',
     summary: '',
     body: '',
     aliasesText: '',
@@ -160,6 +166,12 @@ async function selectPage(pageId) {
       pageId: page.pageId,
       pageType: page.pageType ?? 'topic',
       title: page.title ?? '',
+      preferenceType: page.preferenceType ?? '',
+      stance: page.stance ?? '',
+      stabilityLevel: page.stabilityLevel ?? 'medium',
+      evidenceCount: page.evidenceCount ?? 0,
+      lastConfirmedAt: page.lastConfirmedAt ?? '',
+      triggerKeywordsText: Array.isArray(page.triggerKeywords) ? page.triggerKeywords.join(', ') : '',
       summary: page.summary ?? '',
       body: page.body ?? '',
       aliasesText: Array.isArray(page.aliases) ? page.aliases.join(', ') : '',
@@ -243,6 +255,15 @@ async function savePage() {
     const payload = {
       pageType: pageForm.value.pageType,
       title: pageForm.value.title,
+      preferenceType: pageForm.value.preferenceType,
+      stance: pageForm.value.stance,
+      stabilityLevel: pageForm.value.stabilityLevel,
+      evidenceCount: Number(pageForm.value.evidenceCount) || 0,
+      lastConfirmedAt: pageForm.value.lastConfirmedAt,
+      triggerKeywords: pageForm.value.triggerKeywordsText
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean),
       summary: pageForm.value.summary,
       body: pageForm.value.body
     }
@@ -574,6 +595,48 @@ onMounted(refreshAll)
             <span>标题</span>
             <input v-model="pageForm.title" placeholder="输入页面标题" />
           </label>
+          <template v-if="pageForm.pageType === 'identity_preference'">
+            <label>
+              <span>偏好类型</span>
+              <select v-model="pageForm.preferenceType">
+                <option value="">未分类</option>
+                <option value="饮食">饮食</option>
+                <option value="交流">交流</option>
+                <option value="风格">风格</option>
+                <option value="作息">作息</option>
+                <option value="情感表达">情感表达</option>
+              </select>
+            </label>
+            <label>
+              <span>立场</span>
+              <select v-model="pageForm.stance">
+                <option value="">未标注</option>
+                <option value="喜欢">喜欢</option>
+                <option value="不喜欢">不喜欢</option>
+                <option value="中性偏好">中性偏好</option>
+              </select>
+            </label>
+            <label>
+              <span>稳定性</span>
+              <select v-model="pageForm.stabilityLevel">
+                <option value="low">low</option>
+                <option value="medium">medium</option>
+                <option value="high">high</option>
+              </select>
+            </label>
+            <label>
+              <span>证据计数</span>
+              <input v-model="pageForm.evidenceCount" type="number" min="0" />
+            </label>
+            <label class="span2">
+              <span>最近确认时间</span>
+              <input v-model="pageForm.lastConfirmedAt" placeholder="例如：2026-06-29" />
+            </label>
+            <label class="span2">
+              <span>触发关键词（逗号分隔）</span>
+              <input v-model="pageForm.triggerKeywordsText" placeholder="例如：奶茶, 咖啡, 甜度" />
+            </label>
+          </template>
           <label class="span2">
             <span>摘要</span>
             <textarea v-model="pageForm.summary" rows="4" placeholder="写一段简短摘要" />

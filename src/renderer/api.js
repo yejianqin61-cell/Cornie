@@ -377,7 +377,8 @@ export async function listMemoryWikiPages({ pageType, status } = {}) {
         id: item?.id ?? item?.pageId ?? '',
         pageId: item?.pageId ?? item?.id ?? '',
         content: item?.content ?? item?.body ?? '',
-        updatedAt: item?.updatedAt ?? item?.lastUpdatedAt ?? ''
+        updatedAt: item?.updatedAt ?? item?.lastUpdatedAt ?? '',
+        triggerKeywords: Array.isArray(item?.triggerKeywords) ? item.triggerKeywords : []
       }))
     : []
 
@@ -392,13 +393,14 @@ export async function getMemoryWikiPage(pageId) {
   const data = await apiFetch(`/memory-wiki/pages/${encodeURIComponent(pageId)}`)
   const rawPage = data?.page ?? data
   const page = rawPage
-    ? {
+      ? {
         ...rawPage,
         id: rawPage?.id ?? rawPage?.pageId ?? '',
         pageId: rawPage?.pageId ?? rawPage?.id ?? '',
         content: rawPage?.content ?? rawPage?.body ?? '',
         body: rawPage?.body ?? rawPage?.content ?? '',
-        updatedAt: rawPage?.updatedAt ?? rawPage?.lastUpdatedAt ?? ''
+        updatedAt: rawPage?.updatedAt ?? rawPage?.lastUpdatedAt ?? '',
+        triggerKeywords: Array.isArray(rawPage?.triggerKeywords) ? rawPage.triggerKeywords : []
       }
     : null
 

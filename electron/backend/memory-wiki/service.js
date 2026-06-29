@@ -6,6 +6,98 @@ import { createTopicIndexStore } from './topicIndex.js'
 import { createMemoryWikiGovernanceStore } from './governanceStore.js'
 import { normalizePageStatus } from './pageModel.js'
 
+const IDENTITY_PREFERENCE_PAGE_TYPE = 'identity_preference'
+
+function normalizeString(value) {
+  return String(value ?? '').trim()
+}
+
+function normalizeStringArray(value) {
+  if (!Array.isArray(value)) return []
+  return value.map((item) => normalizeString(item)).filter(Boolean)
+}
+
+function normalizeInteger(value, fallback = 0) {
+  if (value === '' || value === null || value === undefined) return fallback
+  const parsed = Number.parseInt(String(value), 10)
+  return Number.isFinite(parsed) ? parsed : fallback
+}
+
+function isIdentityPreferencePageInput(input) {
+  return normalizeString(input?.pageType ?? input?.page_type) === IDENTITY_PREFERENCE_PAGE_TYPE
+}
+
+function buildIdentityPreferenceSummary(input) {
+  const title = normalizeString(input.title)
+  const stance = normalizeString(input.stance)
+  const preferenceType = normalizeString(input.preferenceType ?? input.preference_type)
+  const stabilityLevel = normalizeString(input.stabilityLevel ?? input.stability_level)
+  const segments = [stance, preferenceType, title].filter(Boolean)
+  if (segments.length === 0) {
+    return ''
+  }
+  const summary = segments.join(' / ')
+  return stabilityLevel ? `${summary}（稳定性：${stabilityLevel}）` : summary
+}
+
+function buildIdentityPreferenceBody(input) {
+  const title = normalizeString(input.title)
+  const stance = normalizeString(input.stance) || '未标注'
+  const preferenceType = normalizeString(input.preferenceType ?? input.preference_type) || '未分类'
+  const stabilityLevel = normalizeString(input.stabilityLevel ?? input.stability_level) || 'medium'
+  const summary = normalizeString(input.summary) || buildIdentityPreferenceSummary(input) || '暂无结论'
+  const evidenceCount = normalizeInteger(input.evidenceCount ?? input.evidence_count)
+  const lastConfirmedAt = normalizeString(input.lastConfirmedAt ?? input.last_confirmed_at) || '待确认'
+  const keywords = normalizeStringArray(input.triggerKeywords ?? input.trigger_keywords)
+
+  const lines = [
+    '## 偏好结论',
+    `- 标题：${title || '未命名偏好'}`,
+    `- 立场：${stance}`,
+    `- 类型：${preferenceType}`,
+    `- 摘要：${summary}`,
+    '',
+    '## 稳定性与确认',
+    `- 稳定性：${stabilityLevel}`,
+    `- 证据计数：${evidenceCount}`,
+    `- 最近确认：${lastConfirmedAt}`,
+    '',
+    '## 触发关键词',
+    ...(keywords.length > 0 ? keywords.map((item) => `- ${item}`) : ['- 暂无']),
+    '',
+    '## 使用说明',
+    '- 仅在当前话题与该偏好直接相关时注入对话 prompt。'
+  ]
+
+  return lines.join('\n')
+}
+
+function normalizeStructuredPageInput(input) {
+  if (!isIdentityPreferencePageInput(input)) {
+    return input
+  }
+
+  const normalized = {
+    ...input,
+    preferenceType: normalizeString(input.preferenceType ?? input.preference_type),
+    stance: normalizeString(input.stance),
+    stabilityLevel: normalizeString(input.stabilityLevel ?? input.stability_level) || 'medium',
+    evidenceCount: normalizeInteger(input.evidenceCount ?? input.evidence_count),
+    lastConfirmedAt: normalizeString(input.lastConfirmedAt ?? input.last_confirmed_at),
+    triggerKeywords: normalizeStringArray(input.triggerKeywords ?? input.trigger_keywords)
+  }
+
+  if (!normalizeString(normalized.summary)) {
+    normalized.summary = buildIdentityPreferenceSummary(normalized)
+  }
+
+  if (!normalizeString(normalized.body)) {
+    normalized.body = buildIdentityPreferenceBody(normalized)
+  }
+
+  return normalized
+}
+
 function summarizePage(page) {
   return {
     pageId: page.pageId,
@@ -17,6 +109,12 @@ function summarizePage(page) {
     status: page.status,
     importance: page.importance,
     ownerConfirmed: page.ownerConfirmed,
+    preferenceType: page.preferenceType ?? '',
+    stance: page.stance ?? '',
+    stabilityLevel: page.stabilityLevel ?? '',
+    evidenceCount: page.evidenceCount ?? 0,
+    lastConfirmedAt: page.lastConfirmedAt ?? '',
+    triggerKeywords: Array.isArray(page.triggerKeywords) ? page.triggerKeywords : [],
     relatedPageIds: Array.isArray(page.relatedPageIds) ? page.relatedPageIds : [],
     filePath: page.filePath,
     updatedAt: page.lastUpdatedAt
@@ -72,7 +170,7 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
 
   return {
     async create(input) {
-      const page = await storage.createPage(input)
+      const page = await storage.createPage(normalizeStructuredPageInput(input))
       await writeAudit({
         eventType: 'page_created',
         pageId: page.pageId,
@@ -104,7 +202,7 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
       await versionStore.snapshotPage(existing, { reason: 'before_update' })
       const updated = await storage.updatePage({
         ...existing,
-        ...input,
+        ...normalizeStructuredPageInput(input),
         pageId: existing.pageId
       })
       await writeAudit({

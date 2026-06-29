@@ -5,9 +5,9 @@ import { createObservationService } from '../observation/service.js'
 const DEFAULT_MEMORY_PAGE_LIMIT = 4
 const DEFAULT_TOPIC_LIMIT = 4
 const DEFAULT_MESSAGE_HIT_LIMIT = 3
-const DEFAULT_OBSERVATION_LIMIT = 3
 const IDENTITY_PROFILE_PAGE_TYPE = 'identity_profile'
 const IDENTITY_PERSON_PAGE_TYPE = 'identity_person'
+const IDENTITY_PREFERENCE_PAGE_TYPE = 'identity_preference'
 
 const IMPORTANCE_WEIGHT = {
   critical: 4,
@@ -35,8 +35,20 @@ function isIdentityPersonPage(page) {
   return normalizeString(page?.pageType) === IDENTITY_PERSON_PAGE_TYPE
 }
 
+function isIdentityPreferencePage(page) {
+  return normalizeString(page?.pageType) === IDENTITY_PREFERENCE_PAGE_TYPE
+}
+
 function getPageStableId(page) {
   return normalizeString(page?.pageId ?? page?.id)
+}
+
+function splitQueryTerms(normalizedQuery) {
+  return normalizeString(normalizedQuery)
+    .toLowerCase()
+    .split(/\s+/)
+    .map((item) => item.trim())
+    .filter(Boolean)
 }
 
 function pageMatchesQuery(page, normalizedQuery) {
@@ -54,7 +66,31 @@ function pageMatchesQuery(page, normalizedQuery) {
   return haystack.includes(normalizedQuery)
 }
 
-function comparePages(a, b, { normalizedQuery = '' } = {}) {
+function pageMatchesAnyKeyword(page, queryTerms) {
+  if (!Array.isArray(queryTerms) || queryTerms.length === 0) return false
+
+  const haystack = [
+    page?.title,
+    page?.summary,
+    page?.preferenceType,
+    page?.stance,
+    ...(Array.isArray(page?.aliases) ? page.aliases : []),
+    ...(Array.isArray(page?.triggerKeywords) ? page.triggerKeywords : [])
+  ]
+    .map((item) => normalizeString(item).toLowerCase())
+    .filter(Boolean)
+    .join(' ')
+
+  return queryTerms.some((term) => haystack.includes(term))
+}
+
+function comparePages(a, b, { normalizedQuery = '', queryTerms = [] } = {}) {
+  const identityPreferenceQueryHitA = isIdentityPreferencePage(a) && pageMatchesAnyKeyword(a, queryTerms) ? 1 : 0
+  const identityPreferenceQueryHitB = isIdentityPreferencePage(b) && pageMatchesAnyKeyword(b, queryTerms) ? 1 : 0
+  if (identityPreferenceQueryHitA !== identityPreferenceQueryHitB) {
+    return identityPreferenceQueryHitB - identityPreferenceQueryHitA
+  }
+
   const identityPersonQueryHitA = isIdentityPersonPage(a) && pageMatchesQuery(a, normalizedQuery) ? 1 : 0
   const identityPersonQueryHitB = isIdentityPersonPage(b) && pageMatchesQuery(b, normalizedQuery) ? 1 : 0
   if (identityPersonQueryHitA !== identityPersonQueryHitB) {
@@ -97,6 +133,14 @@ function buildIdentityProfileSummaryLine(page) {
   return `- [identity] ${page.title}: ${summary}`
 }
 
+function buildIdentityPreferenceSummaryLine(page) {
+  const preferenceType = normalizeString(page.preferenceType) || '未分类'
+  const stance = normalizeString(page.stance) || '未标注立场'
+  const stabilityLevel = normalizeString(page.stabilityLevel) || 'medium'
+  const summary = normalizeString(page.summary) || '暂无偏好摘要'
+  return `- [preference/${preferenceType}/${stabilityLevel}] ${page.title}: ${stance}；${summary}`
+}
+
 function buildTopicSummaryLine(item) {
   const dates = Array.isArray(item.dates) ? item.dates.slice(-2).join(' / ') : ''
   const note = normalizeString(item.note)
@@ -113,16 +157,28 @@ export async function buildWikiContext(
   const chatlog = createChatlogService(store)
   const observation = createObservationService(store)
   const normalizedQuery = normalizeString(query).toLowerCase()
+  const queryTerms = splitQueryTerms(normalizedQuery)
 
   const pageSummaries = await memoryWiki.listSummaries({ status: 'active' })
   const primaryIdentityProfile = selectPrimaryIdentityProfile(pageSummaries)
+  const matchedPreferencePages = queryTerms.length === 0
+    ? []
+    : pageSummaries
+        .filter(isIdentityPreferencePage)
+        .filter((page) => pageMatchesAnyKeyword(page, queryTerms))
+        .sort((a, b) => comparePages(a, b, { normalizedQuery, queryTerms }))
+
+  const matchedPreferenceIds = new Set(matchedPreferencePages.map((item) => getPageStableId(item)).filter(Boolean))
   const otherPages = [...pageSummaries]
     .filter((page) => !primaryIdentityProfile || getPageStableId(page) !== getPageStableId(primaryIdentityProfile))
-    .sort((a, b) => comparePages(a, b, { normalizedQuery }))
+    .filter((page) => !matchedPreferenceIds.has(getPageStableId(page)))
+    .sort((a, b) => comparePages(a, b, { normalizedQuery, queryTerms }))
+
   const selectedPages = [
     ...(primaryIdentityProfile ? [primaryIdentityProfile] : []),
-    ...otherPages.slice(0, Math.max(pageLimit - (primaryIdentityProfile ? 1 : 0), 0))
-  ]
+    ...matchedPreferencePages,
+    ...otherPages
+  ].slice(0, pageLimit)
 
   const topics = await topicIndex.list()
   const selectedTopics = [...topics]
@@ -147,7 +203,7 @@ export async function buildWikiContext(
   memorySummaryLines.push(
     ...selectedPages
       .filter((page) => !primaryIdentityProfile || getPageStableId(page) !== getPageStableId(primaryIdentityProfile))
-      .map(buildPageSummaryLine)
+      .map((page) => (isIdentityPreferencePage(page) ? buildIdentityPreferenceSummaryLine(page) : buildPageSummaryLine(page)))
   )
 
   const memorySummary = memorySummaryLines.length === 0
