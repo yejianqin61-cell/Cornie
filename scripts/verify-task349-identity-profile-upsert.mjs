@@ -3,6 +3,7 @@ import path from 'node:path'
 import { createServiceHarness, assert } from '../tests/shared/service-harness.mjs'
 import { upsertIdentityProfileFromConversation } from '../electron/backend/identity/profileUpsert.js'
 import { createMemoryWikiService } from '../electron/backend/memory-wiki/index.js'
+import { buildWikiContext } from '../electron/backend/agent/wikiContext.js'
 
 async function run() {
   const harness = await createServiceHarness('task349-identity-profile-upsert')
@@ -39,6 +40,37 @@ async function run() {
 
   const updatedPage = await memoryWiki.get(summaries[0].pageId)
   assert(updatedPage.preferredName === '爸爸', '主身份页应补充偏好称呼')
+
+  const stageWrite = await upsertIdentityProfileFromConversation(harness.store, {
+    baseDir,
+    date: '2026-07-01',
+    messageId: 'msg-2b',
+    userMessage: '我最近好多项目、考试、assignment，还要找实习，压力真的很大。我希望你温柔一点，记住上下文。'
+  })
+
+  assert(['updated', 'noop'].includes(stageWrite.action), '阶段画像类信息应能保守写入主身份页')
+
+  const enrichedPage = await memoryWiki.get(summaries[0].pageId)
+  assert(enrichedPage.lifeStageSummary.includes('学业') || enrichedPage.lifeStageSummary.includes('项目'), '主身份页应写入阶段画像摘要')
+  assert(enrichedPage.currentFocus.includes('项目') || enrichedPage.currentFocus.includes('实习'), '主身份页应写入当前关注点')
+  assert(enrichedPage.stressors.length > 0, '主身份页应写入压力来源')
+  assert(enrichedPage.communicationPreference.length > 0, '主身份页应写入沟通偏好')
+
+  const unrelatedContext = await buildWikiContext(harness.store, {
+    date: '2026-07-01',
+    baseDir,
+    query: ''
+  })
+  assert(!unrelatedContext.memorySummary.includes('沟通偏好：'), '无关 query 时不应默认展开沟通偏好')
+  assert(!unrelatedContext.memorySummary.includes('压力：'), '无关 query 时不应默认展开压力细节')
+
+  const relatedContext = await buildWikiContext(harness.store, {
+    date: '2026-07-01',
+    baseDir,
+    query: '最近压力很大 项目 实习 温柔 记住上下文'
+  })
+  assert(relatedContext.memorySummary.includes('压力：'), '相关 query 时应展开压力细节')
+  assert(relatedContext.memorySummary.includes('沟通偏好：'), '相关 query 时应展开沟通偏好')
 
   const conflict = await upsertIdentityProfileFromConversation(harness.store, {
     baseDir,

@@ -827,7 +827,13 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
 
     async listSummaries(filters = {}) {
       const pages = await this.list(filters)
-      return pages.map((item) => summarizePage(item))
+      const hydratedPages = await Promise.all(
+        pages.map(async (item) => {
+          const fullPage = item?.pageId ? await this.get(item.pageId) : null
+          return fullPage ?? item
+        })
+      )
+      return hydratedPages.map((item) => summarizePage(item))
     },
 
     async getPageSourceTrace(pageId) {

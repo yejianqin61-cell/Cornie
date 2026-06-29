@@ -62,6 +62,11 @@ function pageMatchesQuery(page, normalizedQuery) {
   const haystack = [
     page?.title,
     page?.summary,
+    page?.identitySummary,
+    page?.lifeStageSummary,
+    page?.currentFocus,
+    page?.stressors,
+    page?.communicationPreference,
     ...(Array.isArray(page?.aliases) ? page.aliases : [])
   ]
     .map((item) => normalizeString(item).toLowerCase())
@@ -166,13 +171,39 @@ function buildPageSummaryLine(page) {
   return `- [${importance}] ${page.title}: ${summary}`
 }
 
-function buildIdentityProfileSummaryLine(page) {
+function identityProfileNeedsExtendedDetails(page, queryTerms) {
+  if (!Array.isArray(queryTerms) || queryTerms.length === 0) {
+    return false
+  }
+
+  const haystack = [
+    page?.currentFocus,
+    page?.stressors,
+    page?.communicationPreference,
+    page?.identitySummary,
+    page?.lifeStageSummary
+  ]
+    .map((item) => normalizeString(item).toLowerCase())
+    .filter(Boolean)
+    .join(' ')
+
+  if (!haystack) {
+    return false
+  }
+
+  return queryTerms.some((term) => haystack.includes(term))
+}
+
+function buildIdentityProfileSummaryLine(page, queryTerms = []) {
   const userName = normalizeString(page.userName) || normalizeString(page.title) || '未命名用户'
   const preferredName = normalizeString(page.preferredName)
   const relationship = normalizeString(page.cornieRelationship)
   const identitySummary = normalizeString(page.identitySummary) || normalizeString(page.summary)
   const lifeStageSummary = normalizeString(page.lifeStageSummary)
   const currentFocus = normalizeString(page.currentFocus)
+  const stressors = normalizeString(page.stressors)
+  const communicationPreference = normalizeString(page.communicationPreference)
+  const includeExtendedDetails = identityProfileNeedsExtendedDetails(page, queryTerms)
 
   const parts = [
     `名字：${userName}`,
@@ -180,7 +211,9 @@ function buildIdentityProfileSummaryLine(page) {
     relationship && `关系：${relationship}`,
     identitySummary,
     lifeStageSummary,
-    currentFocus && `当前关注：${currentFocus}`
+    currentFocus && `当前关注：${currentFocus}`,
+    includeExtendedDetails && stressors && `压力：${stressors}`,
+    includeExtendedDetails && communicationPreference && `沟通偏好：${communicationPreference}`
   ].filter(Boolean)
 
   return `- [identity] ${userName}: ${parts.join('；') || '暂无主身份摘要'}`
@@ -294,7 +327,7 @@ export async function buildWikiContext(
 
   const memorySummaryLines = []
   if (primaryIdentityProfile) {
-    memorySummaryLines.push(buildIdentityProfileSummaryLine(primaryIdentityProfile))
+    memorySummaryLines.push(buildIdentityProfileSummaryLine(primaryIdentityProfile, queryTerms))
   }
 
   memorySummaryLines.push(

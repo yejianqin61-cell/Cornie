@@ -82,6 +82,92 @@ function extractCornieRelationship(userMessage) {
   return ''
 }
 
+function detectLifeStageSummary(userMessage) {
+  const text = normalizeString(userMessage)
+  if (!text) return ''
+
+  const hasStudyPressure = /考试|期末|assignment|作业|学校|上课|学习|学业/.test(text)
+  const hasCareerPressure = /实习|找工作|求职|面试|就业/.test(text)
+  const hasProjectPressure = /项目|开发|毕设|论文/.test(text)
+
+  if (hasStudyPressure && hasCareerPressure && hasProjectPressure) {
+    return '当前处于学业、项目、实习与求职压力交织阶段。'
+  }
+  if (hasStudyPressure && hasCareerPressure) {
+    return '当前处于学业与实习求职并行阶段。'
+  }
+  if (hasStudyPressure && hasProjectPressure) {
+    return '当前处于学业与项目并行推进阶段。'
+  }
+  if (hasCareerPressure && hasProjectPressure) {
+    return '当前处于项目与实习求职并行推进阶段。'
+  }
+  if (hasStudyPressure) {
+    return '当前处于学业压力较集中的阶段。'
+  }
+  if (hasCareerPressure) {
+    return '当前处于实习求职压力较集中的阶段。'
+  }
+  if (hasProjectPressure) {
+    return '当前处于项目推进压力较集中的阶段。'
+  }
+
+  return ''
+}
+
+function detectCurrentFocus(userMessage) {
+  const text = normalizeString(userMessage)
+  if (!text) return ''
+
+  const focus = []
+  if (/项目|开发|毕设|论文/.test(text)) focus.push('项目推进')
+  if (/考试|期末|assignment|作业|学习|学业/.test(text)) focus.push('考试与学业')
+  if (/实习|找工作|求职|面试|就业/.test(text)) focus.push('实习与求职')
+
+  return focus.length > 0 ? focus.join('、') : ''
+}
+
+function detectStressors(userMessage) {
+  const text = normalizeString(userMessage)
+  if (!text) return ''
+
+  const stressSignals = /累|好累|压力|焦虑|难|熬夜|忙不过来|崩|烦/.test(text)
+  if (!stressSignals) {
+    return ''
+  }
+
+  const stressors = []
+  if (/项目|开发|毕设|论文/.test(text)) stressors.push('项目推进压力')
+  if (/考试|期末|assignment|作业|学习|学业/.test(text)) stressors.push('考试与学业压力')
+  if (/实习|找工作|求职|面试|就业/.test(text)) stressors.push('实习与求职压力')
+
+  return stressors.length > 0 ? stressors.join('、') : '近期压力感较明显。'
+}
+
+function detectCommunicationPreference(userMessage) {
+  const text = normalizeString(userMessage)
+  if (!text) return ''
+
+  const segments = [
+    /温柔/.test(text) && '偏好温柔表达',
+    /克制/.test(text) && '偏好克制表达',
+    /记住上下文|记得上下文|记住我说的话|别忘|记性/.test(text) && '希望被稳定记住上下文',
+    /陪伴感|陪着我|陪我/.test(text) && '希望有陪伴感'
+  ].filter(Boolean)
+
+  return segments.length > 0 ? segments.join('；') : ''
+}
+
+function detectIdentitySummary(userMessage) {
+  const lifeStageSummary = detectLifeStageSummary(userMessage)
+  const currentFocus = detectCurrentFocus(userMessage)
+
+  if (lifeStageSummary && currentFocus) {
+    return `${lifeStageSummary} 当前主要关注 ${currentFocus}。`
+  }
+  return lifeStageSummary || (currentFocus ? `当前主要关注 ${currentFocus}。` : '')
+}
+
 function buildSourceRef({ date, messageId, userMessage }) {
   return {
     kind: 'chat',
@@ -133,15 +219,34 @@ function buildCandidate(userMessage) {
   const userName = extractUserName(userMessage)
   const preferredName = extractPreferredName(userMessage)
   const cornieRelationship = extractCornieRelationship(userMessage)
+  const identitySummary = detectIdentitySummary(userMessage)
+  const lifeStageSummary = detectLifeStageSummary(userMessage)
+  const currentFocus = detectCurrentFocus(userMessage)
+  const stressors = detectStressors(userMessage)
+  const communicationPreference = detectCommunicationPreference(userMessage)
 
-  if (!userName && !preferredName && !cornieRelationship) {
+  if (
+    !userName &&
+    !preferredName &&
+    !cornieRelationship &&
+    !identitySummary &&
+    !lifeStageSummary &&
+    !currentFocus &&
+    !stressors &&
+    !communicationPreference
+  ) {
     return null
   }
 
   return {
     userName,
     preferredName,
-    cornieRelationship
+    cornieRelationship,
+    identitySummary,
+    lifeStageSummary,
+    currentFocus,
+    stressors,
+    communicationPreference
   }
 }
 
@@ -188,6 +293,11 @@ export async function upsertIdentityProfileFromConversation(
       userName: candidate.userName,
       preferredName: candidate.preferredName,
       cornieRelationship: candidate.cornieRelationship,
+      identitySummary: candidate.identitySummary,
+      lifeStageSummary: candidate.lifeStageSummary,
+      currentFocus: candidate.currentFocus,
+      stressors: candidate.stressors,
+      communicationPreference: candidate.communicationPreference,
       aliases: mergeAliases(null, [candidate.userName, candidate.preferredName]),
       importance: 'critical',
       ownerConfirmed: false,
@@ -208,6 +318,11 @@ export async function upsertIdentityProfileFromConversation(
   compareField(existingPage.userName, candidate.userName, 'userName', conflicts, updates)
   compareField(existingPage.preferredName, candidate.preferredName, 'preferredName', conflicts, updates)
   compareField(existingPage.cornieRelationship, candidate.cornieRelationship, 'cornieRelationship', conflicts, updates)
+  compareField(existingPage.identitySummary, candidate.identitySummary, 'identitySummary', conflicts, updates)
+  compareField(existingPage.lifeStageSummary, candidate.lifeStageSummary, 'lifeStageSummary', conflicts, updates)
+  compareField(existingPage.currentFocus, candidate.currentFocus, 'currentFocus', conflicts, updates)
+  compareField(existingPage.stressors, candidate.stressors, 'stressors', conflicts, updates)
+  compareField(existingPage.communicationPreference, candidate.communicationPreference, 'communicationPreference', conflicts, updates)
 
   const aliases = mergeAliases(existingPage, [candidate.userName, candidate.preferredName])
   const sourceRefs = Array.isArray(existingPage.sourceRefs) ? existingPage.sourceRefs : []
