@@ -21,6 +21,7 @@ import {
   setMemoryWikiImportance,
   setMemoryWikiStatus,
   submitConfirmationDecision,
+  linkMemoryWikiRelatedPages,
   updateMemoryWikiAliases,
   updateMemoryWikiGovernanceRequestStatus,
   updateMemoryWikiPage,
@@ -58,6 +59,7 @@ const governanceDetail = ref(null)
 const pageTopicKeyword = ref('')
 const pageTopicAliasesText = ref('')
 const pageTopicNote = ref('')
+const relatedPageSelection = ref([])
 const confirmStatusMap = ref({})
 const confirmErrorMap = ref({})
 
@@ -110,6 +112,100 @@ const governanceSuggestedActions = computed(() => {
   return Object.entries(payload)
     .filter(([, value]) => value !== undefined && value !== null && String(value).trim() !== '')
     .map(([key, value]) => `${key}：${String(value)}`)
+})
+const identityPageOptions = computed(() =>
+  pages.value
+    .filter((item) => item.pageId !== pageForm.value.pageId)
+    .filter((item) => String(item.pageType || '').startsWith('identity_'))
+    .map((item) => ({
+      pageId: item.pageId,
+      title: item.title || item.pageId,
+      pageType: item.pageType,
+      status: item.status
+    }))
+)
+const selectedRelatedPageIds = computed(() => Array.isArray(pageSourceTrace.value?.page?.relatedPageIds) ? pageSourceTrace.value.page.relatedPageIds : [])
+const relatedPageMap = computed(() => {
+  const map = new Map()
+  for (const item of pageSourceTrace.value?.relatedPages || []) {
+    map.set(item.pageId, item)
+  }
+  return map
+})
+const identityRelationshipRules = computed(() => {
+  const pageType = pageForm.value.pageType
+  if (pageType === 'identity_profile') {
+    return [
+      '建议关联 identity_person：重要人物、关系对象、亲密联系人。',
+      '建议关联 identity_preference：稳定偏好、忌讳、表达方式偏好。',
+      '建议关联 identity_trait：性格倾向、情绪模式、压力反应。'
+    ]
+  }
+  if (pageType === 'identity_person') {
+    return [
+      '建议至少关联一个 identity_profile：说明这个人物属于谁的人际网络。',
+      '必要时关联 identity_trait：记录这个人物和主人的互动特征或关系状态。'
+    ]
+  }
+  if (pageType === 'identity_preference') {
+    return [
+      '建议至少关联一个 identity_profile：偏好应归属于具体的人。',
+      '如偏好与某人物强相关，也可额外关联 identity_person。'
+    ]
+  }
+  if (pageType === 'identity_trait') {
+    return [
+      '建议至少关联一个 identity_profile： trait 应说明是在描写谁。',
+      '如 trait 与特定人物关系有关，也可关联 identity_person。'
+    ]
+  }
+  return []
+})
+const identityRelationshipCandidates = computed(() => {
+  const pageType = pageForm.value.pageType
+  const selectedIds = new Set(selectedRelatedPageIds.value)
+  const options = identityPageOptions.value
+  const recommendTypes =
+    pageType === 'identity_profile'
+      ? ['identity_person', 'identity_preference', 'identity_trait']
+      : pageType === 'identity_person'
+        ? ['identity_profile', 'identity_trait']
+        : pageType === 'identity_preference' || pageType === 'identity_trait'
+          ? ['identity_profile', 'identity_person']
+          : []
+
+  return options
+    .filter((item) => recommendTypes.includes(item.pageType))
+    .map((item) => ({
+      ...item,
+      linked: selectedIds.has(item.pageId)
+    }))
+})
+const identityRelationshipWarnings = computed(() => {
+  const pageType = pageForm.value.pageType
+  if (!String(pageType || '').startsWith('identity_') || !pageForm.value.pageId) return []
+
+  const linkedTypes = new Set(
+    selectedRelatedPageIds.value
+      .map((pageId) => relatedPageMap.value.get(pageId)?.pageType)
+      .filter(Boolean)
+  )
+  const warnings = []
+
+  if (pageType === 'identity_person' && !linkedTypes.has('identity_profile')) {
+    warnings.push('这个人物页还没有挂到任何 identity_profile，下次回忆人物关系时可能比较难自动归位。')
+  }
+  if (pageType === 'identity_preference' && !linkedTypes.has('identity_profile')) {
+    warnings.push('这个偏好页还没有明确属于谁，建议至少关联一个 identity_profile。')
+  }
+  if (pageType === 'identity_trait' && !linkedTypes.has('identity_profile')) {
+    warnings.push('这个 trait 页还没有明确描写对象，建议至少关联一个 identity_profile。')
+  }
+  if (pageType === 'identity_profile' && selectedRelatedPageIds.value.length === 0) {
+    warnings.push('这个 identity_profile 还是孤立页，建议补上人物、偏好或 trait 链路。')
+  }
+
+  return warnings
 })
 
 async function refreshPages() {
@@ -196,6 +292,7 @@ async function selectPage(pageId) {
     pageTopicNote.value = page.summary ?? ''
     const traceData = await getMemoryWikiPageSourceTrace(pageId)
     pageSourceTrace.value = traceData.trace || null
+    relatedPageSelection.value = Array.isArray(traceData.trace?.page?.relatedPageIds) ? [...traceData.trace.page.relatedPageIds] : []
   } catch (error) {
     errorMsg.value = error?.message || String(error)
   } finally {
@@ -245,6 +342,7 @@ function resetPageForm() {
   pageTopicKeyword.value = ''
   pageTopicAliasesText.value = ''
   pageTopicNote.value = ''
+  relatedPageSelection.value = []
   pageSourceTrace.value = null
 }
 
@@ -378,6 +476,23 @@ async function saveTopicAliases() {
     await updateTopicIndexAliases(topicDetail.value.normalizedKey, aliases)
     await refreshTopicItems()
     await selectTopic(topicDetail.value.normalizedKey)
+  } catch (error) {
+    errorMsg.value = error?.message || String(error)
+  } finally {
+    saving.value = false
+  }
+}
+
+async function saveRelatedPages() {
+  if (!pageForm.value.pageId) return
+
+  saving.value = true
+  errorMsg.value = ''
+  try {
+    const relatedPageIds = Array.from(new Set(relatedPageSelection.value.map((item) => String(item).trim()).filter(Boolean)))
+    await linkMemoryWikiRelatedPages(pageForm.value.pageId, relatedPageIds)
+    await refreshPages()
+    await selectPage(pageForm.value.pageId)
   } catch (error) {
     errorMsg.value = error?.message || String(error)
   } finally {
@@ -768,6 +883,52 @@ onMounted(refreshAll)
                 <div class="evidenceSummary">{{ item.title }}</div>
                 <div class="detailMeta">{{ item.preview || '原观察记录已不可读' }}</div>
               </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="pageForm.pageId && pageForm.pageType.startsWith('identity_')" class="detailSection">
+          <div class="evidenceTitle">Identity 关系链路</div>
+          <div class="cardSubhint">
+            Identity 页不应该只是孤零零的一页。把“这个人是谁、属于谁、和哪些偏好或特征有关”串起来，铃湾后面召回会稳定很多。
+          </div>
+
+          <div v-if="identityRelationshipRules.length > 0" class="suggestionList">
+            <div v-for="item in identityRelationshipRules" :key="item" class="suggestionItem">{{ item }}</div>
+          </div>
+
+          <div class="formGrid relationshipGrid">
+            <label class="span2">
+              <span>关联 Identity 页面</span>
+              <select v-model="relatedPageSelection" multiple size="6">
+                <option v-for="item in identityPageOptions" :key="item.pageId" :value="item.pageId">
+                  {{ item.title }} · {{ item.pageType }} · {{ item.status }}
+                </option>
+              </select>
+            </label>
+          </div>
+
+          <div class="actionRow">
+            <button :disabled="saving" @click="saveRelatedPages">{{ saving ? '保存中…' : '保存关系链路' }}</button>
+          </div>
+
+          <div v-if="identityRelationshipCandidates.length > 0" class="detailSection">
+            <div class="evidenceTitle">推荐补链</div>
+            <div class="suggestionList">
+              <div
+                v-for="item in identityRelationshipCandidates"
+                :key="item.pageId"
+                class="suggestionItem"
+              >
+                {{ item.title }} · {{ item.pageType }} · {{ item.linked ? '已关联' : '可补充关联' }}
+              </div>
+            </div>
+          </div>
+
+          <div v-if="identityRelationshipWarnings.length > 0" class="detailSection">
+            <div class="evidenceTitle">治理提醒</div>
+            <div class="suggestionList">
+              <div v-for="item in identityRelationshipWarnings" :key="item" class="suggestionItem warningItem">{{ item }}</div>
             </div>
           </div>
         </div>
@@ -1295,12 +1456,19 @@ onMounted(refreshAll)
   line-height: 1.5;
   word-break: break-word;
 }
+.warningItem{
+  border-color: rgba(248, 113, 113, .24);
+  background: rgba(248, 113, 113, .08);
+}
 .topicAliases{
   display:flex;
   flex-direction:column;
   gap: 6px;
   margin-top: 12px;
   font-size: 13px;
+}
+.relationshipGrid select{
+  min-height: 160px;
 }
 .evidenceBlock{
   margin-top: 14px;
