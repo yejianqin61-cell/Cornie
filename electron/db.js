@@ -1174,7 +1174,7 @@ export function getObservationLog(store, id) {
   }
 }
 
-export function listObservationLogs(store, { date, from, to, type, limit = 50 } = {}) {
+export function listObservationLogs(store, { date, from, to, type, q, limit = 50 } = {}) {
   const where = []
   const params = { $limit: Math.max(1, Math.min(200, Number.parseInt(String(limit), 10) || 50)) }
 
@@ -1193,6 +1193,14 @@ export function listObservationLogs(store, { date, from, to, type, limit = 50 } 
   if (type) {
     where.push('type = $type')
     params.$type = type
+  }
+  if (q) {
+    where.push(`(
+      lower(coalesce(title, '')) like $q
+      or lower(coalesce(content, '')) like $q
+      or lower(coalesce(source_text, '')) like $q
+    )`)
+    params.$q = `%${String(q).trim().toLowerCase()}%`
   }
 
   const sql = `

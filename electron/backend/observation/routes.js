@@ -7,7 +7,7 @@ export function observationRoutes({ store }) {
 
   router.get('/observations', (req, res, next) => {
     try {
-      const { date, from, to, type, limit } = req.query
+      const { date, from, to, type, q, limit } = req.query
       let result
       if (date) {
         result = observation.listByDate(date)
@@ -16,6 +16,7 @@ export function observationRoutes({ store }) {
           from: from || undefined,
           to: to || undefined,
           type: type || undefined,
+          q: q || undefined,
           limit: limit ? Number(limit) : 50
         })
       }

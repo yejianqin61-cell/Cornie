@@ -225,7 +225,7 @@ export function createObservationService(store) {
     get: (id) => getObservationLog(store, id),
     listByDate,
     listToday: (date = new Date().toISOString().slice(0, 10)) => listObservationLogs(store, { date }),
-    listByRange: ({ from, to, type, limit }) => listObservationLogs(store, { from, to, type, limit }),
+    listByRange: ({ from, to, type, q, limit }) => listObservationLogs(store, { from, to, type, q, limit }),
     listTodayForConversation: (date) => listObservationLogs(store, {
       date,
       limit: OBSERVATION_PROMPT_POLICY.conversationTodaySummaryLimit

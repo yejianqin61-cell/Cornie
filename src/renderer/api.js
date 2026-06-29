@@ -567,12 +567,13 @@ export async function enqueueMemoryWikiInspectionScan() {
 
 // ─── observations ─────────────────────────────────────────────
 
-export async function listObservations({ date, from, to, type, limit } = {}) {
+export async function listObservations({ date, from, to, type, q, limit } = {}) {
   const params = new URLSearchParams()
   if (date) params.set('date', date)
   if (from) params.set('from', from)
   if (to) params.set('to', to)
   if (type) params.set('type', type)
+  if (q) params.set('q', q)
   if (limit) params.set('limit', String(limit))
   const qs = params.toString()
   return apiFetch(`/observations${qs ? `?${qs}` : ''}`)
