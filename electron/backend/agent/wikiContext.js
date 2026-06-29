@@ -6,6 +6,7 @@ const DEFAULT_MEMORY_PAGE_LIMIT = 4
 const DEFAULT_TOPIC_LIMIT = 4
 const DEFAULT_MESSAGE_HIT_LIMIT = 3
 const DEFAULT_OBSERVATION_LIMIT = 3
+const IDENTITY_PROFILE_PAGE_TYPE = 'identity_profile'
 
 const IMPORTANCE_WEIGHT = {
   critical: 4,
@@ -25,6 +26,23 @@ function scorePage(page) {
   return importanceScore + confirmedScore + summaryScore
 }
 
+function isIdentityProfilePage(page) {
+  return normalizeString(page?.pageType) === IDENTITY_PROFILE_PAGE_TYPE
+}
+
+function comparePages(a, b) {
+  return scorePage(b) - scorePage(a) || String(a.title).localeCompare(String(b.title), 'zh-CN')
+}
+
+function selectPrimaryIdentityProfile(pages) {
+  const identityPages = pages.filter(isIdentityProfilePage)
+  if (identityPages.length === 0) {
+    return null
+  }
+
+  return [...identityPages].sort(comparePages)[0] ?? null
+}
+
 function scoreTopic(item) {
   const importanceScore = IMPORTANCE_WEIGHT[normalizeString(item.importance).toLowerCase()] ?? 0
   const dateScore = Array.isArray(item.dates) ? Math.min(item.dates.length, 3) : 0
@@ -38,6 +56,11 @@ function buildPageSummaryLine(page) {
   return `- [${importance}] ${page.title}: ${summary}`
 }
 
+function buildIdentityProfileSummaryLine(page) {
+  const summary = normalizeString(page.summary) || '暂无主身份摘要'
+  return `- [identity] ${page.title}: ${summary}`
+}
+
 function buildTopicSummaryLine(item) {
   const dates = Array.isArray(item.dates) ? item.dates.slice(-2).join(' / ') : ''
   const note = normalizeString(item.note)
@@ -45,16 +68,24 @@ function buildTopicSummaryLine(item) {
   return `- ${item.keyword}${extra ? `: ${extra}` : ''}`
 }
 
-export async function buildWikiContext(store, { date, baseDir, query = '', pageLimit = DEFAULT_MEMORY_PAGE_LIMIT, topicLimit = DEFAULT_TOPIC_LIMIT } = {}) {
+export async function buildWikiContext(
+  store,
+  { date, baseDir, query = '', pageLimit = DEFAULT_MEMORY_PAGE_LIMIT, topicLimit = DEFAULT_TOPIC_LIMIT } = {}
+) {
   const memoryWiki = await createMemoryWikiService({ baseDir })
   const topicIndex = await createTopicIndexStore(baseDir)
   const chatlog = createChatlogService(store)
   const observation = createObservationService(store)
 
   const pageSummaries = await memoryWiki.listSummaries({ status: 'active' })
-  const selectedPages = [...pageSummaries]
-    .sort((a, b) => scorePage(b) - scorePage(a) || String(a.title).localeCompare(String(b.title), 'zh-CN'))
-    .slice(0, pageLimit)
+  const primaryIdentityProfile = selectPrimaryIdentityProfile(pageSummaries)
+  const otherPages = [...pageSummaries]
+    .filter((page) => !primaryIdentityProfile || page.id !== primaryIdentityProfile.id)
+    .sort(comparePages)
+  const selectedPages = [
+    ...(primaryIdentityProfile ? [primaryIdentityProfile] : []),
+    ...otherPages.slice(0, Math.max(pageLimit - (primaryIdentityProfile ? 1 : 0), 0))
+  ]
 
   const topics = await topicIndex.list()
   const normalizedQuery = normalizeString(query).toLowerCase()
@@ -72,9 +103,20 @@ export async function buildWikiContext(store, { date, baseDir, query = '', pageL
     : []
   const todayObservations = observation.listByDate(date).slice(0, DEFAULT_OBSERVATION_LIMIT)
 
-  const memorySummary = selectedPages.length === 0
+  const memorySummaryLines = []
+  if (primaryIdentityProfile) {
+    memorySummaryLines.push(buildIdentityProfileSummaryLine(primaryIdentityProfile))
+  }
+
+  memorySummaryLines.push(
+    ...selectedPages
+      .filter((page) => !primaryIdentityProfile || page.id !== primaryIdentityProfile.id)
+      .map(buildPageSummaryLine)
+  )
+
+  const memorySummary = memorySummaryLines.length === 0
     ? '当前没有可注入的长期记忆 wiki 页面。'
-    : selectedPages.map(buildPageSummaryLine).join('\n')
+    : memorySummaryLines.join('\n')
 
   const topicSummary = selectedTopics.length === 0
     ? '当前没有高相关主题索引。'
@@ -93,6 +135,7 @@ export async function buildWikiContext(store, { date, baseDir, query = '', pageL
     topicSummary,
     chatSummary,
     observationSummary,
+    primaryIdentityProfile,
     selectedPages,
     selectedTopics,
     chatHits,
