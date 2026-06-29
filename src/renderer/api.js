@@ -90,6 +90,20 @@ export async function getChatlog(date, { limit, cursor } = {}) {
   }
 }
 
+export async function exportChatlogByDate(date, { format = 'json' } = {}) {
+  const params = new URLSearchParams()
+  if (format) params.set('format', format)
+  const qs = params.toString()
+  return apiFetch(`/chatlogs/${encodeURIComponent(date)}/export${qs ? `?${qs}` : ''}`)
+}
+
+export async function exportChatlogByMonth(month, { format = 'json' } = {}) {
+  const params = new URLSearchParams()
+  if (format) params.set('format', format)
+  const qs = params.toString()
+  return apiFetch(`/chatlogs/export/month/${encodeURIComponent(month)}${qs ? `?${qs}` : ''}`)
+}
+
 // ─── model ───────────────────────────────────────────────────
 
 export async function getModelStatus() {

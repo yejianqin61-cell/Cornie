@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
-import { getChatlog, listChatlogDates } from './api'
+import { exportChatlogByDate, exportChatlogByMonth, getChatlog, listChatlogDates } from './api'
 
 const emit = defineEmits(['back', 'open-date'])
 
@@ -17,6 +17,7 @@ const availableMonths = ref([])
 const datePagination = ref({ cursor: '0', nextCursor: null, hasMore: false, pageSize: 100, total: 0 })
 const loadingDates = ref(false)
 const loadingMessages = ref(false)
+const exporting = ref(false)
 const errorMsg = ref('')
 
 const selectedLabel = computed(() => selectedDate.value || '未选择日期')
@@ -87,6 +88,44 @@ function openSelectedDate() {
   emit('open-date', selectedDate.value)
 }
 
+function downloadExportFile(payload) {
+  const blob = new Blob([payload.content || ''], { type: payload.contentType || 'text/plain;charset=utf-8' })
+  const url = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = url
+  anchor.download = payload.filename || 'chatlog-export.txt'
+  anchor.click()
+  URL.revokeObjectURL(url)
+}
+
+async function exportSelectedDate(format) {
+  if (!selectedDate.value) return
+  exporting.value = true
+  errorMsg.value = ''
+  try {
+    const payload = await exportChatlogByDate(selectedDate.value, { format })
+    downloadExportFile(payload)
+  } catch (error) {
+    errorMsg.value = error?.message || String(error)
+  } finally {
+    exporting.value = false
+  }
+}
+
+async function exportSelectedMonth(format) {
+  if (!selectedMonth.value) return
+  exporting.value = true
+  errorMsg.value = ''
+  try {
+    const payload = await exportChatlogByMonth(selectedMonth.value, { format })
+    downloadExportFile(payload)
+  } catch (error) {
+    errorMsg.value = error?.message || String(error)
+  } finally {
+    exporting.value = false
+  }
+}
+
 watch(selectedMonth, () => refreshDates())
 watch(selectedDate, (date) => refreshMessages(date))
 watch(searchQuery, () => refreshDates())
@@ -147,14 +186,32 @@ onMounted(async () => {
             {{ loadingMessages ? '加载中…' : `${messages.length} 条消息` }}
           </div>
         </div>
-        <button
-          class="primary historyOpenBtn"
-          type="button"
-          :disabled="loadingMessages || !selectedDate"
-          @click="openSelectedDate"
-        >
-          查看这一天
-        </button>
+        <div class="historyActions">
+          <button
+            class="ghost"
+            type="button"
+            :disabled="exporting || !selectedMonth"
+            @click="exportSelectedMonth('json')"
+          >
+            {{ exporting ? '导出中…' : '导出本月 JSON' }}
+          </button>
+          <button
+            class="ghost"
+            type="button"
+            :disabled="exporting || !selectedDate"
+            @click="exportSelectedDate('txt')"
+          >
+            {{ exporting ? '导出中…' : '导出当日 TXT' }}
+          </button>
+          <button
+            class="primary historyOpenBtn"
+            type="button"
+            :disabled="loadingMessages || !selectedDate"
+            @click="openSelectedDate"
+          >
+            查看这一天
+          </button>
+        </div>
       </div>
 
       <div v-if="errorMsg" class="historyError">{{ errorMsg }}</div>
@@ -222,6 +279,12 @@ onMounted(async () => {
 }
 .historyBackBtn{ padding: 6px 10px; }
 .historyOpenBtn{ flex: 0 0 auto; }
+.historyActions{
+  display:flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
 
 .historyList{
   display:flex;

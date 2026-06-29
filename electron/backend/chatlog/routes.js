@@ -35,5 +35,27 @@ export function chatlogRoutes({ chatlog }) {
     })
   )
 
+  r.get(
+    '/chatlogs/:date/export',
+    asyncHandler(async (req, res) => {
+      const date = requireISODate(req.params.date)
+      const format = req.query.format === undefined
+        ? 'json'
+        : requireString(String(req.query.format), 'format', { maxLen: 16 })
+      res.json(chatlog.exportByDate(date, { format }))
+    })
+  )
+
+  r.get(
+    '/chatlogs/export/month/:month',
+    asyncHandler(async (req, res) => {
+      const month = optionalISOMonth(req.params.month)
+      const format = req.query.format === undefined
+        ? 'json'
+        : requireString(String(req.query.format), 'format', { maxLen: 16 })
+      res.json(chatlog.exportByMonth(month, { format }))
+    })
+  )
+
   return r
 }

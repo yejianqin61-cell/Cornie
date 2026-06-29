@@ -30,6 +30,15 @@ function buildStorageMeta(repository) {
   }
 }
 
+function buildPlainTextTranscript(date, messages = []) {
+  const lines = [`# Chatlog ${date}`, '']
+  for (const message of messages) {
+    const roleLabel = message.role === 'cornie' ? '铃湾' : '主人'
+    lines.push(`${roleLabel}：${message.content}`)
+  }
+  return lines.join('\n')
+}
+
 export function createChatlogService(store, { repository } = {}) {
   const chatlogRepository = repository ?? createSqlJsChatlogRepository(store)
 
@@ -99,6 +108,78 @@ export function createChatlogService(store, { repository } = {}) {
         keyword: normalizedKeyword,
         entries: result.entries,
         storage: result.storage
+      }
+    },
+
+    exportByDate(date, { format = 'json' } = {}) {
+      const record = this.getByDate(date, { limit: 5000, cursor: 0 })
+      const normalizedFormat = normalizeString(format).toLowerCase() || 'json'
+      const payload = {
+        kind: 'chatlog_day_export',
+        date,
+        messageCount: record.messages.length,
+        messages: record.messages,
+        exportedAt: new Date().toISOString(),
+        storage: record.storage
+      }
+
+      if (normalizedFormat === 'txt') {
+        return {
+          format: 'txt',
+          filename: `chatlog-${date}.txt`,
+          contentType: 'text/plain; charset=utf-8',
+          content: buildPlainTextTranscript(date, record.messages),
+          meta: payload
+        }
+      }
+
+      return {
+        format: 'json',
+        filename: `chatlog-${date}.json`,
+        contentType: 'application/json; charset=utf-8',
+        content: JSON.stringify(payload, null, 2),
+        meta: payload
+      }
+    },
+
+    exportByMonth(month, { format = 'json' } = {}) {
+      const result = this.listDates({ month, limit: 5000, cursor: 0 })
+      const items = result.entries.map((entry) => {
+        const detail = this.getByDate(entry.date, { limit: 5000, cursor: 0 })
+        return {
+          date: entry.date,
+          messageCount: detail.messages.length,
+          messages: detail.messages
+        }
+      })
+
+      const normalizedFormat = normalizeString(format).toLowerCase() || 'json'
+      const payload = {
+        kind: 'chatlog_month_export',
+        month,
+        dayCount: items.length,
+        items,
+        exportedAt: new Date().toISOString(),
+        storage: result.storage
+      }
+
+      if (normalizedFormat === 'txt') {
+        const blocks = items.map((item) => buildPlainTextTranscript(item.date, item.messages))
+        return {
+          format: 'txt',
+          filename: `chatlog-${month}.txt`,
+          contentType: 'text/plain; charset=utf-8',
+          content: blocks.join('\n\n---\n\n'),
+          meta: payload
+        }
+      }
+
+      return {
+        format: 'json',
+        filename: `chatlog-${month}.json`,
+        contentType: 'application/json; charset=utf-8',
+        content: JSON.stringify(payload, null, 2),
+        meta: payload
       }
     }
   }
