@@ -33,6 +33,20 @@ function buildSourceRef({ date, messageId, userMessage }) {
   }
 }
 
+function buildObservationSourceRef(observation) {
+  if (!observation?.id) {
+    return null
+  }
+
+  return {
+    kind: 'observation',
+    observationId: normalizeString(observation.id),
+    date: normalizeString(observation.date),
+    title: normalizeString(observation.title),
+    type: normalizeString(observation.type)
+  }
+}
+
 function buildChatRef({ date, messageId }) {
   return `${normalizeString(date)}#${normalizeString(messageId)}`
 }
@@ -294,7 +308,7 @@ async function ensureProfileLink(memoryWiki, personPageId) {
   }
 }
 
-async function ensurePersonTopicLink({ baseDir, page, date, messageId, personName }) {
+async function ensurePersonTopicLink({ baseDir, page, date, messageId, personName, observation }) {
   if (!page?.pageId) {
     return null
   }
@@ -330,6 +344,10 @@ async function ensurePersonTopicLink({ baseDir, page, date, messageId, personNam
 
   if (normalizeString(date) && normalizeString(messageId)) {
     await topicIndex.addChatRef(normalizedKey, buildChatRef({ date, messageId }))
+  }
+
+  if (observation?.id) {
+    await topicIndex.addObservationRef(normalizedKey, `${normalizeString(observation.date)}#${normalizeString(observation.id)}`)
   }
 
   await topicIndex.linkPage(normalizedKey, page.pageId)
@@ -390,7 +408,8 @@ export async function upsertIdentityPersonFromConversation(
     baseDir = process.cwd(),
     date,
     messageId,
-    userMessage
+    userMessage,
+    observation
   } = {}
 ) {
   const candidate = buildCandidate(userMessage)
@@ -401,6 +420,7 @@ export async function upsertIdentityPersonFromConversation(
   const memoryWiki = await createMemoryWikiService({ baseDir, store })
   const existingPage = await findMatchingPersonPage(memoryWiki, candidate)
   const sourceRef = buildSourceRef({ date, messageId, userMessage })
+  const observationSourceRef = buildObservationSourceRef(observation)
 
   if (!existingPage) {
     const created = await memoryWiki.create({
@@ -419,7 +439,7 @@ export async function upsertIdentityPersonFromConversation(
       importance: candidate.emotionalWeight === 'high' ? 'high' : 'medium',
       ownerConfirmed: false,
       lastMentionedAt: date,
-      sourceRefs: [sourceRef]
+      sourceRefs: observationSourceRef ? [sourceRef, observationSourceRef] : [sourceRef]
     })
 
     await ensureProfileLink(memoryWiki, created.pageId)
@@ -428,7 +448,8 @@ export async function upsertIdentityPersonFromConversation(
       page: created,
       date,
       messageId,
-      personName: candidate.personName
+      personName: candidate.personName,
+      observation
     })
     await ensurePersonMeaningGovernanceCandidate(memoryWiki, created, candidate)
 
@@ -482,6 +503,17 @@ export async function upsertIdentityPersonFromConversation(
     updates.sourceRefs = [...sourceRefs, sourceRef]
   }
 
+  if (observationSourceRef) {
+    const hasSameObservationSource = sourceRefs.some(
+      (item) =>
+        normalizeString(item?.kind) === 'observation' &&
+        normalizeString(item?.observationId) === normalizeString(observationSourceRef.observationId)
+    )
+    if (!hasSameObservationSource) {
+      updates.sourceRefs = [...(updates.sourceRefs ?? sourceRefs), observationSourceRef]
+    }
+  }
+
   if (conflicts.length > 0) {
     if (!hasSameSource) {
       await memoryWiki.update({
@@ -503,7 +535,8 @@ export async function upsertIdentityPersonFromConversation(
       },
       date,
       messageId,
-      personName: candidate.personName
+      personName: candidate.personName,
+      observation
     })
     await ensurePersonMeaningGovernanceCandidate(memoryWiki, existingPage, candidate)
 
@@ -527,7 +560,8 @@ export async function upsertIdentityPersonFromConversation(
     page: updated,
     date,
     messageId,
-    personName: candidate.personName
+    personName: candidate.personName,
+    observation
   })
   await ensurePersonMeaningGovernanceCandidate(memoryWiki, updated, candidate)
 

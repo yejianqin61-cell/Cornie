@@ -434,7 +434,8 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd() 
           baseDir,
           date,
           messageId: userMessage.id,
-          userMessage: message
+          userMessage: message,
+          observation: observationRecord
         })
       } catch (error) {
         console.error('Identity person upsert error:', error)
