@@ -1,7 +1,8 @@
 <script setup>
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { cancelSchedule, createSchedule, deleteSchedule, listScheduleCategories, listSchedules, restoreSchedule } from '../api'
 import { listenDataChanged } from '../syncSignals'
+import ScheduleCalendar from './ScheduleCalendar.vue'
 
 const schedules = ref([])
 const categories = ref([])
@@ -12,18 +13,80 @@ const adding = ref(false)
 const errorMsg = ref('')
 
 const todayCount = ref(0)
+const currentMonth = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
+const selectedDate = ref('')
+
+const weekdayLabels = ['一', '二', '三', '四', '五', '六', '日']
+
+function toDateKey(value) {
+  return new Date(value).toISOString().slice(0, 10)
+}
+
+function getMonthRange(date) {
+  const year = date.getFullYear()
+  const month = date.getMonth()
+  const start = new Date(year, month, 1)
+  const end = new Date(year, month + 1, 0)
+  return {
+    from: start.toISOString().slice(0, 10),
+    to: end.toISOString().slice(0, 10)
+  }
+}
+
+const monthLabel = computed(() => {
+  const year = currentMonth.value.getFullYear()
+  const month = currentMonth.value.getMonth() + 1
+  return `${year}年${month}月`
+})
+
+const scheduleDates = computed(() => new Set(schedules.value.map((item) => toDateKey(item.startAt))))
+
+const filteredSchedules = computed(() => {
+  if (!selectedDate.value) return schedules.value
+  return schedules.value.filter((item) => toDateKey(item.startAt) === selectedDate.value)
+})
+
+const currentFilterLabel = computed(() => {
+  if (!selectedDate.value) return '正在看这个月的安排'
+  return `正在看 ${selectedDate.value} 的安排`
+})
+
+const calendarCells = computed(() => {
+  const year = currentMonth.value.getFullYear()
+  const month = currentMonth.value.getMonth()
+  const firstDay = new Date(year, month, 1)
+  const lastDay = new Date(year, month + 1, 0)
+  const firstWeekday = (firstDay.getDay() + 6) % 7
+  const startDate = new Date(year, month, 1 - firstWeekday)
+  const cells = []
+
+  for (let index = 0; index < 42; index += 1) {
+    const date = new Date(startDate)
+    date.setDate(startDate.getDate() + index)
+    const dateKey = date.toISOString().slice(0, 10)
+    cells.push({
+      date: dateKey,
+      day: date.getDate(),
+      inMonth: date.getMonth() === month,
+      hasEntries: scheduleDates.value.has(dateKey)
+    })
+  }
+
+  return cells
+})
 
 async function refresh() {
   loading.value = true
   try {
     const today = new Date().toISOString().slice(0, 10)
+    const range = getMonthRange(currentMonth.value)
     const [schData, catData] = await Promise.all([
-      listSchedules({ from: today }),
+      listSchedules({ from: range.from, to: range.to }),
       listScheduleCategories()
     ])
     schedules.value = schData?.items || []
     categories.value = catData?.items || []
-    todayCount.value = schedules.value.filter(s => s.startAt?.startsWith(today)).length
+    todayCount.value = schedules.value.filter((s) => s.startAt?.startsWith(today)).length
   } catch { /* ignore */ }
   finally { loading.value = false }
 }
@@ -34,7 +97,7 @@ async function addSchedule() {
   adding.value = true
   errorMsg.value = ''
   try {
-    const cat = categories.value.find(c => c.id === newForm.value.categoryId)
+    const cat = categories.value.find((c) => c.id === newForm.value.categoryId)
     await createSchedule({
       title,
       startAt: newForm.value.startAt,
@@ -52,6 +115,31 @@ async function addSchedule() {
   } finally {
     adding.value = false
   }
+}
+
+function selectCalendarDate(date) {
+  if (selectedDate.value === date) {
+    selectedDate.value = ''
+    return
+  }
+  selectedDate.value = date
+}
+
+async function moveMonth(delta) {
+  currentMonth.value = new Date(currentMonth.value.getFullYear(), currentMonth.value.getMonth() + delta, 1)
+  selectedDate.value = ''
+  await refresh()
+}
+
+async function jumpToToday() {
+  const today = new Date()
+  currentMonth.value = new Date(today.getFullYear(), today.getMonth(), 1)
+  selectedDate.value = today.toISOString().slice(0, 10)
+  await refresh()
+}
+
+function clearDateFilter() {
+  selectedDate.value = ''
 }
 
 async function toggleStatus(sch) {
@@ -98,6 +186,25 @@ onBeforeUnmount(() => {
       <div class="ssumText">今天有 <strong>{{ todayCount }}</strong> 项安排</div>
     </div>
 
+    <ScheduleCalendar
+      :month-label="monthLabel"
+      :weekday-labels="weekdayLabels"
+      :cells="calendarCells"
+      :selected-date="selectedDate"
+      :today-date="new Date().toISOString().slice(0, 10)"
+      @prev-month="moveMonth(-1)"
+      @next-month="moveMonth(1)"
+      @select-date="selectCalendarDate"
+    />
+
+    <div class="sfilter card">
+      <div class="sfilterText">{{ currentFilterLabel }}</div>
+      <div class="sfilterActions">
+        <button class="ghost" type="button" @click="jumpToToday">回到今天</button>
+        <button class="ghost" type="button" :disabled="!selectedDate" @click="clearDateFilter">清除筛选</button>
+      </div>
+    </div>
+
     <!-- 快速新增 -->
     <div class="squick card">
       <div class="squickHead">
@@ -127,12 +234,17 @@ onBeforeUnmount(() => {
     <!-- 日程列表 -->
     <div class="slist card">
       <div class="slistHead">
-        <div class="slistTitle">最近日程</div>
+        <div>
+          <div class="slistTitle">{{ selectedDate ? '这一天的安排' : '这个月的安排' }}</div>
+          <div class="slistHint">
+            {{ selectedDate ? '点一下别的日期，就能换着看那一天的安排。' : '先从这个月的节奏看起，想看某一天就点上面的日期。' }}
+          </div>
+        </div>
         <button class="ghost" @click="$emit('go', 'category')">管理类目</button>
       </div>
-      <div v-if="schedules.length === 0 && !loading" class="sempty">还没有日程安排</div>
+      <div v-if="filteredSchedules.length === 0 && !loading" class="sempty">还没有日程安排</div>
       <div v-else class="sitems">
-        <div v-for="s in schedules" :key="s.id" class="sitem" :class="{ cancelled: s.status === 'cancelled' }">
+        <div v-for="s in filteredSchedules" :key="s.id" class="sitem" :class="{ cancelled: s.status === 'cancelled' }">
           <span class="sitemTime">{{ s.startAt?.replace('T', ' ') }}</span>
           <div class="sitemMain">
             <span class="sitemTitle">{{ s.title }}</span>
@@ -159,6 +271,25 @@ onBeforeUnmount(() => {
 .ssummary{ background: var(--schedule-tint); padding: 12px 20px; text-align: center; }
 .ssumText{ font-size: 15px; }
 
+.sfilter{
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: #FFFDFC;
+}
+
+.sfilterText{
+  font-size: 13px;
+  color: var(--text);
+}
+
+.sfilterActions{
+  display: flex;
+  gap: 8px;
+}
+
 .squick{ padding: 12px 20px; }
 .squickHead{ display: flex; justify-content: space-between; align-items: center; }
 .squickTitle{ font-weight: 700; }
@@ -178,6 +309,7 @@ onBeforeUnmount(() => {
 .slist{ padding: 12px 20px; }
 .slistHead{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
 .slistTitle{ font-weight: 700; }
+.slistHint{ margin-top: 4px; font-size: 12px; color: var(--muted); }
 .sempty{ color: var(--muted); font-size: 13px; padding: 10px 0; }
 .sitems{ display: flex; flex-direction: column; gap: 4px; }
 .sitem{
@@ -199,4 +331,21 @@ onBeforeUnmount(() => {
 .sitemActions{ display: flex; gap: 6px; opacity: 0; transition: opacity .15s; }
 .sitem:hover .sitemActions{ opacity: 1; }
 .sdel{ color: var(--danger); }
+
+@media (max-width: 720px){
+  .sfilter{
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .sfilterActions{
+    justify-content: flex-start;
+  }
+
+  .slistHead,
+  .squickHead{
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
 </style>
