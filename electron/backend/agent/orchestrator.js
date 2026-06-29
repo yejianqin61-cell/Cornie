@@ -12,6 +12,7 @@ import { evaluateToolCalls } from '../policy/toolPolicy.js'
 import { chat } from '../model/deepseek/client.js'
 import { executeToolCalls } from '../tools/gateway.js'
 import { createObservationService } from '../observation/service.js'
+import { enqueueObservationWikiUpgradeCandidates } from '../observation/wikiUpgrade.js'
 import { createConfirmService } from '../confirm/service.js'
 import { upsertIdentityProfileFromConversation } from '../identity/profileUpsert.js'
 import { upsertIdentityPreferenceFromConversation } from '../identity/preferenceUpsert.js'
@@ -367,14 +368,28 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd() 
         }
       }
 
+      let observationRecord = null
       try {
-        observation.recordConversationTurn({
+        observationRecord = observation.recordConversationTurn({
           date,
           userMessage: message,
           cornieMessage: finalReply
         })
       } catch (error) {
         console.error('Observation write error:', error)
+      }
+
+      try {
+        if (observationRecord) {
+          await enqueueObservationWikiUpgradeCandidates(store, {
+            baseDir,
+            observation: observationRecord,
+            userMessage: message,
+            messageId: userMessage.id
+          })
+        }
+      } catch (error) {
+        console.error('Observation wiki upgrade candidate error:', error)
       }
 
       try {
