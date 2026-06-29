@@ -5,6 +5,10 @@ export const MEMORY_WIKI_PAGES_SEGMENTS = [...MEMORY_WIKI_ROOT_SEGMENTS, 'pages'
 export const MEMORY_WIKI_INDEX_SEGMENTS = [...MEMORY_WIKI_ROOT_SEGMENTS, 'index']
 
 export const MEMORY_WIKI_PAGE_TYPE_DIRECTORY = Object.freeze({
+  identity_profile: 'identity/profiles',
+  identity_preference: 'identity/preferences',
+  identity_trait: 'identity/traits',
+  identity_person: 'identity/people',
   preference: 'preferences',
   dislike: 'preferences',
   need: 'needs',

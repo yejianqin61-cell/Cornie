@@ -3,14 +3,23 @@ import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { listMemoryWikiPages } from '../api'
 import { listenDataChanged } from '../syncSignals'
 
+const IDENTITY_MEMORY_PAGE_TYPES = new Set([
+  'identity_profile',
+  'identity_preference',
+  'identity_trait',
+  'identity_person'
+])
+
 const recentMemories = ref([])
 const loadingMemories = ref(false)
 
 async function refreshMemories() {
   loadingMemories.value = true
   try {
-    const data = await listMemoryWikiPages({ pageType: 'memory', limit: 5 })
-    recentMemories.value = (data?.pages || []).slice(0, 5)
+    const data = await listMemoryWikiPages({ status: 'active' })
+    recentMemories.value = (data?.pages || [])
+      .filter((page) => IDENTITY_MEMORY_PAGE_TYPES.has(page.pageType))
+      .slice(0, 5)
   } catch {
     recentMemories.value = []
   } finally {

@@ -361,11 +361,39 @@ export async function listMemoryWikiPages({ pageType, status } = {}) {
   if (pageType) params.set('pageType', pageType)
   if (status) params.set('status', status)
   const qs = params.toString()
-  return apiFetch(`/memory-wiki/pages${qs ? `?${qs}` : ''}`)
+  const data = await apiFetch(`/memory-wiki/pages${qs ? `?${qs}` : ''}`)
+  const items = Array.isArray(data?.items)
+    ? data.items.map((item) => ({
+        ...item,
+        id: item?.id ?? item?.pageId ?? '',
+        pageId: item?.pageId ?? item?.id ?? '',
+        content: item?.content ?? item?.body ?? '',
+        updatedAt: item?.updatedAt ?? item?.lastUpdatedAt ?? ''
+      }))
+    : []
+
+  return {
+    ...data,
+    items,
+    pages: items
+  }
 }
 
 export async function getMemoryWikiPage(pageId) {
-  return apiFetch(`/memory-wiki/pages/${encodeURIComponent(pageId)}`)
+  const data = await apiFetch(`/memory-wiki/pages/${encodeURIComponent(pageId)}`)
+  const rawPage = data?.page ?? data
+  const page = rawPage
+    ? {
+        ...rawPage,
+        id: rawPage?.id ?? rawPage?.pageId ?? '',
+        pageId: rawPage?.pageId ?? rawPage?.id ?? '',
+        content: rawPage?.content ?? rawPage?.body ?? '',
+        body: rawPage?.body ?? rawPage?.content ?? '',
+        updatedAt: rawPage?.updatedAt ?? rawPage?.lastUpdatedAt ?? ''
+      }
+    : null
+
+  return data?.page ? { ...data, page } : page
 }
 
 export async function listMemoryWikiPageVersions(pageId) {
@@ -380,16 +408,22 @@ export async function getMemoryWikiPageVersionDiff(pageId, { fromVersionId, toVe
 }
 
 export async function createMemoryWikiPage(payload) {
+  const normalizedPayload = payload?.content !== undefined && payload?.body === undefined
+    ? { ...payload, body: payload.content }
+    : payload
   return apiFetch('/memory-wiki/pages', {
     method: 'POST',
-    body: JSON.stringify(payload)
+    body: JSON.stringify(normalizedPayload)
   })
 }
 
 export async function updateMemoryWikiPage(pageId, payload) {
+  const normalizedPayload = payload?.content !== undefined && payload?.body === undefined
+    ? { ...payload, body: payload.content }
+    : payload
   return apiFetch(`/memory-wiki/pages/${encodeURIComponent(pageId)}`, {
     method: 'PUT',
-    body: JSON.stringify(payload)
+    body: JSON.stringify(normalizedPayload)
   })
 }
 

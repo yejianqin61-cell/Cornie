@@ -464,6 +464,10 @@ onMounted(refreshAll)
               <option value="person">person</option>
               <option value="event">event</option>
               <option value="preference">preference</option>
+              <option value="identity_profile">identity_profile</option>
+              <option value="identity_person">identity_person</option>
+              <option value="identity_preference">identity_preference</option>
+              <option value="identity_trait">identity_trait</option>
             </select>
             <select v-model="pageFilterStatus" @change="refreshPages">
               <option value="">全部状态</option>
@@ -513,6 +517,10 @@ onMounted(refreshAll)
               <option value="person">person</option>
               <option value="event">event</option>
               <option value="preference">preference</option>
+              <option value="identity_profile">identity_profile</option>
+              <option value="identity_person">identity_person</option>
+              <option value="identity_preference">identity_preference</option>
+              <option value="identity_trait">identity_trait</option>
             </select>
           </label>
           <label>

@@ -2,6 +2,13 @@
 import { onMounted, ref } from 'vue'
 import { listMemoryWikiPages } from '../api'
 
+const IDENTITY_MEMORY_PAGE_TYPES = new Set([
+  'identity_profile',
+  'identity_preference',
+  'identity_trait',
+  'identity_person'
+])
+
 const pages = ref([])
 const loading = ref(false)
 const errorMsg = ref('')
@@ -10,8 +17,8 @@ async function refresh() {
   loading.value = true
   errorMsg.value = ''
   try {
-    const data = await listMemoryWikiPages({})
-    pages.value = data?.pages || []
+    const data = await listMemoryWikiPages({ status: 'active' })
+    pages.value = (data?.pages || []).filter((page) => IDENTITY_MEMORY_PAGE_TYPES.has(page.pageType))
   } catch (e) {
     errorMsg.value = e?.message || '加载失败'
   } finally {
@@ -55,6 +62,7 @@ onMounted(refresh)
         <div class="mlistCardTitle">{{ page.title }}</div>
         <div class="mlistCardSummary" v-if="page.summary">{{ truncated(page.summary, 120) }}</div>
         <div class="mlistCardSummary" v-else>{{ truncated(page.content, 120) }}</div>
+        <div class="mlistCardType">{{ page.pageType }}</div>
         <div class="mlistCardMeta">{{ page.updatedAt ? new Date(page.updatedAt).toLocaleDateString('zh-CN') : '' }}</div>
       </div>
     </div>
@@ -118,5 +126,6 @@ onMounted(refresh)
 .mlistCard:hover{ border-color: rgba(232,133,106,.20); }
 .mlistCardTitle{ font-weight: 600; margin-bottom: 6px; }
 .mlistCardSummary{ font-size: 13px; color: var(--muted); line-height: 1.5; }
+.mlistCardType{ font-size: 11px; color: var(--muted); margin-top: 8px; }
 .mlistCardMeta{ font-size: 11px; color: var(--muted); margin-top: 8px; }
 </style>
