@@ -14,6 +14,7 @@ import { executeToolCalls } from '../tools/gateway.js'
 import { createObservationService } from '../observation/service.js'
 import { createConfirmService } from '../confirm/service.js'
 import { upsertIdentityProfileFromConversation } from '../identity/profileUpsert.js'
+import { upsertIdentityPreferenceFromConversation } from '../identity/preferenceUpsert.js'
 import {
   attachContextTelemetry,
   captureInitialPromptTelemetry,
@@ -387,6 +388,17 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd() 
         }
       } catch (error) {
         console.error('Identity profile upsert error:', error)
+      }
+
+      try {
+        await upsertIdentityPreferenceFromConversation(store, {
+          baseDir,
+          date,
+          messageId: userMessage.id,
+          userMessage: message
+        })
+      } catch (error) {
+        console.error('Identity preference upsert error:', error)
       }
 
       return {

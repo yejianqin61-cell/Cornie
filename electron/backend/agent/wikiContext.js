@@ -288,6 +288,12 @@ export async function buildWikiContext(
   memorySummaryLines.push(
     ...selectedPages
       .filter((page) => !primaryIdentityProfile || getPageStableId(page) !== getPageStableId(primaryIdentityProfile))
+      .filter((page) => {
+        if (queryTerms.length === 0 && isIdentityPreferencePage(page)) {
+          return false
+        }
+        return true
+      })
       .map((page) => {
         if (isIdentityPersonPage(page)) return buildIdentityPersonSummaryLine(page)
         if (isIdentityPreferencePage(page)) return buildIdentityPreferenceSummaryLine(page)
