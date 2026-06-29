@@ -76,6 +76,14 @@ function createEmptyPageForm() {
     currentFocus: '',
     stressors: '',
     communicationPreference: '',
+    personName: '',
+    relationshipToUser: '',
+    roleSummary: '',
+    personalitySummary: '',
+    sharedExperienceSummary: '',
+    emotionalWeight: '',
+    timelineSummary: '',
+    firstKnownPeriod: '',
     preferenceType: '',
     stance: '',
     stabilityLevel: 'medium',
@@ -287,6 +295,14 @@ async function selectPage(pageId) {
       currentFocus: page.currentFocus ?? '',
       stressors: page.stressors ?? '',
       communicationPreference: page.communicationPreference ?? '',
+      personName: page.personName ?? '',
+      relationshipToUser: page.relationshipToUser ?? '',
+      roleSummary: page.roleSummary ?? '',
+      personalitySummary: page.personalitySummary ?? '',
+      sharedExperienceSummary: page.sharedExperienceSummary ?? '',
+      emotionalWeight: page.emotionalWeight ?? '',
+      timelineSummary: page.timelineSummary ?? '',
+      firstKnownPeriod: page.firstKnownPeriod ?? '',
       preferenceType: page.preferenceType ?? '',
       stance: page.stance ?? '',
       stabilityLevel: page.stabilityLevel ?? 'medium',
@@ -395,6 +411,14 @@ async function savePage() {
       currentFocus: pageForm.value.currentFocus,
       stressors: pageForm.value.stressors,
       communicationPreference: pageForm.value.communicationPreference,
+      personName: pageForm.value.personName,
+      relationshipToUser: pageForm.value.relationshipToUser,
+      roleSummary: pageForm.value.roleSummary,
+      personalitySummary: pageForm.value.personalitySummary,
+      sharedExperienceSummary: pageForm.value.sharedExperienceSummary,
+      emotionalWeight: pageForm.value.emotionalWeight,
+      timelineSummary: pageForm.value.timelineSummary,
+      firstKnownPeriod: pageForm.value.firstKnownPeriod,
       preferenceType: pageForm.value.preferenceType,
       stance: pageForm.value.stance,
       stabilityLevel: pageForm.value.stabilityLevel,
@@ -830,6 +854,40 @@ onMounted(refreshAll)
             <label class="span2">
               <span>触发关键词（逗号分隔）</span>
               <input v-model="pageForm.triggerKeywordsText" placeholder="例如：奶茶, 咖啡, 甜度" />
+            </label>
+          </template>
+          <template v-if="pageForm.pageType === 'identity_person'">
+            <label>
+              <span>人物名字</span>
+              <input v-model="pageForm.personName" placeholder="例如：钟奕菲" />
+            </label>
+            <label>
+              <span>与用户关系</span>
+              <input v-model="pageForm.relationshipToUser" placeholder="例如：初恋、朋友、家人" />
+            </label>
+            <label class="span2">
+              <span>身份摘要</span>
+              <textarea v-model="pageForm.roleSummary" rows="2" placeholder="例如：用户人生中具有高情感权重的重要人物。" />
+            </label>
+            <label class="span2">
+              <span>性格摘要</span>
+              <textarea v-model="pageForm.personalitySummary" rows="2" placeholder="例如：温柔、害羞、内向。" />
+            </label>
+            <label class="span2">
+              <span>共同经历</span>
+              <textarea v-model="pageForm.sharedExperienceSummary" rows="3" placeholder="例如：2021年冬天相恋，2022年春天疏远，2022年夏天决裂。" />
+            </label>
+            <label>
+              <span>情感权重</span>
+              <input v-model="pageForm.emotionalWeight" placeholder="例如：high / 很高" />
+            </label>
+            <label>
+              <span>首次已知阶段</span>
+              <input v-model="pageForm.firstKnownPeriod" placeholder="例如：2021年冬天" />
+            </label>
+            <label class="span2">
+              <span>时间线摘要</span>
+              <textarea v-model="pageForm.timelineSummary" rows="2" placeholder="例如：相恋-疏远-决裂。" />
             </label>
           </template>
           <template v-if="pageForm.pageType === 'identity_trait'">

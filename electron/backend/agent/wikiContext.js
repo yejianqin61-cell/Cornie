@@ -194,6 +194,21 @@ function buildIdentityPreferenceSummaryLine(page) {
   return `- [preference/${preferenceType}/${stabilityLevel}] ${page.title}: ${stance}；${summary}`
 }
 
+function buildIdentityPersonSummaryLine(page) {
+  const personName = normalizeString(page.personName) || normalizeString(page.title) || '未命名人物'
+  const relationshipToUser = normalizeString(page.relationshipToUser)
+  const roleSummary = normalizeString(page.roleSummary)
+  const personalitySummary = normalizeString(page.personalitySummary)
+  const sharedExperienceSummary = normalizeString(page.sharedExperienceSummary) || normalizeString(page.summary)
+
+  return `- [person] ${personName}: ${[
+    relationshipToUser && `关系：${relationshipToUser}`,
+    roleSummary,
+    personalitySummary,
+    sharedExperienceSummary
+  ].filter(Boolean).join('；') || '暂无人物摘要'}`
+}
+
 function buildIdentityTraitSummaryLine(page) {
   const traitType = normalizeString(page.traitType) || '未分类'
   const confidenceLevel = normalizeString(page.confidenceLevel) || 'low'
@@ -274,6 +289,7 @@ export async function buildWikiContext(
     ...selectedPages
       .filter((page) => !primaryIdentityProfile || getPageStableId(page) !== getPageStableId(primaryIdentityProfile))
       .map((page) => {
+        if (isIdentityPersonPage(page)) return buildIdentityPersonSummaryLine(page)
         if (isIdentityPreferencePage(page)) return buildIdentityPreferenceSummaryLine(page)
         if (isIdentityTraitPage(page)) return buildIdentityTraitSummaryLine(page)
         return buildPageSummaryLine(page)

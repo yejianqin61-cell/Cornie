@@ -8,6 +8,7 @@ import { normalizePageStatus } from './pageModel.js'
 import { getMessagesByDate, getObservationLog } from '../../db.js'
 
 const IDENTITY_PROFILE_PAGE_TYPE = 'identity_profile'
+const IDENTITY_PERSON_PAGE_TYPE = 'identity_person'
 const IDENTITY_PREFERENCE_PAGE_TYPE = 'identity_preference'
 const IDENTITY_TRAIT_PAGE_TYPE = 'identity_trait'
 
@@ -36,6 +37,10 @@ function isIdentityTraitPageInput(input) {
 
 function isIdentityProfilePageInput(input) {
   return normalizeString(input?.pageType ?? input?.page_type) === IDENTITY_PROFILE_PAGE_TYPE
+}
+
+function isIdentityPersonPageInput(input) {
+  return normalizeString(input?.pageType ?? input?.page_type) === IDENTITY_PERSON_PAGE_TYPE
 }
 
 function buildIdentityProfileSummary(input) {
@@ -86,6 +91,53 @@ function buildIdentityProfileBody(input) {
     '',
     '## 沟通与陪伴偏好',
     `- 沟通偏好：${communicationPreference}`
+  ].join('\n')
+}
+
+function buildIdentityPersonSummary(input) {
+  const personName = normalizeString(input.personName ?? input.person_name) || normalizeString(input.title)
+  const relationshipToUser = normalizeString(input.relationshipToUser ?? input.relationship_to_user)
+  const roleSummary = normalizeString(input.roleSummary ?? input.role_summary)
+  const personalitySummary = normalizeString(input.personalitySummary ?? input.personality_summary)
+  const sharedExperienceSummary = normalizeString(input.sharedExperienceSummary ?? input.shared_experience_summary)
+
+  return [
+    personName && `人物：${personName}`,
+    relationshipToUser && `关系：${relationshipToUser}`,
+    roleSummary,
+    personalitySummary,
+    sharedExperienceSummary
+  ]
+    .filter(Boolean)
+    .join('；')
+}
+
+function buildIdentityPersonBody(input) {
+  const personName = normalizeString(input.personName ?? input.person_name) || normalizeString(input.title) || '待确认'
+  const relationshipToUser = normalizeString(input.relationshipToUser ?? input.relationship_to_user) || '待补充'
+  const roleSummary = normalizeString(input.roleSummary ?? input.role_summary) || '待补充'
+  const personalitySummary = normalizeString(input.personalitySummary ?? input.personality_summary) || '待补充'
+  const sharedExperienceSummary = normalizeString(input.sharedExperienceSummary ?? input.shared_experience_summary) || '待补充'
+  const emotionalWeight = normalizeString(input.emotionalWeight ?? input.emotional_weight) || '待补充'
+  const timelineSummary = normalizeString(input.timelineSummary ?? input.timeline_summary) || '待补充'
+  const firstKnownPeriod = normalizeString(input.firstKnownPeriod ?? input.first_known_period) || '待补充'
+
+  return [
+    '## 关系',
+    `- 人物名字：${personName}`,
+    `- 与用户关系：${relationshipToUser}`,
+    '',
+    '## 身份',
+    `- 身份摘要：${roleSummary}`,
+    `- 首次已知阶段：${firstKnownPeriod}`,
+    '',
+    '## 性格',
+    `- 性格摘要：${personalitySummary}`,
+    `- 情感权重：${emotionalWeight}`,
+    '',
+    '## 和用户的共同经历',
+    `- 共同经历：${sharedExperienceSummary}`,
+    `- 时间线：${timelineSummary}`
   ].join('\n')
 }
 
@@ -220,6 +272,30 @@ function normalizeStructuredPageInput(input) {
     return normalized
   }
 
+  if (isIdentityPersonPageInput(input)) {
+    const normalized = {
+      ...input,
+      personName: normalizeString(input.personName ?? input.person_name),
+      relationshipToUser: normalizeString(input.relationshipToUser ?? input.relationship_to_user),
+      roleSummary: normalizeString(input.roleSummary ?? input.role_summary),
+      personalitySummary: normalizeString(input.personalitySummary ?? input.personality_summary),
+      sharedExperienceSummary: normalizeString(input.sharedExperienceSummary ?? input.shared_experience_summary),
+      emotionalWeight: normalizeString(input.emotionalWeight ?? input.emotional_weight),
+      timelineSummary: normalizeString(input.timelineSummary ?? input.timeline_summary),
+      firstKnownPeriod: normalizeString(input.firstKnownPeriod ?? input.first_known_period)
+    }
+
+    if (!normalizeString(normalized.summary)) {
+      normalized.summary = buildIdentityPersonSummary(normalized)
+    }
+
+    if (!normalizeString(normalized.body)) {
+      normalized.body = buildIdentityPersonBody(normalized)
+    }
+
+    return normalized
+  }
+
   if (isIdentityPreferencePageInput(input)) {
     const normalized = {
       ...input,
@@ -335,6 +411,14 @@ function summarizePage(page) {
     currentFocus: page.currentFocus ?? '',
     stressors: page.stressors ?? '',
     communicationPreference: page.communicationPreference ?? '',
+    personName: page.personName ?? '',
+    relationshipToUser: page.relationshipToUser ?? '',
+    roleSummary: page.roleSummary ?? '',
+    personalitySummary: page.personalitySummary ?? '',
+    sharedExperienceSummary: page.sharedExperienceSummary ?? '',
+    emotionalWeight: page.emotionalWeight ?? '',
+    timelineSummary: page.timelineSummary ?? '',
+    firstKnownPeriod: page.firstKnownPeriod ?? '',
     preferenceType: page.preferenceType ?? '',
     stance: page.stance ?? '',
     stabilityLevel: page.stabilityLevel ?? '',
