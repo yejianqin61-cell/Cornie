@@ -66,6 +66,36 @@ export function registerSystemTools(store, { registerTool }) {
   })
 
   registerTool({
+    name: 'conversation.list_history_dates',
+    description: '按全部历史、最近30天或指定月份列出聊天日期归档',
+    riskLevel: 'low',
+    handler: async ({ month, scope, query, limit, cursor } = {}) => ({
+      ok: true,
+      result: chatlog.listDates({ month, scope, query, limit, cursor })
+    })
+  })
+
+  registerTool({
+    name: 'conversation.get_day_page',
+    description: '分页读取指定日期的聊天记录，支持关键词过滤和 beforeId 补读',
+    riskLevel: 'low',
+    handler: async ({ date, cursor, limit, query, beforeId } = {}, context = {}) => ({
+      ok: true,
+      result: chatlog.getDayPage(date ?? context.date, { cursor, limit, query, beforeId })
+    })
+  })
+
+  registerTool({
+    name: 'conversation.export_month_record',
+    description: '导出指定月份的聊天记录归档',
+    riskLevel: 'low',
+    handler: async ({ month, format } = {}) => ({
+      ok: true,
+      result: chatlog.exportByMonth(month, { format })
+    })
+  })
+
+  registerTool({
     name: 'observation.get_day_record',
     description: '读取指定日期的观察日志',
     riskLevel: 'low',
