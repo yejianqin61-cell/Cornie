@@ -274,6 +274,14 @@ export function memoryWikiRoutes({ memoryWiki, topicIndex }) {
   )
 
   r.post(
+    '/memory-wiki/governance/:requestId/apply',
+    asyncHandler(async (req, res) => {
+      const requestId = requireString(req.params.requestId, 'requestId', { maxLen: 256 })
+      res.json({ result: await memoryWiki.applyGovernanceUpgradeRequest(requestId) })
+    })
+  )
+
+  r.post(
     '/memory-wiki/governance/inspection-scan',
     asyncHandler(async (_req, res) => {
       res.json({ result: await memoryWiki.enqueueInspectionGovernanceRequests() })

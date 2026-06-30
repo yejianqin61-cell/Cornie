@@ -236,4 +236,13 @@ export async function registerMemoryWikiTools({ baseDir, store }, { registerTool
       result: await memoryWiki.updateGovernanceRequestStatus(requestId, status)
     })
   })
+  registerTool({
+    name: 'memory_governance.apply_upgrade_request',
+    description: 'apply approved wiki upgrade candidate into identity memory pages',
+    riskLevel: 'high',
+    handler: async ({ requestId }) => ({
+      ok: true,
+      result: await memoryWiki.applyGovernanceUpgradeRequest(requestId)
+    })
+  })
 }

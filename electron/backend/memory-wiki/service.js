@@ -4,6 +4,7 @@ import { createMemoryWikiAuditStore } from './audit.js'
 import { createMemoryWikiInspector } from './inspector.js'
 import { createTopicIndexStore } from './topicIndex.js'
 import { createMemoryWikiGovernanceStore } from './governanceStore.js'
+import { applyObservationWikiUpgradeRequest } from '../observation/wikiUpgradeApply.js'
 import { normalizePageStatus } from './pageModel.js'
 import { getMessagesByDate, getObservationLog } from '../../db.js'
 
@@ -1187,6 +1188,14 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
       if (!requestId) throw new Error('memory governance requestId is required')
       if (!status) throw new Error('memory governance status is required')
       return governanceStore.updateStatus(requestId, status)
+    },
+
+    async applyGovernanceUpgradeRequest(requestId) {
+      if (!requestId) throw new Error('memory governance requestId is required')
+      return applyObservationWikiUpgradeRequest(store, {
+        baseDir,
+        requestId
+      })
     },
 
     getStorage() {
