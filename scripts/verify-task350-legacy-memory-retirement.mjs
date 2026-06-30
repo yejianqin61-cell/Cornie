@@ -25,7 +25,11 @@ async function run() {
   clearTools()
   registerMemoryTools(harness.store, { registerTool })
   const compatToolNames = listTools().map((item) => item.name)
-  assert(compatToolNames.includes('memory.create'), '兼容层在显式注册时仍应保留 memory 工具')
+  assert(
+    !compatToolNames.some((name) => name.startsWith('memory.')),
+    '兼容层即使显式注册，也不应再恢复 legacy memory runtime 工具',
+    compatToolNames
+  )
 
   await harness.close()
 }
