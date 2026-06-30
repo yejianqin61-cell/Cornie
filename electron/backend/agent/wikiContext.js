@@ -53,10 +53,14 @@ function isHighPriorityPage(page) {
   return ['critical', 'high'].includes(normalizeString(page?.importance).toLowerCase())
 }
 
+function isStableImportantPersonPage(page) {
+  return isIdentityPersonPage(page) && isHighPriorityPage(page) && page?.ownerConfirmed === true
+}
+
 function splitQueryTerms(normalizedQuery) {
   return normalizeString(normalizedQuery)
     .toLowerCase()
-    .split(/\s+/)
+    .split(/[\s,.;:!?，。；：！？、()（）[\]【】'"“”‘’/\\|]+/)
     .map((item) => item.trim())
     .filter(Boolean)
 }
@@ -72,6 +76,14 @@ function pageMatchesQuery(page, normalizedQuery) {
     page?.currentFocus,
     page?.stressors,
     page?.communicationPreference,
+    page?.personName,
+    page?.relationshipToUser,
+    page?.roleSummary,
+    page?.personalitySummary,
+    page?.meaningToUser,
+    page?.sharedExperienceSummary,
+    page?.timelineSummary,
+    page?.firstKnownPeriod,
     ...(Array.isArray(page?.aliases) ? page.aliases : [])
   ]
     .map((item) => normalizeString(item).toLowerCase())
@@ -91,6 +103,46 @@ function pageMatchesAnyKeyword(page, queryTerms) {
     page?.stance,
     ...(Array.isArray(page?.aliases) ? page.aliases : []),
     ...(Array.isArray(page?.triggerKeywords) ? page.triggerKeywords : [])
+  ]
+    .map((item) => normalizeString(item).toLowerCase())
+    .filter(Boolean)
+    .join(' ')
+
+  return queryTerms.some((term) => haystack.includes(term))
+}
+
+function personMatchesQuery(page, normalizedQuery, queryTerms) {
+  if (pageMatchesQuery(page, normalizedQuery)) {
+    return true
+  }
+
+  const directCandidates = [
+    page?.title,
+    page?.personName,
+    page?.relationshipToUser,
+    ...(Array.isArray(page?.aliases) ? page.aliases : [])
+  ]
+    .map((item) => normalizeString(item).toLowerCase())
+    .filter(Boolean)
+
+  if (normalizedQuery && directCandidates.some((item) => normalizedQuery.includes(item))) {
+    return true
+  }
+
+  if (!Array.isArray(queryTerms) || queryTerms.length === 0) return false
+
+  const haystack = [
+    page?.title,
+    page?.summary,
+    page?.personName,
+    page?.relationshipToUser,
+    page?.roleSummary,
+    page?.personalitySummary,
+    page?.meaningToUser,
+    page?.sharedExperienceSummary,
+    page?.timelineSummary,
+    page?.firstKnownPeriod,
+    ...(Array.isArray(page?.aliases) ? page.aliases : [])
   ]
     .map((item) => normalizeString(item).toLowerCase())
     .filter(Boolean)
@@ -139,8 +191,8 @@ function comparePages(a, b, { normalizedQuery = '', queryTerms = [] } = {}) {
     return identityPreferenceQueryHitB - identityPreferenceQueryHitA
   }
 
-  const identityPersonQueryHitA = isIdentityPersonPage(a) && pageMatchesQuery(a, normalizedQuery) ? 1 : 0
-  const identityPersonQueryHitB = isIdentityPersonPage(b) && pageMatchesQuery(b, normalizedQuery) ? 1 : 0
+  const identityPersonQueryHitA = isIdentityPersonPage(a) && personMatchesQuery(a, normalizedQuery, queryTerms) ? 1 : 0
+  const identityPersonQueryHitB = isIdentityPersonPage(b) && personMatchesQuery(b, normalizedQuery, queryTerms) ? 1 : 0
   if (identityPersonQueryHitA !== identityPersonQueryHitB) {
     return identityPersonQueryHitB - identityPersonQueryHitA
   }
@@ -359,9 +411,10 @@ export async function buildWikiContext(
     })
     .sort((a, b) => comparePages(a, b, { normalizedQuery, queryTerms }))
 
-  const stablePersonPages = queryTerms.length === 0
-    ? otherPages.filter((page) => isIdentityPersonPage(page) && isHighPriorityPage(page))
-    : []
+  const stablePersonPages = otherPages.filter((page) =>
+    isStableImportantPersonPage(page) &&
+    (queryTerms.length === 0 || personMatchesQuery(page, normalizedQuery, queryTerms))
+  )
   const stablePersonIds = new Set(stablePersonPages.map((item) => getPageStableId(item)).filter(Boolean))
   const remainingPages = otherPages
     .filter((page) => !stablePersonIds.has(getPageStableId(page)))
