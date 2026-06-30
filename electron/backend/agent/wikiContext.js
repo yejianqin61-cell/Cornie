@@ -232,7 +232,32 @@ function buildIdentityPreferenceSummaryLine(page) {
   return `- [preference/${preferenceType}/${stabilityLevel}] ${page.title}: ${stance}；${summary}`
 }
 
-function buildIdentityPersonSummaryLine(page) {
+function personNeedsRiskyDetails(page, normalizedQuery = '', queryTerms = []) {
+  if (page?.ownerConfirmed === true) {
+    return true
+  }
+
+  const queryText = normalizeString(normalizedQuery).toLowerCase()
+  if (!queryText && (!Array.isArray(queryTerms) || queryTerms.length === 0)) {
+    return false
+  }
+
+  const riskyTerms = [
+    '重要', '很重要', '意义', '回忆', '想念', '怀念', '初恋', '前任', '关系', '感情',
+    '喜欢', '爱', '温柔', '害羞', '内向', '性格', '为什么', '怎么看', '意味着'
+  ]
+  if (riskyTerms.some((item) => queryText.includes(item))) {
+    return true
+  }
+
+  if (!Array.isArray(queryTerms) || queryTerms.length === 0) {
+    return false
+  }
+
+  return queryTerms.some((term) => riskyTerms.includes(term))
+}
+
+function buildIdentityPersonSummaryLine(page, normalizedQuery = '', queryTerms = []) {
   const personName = normalizeString(page.personName) || normalizeString(page.title) || '未命名人物'
   const relationshipToUser = normalizeString(page.relationshipToUser)
   const roleSummary = normalizeString(page.roleSummary)
@@ -241,13 +266,14 @@ function buildIdentityPersonSummaryLine(page) {
   const sharedExperienceSummary = normalizeString(page.sharedExperienceSummary) || normalizeString(page.summary)
   const firstKnownPeriod = normalizeString(page.firstKnownPeriod)
   const timelineSummary = normalizeString(page.timelineSummary)
+  const includeRiskyDetails = personNeedsRiskyDetails(page, normalizedQuery, queryTerms)
 
   return `- [person] ${personName}: ${[
     relationshipToUser && `关系：${relationshipToUser}`,
     firstKnownPeriod && `首次已知：${firstKnownPeriod}`,
     roleSummary,
-    personalitySummary,
-    meaningToUser && `意义：${meaningToUser}`,
+    includeRiskyDetails && personalitySummary,
+    includeRiskyDetails && meaningToUser && `意义：${meaningToUser}`,
     sharedExperienceSummary,
     timelineSummary && `时间线：${timelineSummary}`
   ].filter(Boolean).join('；') || '暂无人物摘要'}`
@@ -365,7 +391,7 @@ export async function buildWikiContext(
         return true
       })
       .map((page) => {
-        if (isIdentityPersonPage(page)) return buildIdentityPersonSummaryLine(page)
+        if (isIdentityPersonPage(page)) return buildIdentityPersonSummaryLine(page, normalizedQuery, queryTerms)
         if (isIdentityPreferencePage(page)) return buildIdentityPreferenceSummaryLine(page)
         if (isIdentityTraitPage(page)) return buildIdentityTraitSummaryLine(page)
         return buildPageSummaryLine(page)
