@@ -42,6 +42,8 @@ const pendingCount = computed(() =>
   messages.value.filter((m) => m.kind === 'confirm' && m.status === 'pending').length
 )
 
+defineEmits(['go-history'])
+
 function getDistanceFromBottom(el) {
   return el.scrollHeight - el.scrollTop - el.clientHeight
 }
@@ -132,6 +134,7 @@ watch(
     <div class="chatCompanion">
       <span class="chatGreeting">{{ greeting }}</span>
       <span class="chatDate">{{ todayDate }}</span>
+      <button class="ghost chatHistoryBtn" type="button" @click="$emit('go-history')">翻看以前聊天</button>
       <span class="chatTagline">想和我聊点什么？</span>
     </div>
 
@@ -258,6 +261,10 @@ watch(
 .chatDate{
   font-size: 12px;
   color: var(--muted);
+}
+.chatHistoryBtn{
+  padding: 6px 10px;
+  margin-left: 6px;
 }
 .chatTagline{
   margin-left: auto;

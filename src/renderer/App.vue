@@ -7,6 +7,7 @@ import {
   saveModelSettings
 } from './api'
 import ChatHome from './components/ChatHome.vue'
+import ChatDayView from './components/ChatDayView.vue'
 import DiaryHome from './components/DiaryHome.vue'
 import DiaryEditor from './components/DiaryEditor.vue'
 import CornieDiaryReview from './components/CornieDiaryReview.vue'
@@ -22,6 +23,7 @@ import ScheduleHome from './components/ScheduleHome.vue'
 import SettingsHome from './components/SettingsHome.vue'
 import DeepseekConfig from './components/DeepseekConfig.vue'
 import AdvancedSettings from './components/AdvancedSettings.vue'
+import ChatHistory from './ChatHistory.vue'
 
 const sections = [
   { id: 'chat',            label: '聊天',       hint: '和铃湾说说话',       icon: '💬' },
@@ -35,6 +37,9 @@ const sections = [
 
 const mode = ref('chat')
 const modeMeta = computed(() => sections.find((item) => item.id === mode.value) || sections[0])
+
+const chatView = ref('home')
+const chatHistoryDate = ref('')
 
 // Diary sub-view
 const diaryView = ref('home') // 'home' | 'editor' | 'cornie-review' | 'on-this-day'
@@ -149,6 +154,8 @@ async function resetModelSettings() {
 }
 
 watch(mode, () => {
+  chatView.value = 'home'
+  chatHistoryDate.value = ''
   diaryView.value = 'home'
   omView.value = 'home'
   settingsView.value = 'home'
@@ -226,7 +233,20 @@ onMounted(async () => {
 
       <!-- 聊天模式 -->
       <section v-else-if="mode === 'chat'" class="contentFrame">
-        <ChatHome />
+        <ChatHome
+          v-if="chatView === 'home'"
+          @go-history="chatView = 'history'"
+        />
+        <ChatHistory
+          v-else-if="chatView === 'history'"
+          @back="chatView = 'home'"
+          @open-date="(date) => { chatHistoryDate = date; chatView = 'day' }"
+        />
+        <ChatDayView
+          v-else-if="chatView === 'day'"
+          :date="chatHistoryDate"
+          @back="chatView = 'history'"
+        />
       </section>
 
       <!-- 日记模式 -->

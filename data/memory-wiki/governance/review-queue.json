@@ -1,1 +1,104 @@
-[]
+[
+  {
+    "requestId": "gov_cff04eef-107",
+    "requestType": "identity_profile_upgrade_candidate",
+    "triggerSource": "observation_upgrade",
+    "queueSection": "wiki_upgrade_candidates",
+    "status": "pending",
+    "riskLevel": "high",
+    "pageIds": [],
+    "topicKeys": [],
+    "title": "啥名字啊",
+    "reason": "观察日志中出现了高价值主身份线索，建议进入长期记忆升级审核，而不是仅停留在事实层。",
+    "evidence": [
+      {
+        "observationId": "03942c19-d8ac-4cca-9094-8ffb7898e340",
+        "date": "2026-06-30",
+        "type": "event",
+        "title": "我叫啥名字啊",
+        "content": "主人：我叫啥名字啊\n铃湾：唔…主人没告诉过铃湾你的名字呢。你叫什么呀？铃湾想记住～",
+        "messageId": "2d6c9581-21ac-45bf-807e-c8721fe3d6b9",
+        "sourceText": "我叫啥名字啊"
+      },
+      {
+        "candidateType": "identity_profile",
+        "candidate": {
+          "userName": "啥名字啊",
+          "preferredName": "",
+          "cornieRelationship": "",
+          "identitySummary": "",
+          "lifeStageSummary": "",
+          "currentFocus": "",
+          "stressors": "",
+          "communicationPreference": ""
+        }
+      }
+    ],
+    "payload": {
+      "action": "upgrade_identity_profile_from_observation",
+      "candidate": {
+        "userName": "啥名字啊",
+        "preferredName": "",
+        "cornieRelationship": "",
+        "identitySummary": "",
+        "lifeStageSummary": "",
+        "currentFocus": "",
+        "stressors": "",
+        "communicationPreference": ""
+      }
+    },
+    "createdAt": "2026-06-30T06:37:04.385Z",
+    "updatedAt": "2026-06-30T06:37:04.385Z"
+  },
+  {
+    "requestId": "gov_6028dfb5-8fb",
+    "requestType": "identity_profile_upgrade_candidate",
+    "triggerSource": "observation_upgrade",
+    "queueSection": "wiki_upgrade_candidates",
+    "status": "pending",
+    "riskLevel": "high",
+    "pageIds": [],
+    "topicKeys": [],
+    "title": "主身份升级候选",
+    "reason": "观察日志中出现了高价值主身份线索，建议进入长期记忆升级审核，而不是仅停留在事实层。",
+    "evidence": [
+      {
+        "observationId": "fa029a45-2a5e-4fca-949f-241b6f64b88c",
+        "date": "2026-06-30",
+        "type": "event",
+        "title": "是谁开发你的？",
+        "content": "主人：是谁开发你的？\n铃湾：嗯…这个问题有点难呢～铃湾只知道自己是主人屏幕上的小羊，每天陪主人聊天、记日记。开发我的人嘛…大概是某个很温柔的程序员吧！",
+        "messageId": "3842133c-a135-480b-99c2-b90832e4d533",
+        "sourceText": "是谁开发你的？"
+      },
+      {
+        "candidateType": "identity_profile",
+        "candidate": {
+          "userName": "",
+          "preferredName": "",
+          "cornieRelationship": "",
+          "identitySummary": "当前处于项目推进压力较集中的阶段。 当前主要关注 项目推进。",
+          "lifeStageSummary": "当前处于项目推进压力较集中的阶段。",
+          "currentFocus": "项目推进",
+          "stressors": "",
+          "communicationPreference": ""
+        }
+      }
+    ],
+    "payload": {
+      "action": "upgrade_identity_profile_from_observation",
+      "candidate": {
+        "userName": "",
+        "preferredName": "",
+        "cornieRelationship": "",
+        "identitySummary": "当前处于项目推进压力较集中的阶段。 当前主要关注 项目推进。",
+        "lifeStageSummary": "当前处于项目推进压力较集中的阶段。",
+        "currentFocus": "项目推进",
+        "stressors": "",
+        "communicationPreference": ""
+      }
+    },
+    "createdAt": "2026-06-30T06:37:26.247Z",
+    "updatedAt": "2026-06-30T06:37:26.247Z"
+  }
+]

@@ -1,6 +1,5 @@
 <script setup>
 import { onMounted, ref } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
 import { getChatlog } from '../api'
 
 const props = defineProps({
@@ -14,6 +13,7 @@ const errorMsg = ref('')
 
 onMounted(async () => {
   loading.value = true
+  errorMsg.value = ''
   try {
     const data = await getChatlog(props.date)
     messages.value = data.messages || []
@@ -24,6 +24,13 @@ onMounted(async () => {
   }
 })
 
+function formatDateLabel(date) {
+  if (!date) return ''
+  const [y, m, d] = String(date).split('-')
+  if (!y || !m || !d) return date
+  return `${y}年${Number(m)}月${Number(d)}日`
+}
+
 function goBack() {
   emit('back')
 }
@@ -33,7 +40,7 @@ function goBack() {
   <div class="dayView">
     <header class="dayHead">
       <button class="ghost" @click="goBack">← 返回聊天记录</button>
-      <div class="dayDate">{{ date }}</div>
+      <div class="dayDate">{{ formatDateLabel(date) }}</div>
       <div class="dayHint" v-if="!loading">{{ messages.length }} 条消息</div>
     </header>
 
