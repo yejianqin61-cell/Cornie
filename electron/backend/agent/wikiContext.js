@@ -100,7 +100,7 @@ function pageMatchesQuery(page, normalizedQuery) {
 function pageMatchesAnyKeyword(page, queryTerms) {
   if (!Array.isArray(queryTerms) || queryTerms.length === 0) return false
 
-  const haystack = [
+  const keywords = [
     page?.title,
     page?.summary,
     page?.preferenceType,
@@ -110,9 +110,10 @@ function pageMatchesAnyKeyword(page, queryTerms) {
   ]
     .map((item) => normalizeString(item).toLowerCase())
     .filter(Boolean)
-    .join(' ')
 
-  return queryTerms.some((term) => haystack.includes(term))
+  return queryTerms.some((term) =>
+    keywords.some((keyword) => keyword.includes(term) || term.includes(keyword))
+  )
 }
 
 function personMatchesQuery(page, normalizedQuery, queryTerms) {
@@ -426,7 +427,7 @@ export async function buildWikiContext(
       if (isIdentityPersonPage(page) && !personMatchesQuery(page, normalizedQuery, queryTerms)) {
         return false
       }
-      if (queryTerms.length === 0 && isIdentityPreferencePage(page)) {
+      if (isIdentityPreferencePage(page) && !pageMatchesAnyKeyword(page, queryTerms)) {
         return false
       }
       if (queryTerms.length === 0 && isIdentityTraitPage(page)) {

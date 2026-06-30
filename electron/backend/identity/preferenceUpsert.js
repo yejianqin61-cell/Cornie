@@ -83,6 +83,18 @@ function cleanupPreferenceTarget(target) {
   return blocked.has(cleaned) ? '' : cleaned
 }
 
+function buildPreferenceKeywords(target, preferenceType, stance) {
+  const normalizedTarget = normalizeString(target)
+  const phraseKeywords = [normalizedTarget, preferenceType, stance]
+
+  const tokenKeywords = normalizedTarget
+    .split(/[的\s/]+/g)
+    .map((item) => normalizeString(item))
+    .filter((item) => item.length >= 2)
+
+  return dedupeStrings([...phraseKeywords, ...tokenKeywords])
+}
+
 function takePreferenceTarget(text, marker) {
   const startIndex = text.indexOf(marker)
   if (startIndex === -1) return ''
@@ -112,7 +124,7 @@ function buildCandidate(userMessage) {
 
     const preferenceType = guessPreferenceType(target, text)
     const title = target
-    const triggerKeywords = dedupeStrings([target, preferenceType, stance])
+    const triggerKeywords = buildPreferenceKeywords(target, preferenceType, stance)
 
     return {
       title,

@@ -45,10 +45,10 @@ async function run() {
 
     await memoryWiki.create({
       pageType: 'identity_preference',
-      title: '奶茶',
+      title: '甜甜的奶茶',
       preferenceType: '饮食',
       stance: '喜欢',
-      triggerKeywords: ['奶茶', '饮品', '甜'],
+      triggerKeywords: ['甜甜的奶茶', '奶茶', '饮品', '甜'],
       importance: 'high',
       ownerConfirmed: true,
       status: 'active',
@@ -92,7 +92,7 @@ async function run() {
     const preferenceContext = await buildWikiContext(harness.store, {
       date: '2026-06-30',
       baseDir: harness.baseDir,
-      query: '我今天想喝奶茶',
+      query: '我今天想喝奶茶，想喝点甜甜的饮品',
       pageLimit: 6,
       topicLimit: 4
     })
