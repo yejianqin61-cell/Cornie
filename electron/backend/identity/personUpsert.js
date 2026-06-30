@@ -398,6 +398,56 @@ async function ensurePersonMeaningGovernanceCandidate(memoryWiki, page, candidat
   })
 }
 
+async function ensurePersonRelationshipConflictGovernanceCandidate(memoryWiki, page, candidate, conflicts, sourceRef) {
+  if (!page?.pageId || !Array.isArray(conflicts) || conflicts.length === 0) {
+    return
+  }
+
+  const relationshipConflicts = conflicts.filter((item) =>
+    ['relationshipToUser', 'roleSummary', 'emotionalWeight'].includes(normalizeString(item?.field))
+  )
+  if (relationshipConflicts.length === 0) {
+    return
+  }
+
+  const governanceRequests = await memoryWiki.listGovernanceRequests({
+    requestType: 'identity_person_relationship_conflict',
+    queueSection: 'identity_person_reviews'
+  })
+  const duplicated = governanceRequests.some((item) =>
+    (item.status === 'pending' || item.status === 'deferred') &&
+    Array.isArray(item.pageIds) &&
+    item.pageIds.includes(page.pageId)
+  )
+  if (duplicated) {
+    return
+  }
+
+  await memoryWiki.createGovernanceRequest({
+    requestType: 'identity_person_relationship_conflict',
+    triggerSource: 'conversation_conflict',
+    queueSection: 'identity_person_reviews',
+    riskLevel: 'high',
+    pageIds: [page.pageId],
+    title: page.title || page.pageId,
+    reason: '重要人物页的关系定义出现了高风险冲突，建议由人类确认后再决定是否改写正式记忆。',
+    evidence: relationshipConflicts.map((item) => ({
+      field: item.field,
+      existingValue: item.existingValue,
+      incomingValue: item.incomingValue,
+      sourceDate: sourceRef?.date ?? '',
+      sourceMessageId: sourceRef?.messageId ?? '',
+      sourceTitle: sourceRef?.title ?? ''
+    })),
+    payload: {
+      action: 'review_identity_person_relationship_conflict',
+      candidatePersonName: candidate?.personName ?? '',
+      candidateRelationshipToUser: candidate?.relationshipToUser ?? '',
+      conflicts: relationshipConflicts
+    }
+  })
+}
+
 export function extractIdentityPersonCandidate(userMessage) {
   return buildCandidate(userMessage)
 }
@@ -538,6 +588,7 @@ export async function upsertIdentityPersonFromConversation(
       personName: candidate.personName,
       observation
     })
+    await ensurePersonRelationshipConflictGovernanceCandidate(memoryWiki, existingPage, candidate, conflicts, sourceRef)
     await ensurePersonMeaningGovernanceCandidate(memoryWiki, existingPage, candidate)
 
     return {
