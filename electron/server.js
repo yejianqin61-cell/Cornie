@@ -5,6 +5,7 @@ import { chatlogRoutes } from './backend/chatlog/routes.js'
 import { conversationRoutes } from './backend/conversation/routes.js'
 import { conversationService } from './backend/conversation/service.js'
 import { createChatlogService } from './backend/chatlog/service.js'
+import { CHATLOG_REPOSITORY_DRIVERS } from './backend/chatlog/repository.js'
 import { createConfirmService } from './backend/confirm/service.js'
 import { confirmRoutes } from './backend/confirm/routes.js'
 import { checkHealth as checkModelHealth } from './backend/model/deepseek/client.js'
@@ -57,7 +58,9 @@ export function createServer({ store }) {
   const diary = diaryService(store)
   app.use('/api', diaryRoutes({ diary }))
 
-  const chatlog = createChatlogService(store)
+  const chatlog = createChatlogService(store, {
+    driver: CHATLOG_REPOSITORY_DRIVERS.betterSqlite3
+  })
   app.use('/api', chatlogRoutes({ chatlog }))
 
   const ledger = createLedgerService(store)

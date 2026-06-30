@@ -19,8 +19,8 @@ async function run() {
     })
 
     const defaultRepository = createChatlogRepository(harness.store)
-    assert(defaultRepository.driver === CHATLOG_REPOSITORY_DRIVERS.sqljs, '默认应使用 sql.js repository')
-    assert(defaultRepository.capabilities.migrationReady === true, 'sql.js repository 应声明已接入可迁移契约')
+    assert(defaultRepository.driver === CHATLOG_REPOSITORY_DRIVERS.betterSqlite3, '默认应切到 better-sqlite3 repository')
+    assert(defaultRepository.capabilities.migrationReady === true, 'better-sqlite3 repository 应声明已接入可迁移契约')
 
     const betterSqlite3Skeleton = createBetterSqlite3ChatlogRepositorySkeleton()
     assert(betterSqlite3Skeleton.driver === CHATLOG_REPOSITORY_DRIVERS.betterSqlite3, '应暴露 better-sqlite3 驱动骨架')
@@ -29,8 +29,8 @@ async function run() {
 
     const chatlog = createChatlogService(harness.store)
     const dayRecord = chatlog.getByDate('2026-06-30')
-    assert(dayRecord.storage.driver === CHATLOG_REPOSITORY_DRIVERS.sqljs, '现有 chatlog service 应继续通过 sql.js 提供服务')
-    assert(dayRecord.storage.availableDrivers.includes(CHATLOG_REPOSITORY_DRIVERS.betterSqlite3), 'storage meta 应暴露未来可切换驱动')
+    assert(dayRecord.storage.driver === CHATLOG_REPOSITORY_DRIVERS.betterSqlite3, '现有 chatlog service 默认应通过 better-sqlite3 提供服务')
+    assert(dayRecord.storage.availableDrivers.includes(CHATLOG_REPOSITORY_DRIVERS.betterSqlite3), 'storage meta 应暴露可切换驱动')
     assert(dayRecord.storage.driverCapabilities?.migrationReady === true, 'storage meta 应暴露当前驱动迁移就绪信息')
 
     let unsupportedError = null

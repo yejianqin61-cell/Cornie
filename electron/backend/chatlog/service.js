@@ -73,7 +73,7 @@ function buildPlainTextTranscript(date, messages = []) {
 
 export function createChatlogService(store, { repository, driver, dbPath } = {}) {
   const chatlogRepository = repository ?? createChatlogRepository(store, {
-    driver: driver ?? CHATLOG_REPOSITORY_DRIVERS.sqljs,
+    driver,
     dbPath
   })
 

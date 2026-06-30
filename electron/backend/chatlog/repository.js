@@ -271,61 +271,72 @@ export function createBetterSqlite3ChatlogRepository({ dbPath } = {}) {
     })
   })
 
-  const database = createReadonlyBetterSqliteConnection(dbPath)
+  function withDatabase(callback) {
+    const database = createReadonlyBetterSqliteConnection(dbPath)
+    try {
+      return callback(database)
+    } finally {
+      database.close()
+    }
+  }
 
   function listDateEntriesBase({ month, scope } = {}) {
-    const normalizedScope = normalizeScope(scope)
-    const allIndexedEntries = database
-      .prepare(`
-        select date, count(*) as messageCount
-        from conversations
-        group by date
-        order by date desc
-      `)
-      .all()
-      .map((row) => ({
-        date: String(row.date),
-        messageCount: Number(row.messageCount)
-      }))
+    return withDatabase((database) => {
+      const normalizedScope = normalizeScope(scope)
+      const allIndexedEntries = database
+        .prepare(`
+          select date, count(*) as messageCount
+          from conversations
+          group by date
+          order by date desc
+        `)
+        .all()
+        .map((row) => ({
+          date: String(row.date),
+          messageCount: Number(row.messageCount)
+        }))
 
-    const availableMonths = buildAvailableMonths(allIndexedEntries)
-    const effectiveMonth = normalizedScope === 'month' ? normalizeString(month) : ''
-    const recentLatestDate = normalizedScope === 'recent_30_days' ? resolveLatestDate(allIndexedEntries) : ''
-    const recentFromDate = recentLatestDate ? shiftDateByDays(recentLatestDate, -29) : ''
+      const availableMonths = buildAvailableMonths(allIndexedEntries)
+      const effectiveMonth = normalizedScope === 'month' ? normalizeString(month) : ''
+      const recentLatestDate = normalizedScope === 'recent_30_days' ? resolveLatestDate(allIndexedEntries) : ''
+      const recentFromDate = recentLatestDate ? shiftDateByDays(recentLatestDate, -29) : ''
 
-    const scopedEntries = allIndexedEntries.filter((item) => {
-      const date = normalizeString(item.date)
-      if (normalizedScope === 'month') {
-        return effectiveMonth ? date.startsWith(`${effectiveMonth}-`) : true
+      const scopedEntries = allIndexedEntries.filter((item) => {
+        const date = normalizeString(item.date)
+        if (normalizedScope === 'month') {
+          return effectiveMonth ? date.startsWith(`${effectiveMonth}-`) : true
+        }
+        if (normalizedScope === 'recent_30_days') {
+          return recentFromDate ? date >= recentFromDate : true
+        }
+        return true
+      })
+
+      return {
+        normalizedScope,
+        effectiveMonth,
+        recentLatestDate,
+        recentFromDate,
+        availableMonths,
+        scopedEntries
       }
-      if (normalizedScope === 'recent_30_days') {
-        return recentFromDate ? date >= recentFromDate : true
-      }
-      return true
     })
-
-    return {
-      normalizedScope,
-      effectiveMonth,
-      recentLatestDate,
-      recentFromDate,
-      availableMonths,
-      scopedEntries
-    }
   }
 
   return {
     ...descriptor,
     getMessagesByDate(date) {
-      return database
-        .prepare(`
-          select id, date, role, content, created_at as createdAt
-          from conversations
-          where date = ?
-          order by created_at asc
-        `)
-        .all(normalizeString(date))
-        .map(mapConversationRow)
+      return withDatabase((database) =>
+        database
+          .prepare(`
+            select id, date, role, content, created_at as createdAt
+            from conversations
+            where date = ?
+            order by created_at asc
+          `)
+          .all(normalizeString(date))
+          .map(mapConversationRow)
+      )
     },
     searchMessagesByDate(date, keyword) {
       const normalizedKeyword = normalizeString(keyword).toLowerCase()
@@ -334,22 +345,24 @@ export function createBetterSqlite3ChatlogRepository({ dbPath } = {}) {
       }
 
       const like = `%${normalizedKeyword}%`
-      return database
-        .prepare(`
-          select id, date, role, content, created_at as createdAt
-          from conversations
-          where date = ?
-            and (
-              lower(coalesce(role, '')) like ?
-              or lower(coalesce(content, '')) like ?
-            )
-          order by created_at asc
-        `)
-        .all(normalizeString(date), like, like)
-        .map((row) => ({
-          ...mapConversationRow(row),
-          matchedPreview: buildMessageMatchedPreview(row, normalizedKeyword)
-        }))
+      return withDatabase((database) =>
+        database
+          .prepare(`
+            select id, date, role, content, created_at as createdAt
+            from conversations
+            where date = ?
+              and (
+                lower(coalesce(role, '')) like ?
+                or lower(coalesce(content, '')) like ?
+              )
+            order by created_at asc
+          `)
+          .all(normalizeString(date), like, like)
+          .map((row) => ({
+            ...mapConversationRow(row),
+            matchedPreview: buildMessageMatchedPreview(row, normalizedKeyword)
+          }))
+      )
     },
     listDateEntries({ month, query, limit, cursor, scope } = {}) {
       const pageSize = normalizePageSize(limit)
@@ -413,24 +426,25 @@ export function createBetterSqlite3ChatlogRepository({ dbPath } = {}) {
         }
       }
     },
-    close() {
-      database.close()
-    }
+    close() {}
   }
 }
 
 export function createChatlogRepository(store, { driver, dbPath } = {}) {
   const normalizedDriver = normalizeString(driver)
+  const effectiveDriver =
+    normalizedDriver ||
+    (normalizeString(dbPath ?? store?.dbPath) ? CHATLOG_REPOSITORY_DRIVERS.betterSqlite3 : CHATLOG_REPOSITORY_DRIVERS.sqljs)
 
-  if (!normalizedDriver || normalizedDriver === CHATLOG_REPOSITORY_DRIVERS.sqljs) {
+  if (effectiveDriver === CHATLOG_REPOSITORY_DRIVERS.sqljs) {
     return createSqlJsChatlogRepository(store)
   }
 
-  if (normalizedDriver === CHATLOG_REPOSITORY_DRIVERS.betterSqlite3) {
+  if (effectiveDriver === CHATLOG_REPOSITORY_DRIVERS.betterSqlite3) {
     return createBetterSqlite3ChatlogRepository({
       dbPath: dbPath ?? store?.dbPath
     })
   }
 
-  throw new Error(`unsupported chatlog repository driver: ${normalizedDriver}`)
+  throw new Error(`unsupported chatlog repository driver: ${effectiveDriver}`)
 }
