@@ -74,7 +74,27 @@ export async function listChatlogDates({ month, scope, query, limit, cursor } = 
     filters: data?.filters || { scope: scope || 'all', month: month || '', query: query || '' },
     archiveScope: data?.archiveScope || { scope: scope || 'all', month: month || '', recentFromDate: '', recentToDate: '' },
     searchMeta: data?.searchMeta || { query: query || '', mode: query ? 'keyword' : 'browse' },
-    storage: data?.storage || { driver: 'unknown', queryContractVersion: 1 }
+    storage: data?.storage || data?.meta?.storage || { driver: 'unknown', queryContractVersion: 1 },
+    meta: data?.meta || { responseType: 'chatlog_history_list' }
+  }
+}
+
+export async function searchChatlogMessageSnippets({ keyword, month, scope, limit, cursor } = {}) {
+  const params = new URLSearchParams()
+  if (keyword) params.set('keyword', keyword)
+  if (month) params.set('month', month)
+  if (scope) params.set('scope', scope)
+  if (limit !== undefined) params.set('limit', String(limit))
+  if (cursor !== undefined && cursor !== null) params.set('cursor', String(cursor))
+  const qs = params.toString()
+  const data = await apiFetch(`/chatlogs/search/snippets${qs ? `?${qs}` : ''}`)
+  return {
+    ...data,
+    items: Array.isArray(data?.items) ? data.items : [],
+    filters: data?.filters || { scope: scope || 'all', month: month || '' },
+    pagination: data?.pagination || { cursor: '0', nextCursor: null, hasMore: false, pageSize: 100, total: 0 },
+    storage: data?.storage || data?.meta?.storage || { driver: 'unknown', queryContractVersion: 1 },
+    meta: data?.meta || { responseType: 'chatlog_message_snippet_search' }
   }
 }
 
@@ -113,14 +133,22 @@ export async function exportChatlogByDate(date, { format = 'json' } = {}) {
   const params = new URLSearchParams()
   if (format) params.set('format', format)
   const qs = params.toString()
-  return apiFetch(`/chatlogs/${encodeURIComponent(date)}/export${qs ? `?${qs}` : ''}`)
+  const data = await apiFetch(`/chatlogs/${encodeURIComponent(date)}/export${qs ? `?${qs}` : ''}`)
+  return {
+    ...data,
+    meta: data?.meta || { responseType: 'chatlog_day_export' }
+  }
 }
 
 export async function exportChatlogByMonth(month, { format = 'json' } = {}) {
   const params = new URLSearchParams()
   if (format) params.set('format', format)
   const qs = params.toString()
-  return apiFetch(`/chatlogs/export/month/${encodeURIComponent(month)}${qs ? `?${qs}` : ''}`)
+  const data = await apiFetch(`/chatlogs/export/month/${encodeURIComponent(month)}${qs ? `?${qs}` : ''}`)
+  return {
+    ...data,
+    meta: data?.meta || { responseType: 'chatlog_month_export' }
+  }
 }
 
 // ─── model ───────────────────────────────────────────────────
