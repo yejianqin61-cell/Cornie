@@ -466,6 +466,15 @@ function normalizeObservationTraceItem(sourceRef, observation) {
   }
 }
 
+function parseSourceRefPair(value) {
+  const text = normalizeString(value)
+  const [date, refId] = text.split('#')
+  return {
+    date: normalizeString(date),
+    refId: normalizeString(refId)
+  }
+}
+
 function normalizeDateValue(value) {
   const normalized = normalizeString(value)
   return /^\d{4}-\d{2}-\d{2}$/.test(normalized) ? normalized : ''
@@ -504,6 +513,42 @@ function buildPersonTimelineTrace({ page, chatSources, observationSources, relat
     chatDates,
     observationDates,
     timeline,
+    relatedMemoryPages: relatedPages.map((item) => ({
+      pageId: item.pageId,
+      pageType: item.pageType,
+      title: item.title,
+      summary: item.summary
+    }))
+  }
+}
+
+function buildTopicTimelineTrace({ topic, chatSources, observationSources, relatedPages }) {
+  const chatDates = Array.from(
+    new Set(chatSources.map((item) => normalizeDateValue(item?.date)).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b, 'zh-CN'))
+
+  const observationDates = Array.from(
+    new Set(observationSources.map((item) => normalizeDateValue(item?.date)).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b, 'zh-CN'))
+
+  const timelineDates = Array.from(
+    new Set([
+      ...chatDates,
+      ...observationDates,
+      ...(Array.isArray(topic?.dates) ? topic.dates.map((item) => normalizeDateValue(item)) : [])
+    ].filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b, 'zh-CN'))
+
+  return {
+    keyword: normalizeString(topic?.keyword),
+    normalizedKey: normalizeString(topic?.normalizedKey),
+    chatDates,
+    observationDates,
+    timeline: timelineDates.map((date) => ({
+      date,
+      hasChatSource: chatDates.includes(date),
+      hasObservationSource: observationDates.includes(date)
+    })),
     relatedMemoryPages: relatedPages.map((item) => ({
       pageId: item.pageId,
       pageType: item.pageType,
@@ -973,20 +1018,37 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
         }
       }
 
-      const chatSources = (topic.chatRefs ?? []).map((chatRef) => ({
-        kind: 'chat',
-        date: chatRef,
-        title: chatRef ? `${chatRef} 对话` : '聊天记录'
-      }))
+      const chatSources = (topic.chatRefs ?? []).map((chatRef) => {
+        const sourceRef = parseSourceRefPair(chatRef)
+        const date = normalizeDateValue(sourceRef.date)
+        const messageId = sourceRef.refId
+        const messages = date ? getMessagesByDate(store, date) : []
+        const message = messageId
+          ? messages.find((item) => normalizeString(item?.id) === messageId)
+          : null
+
+        return {
+          kind: 'chat',
+          date,
+          messageId,
+          exists: Boolean(message),
+          preview: message?.content ? String(message.content).slice(0, 120) : '',
+          title: date ? `${date} 对话` : '聊天记录'
+        }
+      })
 
       const observationSources = (topic.observationRefs ?? []).map((observationRef) => {
-        const observation = getObservationLog(store, observationRef)
+        const sourceRef = parseSourceRefPair(observationRef)
+        const date = normalizeDateValue(sourceRef.date)
+        const observationId = sourceRef.refId
+        const observation = observationId ? getObservationLog(store, observationId) : null
+
         return {
           kind: 'observation',
-          observationId: observationRef,
-          date: observation?.date || '',
+          date: date || observation?.date || '',
+          observationId,
           type: observation?.type || '',
-          title: observation?.title || observationRef,
+          title: observation?.title || observationId || '观察日志',
           exists: Boolean(observation),
           preview: observation?.content ? String(observation.content).slice(0, 120) : ''
         }
@@ -996,7 +1058,13 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
         topic,
         relatedPages,
         chatSources,
-        observationSources
+        observationSources,
+        topicTimelineTrace: buildTopicTimelineTrace({
+          topic,
+          chatSources,
+          observationSources,
+          relatedPages
+        })
       }
     },
 
