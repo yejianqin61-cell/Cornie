@@ -87,10 +87,24 @@ export async function getChatlog(date, { limit, cursor, query, beforeId, mode } 
   if (mode) params.set('mode', mode)
   const qs = params.toString()
   const data = await apiFetch(`/chatlogs/${encodeURIComponent(date)}${qs ? `?${qs}` : ''}`)
+  const normalizedItems = Array.isArray(data?.items) ? data.items : []
+  const normalizedMessages = Array.isArray(data?.messages)
+    ? data.messages
+    : normalizedItems
+  const normalizedPagination = data?.pagination || {
+    cursor: data?.context?.currentCursor || '0',
+    nextCursor: data?.nextCursor ?? null,
+    hasMore: data?.hasMore === true,
+    pageSize: data?.context?.pageSize || limit || 100,
+    total: data?.context?.total || normalizedMessages.length
+  }
   return {
     ...data,
-    messages: Array.isArray(data?.messages) ? data.messages : [],
-    pagination: data?.pagination || { cursor: '0', nextCursor: null, hasMore: false, pageSize: 100, total: 0 },
+    items: normalizedItems,
+    messages: normalizedMessages,
+    context: data?.context || null,
+    pagination: normalizedPagination,
+    meta: data?.meta || { responseType: mode === 'page' ? 'chatlog_day_page' : 'chatlog_day_record' },
     storage: data?.storage || data?.meta?.storage || { driver: 'unknown', queryContractVersion: 1 }
   }
 }
