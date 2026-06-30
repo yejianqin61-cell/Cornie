@@ -1,4 +1,4 @@
-import { createMemoryWikiService } from '../memory-wiki/index.js'
+import { createMemoryWikiService, createTopicIndexStore } from '../memory-wiki/index.js'
 
 const IDENTITY_PREFERENCE_PAGE_TYPE = 'identity_preference'
 
@@ -32,6 +32,14 @@ function getStabilityLevel(evidenceCount) {
 
 function dedupeStrings(items = []) {
   return Array.from(new Set(items.map((item) => normalizeString(item)).filter(Boolean)))
+}
+
+function normalizeKey(value) {
+  return normalizeString(value).toLowerCase()
+}
+
+function buildChatRef({ date, messageId }) {
+  return `${normalizeString(date)}#${normalizeString(messageId)}`
 }
 
 function guessPreferenceType(target, rawMessage) {
@@ -178,6 +186,51 @@ async function ensureProfileLink(memoryWiki, pageId) {
   }
 }
 
+async function ensurePreferenceTopicLink({ baseDir, page, date, messageId, candidate }) {
+  if (!page?.pageId) {
+    return null
+  }
+
+  const keyword = normalizeString(page.title) || normalizeString(candidate?.title)
+  const normalizedKey = normalizeKey(keyword)
+  if (!normalizedKey) {
+    return null
+  }
+
+  const topicIndex = await createTopicIndexStore(baseDir)
+  const existing = await topicIndex.get(normalizedKey)
+  const aliases = dedupeStrings([
+    keyword,
+    page.title,
+    candidate?.title,
+    ...(Array.isArray(page.aliases) ? page.aliases : []),
+    ...(Array.isArray(page.triggerKeywords) ? page.triggerKeywords : []),
+    candidate?.preferenceType,
+    candidate?.stance
+  ])
+
+  await topicIndex.upsert({
+    ...(existing ?? {}),
+    keyword: existing?.keyword || keyword,
+    normalizedKey,
+    aliases: dedupeStrings([...(existing?.aliases ?? []), ...aliases]),
+    importance: page.importance || existing?.importance || 'medium',
+    note: page.summary || page.preferenceSummary || existing?.note || '',
+    lastMentionedAt: normalizeString(date) || existing?.lastMentionedAt || ''
+  })
+
+  if (normalizeString(date)) {
+    await topicIndex.addDateRef(normalizedKey, date)
+  }
+
+  if (normalizeString(date) && normalizeString(messageId)) {
+    await topicIndex.addChatRef(normalizedKey, buildChatRef({ date, messageId }))
+  }
+
+  await topicIndex.linkPage(normalizedKey, page.pageId)
+  return topicIndex.get(normalizedKey)
+}
+
 export function extractIdentityPreferenceCandidate(userMessage) {
   return buildCandidate(userMessage)
 }
@@ -217,6 +270,13 @@ export async function upsertIdentityPreferenceFromConversation(
     })
 
     await ensureProfileLink(memoryWiki, created.pageId)
+    await ensurePreferenceTopicLink({
+      baseDir,
+      page: created,
+      date,
+      messageId,
+      candidate
+    })
 
     return {
       action: 'created',
@@ -257,6 +317,13 @@ export async function upsertIdentityPreferenceFromConversation(
   })
 
   await ensureProfileLink(memoryWiki, updated.pageId)
+  await ensurePreferenceTopicLink({
+    baseDir,
+    page: updated,
+    date,
+    messageId,
+    candidate
+  })
 
   return {
     action: hasSameSource ? 'noop' : 'updated',
