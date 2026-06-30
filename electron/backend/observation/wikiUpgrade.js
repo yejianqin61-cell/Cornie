@@ -1,6 +1,7 @@
 import { createMemoryWikiGovernanceStore } from '../memory-wiki/index.js'
 import { extractIdentityProfileCandidate } from '../identity/profileUpsert.js'
 import { extractIdentityPreferenceCandidate } from '../identity/preferenceUpsert.js'
+import { extractIdentityTraitCandidate } from '../identity/traitUpsert.js'
 import { extractIdentityPersonCandidate } from '../identity/personUpsert.js'
 
 function normalizeString(value) {
@@ -65,6 +66,25 @@ function toPreferenceRequest({ observation, userMessage, messageId, candidate })
   }
 }
 
+function toTraitRequest({ observation, userMessage, messageId, candidate }) {
+  return {
+    requestType: 'identity_trait_upgrade_candidate',
+    triggerSource: 'observation_upgrade',
+    queueSection: 'wiki_upgrade_candidates',
+    riskLevel: 'high',
+    title: candidate.title || '侧写升级候选',
+    reason: '观察日志中出现了可能具有长期意义的性格/侧写线索，建议先进入长期记忆升级审查，而不是直接固化为正式 trait 页面。',
+    evidence: [
+      buildObservationEvidence({ observation, userMessage, messageId }),
+      { candidateType: 'identity_trait', candidate }
+    ],
+    payload: {
+      action: 'upgrade_identity_trait_from_observation',
+      candidate
+    }
+  }
+}
+
 function toPersonRequest({ observation, userMessage, messageId, candidate }) {
   return {
     requestType: 'identity_person_upgrade_candidate',
@@ -111,6 +131,11 @@ export async function enqueueObservationWikiUpgradeCandidates(
   const preferenceCandidate = extractIdentityPreferenceCandidate(userMessage)
   if (preferenceCandidate) {
     requests.push(toPreferenceRequest({ observation, userMessage, messageId, candidate: preferenceCandidate }))
+  }
+
+  const traitCandidate = extractIdentityTraitCandidate(userMessage)
+  if (traitCandidate) {
+    requests.push(toTraitRequest({ observation, userMessage, messageId, candidate: traitCandidate }))
   }
 
   const personCandidate = extractIdentityPersonCandidate(userMessage)
