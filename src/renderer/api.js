@@ -78,10 +78,13 @@ export async function listChatlogDates({ month, scope, query, limit, cursor } = 
   }
 }
 
-export async function getChatlog(date, { limit, cursor } = {}) {
+export async function getChatlog(date, { limit, cursor, query, beforeId, mode } = {}) {
   const params = new URLSearchParams()
   if (limit !== undefined) params.set('limit', String(limit))
   if (cursor !== undefined && cursor !== null) params.set('cursor', String(cursor))
+  if (query) params.set('q', query)
+  if (beforeId) params.set('beforeId', beforeId)
+  if (mode) params.set('mode', mode)
   const qs = params.toString()
   const data = await apiFetch(`/chatlogs/${encodeURIComponent(date)}${qs ? `?${qs}` : ''}`)
   return {
