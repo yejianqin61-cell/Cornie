@@ -24,7 +24,7 @@ async function run() {
       relationshipToUser: '初恋',
       roleSummary: '对用户很重要的人物',
       sharedExperienceSummary: '2021年冬天相恋，2022年春夏疏远与决裂。',
-      importance: 'high',
+      importance: 'critical',
       ownerConfirmed: true,
       summary: '重要人物摘要'
     })

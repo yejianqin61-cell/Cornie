@@ -37,7 +37,7 @@ async function run() {
     pageLimit: 4,
     topicLimit: 4
   })
-  assert(neutralContext.memorySummary.includes('[person] 钟奕菲'), '重要人物页应仍进入主链')
+  assert(!neutralContext.memorySummary.includes('[person] 钟奕菲'), '非极高权重人物无 query 时不应默认进入主链')
   assert(!neutralContext.memorySummary.includes('意义：'), '普通场景下不应默认注入人物意义字段')
   assert(!neutralContext.memorySummary.includes('温柔'), '普通场景下不应默认注入人物性格字段')
 

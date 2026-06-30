@@ -32,7 +32,7 @@ async function run() {
     title: '钟奕菲',
     personName: '钟奕菲',
     relationshipToUser: '初恋',
-    importance: 'high',
+    importance: 'critical',
     ownerConfirmed: true,
     summary: '重要人物摘要'
   })

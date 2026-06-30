@@ -54,7 +54,11 @@ function isHighPriorityPage(page) {
 }
 
 function isStableImportantPersonPage(page) {
-  return isIdentityPersonPage(page) && isHighPriorityPage(page) && page?.ownerConfirmed === true
+  return (
+    isIdentityPersonPage(page) &&
+    normalizeString(page?.importance).toLowerCase() === 'critical' &&
+    page?.ownerConfirmed === true
+  )
 }
 
 function splitQueryTerms(normalizedQuery) {
@@ -419,7 +423,13 @@ export async function buildWikiContext(
   const remainingPages = otherPages
     .filter((page) => !stablePersonIds.has(getPageStableId(page)))
     .filter((page) => {
+      if (isIdentityPersonPage(page) && !personMatchesQuery(page, normalizedQuery, queryTerms)) {
+        return false
+      }
       if (queryTerms.length === 0 && isIdentityPreferencePage(page)) {
+        return false
+      }
+      if (queryTerms.length === 0 && isIdentityTraitPage(page)) {
         return false
       }
       return true
