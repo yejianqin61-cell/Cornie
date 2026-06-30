@@ -235,13 +235,17 @@ function buildIdentityPersonSummaryLine(page) {
   const personalitySummary = normalizeString(page.personalitySummary)
   const meaningToUser = normalizeString(page.meaningToUser)
   const sharedExperienceSummary = normalizeString(page.sharedExperienceSummary) || normalizeString(page.summary)
+  const firstKnownPeriod = normalizeString(page.firstKnownPeriod)
+  const timelineSummary = normalizeString(page.timelineSummary)
 
   return `- [person] ${personName}: ${[
     relationshipToUser && `关系：${relationshipToUser}`,
+    firstKnownPeriod && `首次已知：${firstKnownPeriod}`,
     roleSummary,
     personalitySummary,
     meaningToUser && `意义：${meaningToUser}`,
-    sharedExperienceSummary
+    sharedExperienceSummary,
+    timelineSummary && `时间线：${timelineSummary}`
   ].filter(Boolean).join('；') || '暂无人物摘要'}`
 }
 
