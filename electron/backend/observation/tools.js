@@ -60,4 +60,14 @@ export function registerObservationTools(store, { registerTool }) {
       result: observation.listByDate(date ?? context.date)
     })
   })
+
+  registerTool({
+    name: 'observation.recall_history',
+    description: '按日期、主题、人物或关键词回查历史观察日志',
+    riskLevel: 'low',
+    handler: async (args = {}) => ({
+      ok: true,
+      result: observation.listByRecall(args)
+    })
+  })
 }

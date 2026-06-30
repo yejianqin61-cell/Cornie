@@ -24,7 +24,7 @@ function buildObservationFingerprint(input = {}) {
 }
 
 function buildObservationSearchText(input = {}) {
-  return [input.title, input.content, input.sourceText].map((item) => normalizeCompareText(item)).filter(Boolean).join('\n')
+  return [input.title, input.content, input.sourceText, input.relatedRef].map((item) => normalizeCompareText(item)).filter(Boolean).join('\n')
 }
 
 function buildObservationPatch(existing, incoming) {
@@ -115,6 +115,22 @@ function deriveConversationObservation({ date, userMessage, cornieMessage }) {
 }
 
 export function createObservationService(store) {
+  function listByRecall({ date, from, to, type, q, topic, person, limit } = {}) {
+    const explicitQuery = String(q ?? '').trim()
+    const topicQuery = String(topic ?? '').trim()
+    const personQuery = String(person ?? '').trim()
+    const mergedQuery = [explicitQuery, topicQuery, personQuery].filter(Boolean).join(' ').trim()
+
+    return listObservationLogs(store, {
+      date,
+      from,
+      to,
+      type,
+      q: mergedQuery || undefined,
+      limit
+    })
+  }
+
   function listByDate(date) {
     return listObservationLogs(store, { date, limit: OBSERVATION_PROMPT_POLICY.todayArchiveDefaultLimit })
   }
@@ -226,6 +242,7 @@ export function createObservationService(store) {
     listByDate,
     listToday: (date = new Date().toISOString().slice(0, 10)) => listObservationLogs(store, { date }),
     listByRange: ({ from, to, type, q, limit }) => listObservationLogs(store, { from, to, type, q, limit }),
+    listByRecall,
     listTodayForConversation: (date) => listObservationLogs(store, {
       date,
       limit: OBSERVATION_PROMPT_POLICY.conversationTodaySummaryLimit

@@ -1198,6 +1198,7 @@ export function listObservationLogs(store, { date, from, to, type, q, limit = 50
     where.push(`(
       lower(coalesce(title, '')) like $q
       or lower(coalesce(content, '')) like $q
+      or lower(coalesce(related_ref, '')) like $q
       or lower(coalesce(source_text, '')) like $q
     )`)
     params.$q = `%${String(q).trim().toLowerCase()}%`

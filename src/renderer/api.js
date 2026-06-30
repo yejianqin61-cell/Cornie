@@ -627,6 +627,20 @@ export async function listObservations({ date, from, to, type, q, limit } = {}) 
   return apiFetch(`/observations${qs ? `?${qs}` : ''}`)
 }
 
+export async function recallObservations({ date, from, to, type, q, topic, person, limit } = {}) {
+  const params = new URLSearchParams()
+  if (date) params.set('date', date)
+  if (from) params.set('from', from)
+  if (to) params.set('to', to)
+  if (type) params.set('type', type)
+  if (q) params.set('q', q)
+  if (topic) params.set('topic', topic)
+  if (person) params.set('person', person)
+  if (limit) params.set('limit', String(limit))
+  const qs = params.toString()
+  return apiFetch(`/observations/recall${qs ? `?${qs}` : ''}`)
+}
+
 export async function getObservation(id) {
   return apiFetch(`/observations/${encodeURIComponent(id)}`)
 }

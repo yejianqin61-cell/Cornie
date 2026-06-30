@@ -28,6 +28,36 @@ export function observationRoutes({ store }) {
     } catch (error) { next(error) }
   })
 
+  router.get('/observations/recall', (req, res, next) => {
+    try {
+      const { date, from, to, type, q, topic, person, limit } = req.query
+      const result = observation.listByRecall({
+        date: date || undefined,
+        from: from || undefined,
+        to: to || undefined,
+        type: type || undefined,
+        q: q || undefined,
+        topic: topic || undefined,
+        person: person || undefined,
+        limit: limit ? Number(limit) : 50
+      })
+      res.json({
+        observations: result,
+        recall: {
+          date: date || '',
+          from: from || '',
+          to: to || '',
+          type: type || '',
+          q: q || '',
+          topic: topic || '',
+          person: person || ''
+        },
+        policy: observation.getPromptPolicy(),
+        policySummary: observation.getPromptPolicySummary()
+      })
+    } catch (error) { next(error) }
+  })
+
   router.get('/observations/:id', (req, res, next) => {
     try {
       const result = observation.get(req.params.id)
