@@ -2,6 +2,7 @@ import { createMemoryWikiService, createTopicIndexStore } from '../memory-wiki/i
 
 const IDENTITY_PERSON_PAGE_TYPE = 'identity_person'
 const IDENTITY_PROFILE_PAGE_TYPE = 'identity_profile'
+const IDENTITY_TRAIT_PAGE_TYPE = 'identity_trait'
 
 function normalizeString(value) {
   return String(value ?? '').trim()
@@ -21,6 +22,27 @@ function dedupeStrings(items = []) {
 
 function normalizeKey(value) {
   return normalizeString(value).toLowerCase()
+}
+
+function tokenizeChineseText(value) {
+  return Array.from(
+    new Set(
+      normalizeString(value)
+        .toLowerCase()
+        .split(/[^a-z0-9\u4e00-\u9fff]+/i)
+        .map((item) => item.trim())
+        .filter((item) => item.length >= 2)
+    )
+  )
+}
+
+function includesBySubstring(haystack, needle) {
+  const normalizedHaystack = normalizeString(haystack).toLowerCase()
+  const normalizedNeedle = normalizeString(needle).toLowerCase()
+  if (!normalizedHaystack || !normalizedNeedle) {
+    return false
+  }
+  return normalizedHaystack.includes(normalizedNeedle)
 }
 
 function buildSourceRef({ date, messageId, userMessage }) {
@@ -218,6 +240,7 @@ function buildCandidate(userMessage) {
     }
 
     return {
+      rawText: text,
       personName,
       relationshipToUser,
       roleSummary: buildRoleSummary(relationshipToUser),
@@ -305,6 +328,98 @@ async function ensureProfileLink(memoryWiki, personPageId) {
   const personRelated = Array.isArray(personPage?.relatedPageIds) ? personPage.relatedPageIds : []
   if (personPage && !personRelated.includes(profile.pageId)) {
     await memoryWiki.linkRelatedPages(personPageId, [...personRelated, profile.pageId])
+  }
+}
+
+function buildPersonTraitTokens(candidate = {}) {
+  return tokenizeChineseText([
+    candidate.rawText,
+    candidate.personalitySummary,
+    candidate.meaningToUser,
+    candidate.sharedExperienceSummary,
+    candidate.timelineSummary
+  ].join(' '))
+}
+
+function buildTraitPageTokens(page = {}) {
+  return tokenizeChineseText([
+    page.title,
+    page.traitSummary,
+    ...(Array.isArray(page.triggerKeywords) ? page.triggerKeywords : []),
+    ...(Array.isArray(page.aliases) ? page.aliases : [])
+  ].join(' '))
+}
+
+function matchesTraitWeakLink(candidate, traitPage) {
+  const personText = [
+    candidate?.rawText,
+    candidate?.personalitySummary,
+    candidate?.meaningToUser,
+    candidate?.sharedExperienceSummary,
+    candidate?.timelineSummary
+  ]
+    .map((item) => normalizeString(item))
+    .filter(Boolean)
+    .join(' ')
+  if (!personText) {
+    return false
+  }
+
+  const directFields = [
+    traitPage?.title,
+    traitPage?.traitSummary,
+    ...(Array.isArray(traitPage?.triggerKeywords) ? traitPage.triggerKeywords : []),
+    ...(Array.isArray(traitPage?.aliases) ? traitPage.aliases : [])
+  ]
+    .map((item) => normalizeString(item))
+    .filter(Boolean)
+
+  if (directFields.some((field) => includesBySubstring(personText, field) || includesBySubstring(field, personText))) {
+    return true
+  }
+
+  const personTokens = buildPersonTraitTokens(candidate)
+  const traitTokens = buildTraitPageTokens(traitPage)
+  return personTokens.some((token) => traitTokens.includes(token))
+}
+
+async function ensureTraitWeakLinks(memoryWiki, pageId, candidate) {
+  const personTokens = buildPersonTraitTokens(candidate)
+  if (!pageId || personTokens.length === 0) {
+    return
+  }
+
+  const personPage = await memoryWiki.get(pageId)
+  if (!personPage?.pageId) {
+    return
+  }
+
+  const traitSummaries = await memoryWiki.listSummaries({
+    pageType: IDENTITY_TRAIT_PAGE_TYPE
+  })
+
+  for (const summary of traitSummaries) {
+    const traitPage = summary?.pageId ? await memoryWiki.get(summary.pageId) : null
+    if (!traitPage?.pageId) {
+      continue
+    }
+
+    const traitTokens = buildTraitPageTokens(traitPage)
+    const hasOverlap = personTokens.some((token) => traitTokens.includes(token)) || matchesTraitWeakLink(candidate, traitPage)
+    if (!hasOverlap) {
+      continue
+    }
+
+    const personRelated = Array.isArray(personPage.relatedPageIds) ? personPage.relatedPageIds : []
+    if (!personRelated.includes(traitPage.pageId)) {
+      const updatedPerson = await memoryWiki.linkRelatedPages(personPage.pageId, [...personRelated, traitPage.pageId])
+      personPage.relatedPageIds = updatedPerson.relatedPageIds
+    }
+
+    const traitRelated = Array.isArray(traitPage.relatedPageIds) ? traitPage.relatedPageIds : []
+    if (!traitRelated.includes(personPage.pageId)) {
+      await memoryWiki.linkRelatedPages(traitPage.pageId, [...traitRelated, personPage.pageId])
+    }
   }
 }
 
@@ -501,6 +616,7 @@ export async function upsertIdentityPersonFromConversation(
       personName: candidate.personName,
       observation
     })
+    await ensureTraitWeakLinks(memoryWiki, created.pageId, candidate)
     await ensurePersonMeaningGovernanceCandidate(memoryWiki, created, candidate)
 
     return {
@@ -588,6 +704,7 @@ export async function upsertIdentityPersonFromConversation(
       personName: candidate.personName,
       observation
     })
+    await ensureTraitWeakLinks(memoryWiki, existingPage.pageId, candidate)
     await ensurePersonRelationshipConflictGovernanceCandidate(memoryWiki, existingPage, candidate, conflicts, sourceRef)
     await ensurePersonMeaningGovernanceCandidate(memoryWiki, existingPage, candidate)
 
@@ -614,6 +731,7 @@ export async function upsertIdentityPersonFromConversation(
     personName: candidate.personName,
     observation
   })
+  await ensureTraitWeakLinks(memoryWiki, updated.pageId, candidate)
   await ensurePersonMeaningGovernanceCandidate(memoryWiki, updated, candidate)
 
   return {
