@@ -1,5 +1,6 @@
 import { deleteObservationLog, getObservationLog, listObservationLogs, saveObservationLog, updateObservationLog } from '../../db.js'
 import { buildObservationPromptPolicySummary, getObservationPromptPolicy, OBSERVATION_PROMPT_POLICY } from './policy.js'
+import { enqueueObservationCompressionCandidates } from './governance.js'
 
 function normalizeObservationInput(input = {}) {
   return {
@@ -255,6 +256,8 @@ export function createObservationService(store) {
       date,
       limit: OBSERVATION_PROMPT_POLICY.diaryTodayDetailLimit
     }),
+    enqueueCompressionCandidates: ({ baseDir = process.cwd(), date, observations } = {}) =>
+      enqueueObservationCompressionCandidates(store, { baseDir, date, observations }),
     getPromptPolicy: () => getObservationPromptPolicy(),
     getPromptPolicySummary: () => buildObservationPromptPolicySummary(),
     prepareNote,

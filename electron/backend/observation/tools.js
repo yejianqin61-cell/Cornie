@@ -70,4 +70,14 @@ export function registerObservationTools(store, { registerTool }) {
       result: observation.listByRecall(args)
     })
   })
+
+  registerTool({
+    name: 'observation.enqueue_compression_candidates',
+    description: '为同日同主题的观察日志生成压缩治理候选',
+    riskLevel: 'medium',
+    handler: async (args = {}) => ({
+      ok: true,
+      result: await observation.enqueueCompressionCandidates(args)
+    })
+  })
 }
