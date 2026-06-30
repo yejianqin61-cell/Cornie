@@ -176,15 +176,15 @@ function buildPageSummaryLine(page) {
   return `- [${importance}] ${page.title}: ${summary}`
 }
 
-function identityProfileNeedsExtendedDetails(page, queryTerms) {
-  if (!Array.isArray(queryTerms) || queryTerms.length === 0) {
+function identityProfileNeedsExtendedDetails(page, normalizedQuery = '', queryTerms = []) {
+  const queryText = normalizeString(normalizedQuery).toLowerCase()
+  if (!queryText && (!Array.isArray(queryTerms) || queryTerms.length === 0)) {
     return false
   }
 
-  const haystack = [
+  const stressorHaystack = [
     page?.currentFocus,
     page?.stressors,
-    page?.communicationPreference,
     page?.identitySummary,
     page?.lifeStageSummary
   ]
@@ -192,14 +192,33 @@ function identityProfileNeedsExtendedDetails(page, queryTerms) {
     .filter(Boolean)
     .join(' ')
 
-  if (!haystack) {
+  const communicationHaystack = [
+    page?.communicationPreference,
+    page?.identitySummary,
+    page?.summary
+  ]
+    .map((item) => normalizeString(item).toLowerCase())
+    .filter(Boolean)
+    .join(' ')
+
+  const stressorTerms = ['压力', '焦虑', '累', '疲惫', '崩溃', '难', '熬夜', '求职', '考试', '项目']
+  const communicationTerms = ['温柔', '陪伴', '安慰', '记住', '上下文', '沟通', '说话', '克制', '陪我']
+  if (
+    (stressorHaystack && stressorTerms.some((term) => queryText.includes(term))) ||
+    (communicationHaystack && communicationTerms.some((term) => queryText.includes(term)))
+  ) {
+    return true
+  }
+
+  const haystack = [stressorHaystack, communicationHaystack].filter(Boolean).join(' ')
+  if (!haystack || !Array.isArray(queryTerms) || queryTerms.length === 0) {
     return false
   }
 
   return queryTerms.some((term) => haystack.includes(term))
 }
 
-function buildIdentityProfileSummaryLine(page, queryTerms = []) {
+function buildIdentityProfileSummaryLine(page, normalizedQuery = '', queryTerms = []) {
   const userName = normalizeString(page.userName) || normalizeString(page.title) || '未命名用户'
   const preferredName = normalizeString(page.preferredName)
   const relationship = normalizeString(page.cornieRelationship)
@@ -208,7 +227,7 @@ function buildIdentityProfileSummaryLine(page, queryTerms = []) {
   const currentFocus = normalizeString(page.currentFocus)
   const stressors = normalizeString(page.stressors)
   const communicationPreference = normalizeString(page.communicationPreference)
-  const includeExtendedDetails = identityProfileNeedsExtendedDetails(page, queryTerms)
+  const includeExtendedDetails = identityProfileNeedsExtendedDetails(page, normalizedQuery, queryTerms)
 
   const parts = [
     `名字：${userName}`,
@@ -378,7 +397,7 @@ export async function buildWikiContext(
 
   const memorySummaryLines = []
   if (primaryIdentityProfile) {
-    memorySummaryLines.push(buildIdentityProfileSummaryLine(primaryIdentityProfile, queryTerms))
+    memorySummaryLines.push(buildIdentityProfileSummaryLine(primaryIdentityProfile, normalizedQuery, queryTerms))
   }
 
   memorySummaryLines.push(
