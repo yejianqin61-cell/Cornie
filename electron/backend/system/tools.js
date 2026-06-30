@@ -96,6 +96,16 @@ export function registerSystemTools(store, { registerTool }) {
   })
 
   registerTool({
+    name: 'conversation.export_day_record',
+    description: '导出指定日期的聊天记录归档',
+    riskLevel: 'low',
+    handler: async ({ date, format } = {}, context = {}) => ({
+      ok: true,
+      result: chatlog.exportByDate(date ?? context.date, { format })
+    })
+  })
+
+  registerTool({
     name: 'observation.get_day_record',
     description: '读取指定日期的观察日志',
     riskLevel: 'low',
