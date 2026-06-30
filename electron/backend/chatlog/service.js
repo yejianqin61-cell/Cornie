@@ -203,6 +203,71 @@ export function createChatlogService(store, { repository, driver, dbPath } = {})
       }
     },
 
+    searchMessageSnippets(keyword, { month, scope, limit, cursor } = {}) {
+      const normalizedKeyword = normalizeString(keyword).toLowerCase()
+      const pageSize = normalizePageSize(limit)
+      const offset = normalizeCursor(cursor)
+
+      if (!normalizedKeyword) {
+        return {
+          keyword: '',
+          items: [],
+          filters: {
+            scope: scope || 'all',
+            month: month || ''
+          },
+          pagination: {
+            cursor: String(offset),
+            nextCursor: null,
+            hasMore: false,
+            pageSize,
+            total: 0
+          },
+          storage: buildStorageMeta(chatlogRepository)
+        }
+      }
+
+      const dateResult = this.listDates({
+        month,
+        scope,
+        query: normalizedKeyword,
+        limit: 5000,
+        cursor: 0
+      })
+
+      const allItems = dateResult.entries.flatMap((entry) => {
+        const messages = chatlogRepository.searchMessagesByDate(entry.date, normalizedKeyword)
+        return messages.map((message) => ({
+          date: entry.date,
+          messageId: message.id,
+          role: message.role,
+          content: message.content,
+          createdAt: message.createdAt,
+          matchedPreview: buildMessageSearchPreview(message, normalizedKeyword)
+        }))
+      })
+
+      const items = allItems.slice(offset, offset + pageSize)
+      const nextCursor = offset + pageSize < allItems.length ? String(offset + pageSize) : null
+
+      return {
+        keyword: normalizedKeyword,
+        items,
+        filters: {
+          scope: dateResult.archiveScope?.scope || scope || 'all',
+          month: dateResult.archiveScope?.month || month || ''
+        },
+        pagination: {
+          cursor: String(offset),
+          nextCursor,
+          hasMore: nextCursor !== null,
+          pageSize,
+          total: allItems.length
+        },
+        storage: dateResult.storage
+      }
+    },
+
     exportByDate(date, { format = 'json' } = {}) {
       const record = this.getByDate(date, { limit: 5000, cursor: 0 })
       const normalizedFormat = normalizeString(format).toLowerCase() || 'json'

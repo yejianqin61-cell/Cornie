@@ -66,6 +66,16 @@ export function registerSystemTools(store, { registerTool }) {
   })
 
   registerTool({
+    name: 'conversation.search_message_snippets',
+    description: '跨日期按关键词检索聊天消息片段，返回日期、消息 id 与命中摘要',
+    riskLevel: 'low',
+    handler: async ({ keyword, month, scope, limit, cursor } = {}) => ({
+      ok: true,
+      result: chatlog.searchMessageSnippets(keyword, { month, scope, limit, cursor })
+    })
+  })
+
+  registerTool({
     name: 'conversation.list_history_dates',
     description: '按全部历史、最近30天或指定月份列出聊天日期归档',
     riskLevel: 'low',
