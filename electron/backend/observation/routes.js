@@ -8,16 +8,25 @@ export function observationRoutes({ store }) {
   router.get('/observations', (req, res, next) => {
     try {
       const { date, from, to, type, q, limit } = req.query
+      const parsedLimit = limit ? Number(limit) : undefined
       let result
       if (date) {
-        result = observation.listByDate(date)
+        result = observation.listByRange({
+          from: date,
+          to: date,
+          type: type || undefined,
+          q: q || undefined,
+          limit: Number.isFinite(parsedLimit) ? parsedLimit : undefined
+        })
       } else {
         result = observation.listByRange({
           from: from || undefined,
           to: to || undefined,
           type: type || undefined,
           q: q || undefined,
-          limit: limit ? Number(limit) : 50
+          limit: Number.isFinite(parsedLimit)
+            ? parsedLimit
+            : observation.getPromptPolicy().historyListDefaultLimit
         })
       }
       res.json({

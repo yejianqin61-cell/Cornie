@@ -1,4 +1,4 @@
-import { getMessagesByDate, listObservationLogs, listScheduleEntries, listTodoEntries } from '../../db.js'
+import { getMessagesByDate, listScheduleEntries, listTodoEntries } from '../../db.js'
 import { buildCategorySummaryPayload } from './categorySummary.js'
 import { listTools } from '../tools/registry.js'
 import { buildWikiContext } from './wikiContext.js'
@@ -52,15 +52,6 @@ function summarizeSchedules(store) {
   }
 
   return items.map((item) => `- ${item.title} @ ${item.startAt}`).join('\n')
-}
-
-function summarizeObservations(store, date) {
-  const items = listObservationLogs(store, { date, limit: 5 })
-  if (items.length === 0) {
-    return '当前没有观察日志。'
-  }
-
-  return items.map((item) => `- [${item.type}] ${item.title}`).join('\n')
 }
 
 export async function buildConversationContext(store, { date, baseDir = process.cwd() }) {
@@ -140,7 +131,8 @@ export async function buildConversationContext(store, { date, baseDir = process.
       todoCount: todoItems.length,
       scheduleCount: scheduleItems.length,
       observationCount: observationItems.length,
-      observationPromptPolicy: observation.getPromptPolicySummary(),
+      observationPromptPolicy: observation.getPromptPolicy(),
+      observationPromptPolicySummary: observation.getPromptPolicySummary(),
       memoryHitCount: wikiContext.selectedPages.length,
       topicHitCount: wikiContext.selectedTopics.length,
       chatRecallHitCount: wikiContext.chatHits.length,
