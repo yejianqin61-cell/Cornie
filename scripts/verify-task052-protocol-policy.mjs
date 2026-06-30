@@ -6,7 +6,6 @@ import { buildJsonRepairPrompt, parseModelJson } from '../electron/backend/agent
 import { registerLedgerTools } from '../electron/backend/ledger/tools.js'
 import { registerTodoTools } from '../electron/backend/todo/tools.js'
 import { registerScheduleTools } from '../electron/backend/schedule/tools.js'
-import { registerMemoryTools } from '../electron/backend/memory/tools.js'
 import { registerSystemTools } from '../electron/backend/system/tools.js'
 import { evaluateToolCalls } from '../electron/backend/policy/toolPolicy.js'
 import { registerTool } from '../electron/backend/tools/registry.js'
@@ -27,7 +26,6 @@ async function createStore(caseName) {
   registerLedgerTools(store, { registerTool })
   registerTodoTools(store, { registerTool })
   registerScheduleTools(store, { registerTool })
-  registerMemoryTools(store, { registerTool })
   registerSystemTools(store, { registerTool })
 
   return {
@@ -176,7 +174,7 @@ async function testPolicyAllowSystemRead() {
   }
 }
 
-async function testPolicyConfirmMemoryWrite() {
+async function testPolicyDenyLegacyMemoryWrite() {
   const harness = await createStore('confirm-memory')
   try {
     const decision = evaluateToolCalls(
@@ -196,10 +194,10 @@ async function testPolicyConfirmMemoryWrite() {
       }
     )
 
-    assert(decision.decision === 'confirm', 'expected confirm decision', decision)
+    assert(decision.decision === 'deny', 'expected deny decision', decision)
     assert(
-      decision.confirmRequest?.toolName === 'memory.create',
-      'expected memory.create confirm request',
+      String(decision.reason ?? '').includes('Memory Wiki'),
+      'expected legacy memory deny reason mention Memory Wiki',
       decision
     )
   } finally {
@@ -292,7 +290,7 @@ const tests = [
   ['protocol category argument validation', testCategoryArgumentValidation],
   ['protocol repair prompt', testRepairPrompt],
   ['policy allow system read', testPolicyAllowSystemRead],
-  ['policy confirm memory write', testPolicyConfirmMemoryWrite],
+  ['policy deny legacy memory write', testPolicyDenyLegacyMemoryWrite],
   ['policy ask_back missing ledger amount', testPolicyAskBackMissingLedgerAmount],
   ['policy deny unknown tool', testPolicyDenyUnknownTool],
   ['policy confirm high risk ledger delete', testPolicyConfirmHighRiskLedgerDelete]

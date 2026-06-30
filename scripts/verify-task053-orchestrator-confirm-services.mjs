@@ -11,7 +11,6 @@ import { registerLedgerTools } from '../electron/backend/ledger/tools.js'
 import { registerTodoTools } from '../electron/backend/todo/tools.js'
 import { registerScheduleTools } from '../electron/backend/schedule/tools.js'
 import { registerObservationTools } from '../electron/backend/observation/tools.js'
-import { registerMemoryTools } from '../electron/backend/memory/tools.js'
 import { registerSystemTools } from '../electron/backend/system/tools.js'
 import { registerTool } from '../electron/backend/tools/registry.js'
 import { cleanupSqliteFile, createRuntimeSqlitePath } from './tmp-artifacts.mjs'
@@ -33,7 +32,6 @@ async function createStore(caseName) {
   registerTodoTools(store, { registerTool })
   registerScheduleTools(store, { registerTool })
   registerObservationTools(store, { registerTool })
-  registerMemoryTools(store, { registerTool })
   registerSystemTools(store, { registerTool })
 
   return {
@@ -251,22 +249,20 @@ async function testConfirmReject() {
     const pending = confirm.createPending({
       date: '2026-06-27',
       conversationMessageId: 'msg-confirm-reject',
-      sourceText: '把这段记忆写进去',
+      sourceText: '把这笔账删掉',
       assistantReply: '小铃湾想先征得主人同意。',
       toolCalls: [
         {
-          tool_name: 'memory.create',
+          tool_name: 'ledger.delete_entry',
           arguments: {
-            kind: 'preference',
-            title: '喜欢猫咪',
-            content: '主人喜欢猫咪'
+            id: 'ledger-entry-to-delete'
           }
         }
       ],
       confirmRequest: {
         kind: 'tool_confirmation',
-        toolName: 'memory.create',
-        reason: '长期记忆写入需要确认'
+        toolName: 'ledger.delete_entry',
+        reason: '删除记账需要确认'
       }
     })
 
@@ -369,14 +365,12 @@ async function testOrchestratorConfirmPath() {
       buildMockFetch(async () =>
         JSON.stringify({
           type: 'tool_call',
-          assistant_reply: '我想把这个偏好写进长期记忆。',
+          assistant_reply: '我先帮主人确认要不要删掉这笔账。',
           tool_calls: [
             {
-              tool_name: 'memory.create',
+              tool_name: 'ledger.delete_entry',
               arguments: {
-                kind: 'preference',
-                title: '喜欢猫咪',
-                content: '主人喜欢猫咪'
+                id: 'ledger-entry-to-delete'
               }
             }
           ]
@@ -385,7 +379,7 @@ async function testOrchestratorConfirmPath() {
       () =>
         orchestrator.runTurn({
           date: '2026-06-27',
-          message: '我很喜欢猫咪'
+          message: '把那笔账删掉'
         })
     )
 

@@ -377,6 +377,18 @@ function toolNotRegistered(toolCall) {
   }
 }
 
+function applyLegacyMemoryDeprecationRule(toolCall) {
+  if (!toolCall.tool_name.startsWith('memory.')) {
+    return null
+  }
+
+  return {
+    decision: 'deny',
+    reason: '旧 memory 工具集已经退场，长期记忆请改用 Memory Wiki / Memory Governance 相关工具。',
+    toolCall
+  }
+}
+
 function applyLedgerRule(toolCall, sourceText, options = {}) {
   const registration = categoryDomainRegistry.getDomainByActionTool(toolCall.tool_name)
   if (registration?.domain !== 'ledger') {
@@ -574,6 +586,7 @@ function applyHighRiskRule(toolCall, sourceText) {
 
 export function evaluateToolRule(toolCall, sourceText, options = {}) {
   return (
+    applyLegacyMemoryDeprecationRule(toolCall) ??
     toolNotRegistered(toolCall) ??
     applyLedgerRule(toolCall, sourceText, options) ??
     applyTodoRule(toolCall, sourceText, options) ??
