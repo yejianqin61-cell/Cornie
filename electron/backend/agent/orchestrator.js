@@ -374,7 +374,8 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd() 
         observationRecord = observation.recordConversationTurn({
           date,
           userMessage: message,
-          cornieMessage: finalReply
+          cornieMessage: finalReply,
+          messageId: userMessage.id
         })
       } catch (error) {
         console.error('Observation write error:', error)

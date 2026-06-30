@@ -103,14 +103,23 @@ function shouldRecordObservation({ userMessage, cornieMessage }) {
   return keywords.some((keyword) => text.includes(keyword))
 }
 
-function deriveConversationObservation({ date, userMessage, cornieMessage }) {
+function buildConversationRelatedRef({ date, messageId }) {
+  const normalizedDate = String(date ?? '').trim()
+  const normalizedMessageId = String(messageId ?? '').trim()
+  if (normalizedDate && normalizedMessageId) {
+    return `${normalizedDate}#${normalizedMessageId}`
+  }
+  return normalizedDate
+}
+
+function deriveConversationObservation({ date, userMessage, cornieMessage, messageId }) {
   const title = userMessage.slice(0, 16) || '对话记录'
   return {
     date,
     type: 'event',
     title,
     content: `主人：${userMessage}\n铃湾：${cornieMessage}`,
-    relatedRef: date,
+    relatedRef: buildConversationRelatedRef({ date, messageId }),
     sourceText: `${userMessage}\n${cornieMessage}`
   }
 }
@@ -262,10 +271,10 @@ export function createObservationService(store) {
     getPromptPolicySummary: () => buildObservationPromptPolicySummary(),
     prepareNote,
     addNoteSmart,
-    recordConversationTurn: ({ date, userMessage, cornieMessage }) => {
+    recordConversationTurn: ({ date, userMessage, cornieMessage, messageId }) => {
       if (!shouldRecordObservation({ userMessage, cornieMessage })) return null
 
-      const note = deriveConversationObservation({ date, userMessage, cornieMessage })
+      const note = deriveConversationObservation({ date, userMessage, cornieMessage, messageId })
       return addNoteSmart(note).note
     }
   }
