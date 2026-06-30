@@ -49,6 +49,10 @@ function getPageStableId(page) {
   return normalizeString(page?.pageId ?? page?.id)
 }
 
+function isHighPriorityPage(page) {
+  return ['critical', 'high'].includes(normalizeString(page?.importance).toLowerCase())
+}
+
 function splitQueryTerms(normalizedQuery) {
   return normalizeString(normalizedQuery)
     .toLowerCase()
@@ -310,11 +314,25 @@ export async function buildWikiContext(
     })
     .sort((a, b) => comparePages(a, b, { normalizedQuery, queryTerms }))
 
+  const stablePersonPages = queryTerms.length === 0
+    ? otherPages.filter((page) => isIdentityPersonPage(page) && isHighPriorityPage(page))
+    : []
+  const stablePersonIds = new Set(stablePersonPages.map((item) => getPageStableId(item)).filter(Boolean))
+  const remainingPages = otherPages
+    .filter((page) => !stablePersonIds.has(getPageStableId(page)))
+    .filter((page) => {
+      if (queryTerms.length === 0 && isIdentityPreferencePage(page)) {
+        return false
+      }
+      return true
+    })
+
   const selectedPages = [
     ...(primaryIdentityProfile ? [primaryIdentityProfile] : []),
+    ...stablePersonPages,
     ...matchedPreferencePages,
     ...matchedTraitPages,
-    ...otherPages
+    ...remainingPages
   ].slice(0, pageLimit)
 
   const topics = await topicIndex.list()
