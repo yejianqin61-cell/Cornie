@@ -153,7 +153,13 @@ function personMatchesQuery(page, normalizedQuery, queryTerms) {
     .filter(Boolean)
     .join(' ')
 
-  return queryTerms.some((term) => haystack.includes(term))
+  return queryTerms.some((term) =>
+    haystack.includes(term) ||
+    term.split(/[\s,.;:!?，。；：！？、()（）[\]【】'"“”‘’/\\|]+/)
+      .map((item) => item.trim())
+      .filter(Boolean)
+      .some((item) => haystack.includes(item) || item.includes(haystack))
+  )
 }
 
 function traitMatchesEmotionalScene(page, queryTerms) {
@@ -163,12 +169,14 @@ function traitMatchesEmotionalScene(page, queryTerms) {
     '累', '难过', '焦虑', '紧张', '压力', '崩溃', '痛苦', '伤心', '情绪', '安慰',
     '关系', '初恋', '失恋', '回忆', '喜欢', '讨厌', '害怕', '孤独', '疲惫', '委屈'
   ])
-  const queryHasEmotionalTerm = queryTerms.some((item) => emotionalTerms.has(item))
+  const queryHasEmotionalTerm = queryTerms.some((item) =>
+    Array.from(emotionalTerms).some((term) => item.includes(term) || term.includes(item))
+  )
   if (!queryHasEmotionalTerm) {
     return false
   }
 
-  const haystack = [
+  const keywords = [
     page?.title,
     page?.summary,
     page?.traitType,
@@ -178,9 +186,10 @@ function traitMatchesEmotionalScene(page, queryTerms) {
   ]
     .map((item) => normalizeString(item).toLowerCase())
     .filter(Boolean)
-    .join(' ')
 
-  return queryTerms.some((term) => haystack.includes(term)) || queryHasEmotionalTerm
+  return queryTerms.some((term) =>
+    keywords.some((keyword) => keyword.includes(term) || term.includes(keyword))
+  )
 }
 
 function comparePages(a, b, { normalizedQuery = '', queryTerms = [] } = {}) {
@@ -430,7 +439,7 @@ export async function buildWikiContext(
       if (isIdentityPreferencePage(page) && !pageMatchesAnyKeyword(page, queryTerms)) {
         return false
       }
-      if (queryTerms.length === 0 && isIdentityTraitPage(page)) {
+      if (isIdentityTraitPage(page) && !traitMatchesEmotionalScene(page, queryTerms)) {
         return false
       }
       return true
