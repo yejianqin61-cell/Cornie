@@ -20,6 +20,13 @@ export async function registerMemoryWikiTools({ baseDir, store }, { registerTool
   })
 
   registerTool({
+    name: 'memory_wiki.get_page_source_trace',
+    description: '读取长期记忆 wiki 页面来源追溯信息',
+    riskLevel: 'low',
+    handler: async ({ pageId }) => ({ ok: true, result: await memoryWiki.getPageSourceTrace(pageId) })
+  })
+
+  registerTool({
     name: 'memory_wiki.search_topic_index',
     description: '根据关键词查询主题索引',
     riskLevel: 'low',
@@ -187,6 +194,13 @@ export async function registerMemoryWikiTools({ baseDir, store }, { registerTool
   })
 
   registerTool({
+    name: 'memory_index.get_source_trace',
+    description: '读取主题索引项的来源追溯与时间线信息',
+    riskLevel: 'low',
+    handler: async ({ normalizedKey }) => ({ ok: true, result: await memoryWiki.getTopicSourceTrace(normalizedKey) })
+  })
+
+  registerTool({
     name: 'memory_index.merge_topics',
     description: '合并两个主题索引项',
     riskLevel: 'high',
@@ -236,6 +250,7 @@ export async function registerMemoryWikiTools({ baseDir, store }, { registerTool
       result: await memoryWiki.updateGovernanceRequestStatus(requestId, status)
     })
   })
+
   registerTool({
     name: 'memory_governance.apply_upgrade_request',
     description: 'apply approved wiki upgrade candidate into identity memory pages',
