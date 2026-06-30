@@ -79,10 +79,25 @@ async function run() {
     const orchestrator = createConversationOrchestrator(harness.store, {
       baseDir: harness.baseDir
     })
+    const originalConsoleError = console.error
+    console.error = (...args) => {
+      const [firstArg] = args
+      if (
+        typeof firstArg === 'string' &&
+        firstArg.includes('Conversation orchestrator error:')
+      ) {
+        const errorObject = args[1]
+        if (errorObject?.code === 'missing_api_key') {
+          return
+        }
+      }
+      originalConsoleError(...args)
+    }
     await orchestrator.runTurn({
       date: '2026-06-30',
       message: '我叫叶健钦，你是我的爸爸和创造者。'
     })
+    console.error = originalConsoleError
 
     const memoryEntriesAfter = listActiveMemoryEntries(harness.store, { limit: 200 }).length
     const pagesAfter = (await wikiService.listSummaries()).length
