@@ -1,4 +1,4 @@
-import { createMemoryWikiService } from '../memory-wiki/index.js'
+import { createMemoryWikiService, createTopicIndexStore } from '../memory-wiki/index.js'
 
 const IDENTITY_TRAIT_PAGE_TYPE = 'identity_trait'
 
@@ -16,6 +16,14 @@ function stripTrailingParticles(value) {
 
 function dedupeStrings(items = []) {
   return Array.from(new Set(items.map((item) => normalizeString(item)).filter(Boolean)))
+}
+
+function normalizeKey(value) {
+  return normalizeString(value).toLowerCase()
+}
+
+function buildChatRef({ date, messageId }) {
+  return `${normalizeString(date)}#${normalizeString(messageId)}`
 }
 
 function buildSourceRef({ date, messageId, userMessage }) {
@@ -170,6 +178,50 @@ async function ensureProfileLink(memoryWiki, pageId) {
   }
 }
 
+async function ensureTraitTopicLink({ baseDir, page, date, messageId, candidate }) {
+  if (!page?.pageId) {
+    return null
+  }
+
+  const keyword = normalizeString(page.title) || normalizeString(candidate?.title)
+  const normalizedKey = normalizeKey(keyword)
+  if (!normalizedKey) {
+    return null
+  }
+
+  const topicIndex = await createTopicIndexStore(baseDir)
+  const existing = await topicIndex.get(normalizedKey)
+  const aliases = dedupeStrings([
+    keyword,
+    page.title,
+    candidate?.title,
+    ...(Array.isArray(page.aliases) ? page.aliases : []),
+    ...(Array.isArray(page.triggerKeywords) ? page.triggerKeywords : []),
+    candidate?.traitType
+  ])
+
+  await topicIndex.upsert({
+    ...(existing ?? {}),
+    keyword: existing?.keyword || keyword,
+    normalizedKey,
+    aliases: dedupeStrings([...(existing?.aliases ?? []), ...aliases]),
+    importance: page.importance || existing?.importance || 'medium',
+    note: page.summary || page.traitSummary || existing?.note || '',
+    lastMentionedAt: normalizeString(date) || existing?.lastMentionedAt || ''
+  })
+
+  if (normalizeString(date)) {
+    await topicIndex.addDateRef(normalizedKey, date)
+  }
+
+  if (normalizeString(date) && normalizeString(messageId)) {
+    await topicIndex.addChatRef(normalizedKey, buildChatRef({ date, messageId }))
+  }
+
+  await topicIndex.linkPage(normalizedKey, page.pageId)
+  return topicIndex.get(normalizedKey)
+}
+
 function buildAliases(existingPage, candidate) {
   return dedupeStrings([
     ...(Array.isArray(existingPage?.aliases) ? existingPage.aliases : []),
@@ -218,6 +270,13 @@ export async function upsertIdentityTraitFromConversation(
     })
 
     await ensureProfileLink(memoryWiki, created.pageId)
+    await ensureTraitTopicLink({
+      baseDir,
+      page: created,
+      date,
+      messageId,
+      candidate
+    })
 
     return {
       action: 'created',
@@ -260,6 +319,13 @@ export async function upsertIdentityTraitFromConversation(
   })
 
   await ensureProfileLink(memoryWiki, updated.pageId)
+  await ensureTraitTopicLink({
+    baseDir,
+    page: updated,
+    date,
+    messageId,
+    candidate
+  })
 
   return {
     action: hasSameSource ? 'noop' : 'updated',
