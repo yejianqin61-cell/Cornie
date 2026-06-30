@@ -141,6 +141,35 @@ async function findMatchingTraitPage(memoryWiki, candidate) {
   return null
 }
 
+async function getPrimaryIdentityProfile(memoryWiki) {
+  const summaries = await memoryWiki.listSummaries({
+    pageType: 'identity_profile',
+    status: 'active'
+  })
+  if (!Array.isArray(summaries) || summaries.length === 0) {
+    return null
+  }
+  return summaries[0]?.pageId ? memoryWiki.get(summaries[0].pageId) : null
+}
+
+async function ensureProfileLink(memoryWiki, pageId) {
+  const profile = await getPrimaryIdentityProfile(memoryWiki)
+  if (!profile?.pageId || profile.pageId === pageId) {
+    return
+  }
+
+  const profileRelated = Array.isArray(profile.relatedPageIds) ? profile.relatedPageIds : []
+  if (!profileRelated.includes(pageId)) {
+    await memoryWiki.linkRelatedPages(profile.pageId, [...profileRelated, pageId])
+  }
+
+  const page = await memoryWiki.get(pageId)
+  const pageRelated = Array.isArray(page?.relatedPageIds) ? page.relatedPageIds : []
+  if (page && !pageRelated.includes(profile.pageId)) {
+    await memoryWiki.linkRelatedPages(pageId, [...pageRelated, profile.pageId])
+  }
+}
+
 function buildAliases(existingPage, candidate) {
   return dedupeStrings([
     ...(Array.isArray(existingPage?.aliases) ? existingPage.aliases : []),
@@ -188,6 +217,8 @@ export async function upsertIdentityTraitFromConversation(
       sourceRefs: [sourceRef]
     })
 
+    await ensureProfileLink(memoryWiki, created.pageId)
+
     return {
       action: 'created',
       pageId: created.pageId,
@@ -227,6 +258,8 @@ export async function upsertIdentityTraitFromConversation(
     ...existingPage,
     ...updates
   })
+
+  await ensureProfileLink(memoryWiki, updated.pageId)
 
   return {
     action: hasSameSource ? 'noop' : 'updated',
