@@ -36,8 +36,9 @@ import {
   recordToolRoundState
 } from './toolRoundState.js'
 import { logCategoryAudit } from '../category/audit.js'
+import { PROMPT_LOADING_POLICY } from './promptLoadingPolicy.js'
 
-const MAX_HISTORY_MESSAGES = 40
+const MAX_HISTORY_MESSAGES = PROMPT_LOADING_POLICY.liveConversationHistoryLimit
 const MAX_PROTOCOL_REPAIR_RETRIES = 1
 const MAX_TOOL_ROUNDS = 2
 

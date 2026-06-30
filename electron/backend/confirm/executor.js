@@ -16,8 +16,9 @@ import { logCategoryAudit } from '../category/audit.js'
 import { categoryDomainRegistry } from '../category/domainRegistry.js'
 import { chat } from '../model/deepseek/client.js'
 import { executeToolCalls } from '../tools/gateway.js'
+import { PROMPT_LOADING_POLICY } from '../agent/promptLoadingPolicy.js'
 
-const MAX_HISTORY_MESSAGES = 40
+const MAX_HISTORY_MESSAGES = PROMPT_LOADING_POLICY.liveConversationHistoryLimit
 const MAX_PROTOCOL_REPAIR_RETRIES = 1
 
 function trimMessages(messages) {

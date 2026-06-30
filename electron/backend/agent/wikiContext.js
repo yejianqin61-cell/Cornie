@@ -1,10 +1,11 @@
 import { createMemoryWikiService, createTopicIndexStore } from '../memory-wiki/index.js'
 import { createChatlogService } from '../chatlog/service.js'
 import { createObservationService } from '../observation/service.js'
+import { PROMPT_LOADING_POLICY } from './promptLoadingPolicy.js'
 
-const DEFAULT_MEMORY_PAGE_LIMIT = 4
-const DEFAULT_TOPIC_LIMIT = 4
-const DEFAULT_MESSAGE_HIT_LIMIT = 3
+const DEFAULT_MEMORY_PAGE_LIMIT = PROMPT_LOADING_POLICY.memoryPageLimit
+const DEFAULT_TOPIC_LIMIT = PROMPT_LOADING_POLICY.topicLimit
+const DEFAULT_MESSAGE_HIT_LIMIT = PROMPT_LOADING_POLICY.chatRecallDateLimit
 const IDENTITY_PROFILE_PAGE_TYPE = 'identity_profile'
 const IDENTITY_PERSON_PAGE_TYPE = 'identity_person'
 const IDENTITY_PREFERENCE_PAGE_TYPE = 'identity_preference'

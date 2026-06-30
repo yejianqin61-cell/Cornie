@@ -3,16 +3,17 @@ import { buildCategorySummaryPayload } from './categorySummary.js'
 import { listTools } from '../tools/registry.js'
 import { buildWikiContext } from './wikiContext.js'
 import { createObservationService } from '../observation/service.js'
+import { PROMPT_LOADING_POLICY, buildPromptLoadingPolicySummary } from './promptLoadingPolicy.js'
 
 export const CONVERSATION_CONTEXT_BUDGETS = Object.freeze({
-  recentConversationMessages: 8,
-  todoSummaryItems: 5,
-  scheduleSummaryItems: 5,
-  observationSummaryItems: 5,
-  memoryPageLimit: 4,
-  topicLimit: 4,
-  chatRecallDateLimit: 3,
-  observationRecallLimit: 3
+  recentConversationMessages: PROMPT_LOADING_POLICY.recentConversationSummaryMessages,
+  todoSummaryItems: PROMPT_LOADING_POLICY.todoSummaryItems,
+  scheduleSummaryItems: PROMPT_LOADING_POLICY.scheduleSummaryItems,
+  observationSummaryItems: PROMPT_LOADING_POLICY.observationSummaryItems,
+  memoryPageLimit: PROMPT_LOADING_POLICY.memoryPageLimit,
+  topicLimit: PROMPT_LOADING_POLICY.topicLimit,
+  chatRecallDateLimit: PROMPT_LOADING_POLICY.chatRecallDateLimit,
+  observationRecallLimit: PROMPT_LOADING_POLICY.observationRecallLimit
 })
 
 function summarizeRecentConversation(messages, limit = 8) {
@@ -121,7 +122,8 @@ export async function buildConversationContext(store, { date, baseDir = process.
         'chat_recall_summary',
         'observation_recall_summary'
       ],
-      budgets: CONVERSATION_CONTEXT_BUDGETS
+      budgets: CONVERSATION_CONTEXT_BUDGETS,
+      matrix: buildPromptLoadingPolicySummary()
     },
     contextMeta: {
       recentConversationChars: recentConversationSummary.length,
