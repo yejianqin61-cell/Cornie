@@ -21,6 +21,26 @@ function parseChatRef(value) {
   }
 }
 
+function parseObservationRef(value) {
+  const text = normalizeString(value)
+  const [date, observationId] = text.split('#')
+  return {
+    date: normalizeString(date),
+    observationId: normalizeString(observationId)
+  }
+}
+
+function buildTopicIssueContext(topic) {
+  return {
+    normalizedKey: normalizeString(topic?.normalizedKey),
+    keyword: normalizeString(topic?.keyword),
+    aliases: Array.isArray(topic?.aliases) ? topic.aliases.map((item) => normalizeString(item)).filter(Boolean) : [],
+    memoryPageIds: Array.isArray(topic?.memoryPageIds)
+      ? topic.memoryPageIds.map((item) => normalizeString(item)).filter(Boolean)
+      : []
+  }
+}
+
 export async function createMemoryWikiInspector({ store, memoryWikiService, topicIndex }) {
   if (!store) throw new Error('store is required')
   if (!memoryWikiService) throw new Error('memoryWikiService is required')
@@ -54,24 +74,58 @@ export async function createMemoryWikiInspector({ store, memoryWikiService, topi
         for (const chatRef of topic.chatRefs ?? []) {
           const parsed = parseChatRef(chatRef)
           const messages = parsed.date ? getMessagesByDate(store, parsed.date) : []
-          if (!messages.find((item) => item.id === parsed.messageId)) {
+          const matchedMessage = messages.find((item) => item.id === parsed.messageId)
+          if (!matchedMessage) {
             issues.push({
               issueType: 'missing_topic_chat_ref',
               normalizedKey: topic.normalizedKey,
+              keyword: topic.keyword,
               chatRef,
-              suggestion: buildRepairSuggestion('unlink_topic_chat_ref', { normalizedKey: topic.normalizedKey, chatRef }, '主题索引聊天引用失效')
+              parsedRef: parsed,
+              refDate: parsed.date,
+              refId: parsed.messageId,
+              exists: false,
+              preview: '',
+              topicContext: buildTopicIssueContext(topic),
+              suggestion: buildRepairSuggestion(
+                'unlink_topic_chat_ref',
+                {
+                  normalizedKey: topic.normalizedKey,
+                  keyword: topic.keyword,
+                  chatRef,
+                  parsedRef: parsed
+                },
+                '主题索引聊天引用失效'
+              )
             })
           }
         }
 
         for (const observationRef of topic.observationRefs ?? []) {
-          const observationId = normalizeString(observationRef).split('#')[1]
-          if (!observationId || !getObservationLog(store, observationId)) {
+          const parsed = parseObservationRef(observationRef)
+          const observation = parsed.observationId ? getObservationLog(store, parsed.observationId) : null
+          if (!parsed.observationId || !observation) {
             issues.push({
               issueType: 'missing_topic_observation_ref',
               normalizedKey: topic.normalizedKey,
+              keyword: topic.keyword,
               observationRef,
-              suggestion: buildRepairSuggestion('unlink_topic_observation_ref', { normalizedKey: topic.normalizedKey, observationRef }, '主题索引观察引用失效')
+              parsedRef: parsed,
+              refDate: parsed.date,
+              refId: parsed.observationId,
+              exists: false,
+              preview: '',
+              topicContext: buildTopicIssueContext(topic),
+              suggestion: buildRepairSuggestion(
+                'unlink_topic_observation_ref',
+                {
+                  normalizedKey: topic.normalizedKey,
+                  keyword: topic.keyword,
+                  observationRef,
+                  parsedRef: parsed
+                },
+                '主题索引观察引用失效'
+              )
             })
           }
         }
