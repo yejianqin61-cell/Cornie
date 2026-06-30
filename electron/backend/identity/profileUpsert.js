@@ -1,4 +1,4 @@
-import { createMemoryWikiService } from '../memory-wiki/index.js'
+import { createMemoryWikiService, createTopicIndexStore } from '../memory-wiki/index.js'
 
 const IDENTITY_PROFILE_PAGE_TYPE = 'identity_profile'
 
@@ -178,6 +178,14 @@ function buildSourceRef({ date, messageId, userMessage }) {
   }
 }
 
+function normalizeKey(value) {
+  return normalizeString(value).toLowerCase()
+}
+
+function buildChatRef({ date, messageId }) {
+  return `${normalizeString(date)}#${normalizeString(messageId)}`
+}
+
 function mergeAliases(page, candidates) {
   const values = [
     ...(Array.isArray(page?.aliases) ? page.aliases : []),
@@ -314,6 +322,48 @@ async function getPrimaryIdentityProfile(memoryWiki) {
   return pages[0]
 }
 
+async function ensureProfileTopicLink({ baseDir, page, date, messageId, candidate }) {
+  if (!page?.pageId) {
+    return null
+  }
+
+  const keyword = normalizeString(page.userName) || normalizeString(candidate?.userName) || normalizeString(page.title)
+  const normalizedKey = normalizeKey(keyword)
+  if (!normalizedKey) {
+    return null
+  }
+
+  const topicIndex = await createTopicIndexStore(baseDir)
+  const existing = await topicIndex.get(normalizedKey)
+  const aliases = mergeAliases(page, [
+    candidate?.userName,
+    candidate?.preferredName,
+    page?.title,
+    page?.preferredName
+  ])
+
+  await topicIndex.upsert({
+    ...(existing ?? {}),
+    keyword: existing?.keyword || keyword,
+    normalizedKey,
+    aliases,
+    importance: page.importance || existing?.importance || 'critical',
+    note: page.summary || page.identitySummary || existing?.note || '',
+    lastMentionedAt: normalizeString(date) || existing?.lastMentionedAt || ''
+  })
+
+  if (normalizeString(date)) {
+    await topicIndex.addDateRef(normalizedKey, date)
+  }
+
+  if (normalizeString(date) && normalizeString(messageId)) {
+    await topicIndex.addChatRef(normalizedKey, buildChatRef({ date, messageId }))
+  }
+
+  await topicIndex.linkPage(normalizedKey, page.pageId)
+  return topicIndex.get(normalizedKey)
+}
+
 export function extractIdentityProfileCandidate(userMessage) {
   return buildCandidate(userMessage)
 }
@@ -355,6 +405,14 @@ export async function upsertIdentityProfileFromConversation(
       sourceRefs: [sourceRef]
     })
 
+    await ensureProfileTopicLink({
+      baseDir,
+      page: created,
+      date,
+      messageId,
+      candidate
+    })
+
     return {
       action: 'created',
       pageId: created.pageId,
@@ -389,6 +447,16 @@ export async function upsertIdentityProfileFromConversation(
       await memoryWiki.addSourceRef(existingPage.pageId, sourceRef)
     }
     await ensureProfileConflictGovernanceCandidate(memoryWiki, existingPage, candidate, conflicts, sourceRef)
+    await ensureProfileTopicLink({
+      baseDir,
+      page: {
+        ...existingPage,
+        sourceRefs: hasSameSource ? sourceRefs : [...sourceRefs, sourceRef]
+      },
+      date,
+      messageId,
+      candidate
+    })
 
     return {
       action: 'conflict',
@@ -425,6 +493,14 @@ export async function upsertIdentityProfileFromConversation(
     pageId: existingPage.pageId,
     title: buildProfileTitle({ ...existingPage, ...updates }, existingPage),
     importance: existingPage.importance || 'critical'
+  })
+
+  await ensureProfileTopicLink({
+    baseDir,
+    page: updated,
+    date,
+    messageId,
+    candidate
   })
 
   return {
