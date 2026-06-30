@@ -215,6 +215,57 @@ function compareField(existingValue, incomingValue, fieldName, conflicts, update
   conflicts.push(createConflict(fieldName, currentValue, nextValue))
 }
 
+async function ensureProfileConflictGovernanceCandidate(memoryWiki, page, candidate, conflicts, sourceRef) {
+  if (!page?.pageId || !Array.isArray(conflicts) || conflicts.length === 0) {
+    return
+  }
+
+  const profileConflicts = conflicts.filter((item) =>
+    ['userName', 'preferredName', 'cornieRelationship'].includes(normalizeString(item?.field))
+  )
+  if (profileConflicts.length === 0) {
+    return
+  }
+
+  const governanceRequests = await memoryWiki.listGovernanceRequests({
+    requestType: 'identity_profile_conflict',
+    queueSection: 'identity_profile_reviews'
+  })
+  const duplicated = governanceRequests.some((item) =>
+    (item.status === 'pending' || item.status === 'deferred') &&
+    Array.isArray(item.pageIds) &&
+    item.pageIds.includes(page.pageId)
+  )
+  if (duplicated) {
+    return
+  }
+
+  await memoryWiki.createGovernanceRequest({
+    requestType: 'identity_profile_conflict',
+    triggerSource: 'conversation_conflict',
+    queueSection: 'identity_profile_reviews',
+    riskLevel: 'high',
+    pageIds: [page.pageId],
+    title: page.title || page.pageId,
+    reason: '主身份页出现了名字、称呼或与 Cornie 的关系冲突，建议由人类确认后再决定是否改写正式长期记忆。',
+    evidence: profileConflicts.map((item) => ({
+      field: item.field,
+      existingValue: item.existingValue,
+      incomingValue: item.incomingValue,
+      sourceDate: sourceRef?.date ?? '',
+      sourceMessageId: sourceRef?.messageId ?? '',
+      sourceTitle: sourceRef?.title ?? ''
+    })),
+    payload: {
+      action: 'review_identity_profile_conflict',
+      candidateUserName: candidate?.userName ?? '',
+      candidatePreferredName: candidate?.preferredName ?? '',
+      candidateCornieRelationship: candidate?.cornieRelationship ?? '',
+      conflicts: profileConflicts
+    }
+  })
+}
+
 function buildCandidate(userMessage) {
   const userName = extractUserName(userMessage)
   const preferredName = extractPreferredName(userMessage)
@@ -337,6 +388,7 @@ export async function upsertIdentityProfileFromConversation(
     if (!hasSameSource) {
       await memoryWiki.addSourceRef(existingPage.pageId, sourceRef)
     }
+    await ensureProfileConflictGovernanceCandidate(memoryWiki, existingPage, candidate, conflicts, sourceRef)
 
     return {
       action: 'conflict',
