@@ -206,6 +206,63 @@ function createConflict(field, existingValue, incomingValue) {
   }
 }
 
+function splitListLikeValue(value) {
+  return normalizeString(value)
+    .split(/[；;、,，]\s*/g)
+    .map((item) => normalizeString(item))
+    .filter(Boolean)
+}
+
+function mergeUniqueSegments(existingValue, incomingValue, { separator = '；' } = {}) {
+  const existingItems = splitListLikeValue(existingValue)
+  const incomingItems = splitListLikeValue(incomingValue)
+  const merged = []
+
+  for (const item of [...existingItems, ...incomingItems]) {
+    if (!item) continue
+    const normalizedItem = normalizeCompare(item)
+    const duplicated = merged.some((current) => {
+      const normalizedCurrent = normalizeCompare(current)
+      return (
+        normalizedCurrent === normalizedItem ||
+        normalizedCurrent.includes(normalizedItem) ||
+        normalizedItem.includes(normalizedCurrent)
+      )
+    })
+    if (!duplicated) {
+      merged.push(item)
+    }
+  }
+
+  return merged.join(separator)
+}
+
+function mergeSummaryLikeField(existingValue, incomingValue) {
+  const currentValue = normalizeString(existingValue)
+  const nextValue = normalizeString(incomingValue)
+  if (!nextValue) return currentValue
+  if (!currentValue) return nextValue
+
+  const normalizedCurrent = normalizeCompare(currentValue)
+  const normalizedNext = normalizeCompare(nextValue)
+  if (normalizedCurrent === normalizedNext || normalizedCurrent.includes(normalizedNext)) {
+    return currentValue
+  }
+  if (normalizedNext.includes(normalizedCurrent)) {
+    return nextValue
+  }
+
+  return mergeUniqueSegments(currentValue, nextValue, { separator: ' ' })
+}
+
+function mergeFocusField(existingValue, incomingValue) {
+  return mergeUniqueSegments(existingValue, incomingValue, { separator: '、' })
+}
+
+function mergeCommunicationPreference(existingValue, incomingValue) {
+  return mergeUniqueSegments(existingValue, incomingValue, { separator: '；' })
+}
+
 function compareField(existingValue, incomingValue, fieldName, conflicts, updates) {
   const nextValue = normalizeString(incomingValue)
   if (!nextValue) return
@@ -221,6 +278,15 @@ function compareField(existingValue, incomingValue, fieldName, conflicts, update
   }
 
   conflicts.push(createConflict(fieldName, currentValue, nextValue))
+}
+
+function mergeSoftField(existingValue, incomingValue, fieldName, updates, mergeFn) {
+  const mergedValue = normalizeString(mergeFn(existingValue, incomingValue))
+  const currentValue = normalizeString(existingValue)
+  if (!mergedValue || normalizeCompare(mergedValue) === normalizeCompare(currentValue)) {
+    return
+  }
+  updates[fieldName] = mergedValue
 }
 
 async function ensureProfileConflictGovernanceCandidate(memoryWiki, page, candidate, conflicts, sourceRef) {
@@ -427,11 +493,17 @@ export async function upsertIdentityProfileFromConversation(
   compareField(existingPage.userName, candidate.userName, 'userName', conflicts, updates)
   compareField(existingPage.preferredName, candidate.preferredName, 'preferredName', conflicts, updates)
   compareField(existingPage.cornieRelationship, candidate.cornieRelationship, 'cornieRelationship', conflicts, updates)
-  compareField(existingPage.identitySummary, candidate.identitySummary, 'identitySummary', conflicts, updates)
-  compareField(existingPage.lifeStageSummary, candidate.lifeStageSummary, 'lifeStageSummary', conflicts, updates)
-  compareField(existingPage.currentFocus, candidate.currentFocus, 'currentFocus', conflicts, updates)
-  compareField(existingPage.stressors, candidate.stressors, 'stressors', conflicts, updates)
-  compareField(existingPage.communicationPreference, candidate.communicationPreference, 'communicationPreference', conflicts, updates)
+  mergeSoftField(existingPage.identitySummary, candidate.identitySummary, 'identitySummary', updates, mergeSummaryLikeField)
+  mergeSoftField(existingPage.lifeStageSummary, candidate.lifeStageSummary, 'lifeStageSummary', updates, mergeSummaryLikeField)
+  mergeSoftField(existingPage.currentFocus, candidate.currentFocus, 'currentFocus', updates, mergeFocusField)
+  mergeSoftField(existingPage.stressors, candidate.stressors, 'stressors', updates, mergeFocusField)
+  mergeSoftField(
+    existingPage.communicationPreference,
+    candidate.communicationPreference,
+    'communicationPreference',
+    updates,
+    mergeCommunicationPreference
+  )
 
   const aliases = mergeAliases(existingPage, [candidate.userName, candidate.preferredName])
   const sourceRefs = Array.isArray(existingPage.sourceRefs) ? existingPage.sourceRefs : []
