@@ -208,44 +208,44 @@ onBeforeUnmount(() => {
     />
 
     <div class="stoolbar card">
-      <div class="stoolbarInfo">
-        <div class="stoolbarLabel">当前查看</div>
-        <div class="stoolbarText">{{ currentFilterLabel }}</div>
-      </div>
-      <div class="stoolbarActions">
-        <button class="ghost" type="button" @click="jumpToToday">回到今天</button>
-        <button class="ghost" type="button" :disabled="!selectedDate" @click="clearDateFilter">清除筛选</button>
-        <button class="ghost" type="button" @click="$emit('go', 'category')">管理类目</button>
-        <button class="primary" type="button" @click="showForm = !showForm">{{ showForm ? '收起表单' : '新增安排' }}</button>
-      </div>
-    </div>
-
-    <!-- 快速新增 -->
-    <div v-if="showForm" class="squick card">
-      <div class="squickHead">
-        <div>
-          <div class="squickTitle">新增安排</div>
-          <div class="squickHint">把时间先记下来，下面的列表就会马上更新。</div>
+      <div class="stoolbarTop">
+        <div class="stoolbarInfo">
+          <div class="stoolbarLabel">当前查看</div>
+          <div class="stoolbarText">{{ currentFilterLabel }}</div>
         </div>
-        <button class="ghost" type="button" @click="showForm = false">取消</button>
+        <div class="stoolbarActions">
+          <button class="ghost" type="button" @click="jumpToToday">回到今天</button>
+          <button class="ghost" type="button" :disabled="!selectedDate" @click="clearDateFilter">清除筛选</button>
+          <button class="ghost" type="button" @click="$emit('go', 'category')">管理类目</button>
+          <button class="primary" type="button" @click="showForm = !showForm">{{ showForm ? '收起新增' : '新增安排' }}</button>
+        </div>
       </div>
-      <div v-if="showForm" class="squickForm">
-        <input v-model="newForm.title" placeholder="标题" />
-        <div class="squickRow">
-          <input v-model="newForm.startAt" type="datetime-local" />
-          <input v-model="newForm.endAt" type="datetime-local" placeholder="结束时间（可选）" />
+      <div v-if="showForm" class="squickInline">
+        <div class="squickHead">
+          <div>
+            <div class="squickTitle">新增安排</div>
+            <div class="squickHint">把时间先记下来，下面的列表就会马上更新。</div>
+          </div>
+          <button class="ghost" type="button" @click="showForm = false">取消</button>
         </div>
-        <div class="squickRow">
-          <select v-model="newForm.categoryId">
-            <option value="">类目</option>
-            <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
-          </select>
-          <input v-model="newForm.location" placeholder="地点（可选）" />
+        <div class="squickForm">
+          <input v-model="newForm.title" placeholder="标题" />
+          <div class="squickRow">
+            <input v-model="newForm.startAt" type="datetime-local" />
+            <input v-model="newForm.endAt" type="datetime-local" placeholder="结束时间（可选）" />
+          </div>
+          <div class="squickRow">
+            <select v-model="newForm.categoryId">
+              <option value="">类目</option>
+              <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
+            </select>
+            <input v-model="newForm.location" placeholder="地点（可选）" />
+          </div>
+          <button class="primary" :disabled="adding || !newForm.title.trim() || !newForm.startAt" @click="addSchedule">
+            {{ adding ? '保存中…' : '保存' }}
+          </button>
+          <div v-if="errorMsg" class="serr">{{ errorMsg }}</div>
         </div>
-        <button class="primary" :disabled="adding || !newForm.title.trim() || !newForm.startAt" @click="addSchedule">
-          {{ adding ? '保存中…' : '保存' }}
-        </button>
-        <div v-if="errorMsg" class="serr">{{ errorMsg }}</div>
       </div>
     </div>
 
@@ -290,11 +290,14 @@ onBeforeUnmount(() => {
 
 .stoolbar{
   padding: 12px 16px;
+  background: #FFFDFC;
+}
+
+.stoolbarTop{
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  background: #FFFDFC;
 }
 
 .stoolbarInfo{
@@ -321,7 +324,11 @@ onBeforeUnmount(() => {
   justify-content: flex-end;
 }
 
-.squick{ padding: 12px 20px; }
+.squickInline{
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
 .squickHead{ display: flex; justify-content: space-between; align-items: center; }
 .squickTitle{ font-weight: 700; }
 .squickHint{ margin-top: 4px; font-size: 12px; color: var(--muted); }
@@ -365,7 +372,7 @@ onBeforeUnmount(() => {
 .sdel{ color: var(--danger); }
 
 @media (max-width: 720px){
-  .stoolbar,
+  .stoolbarTop,
   .squickHead,
   .slistHead{
     flex-direction: column;
