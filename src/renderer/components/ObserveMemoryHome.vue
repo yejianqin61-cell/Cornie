@@ -39,6 +39,10 @@ const memoryOverview = ref({
   preferenceAndTraitCount: 0
 })
 const latestMemoryUpdateLabel = ref('')
+const observationOverview = ref({
+  total: 0,
+  topType: ''
+})
 
 async function refreshMemories() {
   loadingMemories.value = true
@@ -82,8 +86,13 @@ async function refreshObservations() {
   try {
     const data = await listObservations({ date: getTodayDate(), limit: 4 })
     recentObservations.value = data?.observations || []
+    observationOverview.value = buildObservationOverview(recentObservations.value)
   } catch {
     recentObservations.value = []
+    observationOverview.value = {
+      total: 0,
+      topType: ''
+    }
   } finally {
     loadingObservations.value = false
   }
@@ -132,6 +141,20 @@ function formatLatestMemoryUpdate(pages) {
     .filter(Boolean)
     .sort((a, b) => b.localeCompare(a))[0]
   return latest || ''
+}
+
+function buildObservationOverview(items) {
+  const list = Array.isArray(items) ? items : []
+  const counts = new Map()
+  for (const item of list) {
+    const key = String(item?.type || 'misc')
+    counts.set(key, (counts.get(key) || 0) + 1)
+  }
+  const topType = Array.from(counts.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] || ''
+  return {
+    total: list.length,
+    topType
+  }
 }
 </script>
 
@@ -243,6 +266,17 @@ function formatLatestMemoryUpdate(pages) {
         <div class="omObserveEmptyHint">铃湾不会把每句闲聊都记下来，只有觉得值得留一下的时候，才会写进观察。</div>
       </div>
       <div v-else class="omObserveList">
+        <div class="omObserveOverview">
+          <div class="omObserveOverviewCard">
+            <div class="omObserveOverviewValue">{{ observationOverview.total }}</div>
+            <div class="omObserveOverviewLabel">今天留下了几条观察</div>
+          </div>
+          <div class="omObserveOverviewCard">
+            <div class="omObserveOverviewValue">{{ observationTypeLabel(observationOverview.topType) }}</div>
+            <div class="omObserveOverviewLabel">今天更多是在记什么</div>
+          </div>
+        </div>
+
         <div
           v-for="item in recentObservations"
           :key="item.id"
@@ -492,6 +526,31 @@ function formatLatestMemoryUpdate(pages) {
   margin-top: 10px;
 }
 
+.omObserveOverview{
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.omObserveOverviewCard{
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(255,255,255,.92);
+  padding: 12px;
+}
+
+.omObserveOverviewValue{
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.omObserveOverviewLabel{
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .omObserveCard{
   padding: 12px 14px;
   border: 1px solid var(--border);
@@ -555,6 +614,7 @@ function formatLatestMemoryUpdate(pages) {
   .omMemoriesActions{
     flex-direction: column;
   }
+  .omObserveOverview{ grid-template-columns: 1fr; }
   .omObserveList{ grid-template-columns: 1fr; }
 }
 </style>
