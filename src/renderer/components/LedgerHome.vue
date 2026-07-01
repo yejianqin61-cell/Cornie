@@ -38,6 +38,14 @@ const monthlyExpense = ref(0)
 
 const weekdayLabels = ['一', '二', '三', '四', '五', '六', '日']
 const chartColors = ['#E8856A', '#E4A35E', '#5B9A6B', '#8DB5A7', '#C59E7A', '#D96A5C']
+const trendChartFrame = Object.freeze({
+  width: 320,
+  height: 164,
+  paddingLeft: 34,
+  paddingRight: 16,
+  paddingTop: 14,
+  paddingBottom: 28
+})
 
 function pad2(value) {
   return String(value).padStart(2, '0')
@@ -119,8 +127,44 @@ const dailyTrendPoints = computed(() => {
   return [...grouped.values()].sort((a, b) => a.date.localeCompare(b.date))
 })
 
-const chartPathExpense = computed(() => buildLinePath(dailyTrendPoints.value, 'expense'))
-const chartPathIncome = computed(() => buildLinePath(dailyTrendPoints.value, 'income'))
+const trendChartStats = computed(() => {
+  const values = dailyTrendPoints.value.flatMap((item) => [item.expense || 0, item.income || 0])
+  const maxValue = Math.max(...values, 0)
+  const safeMaxValue = maxValue > 0 ? maxValue : 1
+  return {
+    maxValue,
+    safeMaxValue,
+    midValue: safeMaxValue / 2
+  }
+})
+
+const trendYAxisTicks = computed(() => {
+  const { safeMaxValue, midValue } = trendChartStats.value
+  return [
+    { label: '0', value: 0 },
+    { label: formatCurrencyTick(midValue), value: midValue },
+    { label: formatCurrencyTick(safeMaxValue), value: safeMaxValue }
+  ]
+})
+
+const trendXAxisTicks = computed(() => {
+  const points = dailyTrendPoints.value
+  if (points.length === 0) return []
+  const indices = Array.from(new Set([
+    0,
+    Math.floor((points.length - 1) / 2),
+    points.length - 1
+  ]))
+
+  return indices.map((index) => ({
+    index,
+    label: formatShortDate(points[index].date)
+  }))
+})
+
+const hasTrendChart = computed(() => dailyTrendPoints.value.length >= 2)
+const chartPathExpense = computed(() => buildLinePath(dailyTrendPoints.value, 'expense', trendChartStats.value.safeMaxValue))
+const chartPathIncome = computed(() => buildLinePath(dailyTrendPoints.value, 'income', trendChartStats.value.safeMaxValue))
 
 const categoryDistribution = computed(() => {
   const grouped = new Map()
@@ -271,17 +315,41 @@ async function submitQuickCategoryCreate() {
   }
 }
 
-function buildLinePath(points, key) {
-  if (points.length === 0) return ''
-  const width = 280
-  const height = 104
-  const paddingX = 8
-  const values = points.map((item) => item[key] || 0)
-  const maxValue = Math.max(...values, 1)
+function formatShortDate(dateText) {
+  const [, month = '', day = ''] = String(dateText || '').split('-')
+  if (!month || !day) return dateText
+  return `${Number(month)}/${Number(day)}`
+}
+
+function formatCurrencyTick(value) {
+  const amount = Number(value || 0)
+  if (amount >= 1000) {
+    return `¥${(amount / 1000).toFixed(amount >= 10000 ? 0 : 1)}k`
+  }
+  if (amount >= 100) {
+    return `¥${amount.toFixed(0)}`
+  }
+  return `¥${amount.toFixed(amount > 0 && amount < 10 ? 1 : 0)}`
+}
+
+function getTrendX(index, total) {
+  const { width, paddingLeft, paddingRight } = trendChartFrame
+  if (total <= 1) return paddingLeft
+  return paddingLeft + (index * (width - paddingLeft - paddingRight)) / (total - 1)
+}
+
+function getTrendY(value, maxValue) {
+  const { height, paddingTop, paddingBottom } = trendChartFrame
+  const drawableHeight = height - paddingTop - paddingBottom
+  return height - paddingBottom - ((value || 0) / Math.max(maxValue, 1)) * drawableHeight
+}
+
+function buildLinePath(points, key, maxValue) {
+  if (points.length < 2) return ''
   return points
     .map((point, index) => {
-      const x = paddingX + (index * (width - paddingX * 2)) / Math.max(points.length - 1, 1)
-      const y = height - ((point[key] || 0) / maxValue) * (height - 12) - 6
+      const x = getTrendX(index, points.length)
+      const y = getTrendY(point[key] || 0, maxValue)
       return `${index === 0 ? 'M' : 'L'} ${x} ${y}`
     })
     .join(' ')
@@ -429,15 +497,59 @@ onBeforeUnmount(() => {
           <div class="lchartTitle">这几天的收支走势</div>
           <div class="lchartHint">红线看支出，绿线看收入，方便快速判断最近哪几天波动更大。</div>
         </div>
-        <div v-if="dailyTrendPoints.length === 0" class="lchartEmpty">这个月还没有足够的记录可以画趋势。</div>
+        <div v-if="dailyTrendPoints.length === 0" class="lchartEmpty">这个月还没有记录，所以暂时看不到走势。</div>
+        <div v-else-if="!hasTrendChart" class="lchartEmpty">目前只有一天的记录，等多记几笔后，这里就能看出变化趋势了。</div>
         <div v-else class="ltrendWrap">
-          <svg viewBox="0 0 296 112" class="ltrend">
+          <svg :viewBox="`0 0 ${trendChartFrame.width} ${trendChartFrame.height}`" class="ltrend" role="img" aria-label="收支趋势图，横轴为日期，纵轴为金额">
+            <line
+              v-for="tick in trendYAxisTicks"
+              :key="`grid-${tick.value}`"
+              class="ltrendGrid"
+              :x1="trendChartFrame.paddingLeft"
+              :x2="trendChartFrame.width - trendChartFrame.paddingRight"
+              :y1="getTrendY(tick.value, trendChartStats.safeMaxValue)"
+              :y2="getTrendY(tick.value, trendChartStats.safeMaxValue)"
+            />
+            <line
+              class="ltrendAxis"
+              :x1="trendChartFrame.paddingLeft"
+              :x2="trendChartFrame.paddingLeft"
+              :y1="trendChartFrame.paddingTop"
+              :y2="trendChartFrame.height - trendChartFrame.paddingBottom"
+            />
+            <line
+              class="ltrendAxis"
+              :x1="trendChartFrame.paddingLeft"
+              :x2="trendChartFrame.width - trendChartFrame.paddingRight"
+              :y1="trendChartFrame.height - trendChartFrame.paddingBottom"
+              :y2="trendChartFrame.height - trendChartFrame.paddingBottom"
+            />
+            <text
+              v-for="tick in trendYAxisTicks"
+              :key="`ylabel-${tick.value}`"
+              class="ltrendTickLabel y"
+              :x="trendChartFrame.paddingLeft - 8"
+              :y="getTrendY(tick.value, trendChartStats.safeMaxValue) + 4"
+            >
+              {{ tick.label }}
+            </text>
+            <text
+              v-for="tick in trendXAxisTicks"
+              :key="`xlabel-${tick.index}`"
+              class="ltrendTickLabel x"
+              :x="getTrendX(tick.index, dailyTrendPoints.length)"
+              :y="trendChartFrame.height - 8"
+            >
+              {{ tick.label }}
+            </text>
             <path v-if="chartPathExpense" :d="chartPathExpense" fill="none" stroke="var(--danger)" stroke-width="3" stroke-linecap="round"></path>
             <path v-if="chartPathIncome" :d="chartPathIncome" fill="none" stroke="var(--success)" stroke-width="3" stroke-linecap="round"></path>
           </svg>
           <div class="ltrendLegend">
-            <span><i class="legendDot exp"></i>支出</span>
-            <span><i class="legendDot inc"></i>收入</span>
+            <span><i class="legendDot exp"></i>支出趋势线</span>
+            <span><i class="legendDot inc"></i>收入趋势线</span>
+            <span class="ltrendAxisHint">横轴：日期</span>
+            <span class="ltrendAxisHint">纵轴：金额</span>
           </div>
         </div>
       </div>
@@ -651,14 +763,43 @@ onBeforeUnmount(() => {
 
 .ltrend{
   width: 100%;
-  height: 130px;
+  height: 176px;
+}
+
+.ltrendAxis{
+  stroke: rgba(60, 52, 48, 0.28);
+  stroke-width: 1;
+}
+
+.ltrendGrid{
+  stroke: rgba(60, 52, 48, 0.12);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+}
+
+.ltrendTickLabel{
+  fill: var(--muted);
+  font-size: 10px;
+}
+
+.ltrendTickLabel.y{
+  text-anchor: end;
+}
+
+.ltrendTickLabel.x{
+  text-anchor: middle;
 }
 
 .ltrendLegend{
-  margin-top: 6px;
+  margin-top: 8px;
   display: flex;
+  flex-wrap: wrap;
   gap: 14px;
   font-size: 12px;
+  color: var(--muted);
+}
+
+.ltrendAxisHint{
   color: var(--muted);
 }
 
