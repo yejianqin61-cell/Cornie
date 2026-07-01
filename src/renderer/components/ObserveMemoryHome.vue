@@ -33,6 +33,11 @@ const MEMORY_TYPE_LABELS = {
 const primaryIdentityMemory = ref(null)
 const otherRecentMemories = ref([])
 const shouldPromptProfileCreation = ref(false)
+const memoryOverview = ref({
+  total: 0,
+  personCount: 0,
+  preferenceAndTraitCount: 0
+})
 
 async function refreshMemories() {
   loadingMemories.value = true
@@ -45,11 +50,21 @@ async function refreshMemories() {
       .filter((page) => page.id !== primaryIdentityMemory.value?.id)
       .slice(0, 4)
     shouldPromptProfileCreation.value = pages.length > 0 && !primaryIdentityMemory.value
+    memoryOverview.value = {
+      total: pages.length,
+      personCount: pages.filter((page) => page.pageType === 'identity_person').length,
+      preferenceAndTraitCount: pages.filter((page) => page.pageType === 'identity_preference' || page.pageType === 'identity_trait').length
+    }
   } catch {
     recentMemories.value = []
     primaryIdentityMemory.value = null
     otherRecentMemories.value = []
     shouldPromptProfileCreation.value = false
+    memoryOverview.value = {
+      total: 0,
+      personCount: 0,
+      preferenceAndTraitCount: 0
+    }
   } finally {
     loadingMemories.value = false
   }
@@ -139,6 +154,21 @@ function memoryTypeLabel(type) {
         <button class="primary omEmptyAction" @click="$emit('go', 'memory-create')">先写下“关于你”</button>
       </div>
       <div v-else class="omMemoryList">
+        <div class="omMemoryOverview">
+          <div class="omMemoryOverviewCard">
+            <div class="omMemoryOverviewValue">{{ memoryOverview.total }}</div>
+            <div class="omMemoryOverviewLabel">已经记住了几页</div>
+          </div>
+          <div class="omMemoryOverviewCard">
+            <div class="omMemoryOverviewValue">{{ memoryOverview.personCount }}</div>
+            <div class="omMemoryOverviewLabel">重要的人</div>
+          </div>
+          <div class="omMemoryOverviewCard">
+            <div class="omMemoryOverviewValue">{{ memoryOverview.preferenceAndTraitCount }}</div>
+            <div class="omMemoryOverviewLabel">偏好与特征</div>
+          </div>
+        </div>
+
         <div v-if="shouldPromptProfileCreation" class="omProfilePrompt">
           <div class="omProfilePromptText">
             <div class="omProfilePromptTitle">铃湾已经记下一些事了，也可以先更清楚地记住你</div>
@@ -273,6 +303,31 @@ function memoryTypeLabel(type) {
 .omEmptyAction{ margin-top: 8px; }
 
 .omMemoryList{ display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+.omMemoryOverview{
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.omMemoryOverviewCard{
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(255,255,255,.92);
+  padding: 12px;
+}
+
+.omMemoryOverviewValue{
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.omMemoryOverviewLabel{
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
 
 .omProfilePrompt{
   grid-column: 1 / -1;
@@ -456,6 +511,7 @@ function memoryTypeLabel(type) {
 
 @media (max-width: 760px){
   .omMemoryList{ grid-template-columns: 1fr; }
+  .omMemoryOverview{ grid-template-columns: 1fr; }
   .omProfilePrompt{
     flex-direction: column;
     align-items: stretch;
