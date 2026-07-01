@@ -71,7 +71,10 @@ function truncated(text, maxLen = 80) {
     <div class="omMemories card">
       <div class="omMemoriesHead">
         <div class="omMemoriesTitle">铃湾帮你记住的事</div>
-        <button class="ghost" @click="$emit('go', 'memory-list')">查看全部</button>
+        <div class="omMemoriesActions">
+          <button class="ghost" @click="$emit('go', 'memory-list')">查看全部</button>
+          <button class="primary" @click="$emit('go', 'memory-create')">新建记忆</button>
+        </div>
       </div>
 
       <div v-if="loadingMemories" class="omLoading">正在翻翻记忆…</div>
@@ -79,6 +82,7 @@ function truncated(text, maxLen = 80) {
         <div class="omEmptyIcon">📝</div>
         <div class="omEmptyText">铃湾还在慢慢记住关于你的事</div>
         <div class="omEmptyHint">多和铃湾聊聊天，她会帮你记住重要的东西</div>
+        <button class="primary omEmptyAction" @click="$emit('go', 'memory-create')">先写下一页记忆</button>
       </div>
       <div v-else class="omMemoryList">
         <div
@@ -152,6 +156,10 @@ function truncated(text, maxLen = 80) {
   justify-content: space-between;
   margin-bottom: 10px;
 }
+.omMemoriesActions{
+  display: flex;
+  gap: 8px;
+}
 .omMemoriesTitle{ font-weight: 700; }
 
 .omLoading{ text-align: center; color: var(--muted); padding: 16px; font-size: 13px; }
@@ -166,6 +174,7 @@ function truncated(text, maxLen = 80) {
 .omEmptyIcon{ font-size: 24px; }
 .omEmptyText{ font-size: 13px; color: var(--muted); }
 .omEmptyHint{ font-size: 12px; color: var(--muted); }
+.omEmptyAction{ margin-top: 8px; }
 
 .omMemoryList{ display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .omMemoryCard{
@@ -198,5 +207,13 @@ function truncated(text, maxLen = 80) {
 
 @media (max-width: 760px){
   .omMemoryList{ grid-template-columns: 1fr; }
+  .omMemoriesHead{
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .omMemoriesActions{
+    flex-direction: column;
+  }
 }
 </style>

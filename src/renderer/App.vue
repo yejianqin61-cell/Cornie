@@ -309,8 +309,16 @@ onMounted(async () => {
         />
         <MemoryPageDetail
           v-else-if="omView === 'memory-detail'"
+          :key="omDetailId || 'memory-detail'"
           :id="omDetailId"
           @back="omView = 'memory-list'"
+          @deleted="omView = 'memory-list'"
+        />
+        <MemoryPageDetail
+          v-else-if="omView === 'memory-create'"
+          key="memory-create"
+          @back="omView = 'memory-list'"
+          @created="(id) => { omDetailId = id; omView = 'memory-detail' }"
         />
       </section>
 
