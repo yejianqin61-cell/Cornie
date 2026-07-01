@@ -23,6 +23,13 @@ const OBSERVATION_TYPE_LABELS = {
   misc: '小事记录'
 }
 
+const MEMORY_TYPE_LABELS = {
+  identity_profile: '关于你',
+  identity_person: '重要的人',
+  identity_preference: '你的偏好',
+  identity_trait: '你的特征'
+}
+
 const primaryIdentityMemory = ref(null)
 const otherRecentMemories = ref([])
 const shouldPromptProfileCreation = ref(false)
@@ -86,6 +93,10 @@ function truncated(text, maxLen = 80) {
 
 function observationTypeLabel(type) {
   return OBSERVATION_TYPE_LABELS[type] || '小事记录'
+}
+
+function memoryTypeLabel(type) {
+  return MEMORY_TYPE_LABELS[type] || '长期记忆'
 }
 </script>
 
@@ -154,6 +165,7 @@ function observationTypeLabel(type) {
           class="omMemoryCard"
           @click="$emit('go', 'memory-detail', mem.id)"
         >
+          <div class="omMemoryType">{{ memoryTypeLabel(mem.pageType) }}</div>
           <div class="omMemoryTitle">{{ mem.title }}</div>
           <div class="omMemorySnippet" v-if="mem.summary">{{ truncated(mem.summary, 100) }}</div>
           <div class="omMemorySnippet" v-else>{{ truncated(mem.content, 100) }}</div>
@@ -329,9 +341,24 @@ function observationTypeLabel(type) {
   border: 1px solid var(--border);
   border-radius: 12px;
   cursor: pointer;
-  transition: background .15s;
+  transition: background .15s, border-color .15s, transform .15s;
 }
-.omMemoryCard:hover{ background: var(--surface-2); }
+.omMemoryCard:hover{
+  background: var(--surface-2);
+  border-color: rgba(232,133,106,.20);
+  transform: translateY(-1px);
+}
+
+.omMemoryType{
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(232,133,106,.12);
+  color: var(--accent-strong);
+  font-size: 11px;
+}
+
 .omMemoryTitle{ font-weight: 600; font-size: 13px; }
 .omMemorySnippet{
   font-size: 12px;
