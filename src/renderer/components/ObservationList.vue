@@ -3,12 +3,12 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { createObservation, deleteObservation, listObservations } from '../api'
 
 const OBSERVATION_TYPES = [
-  { value: '', label: '全部类型' },
-  { value: 'event', label: '事件' },
-  { value: 'fact', label: '事实' },
-  { value: 'emotion', label: '情绪' },
-  { value: 'preference', label: '偏好' },
-  { value: 'misc', label: '其他' }
+  { value: '', label: '全部小事' },
+  { value: 'event', label: '生活事件' },
+  { value: 'fact', label: '事实片段' },
+  { value: 'emotion', label: '情绪变化' },
+  { value: 'preference', label: '偏好线索' },
+  { value: 'misc', label: '小事记录' }
 ]
 
 function getTodayDate() {
@@ -28,8 +28,6 @@ function truncated(text, maxLen = 100) {
 }
 
 const observations = ref([])
-const observationPolicy = ref(null)
-const observationPolicySummary = ref('')
 const loading = ref(false)
 const errorMsg = ref('')
 
@@ -48,9 +46,7 @@ const groupedHistory = computed(() => {
   const groups = new Map()
   for (const item of observations.value) {
     const key = item.date || 'unknown'
-    if (!groups.has(key)) {
-      groups.set(key, [])
-    }
+    if (!groups.has(key)) groups.set(key, [])
     groups.get(key).push(item)
   }
 
@@ -68,6 +64,11 @@ const archiveDates = computed(() => groupedHistory.value.map((group) => ({
   count: group.count
 })))
 
+const todaySummary = computed(() => {
+  if (observations.value.length === 0) return '今天还没有被留下来的观察。'
+  return `今天铃湾留了 ${observations.value.length} 条小事。`
+})
+
 async function refresh() {
   loading.value = true
   errorMsg.value = ''
@@ -75,8 +76,6 @@ async function refresh() {
     if (activeTab.value === 'today') {
       const data = await listObservations({ date: getTodayDate(), limit: 100 })
       observations.value = data?.observations || []
-      observationPolicy.value = data?.policy || null
-      observationPolicySummary.value = data?.policySummary || ''
       selectedDate.value = getTodayDate()
       return
     }
@@ -92,10 +91,8 @@ async function refresh() {
       limit: 200
     })
     observations.value = data?.observations || []
-    observationPolicy.value = data?.policy || null
-    observationPolicySummary.value = data?.policySummary || ''
   } catch (e) {
-    errorMsg.value = e?.message || '加载失败'
+    errorMsg.value = e?.message || '这页小事暂时没打开成功，稍后再试一次吧。'
   } finally {
     loading.value = false
   }
@@ -113,19 +110,19 @@ async function addObservation() {
     showAdd.value = false
     await refresh()
   } catch (e) {
-    errorMsg.value = e?.message || '添加失败'
+    errorMsg.value = e?.message || '这件小事这次还没记下来，我们再试一次吧。'
   } finally {
     adding.value = false
   }
 }
 
 async function removeObservation(id) {
-  if (!confirm('确定要删除这条观察记录吗？')) return
+  if (!confirm('要把这条小事删掉吗？删掉后，它就不会再留在观察里了。')) return
   try {
     await deleteObservation(id)
     await refresh()
   } catch (e) {
-    errorMsg.value = e?.message || '删除失败'
+    errorMsg.value = e?.message || '这条小事这次还没删掉，我们稍后再试一次吧。'
   }
 }
 
@@ -158,39 +155,36 @@ onMounted(refresh)
     <header class="olistHead">
       <button class="ghost" @click="$emit('back')">← 返回观察与记忆</button>
       <div class="olistHeadBody">
-        <div class="olistTitle">观察日志</div>
-        <div class="olistHint">按自然日归档的事实记录层。聊天时不会把历史观察默认整包塞进 prompt，只会按今天高频参考、按需检索历史。</div>
+        <div class="olistTitle">观察记录</div>
+        <div class="olistHint">这里放着铃湾替你留住的小事。不是每句聊天都会留下来，只有值得记一下的片段，才会慢慢收在这里。</div>
       </div>
       <button class="primary" @click="showAdd = !showAdd">
-        {{ showAdd ? '取消' : '记一件小事' }}
+        {{ showAdd ? '先不记了' : '记一件小事' }}
       </button>
     </header>
 
     <div class="olistTabs">
-      <button class="tabBtn" :class="{ active: activeTab === 'today' }" @click="setTab('today')">今天</button>
-      <button class="tabBtn" :class="{ active: activeTab === 'history' }" @click="setTab('history')">历史检索</button>
+      <button class="tabBtn" :class="{ active: activeTab === 'today' }" @click="setTab('today')">今天的小事</button>
+      <button class="tabBtn" :class="{ active: activeTab === 'history' }" @click="setTab('history')">回翻以前</button>
     </div>
 
-    <div class="olistPolicy card">
-      <div class="olistPolicyTitle">使用边界</div>
-      <div class="olistPolicyText">
-        观察日志更像事实档案，不是“每条都永久记住”。今天页服务当下对话，历史页用于你或铃湾按主题、类型、日期回查。
+    <div class="olistGuide card">
+      <div class="olistGuideTitle">观察和长期记忆不太一样</div>
+      <div class="olistGuideText">
+        观察更像当天留下来的生活片段，先帮你把事情留住。真正跨很多天都重要的内容，铃湾才会慢慢整理进长期记忆。
       </div>
-      <div v-if="observationPolicySummary" class="olistPolicySubtext">{{ observationPolicySummary }}</div>
-      <div v-if="observationPolicy" class="olistPolicyMeta">
-        <span>聊天默认 {{ observationPolicy.conversationTodaySummaryLimit }} 条</span>
-        <span>Wiki 补查 {{ observationPolicy.wikiRecallTodayLimit }} 条</span>
-        <span>日记生成 {{ observationPolicy.diaryTodayDetailLimit }} 条</span>
-      </div>
+      <div class="olistGuideSoft">{{ activeTab === 'today' ? todaySummary : '历史页适合按日期、类型或关键词慢慢回翻。' }}</div>
     </div>
 
     <div v-if="errorMsg" class="olistError">{{ errorMsg }}</div>
 
     <div v-if="showAdd" class="olistAdd card">
-      <input v-model="newForm.title" placeholder="一句话标题" />
-      <textarea v-model="newForm.content" placeholder="详细内容（可选）" rows="3" />
+      <div class="olistAddTitle">记下一件小事</div>
+      <div class="olistAddHint">先写一个容易翻回来的标题，再把当时的情况简单记下来就好。</div>
+      <input v-model="newForm.title" placeholder="比如：今天中午又吃了粿条" />
+      <textarea v-model="newForm.content" placeholder="把这件小事补充完整一点。" rows="3" />
       <button class="primary" :disabled="adding || !newForm.title.trim()" @click="addObservation">
-        {{ adding ? '保存中…' : '保存' }}
+        {{ adding ? '保存中…' : '保存这件小事' }}
       </button>
     </div>
 
@@ -200,7 +194,7 @@ onMounted(refresh)
         <input v-model="selectedDate" type="date" />
       </label>
       <label class="filterField">
-        <span>类型</span>
+        <span>类别</span>
         <select v-model="selectedType">
           <option v-for="item in OBSERVATION_TYPES" :key="item.value || 'all'" :value="item.value">{{ item.label }}</option>
         </select>
@@ -211,13 +205,13 @@ onMounted(refresh)
       </label>
     </div>
 
-    <div v-if="loading" class="olistLoading">加载中…</div>
+    <div v-if="loading" class="olistLoading">铃湾正在翻这些小事…</div>
 
     <template v-else-if="activeTab === 'today'">
       <div v-if="observations.length === 0" class="olistEmpty">
         <div class="olistEmptyIcon">📝</div>
-        <div>今天还没有新的观察记录</div>
-        <div class="olistEmptyHint">铃湾会在需要时写下事实，避免把每句闲聊都变成流水账。</div>
+        <div class="olistEmptyTitle">今天还没有新的观察记录</div>
+        <div class="olistEmptyHint">铃湾不会把每句闲聊都写成流水账，只有觉得值得留一下的时候，才会记在这里。</div>
       </div>
 
       <div v-else class="olistList">
@@ -231,13 +225,13 @@ onMounted(refresh)
             <div>
               <div class="olistCardTitle">{{ obs.title }}</div>
               <div class="olistMetaRow">
-                <span class="olistType">{{ typeMap[obs.type] || obs.type || '其他' }}</span>
+                <span class="olistType">{{ typeMap[obs.type] || '小事记录' }}</span>
                 <span class="olistCardDate">{{ obs.date }}</span>
               </div>
             </div>
           </div>
-          <div class="olistCardContent">{{ truncated(obs.content, 140) }}</div>
-          <button class="ghost olistDelBtn" @click.stop="removeObservation(obs.id)">删除</button>
+          <div class="olistCardContent">{{ truncated(obs.content || '铃湾先把这件小事轻轻放在了今天。', 140) }}</div>
+          <button class="ghost olistDelBtn" @click.stop="removeObservation(obs.id)">删除这条</button>
         </div>
       </div>
     </template>
@@ -245,7 +239,7 @@ onMounted(refresh)
     <template v-else>
       <div class="archivePanel">
         <aside class="archiveRail card">
-          <div class="archiveRailTitle">归档日期</div>
+          <div class="archiveRailTitle">回翻日期</div>
           <button
             v-for="item in archiveDates"
             :key="item.date"
@@ -256,14 +250,14 @@ onMounted(refresh)
             <span>{{ item.label }}</span>
             <span>{{ item.count }}</span>
           </button>
-          <div v-if="archiveDates.length === 0" class="archiveEmpty">当前筛选下还没有匹配的归档。</div>
+          <div v-if="archiveDates.length === 0" class="archiveEmpty">当前筛选下，还没有找到能翻回来的小事。</div>
         </aside>
 
         <div class="archiveContent">
           <div v-if="groupedHistory.length === 0" class="olistEmpty">
             <div class="olistEmptyIcon">🗂️</div>
-            <div>没有找到匹配的历史观察</div>
-            <div class="olistEmptyHint">换个日期、类型或关键词试试。</div>
+            <div class="olistEmptyTitle">还没有找到匹配的小事</div>
+            <div class="olistEmptyHint">换个日期、类别或关键词，也许就能把那天的片段翻出来了。</div>
           </div>
 
           <div v-else class="archiveGroups">
@@ -282,10 +276,10 @@ onMounted(refresh)
                   <div class="archiveItemHead">
                     <div class="olistCardTitle">{{ obs.title }}</div>
                     <div class="olistMetaRow">
-                      <span class="olistType">{{ typeMap[obs.type] || obs.type || '其他' }}</span>
+                      <span class="olistType">{{ typeMap[obs.type] || '小事记录' }}</span>
                     </div>
                   </div>
-                  <div class="olistCardContent">{{ truncated(obs.content, 150) }}</div>
+                  <div class="olistCardContent">{{ truncated(obs.content || '铃湾把这件小事留在了这一天。', 150) }}</div>
                 </article>
               </div>
             </section>
@@ -304,6 +298,7 @@ onMounted(refresh)
   gap: 12px;
   overflow: hidden;
 }
+
 .olistHead{
   display: flex;
   align-items: flex-start;
@@ -313,14 +308,17 @@ onMounted(refresh)
   border: 1px solid var(--border);
   border-radius: 18px;
 }
+
 .olistHeadBody{
   min-width: 0;
   flex: 1;
 }
+
 .olistTitle{
   font-size: 18px;
   font-weight: 800;
 }
+
 .olistHint{
   margin-top: 4px;
   font-size: 12px;
@@ -332,6 +330,7 @@ onMounted(refresh)
   display: flex;
   gap: 8px;
 }
+
 .tabBtn{
   border: 1px solid var(--border);
   background: rgba(255,255,255,.72);
@@ -341,42 +340,36 @@ onMounted(refresh)
   font-size: 13px;
   font-weight: 600;
 }
+
 .tabBtn.active{
   background: rgba(232,133,106,.16);
   border-color: rgba(232,133,106,.28);
   color: var(--accent-strong);
 }
 
-.olistPolicy{
+.olistGuide{
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
-.olistPolicyTitle{
+
+.olistGuideTitle{
   font-size: 13px;
   font-weight: 700;
 }
-.olistPolicyText{
+
+.olistGuideText{
   font-size: 13px;
   color: var(--muted);
   line-height: 1.6;
 }
-.olistPolicySubtext{
-  font-size: 12px;
-  color: var(--muted);
-  line-height: 1.7;
-  white-space: pre-wrap;
-}
-.olistPolicyMeta{
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-.olistPolicyMeta span{
+
+.olistGuideSoft{
   font-size: 12px;
   color: var(--accent-strong);
-  background: rgba(232,133,106,.1);
+  background: rgba(232,133,106,.10);
+  align-self: flex-start;
   border-radius: 999px;
   padding: 4px 8px;
 }
@@ -398,21 +391,39 @@ onMounted(refresh)
   flex-wrap: wrap;
   align-items: end;
 }
+
 .olistAdd{
   flex-direction: column;
   align-items: stretch;
 }
-.olistAdd textarea{ min-height: 80px; }
+
+.olistAddTitle{
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.olistAddHint{
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.olistAdd textarea{
+  min-height: 80px;
+}
+
 .filterField{
   display: flex;
   flex-direction: column;
   gap: 6px;
   min-width: 150px;
 }
+
 .filterField span{
   font-size: 12px;
   color: var(--muted);
 }
+
 .filterField.grow{
   flex: 1;
 }
@@ -422,6 +433,7 @@ onMounted(refresh)
   color: var(--muted);
   padding: 30px;
 }
+
 .olistEmpty{
   text-align: center;
   color: var(--muted);
@@ -429,13 +441,22 @@ onMounted(refresh)
   border: 1px dashed var(--border);
   border-radius: 14px;
 }
+
 .olistEmptyIcon{
   font-size: 28px;
   margin-bottom: 8px;
 }
+
+.olistEmptyTitle{
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
 .olistEmptyHint{
   margin-top: 8px;
   font-size: 12px;
+  line-height: 1.6;
 }
 
 .olistList{
@@ -446,10 +467,12 @@ onMounted(refresh)
   gap: 8px;
   padding-right: 2px;
 }
+
 .olistList::-webkit-scrollbar,
 .archiveContent::-webkit-scrollbar{
   width: 4px;
 }
+
 .olistList::-webkit-scrollbar-thumb,
 .archiveContent::-webkit-scrollbar-thumb{
   background: rgba(0,0,0,.08);
@@ -463,10 +486,12 @@ onMounted(refresh)
   flex-direction: column;
   gap: 8px;
 }
+
 .olistCard:hover,
 .archiveItem:hover{
   border-color: rgba(232,133,106,.25);
 }
+
 .olistCardHead,
 .archiveItemHead{
   display: flex;
@@ -474,9 +499,11 @@ onMounted(refresh)
   align-items: flex-start;
   gap: 10px;
 }
+
 .olistCardTitle{
   font-weight: 600;
 }
+
 .olistMetaRow{
   display: flex;
   gap: 8px;
@@ -484,6 +511,7 @@ onMounted(refresh)
   margin-top: 4px;
   flex-wrap: wrap;
 }
+
 .olistType{
   font-size: 12px;
   color: var(--accent-strong);
@@ -491,15 +519,18 @@ onMounted(refresh)
   border-radius: 999px;
   padding: 3px 8px;
 }
+
 .olistCardDate{
   font-size: 12px;
   color: var(--muted);
 }
+
 .olistCardContent{
   font-size: 13px;
   color: var(--muted);
   line-height: 1.6;
 }
+
 .olistDelBtn{
   font-size: 12px;
   align-self: flex-end;
@@ -512,6 +543,7 @@ onMounted(refresh)
   grid-template-columns: 220px minmax(0, 1fr);
   gap: 12px;
 }
+
 .archiveRail{
   padding: 14px;
   display: flex;
@@ -519,10 +551,12 @@ onMounted(refresh)
   gap: 8px;
   overflow-y: auto;
 }
+
 .archiveRailTitle{
   font-size: 13px;
   font-weight: 700;
 }
+
 .archiveDateBtn{
   display: flex;
   justify-content: space-between;
@@ -537,11 +571,13 @@ onMounted(refresh)
   color: var(--text);
   text-align: left;
 }
+
 .archiveDateBtn.active{
   background: rgba(232,133,106,.12);
   border-color: rgba(232,133,106,.28);
   color: var(--accent-strong);
 }
+
 .archiveEmpty{
   padding: 10px 4px;
   color: var(--muted);
@@ -554,14 +590,17 @@ onMounted(refresh)
   overflow-y: auto;
   padding-right: 2px;
 }
+
 .archiveGroups{
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
+
 .archiveGroup{
   padding: 14px 16px;
 }
+
 .archiveGroupHead{
   display: flex;
   justify-content: space-between;
@@ -569,19 +608,23 @@ onMounted(refresh)
   gap: 10px;
   margin-bottom: 12px;
 }
+
 .archiveGroupTitle{
   font-size: 15px;
   font-weight: 700;
 }
+
 .archiveGroupCount{
   font-size: 12px;
   color: var(--muted);
 }
+
 .archiveGroupList{
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
+
 .archiveItem{
   border: 1px solid var(--border);
   border-radius: 14px;
