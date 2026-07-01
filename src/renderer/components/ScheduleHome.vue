@@ -18,8 +18,18 @@ const selectedDate = ref('')
 
 const weekdayLabels = ['一', '二', '三', '四', '五', '六', '日']
 
+function pad2(value) {
+  return String(value).padStart(2, '0')
+}
+
+function formatLocalDateKey(date) {
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`
+}
+
+const todayDateKey = formatLocalDateKey(new Date())
+
 function toDateKey(value) {
-  return new Date(value).toISOString().slice(0, 10)
+  return formatLocalDateKey(new Date(value))
 }
 
 function getMonthRange(date) {
@@ -28,8 +38,8 @@ function getMonthRange(date) {
   const start = new Date(year, month, 1)
   const end = new Date(year, month + 1, 0)
   return {
-    from: start.toISOString().slice(0, 10),
-    to: end.toISOString().slice(0, 10)
+    from: formatLocalDateKey(start),
+    to: formatLocalDateKey(end)
   }
 }
 
@@ -63,7 +73,7 @@ const calendarCells = computed(() => {
   for (let index = 0; index < 42; index += 1) {
     const date = new Date(startDate)
     date.setDate(startDate.getDate() + index)
-    const dateKey = date.toISOString().slice(0, 10)
+    const dateKey = formatLocalDateKey(date)
     cells.push({
       date: dateKey,
       day: date.getDate(),
@@ -78,7 +88,7 @@ const calendarCells = computed(() => {
 async function refresh() {
   loading.value = true
   try {
-    const today = new Date().toISOString().slice(0, 10)
+    const today = formatLocalDateKey(new Date())
     const range = getMonthRange(currentMonth.value)
     const [schData, catData] = await Promise.all([
       listSchedules({ from: range.from, to: range.to }),
@@ -134,7 +144,7 @@ async function moveMonth(delta) {
 async function jumpToToday() {
   const today = new Date()
   currentMonth.value = new Date(today.getFullYear(), today.getMonth(), 1)
-  selectedDate.value = today.toISOString().slice(0, 10)
+  selectedDate.value = formatLocalDateKey(today)
   await refresh()
 }
 
@@ -191,25 +201,33 @@ onBeforeUnmount(() => {
       :weekday-labels="weekdayLabels"
       :cells="calendarCells"
       :selected-date="selectedDate"
-      :today-date="new Date().toISOString().slice(0, 10)"
+      :today-date="todayDateKey"
       @prev-month="moveMonth(-1)"
       @next-month="moveMonth(1)"
       @select-date="selectCalendarDate"
     />
 
-    <div class="sfilter card">
-      <div class="sfilterText">{{ currentFilterLabel }}</div>
-      <div class="sfilterActions">
+    <div class="stoolbar card">
+      <div class="stoolbarInfo">
+        <div class="stoolbarLabel">当前查看</div>
+        <div class="stoolbarText">{{ currentFilterLabel }}</div>
+      </div>
+      <div class="stoolbarActions">
         <button class="ghost" type="button" @click="jumpToToday">回到今天</button>
         <button class="ghost" type="button" :disabled="!selectedDate" @click="clearDateFilter">清除筛选</button>
+        <button class="ghost" type="button" @click="$emit('go', 'category')">管理类目</button>
+        <button class="primary" type="button" @click="showForm = !showForm">{{ showForm ? '收起表单' : '新增安排' }}</button>
       </div>
     </div>
 
     <!-- 快速新增 -->
-    <div class="squick card">
+    <div v-if="showForm" class="squick card">
       <div class="squickHead">
-        <div class="squickTitle">新增安排</div>
-        <button class="primary" @click="showForm = !showForm">{{ showForm ? '取消' : '新增' }}</button>
+        <div>
+          <div class="squickTitle">新增安排</div>
+          <div class="squickHint">把时间先记下来，下面的列表就会马上更新。</div>
+        </div>
+        <button class="ghost" type="button" @click="showForm = false">取消</button>
       </div>
       <div v-if="showForm" class="squickForm">
         <input v-model="newForm.title" placeholder="标题" />
@@ -240,7 +258,6 @@ onBeforeUnmount(() => {
             {{ selectedDate ? '点一下别的日期，就能换着看那一天的安排。' : '先从这个月的节奏看起，想看某一天就点上面的日期。' }}
           </div>
         </div>
-        <button class="ghost" @click="$emit('go', 'category')">管理类目</button>
       </div>
       <div v-if="filteredSchedules.length === 0 && !loading" class="sempty">还没有日程安排</div>
       <div v-else class="sitems">
@@ -271,7 +288,7 @@ onBeforeUnmount(() => {
 .ssummary{ background: var(--schedule-tint); padding: 12px 20px; text-align: center; }
 .ssumText{ font-size: 15px; }
 
-.sfilter{
+.stoolbar{
   padding: 12px 16px;
   display: flex;
   align-items: center;
@@ -280,19 +297,34 @@ onBeforeUnmount(() => {
   background: #FFFDFC;
 }
 
-.sfilterText{
+.stoolbarInfo{
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stoolbarLabel{
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.stoolbarText{
   font-size: 13px;
   color: var(--text);
 }
 
-.sfilterActions{
+.stoolbarActions{
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
+  justify-content: flex-end;
 }
 
 .squick{ padding: 12px 20px; }
 .squickHead{ display: flex; justify-content: space-between; align-items: center; }
 .squickTitle{ font-weight: 700; }
+.squickHint{ margin-top: 4px; font-size: 12px; color: var(--muted); }
 .squickForm{ margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .squickForm > input:first-child,
 .squickForm > .squickRow:first-of-type,
@@ -333,19 +365,19 @@ onBeforeUnmount(() => {
 .sdel{ color: var(--danger); }
 
 @media (max-width: 720px){
-  .sfilter{
+  .stoolbar,
+  .squickHead,
+  .slistHead{
     flex-direction: column;
     align-items: stretch;
   }
 
-  .sfilterActions{
+  .stoolbarActions{
     justify-content: flex-start;
   }
 
-  .slistHead,
-  .squickHead{
-    flex-direction: column;
-    align-items: flex-start;
+  .stoolbarActions > button{
+    width: 100%;
   }
 }
 </style>
