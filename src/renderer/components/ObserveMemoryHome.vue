@@ -193,7 +193,10 @@ function formatLatestObservationUpdate(items) {
     <!-- 重要记忆入口 -->
     <div class="omMemories card">
       <div class="omMemoriesHead">
-        <div class="omMemoriesTitle">铃湾帮你记住的事</div>
+        <div class="omSectionTitleWrap">
+          <div class="omMemoriesTitle">铃湾帮你记住的事</div>
+          <span class="omSectionBadge">{{ memoryOverview.total }} 页</span>
+        </div>
         <div class="omMemoriesActions">
           <button class="ghost" @click="$emit('go', 'memory-list')">查看全部</button>
           <button class="primary" @click="$emit('go', 'memory-create')">新建记忆</button>
@@ -272,7 +275,10 @@ function formatLatestObservationUpdate(items) {
     <!-- 观察记录入口 -->
     <div class="omObserve card">
       <div class="omObserveHead">
-        <div class="omObserveTitle">最近的观察记录</div>
+        <div class="omSectionTitleWrap">
+          <div class="omObserveTitle">最近的观察记录</div>
+          <span class="omSectionBadge">{{ observationOverview.total }} 条</span>
+        </div>
         <button class="ghost" @click="$emit('go', 'observation-list')">查看全部</button>
       </div>
       <div class="omObserveHint">
@@ -370,6 +376,25 @@ function formatLatestObservationUpdate(items) {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 10px;
+}
+
+.omSectionTitleWrap{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.omSectionBadge{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(0,0,0,.05);
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
 }
 .omMemoriesActions{
   display: flex;
@@ -662,6 +687,10 @@ function formatLatestObservationUpdate(items) {
     flex-direction: column;
     align-items: stretch;
     gap: 10px;
+  }
+
+  .omSectionTitleWrap{
+    justify-content: space-between;
   }
   .omMemoriesActions{
     flex-direction: column;
