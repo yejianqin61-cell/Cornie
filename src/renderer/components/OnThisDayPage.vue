@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { listOnThisDay } from '../api'
+import CornieDiaryMarkdown from './CornieDiaryMarkdown.vue'
 
 function pad2(n) { return String(n).padStart(2, '0') }
 function toISODate(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}` }
@@ -42,7 +43,10 @@ onMounted(async () => {
           </div>
           <div class="otdCol">
             <div class="otdLabel">Cornie 日记</div>
-            <div class="otdText">{{ it.cornieText || '（空）' }}</div>
+            <div v-if="it.cornieText" class="otdText cornieText">
+              <CornieDiaryMarkdown :content="it.cornieText" />
+            </div>
+            <div v-else class="otdText">（空）</div>
           </div>
         </div>
       </div>
@@ -93,6 +97,13 @@ onMounted(async () => {
 .otdCols{ display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .otdLabel{ font-size: 12px; color: var(--muted); margin-bottom: 4px; }
 .otdText{ white-space: pre-wrap; line-height: 1.5; font-size: 14px; max-height: 240px; overflow-y: auto; }
+.cornieText{ white-space: normal; color: #9B6B7A; }
+:deep(.cornieText .cornieMarkdown){ gap: 8px; }
+:deep(.cornieText .mdParagraph),
+:deep(.cornieText .mdQuote),
+:deep(.cornieText .mdList){
+  font-size: 14px;
+}
 
 @media (max-width: 760px){
   .otdCols{ grid-template-columns: 1fr; }

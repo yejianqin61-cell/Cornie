@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { getEntry, listEntries, listOnThisDay } from '../api'
+import CornieDiaryMarkdown from './CornieDiaryMarkdown.vue'
 
 function pad2(n) { return String(n).padStart(2, '0') }
 function toISODate(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}` }
@@ -68,7 +69,9 @@ function emitGo(where) {
       </div>
       <div class="previewCard card" :class="{ emptyPreview: !hasCornieWritten }">
         <div class="previewTitle">🌸 铃湾今天写的</div>
-        <div class="previewText corniePreview" v-if="hasCornieWritten">{{ entry.cornieText }}</div>
+        <div class="previewText corniePreview" v-if="hasCornieWritten">
+          <CornieDiaryMarkdown :content="entry.cornieText" />
+        </div>
         <div class="previewHint" v-else>铃湾还没写今天的日记。</div>
       </div>
     </div>
@@ -149,7 +152,16 @@ function emitGo(where) {
   max-height: 160px;
   overflow-y: auto;
 }
-.corniePreview{ color: #9B6B7A; }
+.corniePreview{
+  white-space: normal;
+  color: #9B6B7A;
+}
+:deep(.corniePreview .cornieMarkdown){ gap: 8px; }
+:deep(.corniePreview .mdParagraph),
+:deep(.corniePreview .mdQuote),
+:deep(.corniePreview .mdList){
+  font-size: 13px;
+}
 .emptyPreview{ opacity: .65; background: var(--surface-2); }
 .previewHint{ color: var(--muted); font-size: 13px; }
 
