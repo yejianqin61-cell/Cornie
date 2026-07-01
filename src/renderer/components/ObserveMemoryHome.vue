@@ -209,7 +209,7 @@ function formatLatestObservationUpdate(items) {
       </div>
       <div v-else class="omMemoryList">
         <div class="omSectionScopeHint">
-          这里先放最近整理过的几页记忆，想慢慢翻更多，可以去完整记忆列表。
+          这里先放了最近 {{ primaryIdentityMemory ? otherRecentMemories.length + 1 : recentMemories.length }} 页记忆，想慢慢翻更多，可以去完整记忆列表。
         </div>
 
         <div v-if="latestMemoryUpdateLabel" class="omMemoryUpdatedHint">
@@ -282,7 +282,7 @@ function formatLatestObservationUpdate(items) {
       </div>
       <div v-else class="omObserveList">
         <div class="omSectionScopeHint">
-          这里只先放最近的几条观察，想看今天更完整的整理，可以点查看全部。
+          这里只先放了最近 {{ recentObservations.length }} 条观察，想看今天更完整的整理，可以点查看全部。
         </div>
 
         <div v-if="latestObservationUpdateLabel" class="omObserveUpdatedHint">
