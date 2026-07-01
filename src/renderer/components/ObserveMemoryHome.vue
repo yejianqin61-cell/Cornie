@@ -23,15 +23,23 @@ const OBSERVATION_TYPE_LABELS = {
   misc: '小事记录'
 }
 
+const primaryIdentityMemory = ref(null)
+const otherRecentMemories = ref([])
+
 async function refreshMemories() {
   loadingMemories.value = true
   try {
     const data = await listMemoryWikiPages({ status: 'active' })
-    recentMemories.value = (data?.pages || [])
-      .filter((page) => IDENTITY_MEMORY_PAGE_TYPES.has(page.pageType))
-      .slice(0, 5)
+    const pages = (data?.pages || []).filter((page) => IDENTITY_MEMORY_PAGE_TYPES.has(page.pageType))
+    recentMemories.value = pages.slice(0, 5)
+    primaryIdentityMemory.value = pages.find((page) => page.pageType === 'identity_profile') || null
+    otherRecentMemories.value = pages
+      .filter((page) => page.id !== primaryIdentityMemory.value?.id)
+      .slice(0, 4)
   } catch {
     recentMemories.value = []
+    primaryIdentityMemory.value = null
+    otherRecentMemories.value = []
   } finally {
     loadingMemories.value = false
   }
@@ -114,11 +122,23 @@ function observationTypeLabel(type) {
         <div class="omEmptyIcon">📝</div>
         <div class="omEmptyText">铃湾还在慢慢记住关于你的事</div>
         <div class="omEmptyHint">多和铃湾聊聊天，她会帮你记住重要的东西</div>
-        <button class="primary omEmptyAction" @click="$emit('go', 'memory-create')">先写下一页记忆</button>
+        <button class="primary omEmptyAction" @click="$emit('go', 'memory-create')">先写下“关于你”</button>
       </div>
       <div v-else class="omMemoryList">
         <div
-          v-for="mem in recentMemories"
+          v-if="primaryIdentityMemory"
+          class="omPrimaryMemoryCard"
+          @click="$emit('go', 'memory-detail', primaryIdentityMemory.id)"
+        >
+          <div class="omPrimaryEyebrow">铃湾现在最先记住的你</div>
+          <div class="omPrimaryTitle">{{ primaryIdentityMemory.title }}</div>
+          <div class="omPrimarySummary">
+            {{ truncated(primaryIdentityMemory.summary || primaryIdentityMemory.content || '先把最重要的自己留在这里。', 120) }}
+          </div>
+        </div>
+
+        <div
+          v-for="mem in (primaryIdentityMemory ? otherRecentMemories : recentMemories)"
           :key="mem.id"
           class="omMemoryCard"
           @click="$emit('go', 'memory-detail', mem.id)"
@@ -230,6 +250,41 @@ function observationTypeLabel(type) {
 .omEmptyAction{ margin-top: 8px; }
 
 .omMemoryList{ display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+.omPrimaryMemoryCard{
+  grid-column: 1 / -1;
+  padding: 16px 18px;
+  border: 1px solid rgba(232,133,106,.22);
+  border-radius: 16px;
+  cursor: pointer;
+  background: linear-gradient(135deg, rgba(232,133,106,.12), rgba(255,249,244,.96));
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+
+.omPrimaryMemoryCard:hover{
+  transform: translateY(-1px);
+  border-color: rgba(232,133,106,.34);
+  box-shadow: 0 12px 26px rgba(203,127,90,.14);
+}
+
+.omPrimaryEyebrow{
+  font-size: 11px;
+  letter-spacing: .04em;
+  color: var(--muted);
+}
+
+.omPrimaryTitle{
+  margin-top: 4px;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.omPrimarySummary{
+  margin-top: 8px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--muted);
+}
 .omMemoryCard{
   padding: 12px 14px;
   border: 1px solid var(--border);
