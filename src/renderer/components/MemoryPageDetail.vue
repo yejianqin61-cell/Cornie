@@ -131,6 +131,15 @@ const contentPlaceholder = computed(() => {
   }
   return '可以写这个特征常出现在哪些时候、它怎样影响你的表达、情绪或选择。'
 })
+const personPrompts = computed(() => {
+  if (page.value.pageType !== 'identity_person') return []
+  return [
+    '你们是什么关系？这个人最常以什么身份出现在你的生活里？',
+    '你对他的第一印象或最深印象是什么？',
+    '你们之间有什么共同经历，是你很想留下来的？',
+    '这个人为什么重要？这段关系对你意味着什么？'
+  ]
+})
 const submitLabel = computed(() => {
   if (saving.value) return isCreateMode.value ? '创建中…' : '保存中…'
   return isCreateMode.value ? '创建这页记忆' : '保存修改'
@@ -267,6 +276,13 @@ onMounted(loadPage)
         <div class="mdetailGuideEyebrow">{{ pageGuide.eyebrow }}</div>
         <div class="mdetailGuideTitle">{{ pageGuide.title }}</div>
         <div class="mdetailGuideBody">{{ pageGuide.body }}</div>
+      </section>
+
+      <section v-if="page.pageType === 'identity_person'" class="mdetailGuide mdetailGuidePerson">
+        <div class="mdetailGuideEyebrow">写这个人的时候，可以顺着想</div>
+        <div class="mdetailPromptList">
+          <div v-for="item in personPrompts" :key="item" class="mdetailPromptItem">{{ item }}</div>
+        </div>
       </section>
 
       <section v-if="!isCreateMode" class="mdetailSource cardShell">
@@ -444,6 +460,10 @@ onMounted(loadPage)
   background: linear-gradient(135deg, rgba(232,133,106,.14), rgba(255,248,244,.96));
 }
 
+.mdetailGuidePerson{
+  background: linear-gradient(180deg, rgba(255,250,246,.92), #fff);
+}
+
 .mdetailGuideEyebrow{
   font-size: 11px;
   letter-spacing: .04em;
@@ -458,6 +478,23 @@ onMounted(loadPage)
 
 .mdetailGuideBody{
   margin-top: 6px;
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.mdetailPromptList{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.mdetailPromptItem{
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  padding: 10px 12px;
   font-size: 13px;
   color: var(--muted);
   line-height: 1.6;
