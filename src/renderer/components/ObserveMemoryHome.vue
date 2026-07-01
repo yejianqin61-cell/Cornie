@@ -198,7 +198,7 @@ function formatLatestObservationUpdate(items) {
           <span class="omSectionBadge">{{ memoryOverview.total }} 页</span>
         </div>
         <div class="omMemoriesActions">
-          <button class="ghost" @click="$emit('go', 'memory-list')">查看全部</button>
+          <button class="ghost" @click="$emit('go', 'memory-list')">看完整记忆</button>
           <button class="primary" @click="$emit('go', 'memory-create')">新建记忆</button>
         </div>
       </div>
@@ -279,7 +279,7 @@ function formatLatestObservationUpdate(items) {
           <div class="omObserveTitle">最近的观察记录</div>
           <span class="omSectionBadge">{{ observationOverview.total }} 条</span>
         </div>
-        <button class="ghost" @click="$emit('go', 'observation-list')">查看全部</button>
+        <button class="ghost" @click="$emit('go', 'observation-list')">看全部观察</button>
       </div>
       <div class="omObserveHint">
         铃湾会在值得留下来的时候，记一小段事实。不是每句聊天都会被写成流水账。
