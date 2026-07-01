@@ -28,7 +28,7 @@ function flushParagraph(paragraphLines, blocks) {
   if (paragraphLines.length === 0) return
   blocks.push({
     type: 'paragraph',
-    html: renderInline(paragraphLines.join(' '))
+    html: paragraphLines.map((line) => renderInline(line)).join('<br />')
   })
   paragraphLines.length = 0
 }
@@ -46,7 +46,7 @@ function flushQuote(quoteLines, blocks) {
   if (quoteLines.length === 0) return
   blocks.push({
     type: 'quote',
-    html: renderInline(quoteLines.join(' '))
+    html: quoteLines.map((line) => renderInline(line)).join('<br />')
   })
   quoteLines.length = 0
 }
@@ -154,6 +154,11 @@ const blocks = computed(() => parseMarkdown(props.content))
 .mdParagraph{
   margin: 0;
   line-height: 1.8;
+}
+
+.mdParagraph :deep(br),
+.mdQuote :deep(br){
+  content: '';
 }
 
 .mdQuote{

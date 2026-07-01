@@ -8,6 +8,7 @@
 
 - GitHub Issue `#15` 前端-日记页面
 - 设计文档：`doc/design/Cornie-0701-GitHub-Issue-011-015前端问题分级与落地设计.md`
+- 补充设计文档：`doc/design/Cornie-0701-GitHub-Open-Issue-011-015正式落地设计.md`
 
 ## 3. 背景与现状
 
@@ -26,13 +27,15 @@
 
 ## 4. 涉及范围
 
-- 需要定位当前日记页实际组件，通常可能涉及：
-  - `src/renderer/components/*Diary*.vue`
-  - `src/renderer/components/*Entry*.vue`
-  - `src/renderer/App.vue` 内的日记展示区域
-- `package.json`
-- 如需新增渲染封装组件，可新增：
+- 当前主要落点：
+  - `src/renderer/components/DiaryHome.vue`
+  - `src/renderer/components/CornieDiaryReview.vue`
   - `src/renderer/components/CornieDiaryMarkdown.vue`
+  - `src/renderer/App.vue`
+- `package.json`
+- 如需补齐或重构渲染封装，优先在现有：
+  - `src/renderer/components/CornieDiaryMarkdown.vue`
+  上继续完善
 
 ## 5. 前置依赖
 
@@ -90,7 +93,20 @@
 2. 技术味过重的语法展示
 3. 复杂调试性 UI
 
-## 7. 实现建议
+## 7. 当前代码落点与改造要求
+
+当前代码已经显示：
+
+1. `DiaryHome.vue` 已经接入 `CornieDiaryMarkdown.vue`。
+2. 仓库里已经存在独立的 Markdown 渲染组件骨架。
+
+因此本任务并不一定是“从零接入 Markdown”，而更可能是：
+
+1. 检查当前渲染是否完整覆盖日记入口。
+2. 修补安全边界与异常降级。
+3. 调整样式，让页面更像日记成品。
+
+## 8. 实现建议
 
 ### 7.1 组件封装建议
 
@@ -118,14 +134,21 @@
 
 建议单独定义日记正文容器样式，而不是污染全局 Markdown 样式。
 
-## 8. 验收标准
+## 9. 建议开发顺序
+
+1. 先检查 `CornieDiaryMarkdown.vue` 当前使用的渲染方案。
+2. 确认是否已禁用原始 HTML，是否存在注入风险。
+3. 再对 `DiaryHome.vue` 和相关日记展示入口做统一接线检查。
+4. 最后做阅读样式和异常降级收口。
+
+## 10. 验收标准
 
 1. `#` `##` `**` 等常见 Markdown 在日记页能正确渲染。
 2. 非法 Markdown 不会导致页面报错或空白。
 3. 页面最终阅读体验明显优于纯文本直出。
 4. 不存在原始 HTML 注入风险。
 
-## 9. 自测清单
+## 11. 自测清单
 
 1. 准备一段带 `##`、`**`、列表的 Cornie 日记，确认渲染正确。
 2. 准备一段普通纯文本日记，确认仍正常显示。
@@ -133,9 +156,8 @@
 4. 检查标题、段落、强调样式是否符合日记阅读场景。
 5. 检查是否存在原始 HTML 被当作真实标签插入页面。
 
-## 10. 提交建议
+## 12. 提交建议
 
 建议提交信息：
 
 `feat(diary): render cornie diary content as safe markdown`
-
