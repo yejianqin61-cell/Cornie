@@ -61,6 +61,76 @@ const pageTypeHint = computed(() =>
 const pageTypeLabel = computed(() =>
   PAGE_TYPES.find((item) => item.value === page.value.pageType)?.label || '长期记忆'
 )
+const pageGuide = computed(() => {
+  if (page.value.pageType === 'identity_profile') {
+    return {
+      eyebrow: '最核心的一页',
+      title: '这里最适合写“你是谁”',
+      body: '名字、你和铃湾的关系、你最近的人生状态，或者你最希望被怎样记住，都可以慢慢放在这里。'
+    }
+  }
+  if (page.value.pageType === 'identity_person') {
+    return {
+      eyebrow: '重要的人',
+      title: '把这个人留得更清楚一点',
+      body: '可以写他是谁、你们是什么关系、哪些共同经历最值得被留下来。'
+    }
+  }
+  if (page.value.pageType === 'identity_preference') {
+    return {
+      eyebrow: '你的偏好',
+      title: '把舒服和不舒服都说清楚',
+      body: '喜欢什么、不喜欢什么、怎样的陪伴方式会更让你安心，这里都可以记下来。'
+    }
+  }
+  return {
+    eyebrow: '你的特征',
+    title: '把稳定的小习惯和性格样子留下来',
+    body: '比如你的表达方式、习惯、压力大的时候会有什么反应，这些都能帮铃湾更懂你。'
+  }
+})
+const titleLabel = computed(() => {
+  if (page.value.pageType === 'identity_profile') return '这页想记住的名字或主题'
+  if (page.value.pageType === 'identity_person') return '这个人的名字'
+  if (page.value.pageType === 'identity_preference') return '这个偏好的名字'
+  return '这个特征的名字'
+})
+const titlePlaceholder = computed(() => {
+  if (page.value.pageType === 'identity_profile') return '比如：叶健钦、现在的我、铃湾记住的我'
+  if (page.value.pageType === 'identity_person') return '比如：钟奕菲、大学室友、妈妈'
+  if (page.value.pageType === 'identity_preference') return '比如：喜欢被温柔回应、讨厌临时变动'
+  return '比如：容易心软、睡前爱刷手机、压力大时会沉默'
+})
+const summaryLabel = computed(() => {
+  if (page.value.pageType === 'identity_profile') return '一句话介绍你自己'
+  if (page.value.pageType === 'identity_person') return '一句话记住这个人'
+  if (page.value.pageType === 'identity_preference') return '一句话记住这个偏好'
+  return '一句话记住这个特征'
+})
+const summaryPlaceholder = computed(() => {
+  if (page.value.pageType === 'identity_profile') return '先用一两句话写下“你是谁”和“铃湾最该记住什么”。'
+  if (page.value.pageType === 'identity_person') return '先用一两句话写下这个人对你来说最重要的意义。'
+  if (page.value.pageType === 'identity_preference') return '先用一两句话写下这个偏好为什么重要。'
+  return '先用一两句话写下这个特征最常出现的样子。'
+})
+const contentLabel = computed(() => {
+  if (page.value.pageType === 'identity_profile') return '更完整地写下你自己'
+  if (page.value.pageType === 'identity_person') return '更完整地写下这个人'
+  if (page.value.pageType === 'identity_preference') return '更完整地写下这个偏好'
+  return '更完整地写下这个特征'
+})
+const contentPlaceholder = computed(() => {
+  if (page.value.pageType === 'identity_profile') {
+    return '可以写你的名字、身份、你和铃湾的关系、最近的状态，或者你最希望以后被怎样理解。'
+  }
+  if (page.value.pageType === 'identity_person') {
+    return '可以写他是谁、你们怎么认识、关系怎样变化、有哪些重要经历，或者你为什么不想忘记这个人。'
+  }
+  if (page.value.pageType === 'identity_preference') {
+    return '可以写这个偏好出现在哪些情景、什么会让你更舒服、什么会让你不舒服。'
+  }
+  return '可以写这个特征常出现在哪些时候、它怎样影响你的表达、情绪或选择。'
+})
 const submitLabel = computed(() => {
   if (saving.value) return isCreateMode.value ? '创建中…' : '保存中…'
   return isCreateMode.value ? '创建这页记忆' : '保存修改'
@@ -193,6 +263,12 @@ onMounted(loadPage)
         <div class="mdetailTypePill">{{ pageTypeLabel }}</div>
       </div>
 
+      <section class="mdetailGuide" :class="{ mdetailGuidePrimary: page.pageType === 'identity_profile' }">
+        <div class="mdetailGuideEyebrow">{{ pageGuide.eyebrow }}</div>
+        <div class="mdetailGuideTitle">{{ pageGuide.title }}</div>
+        <div class="mdetailGuideBody">{{ pageGuide.body }}</div>
+      </section>
+
       <section v-if="!isCreateMode" class="mdetailSource cardShell">
         <div class="sectionTitle">这页记忆是怎么来的</div>
         <div v-if="hasSourceSummary" class="sourceSummaryGrid">
@@ -250,32 +326,32 @@ onMounted(loadPage)
       </label>
 
       <label class="mdetailField">
-        <span>标题</span>
+        <span>{{ titleLabel }}</span>
         <input
           v-model="page.title"
           class="mdetailTitle"
-          placeholder="比如：叶健钦、钟奕菲、我喜欢的安慰方式"
+          :placeholder="titlePlaceholder"
           @input="markDirty"
         />
       </label>
 
       <label class="mdetailField">
-        <span>一句话摘要</span>
+        <span>{{ summaryLabel }}</span>
         <textarea
           v-model="page.summary"
           class="mdetailSummary"
           rows="3"
-          placeholder="先用一两句话写下这页记忆最重要的意思。"
+          :placeholder="summaryPlaceholder"
           @input="markDirty"
         />
       </label>
 
       <label class="mdetailField mdetailFieldGrow">
-        <span>详细内容</span>
+        <span>{{ contentLabel }}</span>
         <textarea
           v-model="page.content"
           class="mdetailContent"
-          placeholder="把你想让铃湾长期记住的内容写在这里。"
+          :placeholder="contentPlaceholder"
           @input="markDirty"
         />
       </label>
@@ -351,6 +427,37 @@ onMounted(loadPage)
 }
 
 .mdetailHint{
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.mdetailGuide{
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  background: linear-gradient(180deg, rgba(255,252,249,.95), #fff);
+}
+
+.mdetailGuidePrimary{
+  border-color: rgba(232,133,106,.18);
+  background: linear-gradient(135deg, rgba(232,133,106,.14), rgba(255,248,244,.96));
+}
+
+.mdetailGuideEyebrow{
+  font-size: 11px;
+  letter-spacing: .04em;
+  color: var(--muted);
+}
+
+.mdetailGuideTitle{
+  margin-top: 4px;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.mdetailGuideBody{
+  margin-top: 6px;
   font-size: 13px;
   color: var(--muted);
   line-height: 1.6;
