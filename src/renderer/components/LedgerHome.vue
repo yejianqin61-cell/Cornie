@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import {
   createExpenseCategory,
   createExpenseEntry,
@@ -199,6 +199,31 @@ const categorySegments = computed(() => {
 const filteredCategories = computed(() =>
   categories.value.filter((item) => item.type === form.value.type)
 )
+
+watch(
+  () => form.value.type,
+  () => {
+    const currentCategory = categories.value.find((item) => item.id === form.value.categoryId)
+    if (currentCategory && currentCategory.type !== form.value.type) {
+      form.value.categoryId = ''
+      form.value.categoryName = ''
+    }
+    if (showQuickCategoryCreate.value) {
+      categoryCreateError.value = ''
+    }
+  }
+)
+
+watch(filteredCategories, (nextCategories) => {
+  if (!form.value.categoryId) return
+  const matched = nextCategories.find((item) => item.id === form.value.categoryId)
+  if (matched) {
+    form.value.categoryName = matched.name
+    return
+  }
+  form.value.categoryId = ''
+  form.value.categoryName = ''
+})
 
 const calendarCells = computed(() => {
   const year = currentMonth.value.getFullYear()
