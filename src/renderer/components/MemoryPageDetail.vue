@@ -140,6 +140,15 @@ const personPrompts = computed(() => {
     '这个人为什么重要？这段关系对你意味着什么？'
   ]
 })
+const profilePrompts = computed(() => {
+  if (page.value.pageType !== 'identity_profile') return []
+  return [
+    '你叫什么？如果铃湾平时有更亲近的叫法，也可以一起写下来。',
+    '你和铃湾是什么关系？你希望她怎样理解你们之间的连接？',
+    '你最近正在经历什么阶段？生活、学业、工作、情绪都可以简单提一下。',
+    '你现在最在意什么？最近最想守住、推进，或最想被理解的是什么？'
+  ]
+})
 const submitLabel = computed(() => {
   if (saving.value) return isCreateMode.value ? '创建中…' : '保存中…'
   return isCreateMode.value ? '创建这页记忆' : '保存修改'
@@ -276,6 +285,13 @@ onMounted(loadPage)
         <div class="mdetailGuideEyebrow">{{ pageGuide.eyebrow }}</div>
         <div class="mdetailGuideTitle">{{ pageGuide.title }}</div>
         <div class="mdetailGuideBody">{{ pageGuide.body }}</div>
+      </section>
+
+      <section v-if="page.pageType === 'identity_profile'" class="mdetailGuide mdetailGuideProfile">
+        <div class="mdetailGuideEyebrow">写“关于你”的时候，可以先留下这些</div>
+        <div class="mdetailPromptList">
+          <div v-for="item in profilePrompts" :key="item" class="mdetailPromptItem">{{ item }}</div>
+        </div>
       </section>
 
       <section v-if="page.pageType === 'identity_person'" class="mdetailGuide mdetailGuidePerson">
@@ -462,6 +478,10 @@ onMounted(loadPage)
 
 .mdetailGuidePerson{
   background: linear-gradient(180deg, rgba(255,250,246,.92), #fff);
+}
+
+.mdetailGuideProfile{
+  background: linear-gradient(180deg, rgba(255,248,242,.94), #fff);
 }
 
 .mdetailGuideEyebrow{
