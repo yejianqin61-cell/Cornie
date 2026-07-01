@@ -38,6 +38,7 @@ const memoryOverview = ref({
   personCount: 0,
   preferenceAndTraitCount: 0
 })
+const latestMemoryUpdateLabel = ref('')
 
 async function refreshMemories() {
   loadingMemories.value = true
@@ -55,6 +56,7 @@ async function refreshMemories() {
       personCount: pages.filter((page) => page.pageType === 'identity_person').length,
       preferenceAndTraitCount: pages.filter((page) => page.pageType === 'identity_preference' || page.pageType === 'identity_trait').length
     }
+    latestMemoryUpdateLabel.value = formatLatestMemoryUpdate(pages)
   } catch {
     recentMemories.value = []
     primaryIdentityMemory.value = null
@@ -65,6 +67,7 @@ async function refreshMemories() {
       personCount: 0,
       preferenceAndTraitCount: 0
     }
+    latestMemoryUpdateLabel.value = ''
   } finally {
     loadingMemories.value = false
   }
@@ -113,6 +116,23 @@ function observationTypeLabel(type) {
 function memoryTypeLabel(type) {
   return MEMORY_TYPE_LABELS[type] || '长期记忆'
 }
+
+function normalizeDateText(value) {
+  const text = String(value || '').trim()
+  if (!text) return ''
+  if (/^\d{4}-\d{2}-\d{2}/.test(text)) return text.slice(0, 10)
+  const parsed = new Date(text)
+  if (Number.isNaN(parsed.getTime())) return ''
+  return parsed.toISOString().slice(0, 10)
+}
+
+function formatLatestMemoryUpdate(pages) {
+  const latest = pages
+    .map((page) => normalizeDateText(page.updatedAt || page.createdAt))
+    .filter(Boolean)
+    .sort((a, b) => b.localeCompare(a))[0]
+  return latest || ''
+}
 </script>
 
 <template>
@@ -154,6 +174,10 @@ function memoryTypeLabel(type) {
         <button class="primary omEmptyAction" @click="$emit('go', 'memory-create')">先写下“关于你”</button>
       </div>
       <div v-else class="omMemoryList">
+        <div v-if="latestMemoryUpdateLabel" class="omMemoryUpdatedHint">
+          这些记忆最近整理在 {{ latestMemoryUpdateLabel }}
+        </div>
+
         <div class="omMemoryOverview">
           <div class="omMemoryOverviewCard">
             <div class="omMemoryOverviewValue">{{ memoryOverview.total }}</div>
@@ -303,6 +327,13 @@ function memoryTypeLabel(type) {
 .omEmptyAction{ margin-top: 8px; }
 
 .omMemoryList{ display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+.omMemoryUpdatedHint{
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+}
 
 .omMemoryOverview{
   grid-column: 1 / -1;
