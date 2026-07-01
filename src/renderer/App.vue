@@ -40,6 +40,7 @@ const modeMeta = computed(() => sections.find((item) => item.id === mode.value) 
 
 const chatView = ref('home')
 const chatHistoryDate = ref('')
+const chatFocusMessageId = ref('')
 
 // Diary sub-view
 const diaryView = ref('home') // 'home' | 'editor' | 'cornie-review' | 'on-this-day'
@@ -156,6 +157,7 @@ async function resetModelSettings() {
 watch(mode, () => {
   chatView.value = 'home'
   chatHistoryDate.value = ''
+  chatFocusMessageId.value = ''
   diaryView.value = 'home'
   omView.value = 'home'
   settingsView.value = 'home'
@@ -240,11 +242,12 @@ onMounted(async () => {
         <ChatHistory
           v-else-if="chatView === 'history'"
           @back="chatView = 'home'"
-          @open-date="(date) => { chatHistoryDate = date; chatView = 'day' }"
+          @open-date="(date) => { chatHistoryDate = date; chatFocusMessageId = ''; chatView = 'day' }"
         />
         <ChatDayView
           v-else-if="chatView === 'day'"
           :date="chatHistoryDate"
+          :focus-message-id="chatFocusMessageId"
           @back="chatView = 'history'"
         />
       </section>
@@ -313,6 +316,7 @@ onMounted(async () => {
           :id="omDetailId"
           @back="omView = 'memory-list'"
           @deleted="omView = 'memory-list'"
+          @open-chat-source="({ date, messageId }) => { mode = 'chat'; chatHistoryDate = date || ''; chatFocusMessageId = messageId || ''; chatView = 'day' }"
           @open-observation="(id) => { omDetailId = id; omView = 'observation-detail' }"
           @open-memory="(id) => { omDetailId = id; omView = 'memory-detail' }"
         />

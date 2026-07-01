@@ -1,27 +1,76 @@
 <script setup>
-import { onMounted, ref } from 'vue'
+import { nextTick, onMounted, ref, watch } from 'vue'
 import { getChatlog } from '../api'
 
 const props = defineProps({
-  date: { type: String, required: true }
+  date: { type: String, required: true },
+  focusMessageId: { type: String, default: '' }
 })
 
 const emit = defineEmits(['back'])
 const messages = ref([])
 const loading = ref(false)
 const errorMsg = ref('')
+const highlightedMessageId = ref('')
+const messageRefs = ref(new Map())
 
-onMounted(async () => {
+function setMessageRef(id, el) {
+  if (!id) return
+  if (el) {
+    messageRefs.value.set(id, el)
+    return
+  }
+  messageRefs.value.delete(id)
+}
+
+async function focusMessageIfNeeded() {
+  if (!props.focusMessageId) {
+    highlightedMessageId.value = ''
+    return
+  }
+  const target = messages.value.find((item) => String(item?.id || '') === String(props.focusMessageId))
+  if (!target) {
+    highlightedMessageId.value = ''
+    return
+  }
+  await nextTick()
+  const el = messageRefs.value.get(props.focusMessageId)
+  if (el?.scrollIntoView) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+  highlightedMessageId.value = props.focusMessageId
+}
+
+async function loadMessages() {
+  if (!props.date) {
+    messages.value = []
+    highlightedMessageId.value = ''
+    return
+  }
+
   loading.value = true
   errorMsg.value = ''
   try {
     const data = await getChatlog(props.date)
     messages.value = data.messages || []
+    await focusMessageIfNeeded()
   } catch (error) {
     errorMsg.value = error?.message || '加载聊天记录失败，请稍后再试。'
   } finally {
     loading.value = false
   }
+}
+
+watch(() => props.date, () => {
+  loadMessages()
+})
+
+watch(() => props.focusMessageId, () => {
+  focusMessageIfNeeded()
+})
+
+onMounted(async () => {
+  await loadMessages()
 })
 
 function formatDateLabel(date) {
@@ -56,8 +105,12 @@ function goBack() {
       <div
         v-for="msg in messages"
         :key="msg.id"
+        :ref="(el) => setMessageRef(msg.id, el)"
         class="dayBubble"
-        :class="msg.role === 'user' ? 'dayBubbleUser' : 'dayBubbleCornie'"
+        :class="[
+          msg.role === 'user' ? 'dayBubbleUser' : 'dayBubbleCornie',
+          highlightedMessageId && msg.id === highlightedMessageId ? 'dayBubbleFocus' : ''
+        ]"
       >
         <div class="dayRole">{{ msg.role === 'user' ? '你' : '铃湾' }}</div>
         <div class="dayText">{{ msg.content }}</div>
@@ -114,6 +167,7 @@ function goBack() {
   border-radius: 14px;
   line-height: 1.5;
   font-size: 14px;
+  transition: box-shadow .18s ease, transform .18s ease, border-color .18s ease;
 }
 .dayBubbleUser{
   align-self:flex-end;
@@ -126,6 +180,11 @@ function goBack() {
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-bottom-left-radius: 6px;
+}
+
+.dayBubbleFocus{
+  box-shadow: 0 0 0 3px rgba(232,133,106,.18), 0 12px 24px rgba(203,127,90,.14);
+  transform: translateY(-1px);
 }
 
 .dayRole{

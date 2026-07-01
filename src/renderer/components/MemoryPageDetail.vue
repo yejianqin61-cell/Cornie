@@ -12,7 +12,7 @@ const props = defineProps({
   id: { type: String, default: '' }
 })
 
-const emit = defineEmits(['back', 'created', 'deleted', 'open-observation', 'open-memory'])
+const emit = defineEmits(['back', 'created', 'deleted', 'open-observation', 'open-memory', 'open-chat-source'])
 
 const PAGE_TYPES = [
   {
@@ -322,9 +322,18 @@ onMounted(loadPage)
         <div v-if="chatSources.length > 0" class="sourceBlock">
           <div class="sourceBlockTitle">铃湾是从这些聊天里慢慢记住它的</div>
           <div class="sourceList">
-            <div v-for="item in chatSources.slice(0, 3)" :key="`${item.date}-${item.messageId}`" class="sourceItem">
+            <div
+              v-for="item in chatSources.slice(0, 3)"
+              :key="`${item.date}-${item.messageId}`"
+              class="sourceItem"
+              :class="{ sourceItemLink: item.date }"
+              @click="item.date && emit('open-chat-source', { date: item.date, messageId: item.messageId || '' })"
+            >
               <div class="sourceItemTitle">{{ item.date || '聊天记录' }}</div>
-              <div class="sourceItemBody">{{ shortPreview(item.preview || item.title) }}</div>
+              <div class="sourceItemBody">
+                <span>{{ shortPreview(item.preview || item.title) }}</span>
+                <span v-if="item.date" class="sourceItemHint">点开看看当时怎么说的</span>
+              </div>
             </div>
           </div>
         </div>
