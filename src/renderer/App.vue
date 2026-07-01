@@ -313,6 +313,7 @@ onMounted(async () => {
           :id="omDetailId"
           @back="omView = 'memory-list'"
           @deleted="omView = 'memory-list'"
+          @open-observation="(id) => { omDetailId = id; omView = 'observation-detail' }"
         />
         <MemoryPageDetail
           v-else-if="omView === 'memory-create'"

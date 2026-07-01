@@ -12,7 +12,7 @@ const props = defineProps({
   id: { type: String, default: '' }
 })
 
-const emit = defineEmits(['back', 'created', 'deleted'])
+const emit = defineEmits(['back', 'created', 'deleted', 'open-observation'])
 
 const PAGE_TYPES = [
   {
@@ -332,9 +332,18 @@ onMounted(loadPage)
         <div v-if="observationSources.length > 0" class="sourceBlock">
           <div class="sourceBlockTitle">这些观察记录也在帮铃湾确认它</div>
           <div class="sourceList">
-            <div v-for="item in observationSources.slice(0, 3)" :key="item.observationId || item.title" class="sourceItem">
+            <div
+              v-for="item in observationSources.slice(0, 3)"
+              :key="item.observationId || item.title"
+              class="sourceItem"
+              :class="{ sourceItemLink: item.observationId }"
+              @click="item.observationId && emit('open-observation', item.observationId)"
+            >
               <div class="sourceItemTitle">{{ item.title || '观察记录' }}</div>
-              <div class="sourceItemBody">{{ item.date || '没有日期信息' }}</div>
+              <div class="sourceItemBody">
+                <span>{{ item.date || '没有日期信息' }}</span>
+                <span v-if="item.observationId" class="sourceItemHint">点开看看当时记下了什么</span>
+              </div>
             </div>
           </div>
         </div>
@@ -584,6 +593,17 @@ onMounted(loadPage)
   background: #fff;
 }
 
+.sourceItemLink{
+  cursor: pointer;
+  transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+}
+
+.sourceItemLink:hover{
+  transform: translateY(-1px);
+  border-color: rgba(232,133,106,.34);
+  box-shadow: 0 10px 22px rgba(203, 127, 90, .12);
+}
+
 .sourceItemTitle,
 .relatedPageTitle{
   font-size: 13px;
@@ -597,6 +617,16 @@ onMounted(loadPage)
   font-size: 12px;
   color: var(--muted);
   line-height: 1.6;
+}
+
+.sourceItemBody{
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sourceItemHint{
+  color: var(--accent-strong);
 }
 
 .mdetailField{
