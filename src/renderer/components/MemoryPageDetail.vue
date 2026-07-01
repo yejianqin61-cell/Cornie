@@ -12,7 +12,7 @@ const props = defineProps({
   id: { type: String, default: '' }
 })
 
-const emit = defineEmits(['back', 'created', 'deleted', 'open-observation'])
+const emit = defineEmits(['back', 'created', 'deleted', 'open-observation', 'open-memory'])
 
 const PAGE_TYPES = [
   {
@@ -351,9 +351,18 @@ onMounted(loadPage)
         <div v-if="relatedPages.length > 0" class="sourceBlock">
           <div class="sourceBlockTitle">和它有关的记忆</div>
           <div class="relatedPageList">
-            <div v-for="item in relatedPages" :key="item.pageId || item.id" class="relatedPageItem">
+            <div
+              v-for="item in relatedPages"
+              :key="item.pageId || item.id"
+              class="relatedPageItem"
+              :class="{ sourceItemLink: item.pageId || item.id }"
+              @click="(item.pageId || item.id) && emit('open-memory', item.pageId || item.id)"
+            >
               <div class="relatedPageTitle">{{ item.title || '未命名记忆' }}</div>
-              <div class="relatedPageMeta">{{ summarizePageType(item.pageType) }}</div>
+              <div class="relatedPageMeta">
+                <span>{{ summarizePageType(item.pageType) }}</span>
+                <span v-if="item.pageId || item.id" class="sourceItemHint">点开继续看看这段记忆</span>
+              </div>
             </div>
           </div>
         </div>
