@@ -43,6 +43,7 @@ const observationOverview = ref({
   total: 0,
   topType: ''
 })
+const latestObservationUpdateLabel = ref('')
 
 async function refreshMemories() {
   loadingMemories.value = true
@@ -87,12 +88,14 @@ async function refreshObservations() {
     const data = await listObservations({ date: getTodayDate(), limit: 4 })
     recentObservations.value = data?.observations || []
     observationOverview.value = buildObservationOverview(recentObservations.value)
+    latestObservationUpdateLabel.value = formatLatestObservationUpdate(recentObservations.value)
   } catch {
     recentObservations.value = []
     observationOverview.value = {
       total: 0,
       topType: ''
     }
+    latestObservationUpdateLabel.value = ''
   } finally {
     loadingObservations.value = false
   }
@@ -155,6 +158,14 @@ function buildObservationOverview(items) {
     total: list.length,
     topType
   }
+}
+
+function formatLatestObservationUpdate(items) {
+  const latest = (Array.isArray(items) ? items : [])
+    .map((item) => normalizeDateText(item?.updatedAt || item?.createdAt || item?.date))
+    .filter(Boolean)
+    .sort((a, b) => b.localeCompare(a))[0]
+  return latest || ''
 }
 </script>
 
@@ -266,6 +277,10 @@ function buildObservationOverview(items) {
         <div class="omObserveEmptyHint">铃湾不会把每句闲聊都记下来，只有觉得值得留一下的时候，才会写进观察。</div>
       </div>
       <div v-else class="omObserveList">
+        <div v-if="latestObservationUpdateLabel" class="omObserveUpdatedHint">
+          这些观察最近记在 {{ latestObservationUpdateLabel }}
+        </div>
+
         <div class="omObserveOverview">
           <div class="omObserveOverviewCard">
             <div class="omObserveOverviewValue">{{ observationOverview.total }}</div>
@@ -524,6 +539,13 @@ function buildObservationOverview(items) {
   grid-template-columns: 1fr 1fr;
   gap: 8px;
   margin-top: 10px;
+}
+
+.omObserveUpdatedHint{
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
 }
 
 .omObserveOverview{
