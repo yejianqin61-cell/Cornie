@@ -231,6 +231,10 @@ function formatLatestObservationUpdate(items) {
           </div>
         </div>
 
+        <div class="omSectionNextHint">
+          点查看全部，就能去完整记忆列表慢慢翻。
+        </div>
+
         <div v-if="shouldPromptProfileCreation" class="omProfilePrompt">
           <div class="omProfilePromptText">
             <div class="omProfilePromptTitle">铃湾已经记下一些事了，也可以先更清楚地记住你</div>
@@ -298,6 +302,10 @@ function formatLatestObservationUpdate(items) {
             <div class="omObserveOverviewValue">{{ observationTypeLabel(observationOverview.topType) }}</div>
             <div class="omObserveOverviewLabel">今天更多是在记什么</div>
           </div>
+        </div>
+
+        <div class="omSectionNextHint">
+          点查看全部，就能看今天和以前的小事整理。
         </div>
 
         <div
@@ -393,6 +401,13 @@ function formatLatestObservationUpdate(items) {
 }
 
 .omSectionScopeHint{
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.omSectionNextHint{
   grid-column: 1 / -1;
   font-size: 12px;
   color: var(--muted);
