@@ -208,6 +208,10 @@ function formatLatestObservationUpdate(items) {
         <button class="primary omEmptyAction" @click="$emit('go', 'memory-create')">先写下“关于你”</button>
       </div>
       <div v-else class="omMemoryList">
+        <div class="omSectionScopeHint">
+          这里先放最近整理过的几页记忆，想慢慢翻更多，可以去完整记忆列表。
+        </div>
+
         <div v-if="latestMemoryUpdateLabel" class="omMemoryUpdatedHint">
           这些记忆最近整理在 {{ latestMemoryUpdateLabel }}
         </div>
@@ -277,6 +281,10 @@ function formatLatestObservationUpdate(items) {
         <div class="omObserveEmptyHint">铃湾不会把每句闲聊都记下来，只有觉得值得留一下的时候，才会写进观察。</div>
       </div>
       <div v-else class="omObserveList">
+        <div class="omSectionScopeHint">
+          这里只先放最近的几条观察，想看今天更完整的整理，可以点查看全部。
+        </div>
+
         <div v-if="latestObservationUpdateLabel" class="omObserveUpdatedHint">
           这些观察最近记在 {{ latestObservationUpdateLabel }}
         </div>
@@ -378,6 +386,13 @@ function formatLatestObservationUpdate(items) {
 .omMemoryList{ display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
 .omMemoryUpdatedHint{
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.omSectionScopeHint{
   grid-column: 1 / -1;
   font-size: 12px;
   color: var(--muted);
