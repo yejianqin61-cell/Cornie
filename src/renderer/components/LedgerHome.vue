@@ -1,6 +1,13 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { createExpenseEntry, createIncomeEntry, listLedgerEntries, listLedgerCategories } from '../api'
+import {
+  createExpenseCategory,
+  createExpenseEntry,
+  createIncomeCategory,
+  createIncomeEntry,
+  listLedgerEntries,
+  listLedgerCategories
+} from '../api'
 import { listenDataChanged } from '../syncSignals'
 import LedgerCalendar from './LedgerCalendar.vue'
 
@@ -8,6 +15,7 @@ const entries = ref([])
 const categories = ref([])
 const loading = ref(false)
 const showForm = ref(false)
+const showQuickCategoryCreate = ref(false)
 const form = ref({
   amount: '',
   type: 'expense',
@@ -17,7 +25,10 @@ const form = ref({
   occurredAt: new Date().toISOString().slice(0, 10)
 })
 const saving = ref(false)
+const creatingCategory = ref(false)
 const errorMsg = ref('')
+const categoryCreateError = ref('')
+const draftCategoryName = ref('')
 const currentMonth = ref(new Date(new Date().getFullYear(), new Date().getMonth(), 1))
 const selectedDate = ref('')
 const typeFilter = ref('')
@@ -28,8 +39,27 @@ const monthlyExpense = ref(0)
 const weekdayLabels = ['一', '二', '三', '四', '五', '六', '日']
 const chartColors = ['#E8856A', '#E4A35E', '#5B9A6B', '#8DB5A7', '#C59E7A', '#D96A5C']
 
+function pad2(value) {
+  return String(value).padStart(2, '0')
+}
+
+function formatLocalDateKey(date) {
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`
+}
+
+const todayDateKey = formatLocalDateKey(new Date())
+
 function toDateKey(value) {
-  return new Date(value).toISOString().slice(0, 10)
+  return formatLocalDateKey(new Date(value))
+}
+
+function toTimeMs(value, { endOfDay = false } = {}) {
+  if (!value) return Number.NaN
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(value))) {
+    const suffix = endOfDay ? 'T23:59:59.999Z' : 'T00:00:00.000Z'
+    return new Date(`${value}${suffix}`).getTime()
+  }
+  return new Date(value).getTime()
 }
 
 function getMonthRange(date) {
@@ -38,8 +68,8 @@ function getMonthRange(date) {
   const start = new Date(year, month, 1)
   const end = new Date(year, month + 1, 0)
   return {
-    from: `${start.toISOString().slice(0, 10)}T00:00:00.000Z`,
-    to: `${end.toISOString().slice(0, 10)}T23:59:59.999Z`
+    from: `${formatLocalDateKey(start)}T00:00:00.000Z`,
+    to: `${formatLocalDateKey(end)}T23:59:59.999Z`
   }
 }
 
@@ -51,7 +81,13 @@ const monthLabel = computed(() => {
 
 const monthEntries = computed(() => {
   const range = getMonthRange(currentMonth.value)
-  return entries.value.filter((entry) => entry.occurredAt >= range.from && entry.occurredAt <= range.to)
+  const fromMs = toTimeMs(range.from)
+  const toMs = toTimeMs(range.to, { endOfDay: true })
+
+  return entries.value.filter((entry) => {
+    const occurredAtMs = toTimeMs(entry.occurredAt, { endOfDay: true })
+    return Number.isFinite(occurredAtMs) && occurredAtMs >= fromMs && occurredAtMs <= toMs
+  })
 })
 
 const visibleEntries = computed(() => {
@@ -116,6 +152,10 @@ const categorySegments = computed(() => {
   })
 })
 
+const filteredCategories = computed(() =>
+  categories.value.filter((item) => item.type === form.value.type)
+)
+
 const calendarCells = computed(() => {
   const year = currentMonth.value.getFullYear()
   const month = currentMonth.value.getMonth()
@@ -136,7 +176,7 @@ const calendarCells = computed(() => {
   for (let index = 0; index < 42; index += 1) {
     const date = new Date(startDate)
     date.setDate(startDate.getDate() + index)
-    const key = date.toISOString().slice(0, 10)
+    const key = formatLocalDateKey(date)
     const daySummary = summaryByDay.get(key) || { expense: 0, income: 0 }
     cells.push({
       date: key,
@@ -161,10 +201,13 @@ async function refresh() {
     categories.value = catData?.items || []
 
     const range = getMonthRange(currentMonth.value)
+    const fromMs = toTimeMs(range.from)
+    const toMs = toTimeMs(range.to, { endOfDay: true })
     let inc = 0
     let exp = 0
     for (const entry of entryItems) {
-      if (entry.occurredAt < range.from || entry.occurredAt > range.to) continue
+      const occurredAtMs = toTimeMs(entry.occurredAt, { endOfDay: true })
+      if (!Number.isFinite(occurredAtMs) || occurredAtMs < fromMs || occurredAtMs > toMs) continue
       if (entry.type === 'income') inc += entry.amount || 0
       else exp += entry.amount || 0
     }
@@ -174,6 +217,57 @@ async function refresh() {
     // ignore refresh failure
   } finally {
     loading.value = false
+  }
+}
+
+function openQuickCategoryCreate() {
+  draftCategoryName.value = ''
+  categoryCreateError.value = ''
+  showQuickCategoryCreate.value = true
+}
+
+function closeQuickCategoryCreate() {
+  draftCategoryName.value = ''
+  categoryCreateError.value = ''
+  showQuickCategoryCreate.value = false
+}
+
+async function submitQuickCategoryCreate() {
+  const name = draftCategoryName.value.trim()
+  if (!name) {
+    categoryCreateError.value = '先给这个类目起个名字吧。'
+    return
+  }
+
+  creatingCategory.value = true
+  categoryCreateError.value = ''
+
+  try {
+    const createCategory =
+      form.value.type === 'income' ? createIncomeCategory : createExpenseCategory
+    const result = await createCategory({ name })
+    await refresh()
+
+    const createdCategory =
+      result?.category ??
+      categories.value.find((item) => item.name === name && item.type === form.value.type) ??
+      null
+
+    if (createdCategory) {
+      form.value.categoryId = createdCategory.id
+      form.value.categoryName = createdCategory.name
+    }
+
+    closeQuickCategoryCreate()
+  } catch (error) {
+    const message = String(error?.message || '')
+    categoryCreateError.value = message.includes('invalid category name')
+      ? '这个类目名现在还不太合适，换一个更清楚的名字试试吧。'
+      : message.includes('similar') || message.includes('duplicate')
+        ? '好像已经有很接近的类目啦，换一个名字或者直接选已有的吧。'
+        : '这次没能把类目建好，我们再试一次好不好。'
+  } finally {
+    creatingCategory.value = false
   }
 }
 
@@ -197,7 +291,7 @@ async function submitEntry() {
   saving.value = true
   errorMsg.value = ''
   try {
-    if (form.value.categoryId && form.value.categoryName) {
+    if (form.value.categoryId) {
       const cat = categories.value.find((c) => c.id === form.value.categoryId)
       if (cat) form.value.categoryName = cat.name
     }
@@ -239,7 +333,7 @@ async function moveMonth(delta) {
 async function jumpToToday() {
   const today = new Date()
   currentMonth.value = new Date(today.getFullYear(), today.getMonth(), 1)
-  selectedDate.value = today.toISOString().slice(0, 10)
+  selectedDate.value = formatLocalDateKey(today)
   await refresh()
 }
 
@@ -278,7 +372,7 @@ onBeforeUnmount(() => {
       :weekday-labels="weekdayLabels"
       :cells="calendarCells"
       :selected-date="selectedDate"
-      :today-date="new Date().toISOString().slice(0, 10)"
+      :today-date="todayDateKey"
       @prev-month="moveMonth(-1)"
       @next-month="moveMonth(1)"
       @select-date="selectCalendarDate"
@@ -368,10 +462,34 @@ onBeforeUnmount(() => {
         </div>
         <input v-model="form.item" placeholder="这笔钱是做什么的" />
         <input v-model="form.occurredAt" type="date" />
-        <select v-model="form.categoryId">
-          <option value="">选择类目</option>
-          <option v-for="c in categories.filter((x) => x.type === form.type)" :key="c.id" :value="c.id">{{ c.name }}</option>
-        </select>
+        <div class="lquickCategoryRow">
+          <select v-model="form.categoryId">
+            <option value="">选择类目</option>
+            <option v-for="c in filteredCategories" :key="c.id" :value="c.id">{{ c.name }}</option>
+          </select>
+          <button class="ghost lquickCategoryCreate" type="button" @click="openQuickCategoryCreate">新建类目</button>
+        </div>
+        <div v-if="showQuickCategoryCreate" class="lquickCategoryCreateBox">
+          <div class="lquickCategoryCreateTitle">给这笔{{ form.type === 'income' ? '收入' : '支出' }}新起一个类目</div>
+          <div class="lquickCategoryCreateHint">建好后会自动帮你选中，不会把这笔记账内容弄丢。</div>
+          <div class="lquickCategoryCreateActions">
+            <input
+              v-model="draftCategoryName"
+              placeholder="比如：游戏充值、云服务、学习资料"
+              @keydown.enter.prevent="submitQuickCategoryCreate"
+            />
+            <button
+              class="primary"
+              type="button"
+              :disabled="creatingCategory || !draftCategoryName.trim()"
+              @click="submitQuickCategoryCreate"
+            >
+              {{ creatingCategory ? '创建中…' : '创建并选中' }}
+            </button>
+            <button class="ghost" type="button" :disabled="creatingCategory" @click="closeQuickCategoryCreate">取消</button>
+          </div>
+          <div v-if="categoryCreateError" class="lquickCategoryError">{{ categoryCreateError }}</div>
+        </div>
         <button class="primary" :disabled="saving || !form.amount" @click="submitEntry">
           {{ saving ? '保存中…' : '保存' }}
         </button>
@@ -562,9 +680,49 @@ onBeforeUnmount(() => {
 .lquickForm{ margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .lquickForm > button,
 .lquickForm > .lquickRow,
-.lquickForm > input:nth-child(5),
-.lquickForm > .lquickError{ grid-column: 1 / -1; }
+ .lquickForm > .lquickCategoryRow,
+ .lquickForm > .lquickCategoryCreateBox,
+ .lquickForm > .lquickError{ grid-column: 1 / -1; }
 .lquickRow{ display: flex; gap: 8px; }
+.lquickCategoryRow{
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+.lquickCategoryCreate{
+  white-space: nowrap;
+}
+.lquickCategoryCreateBox{
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(0,0,0,.08);
+  background: #FFFDFC;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.lquickCategoryCreateTitle{
+  font-size: 13px;
+  font-weight: 700;
+}
+.lquickCategoryCreateHint{
+  font-size: 12px;
+  color: var(--muted);
+}
+.lquickCategoryCreateActions{
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+  align-items: center;
+}
+.lquickCategoryError{
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(217,106,92,.20);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: 12px;
+}
 .lquickError{
   padding: 8px 12px;
   border-radius: 10px;
@@ -659,8 +817,14 @@ onBeforeUnmount(() => {
     grid-template-columns: 1fr;
   }
 
-  .lquickRow{
+  .lquickRow,
+  .lquickCategoryCreateActions{
     flex-direction: column;
+  }
+
+  .lquickCategoryRow,
+  .lquickCategoryCreateActions{
+    grid-template-columns: 1fr;
   }
 }
 </style>
