@@ -25,6 +25,7 @@ const OBSERVATION_TYPE_LABELS = {
 
 const primaryIdentityMemory = ref(null)
 const otherRecentMemories = ref([])
+const shouldPromptProfileCreation = ref(false)
 
 async function refreshMemories() {
   loadingMemories.value = true
@@ -36,10 +37,12 @@ async function refreshMemories() {
     otherRecentMemories.value = pages
       .filter((page) => page.id !== primaryIdentityMemory.value?.id)
       .slice(0, 4)
+    shouldPromptProfileCreation.value = pages.length > 0 && !primaryIdentityMemory.value
   } catch {
     recentMemories.value = []
     primaryIdentityMemory.value = null
     otherRecentMemories.value = []
+    shouldPromptProfileCreation.value = false
   } finally {
     loadingMemories.value = false
   }
@@ -125,6 +128,14 @@ function observationTypeLabel(type) {
         <button class="primary omEmptyAction" @click="$emit('go', 'memory-create')">先写下“关于你”</button>
       </div>
       <div v-else class="omMemoryList">
+        <div v-if="shouldPromptProfileCreation" class="omProfilePrompt">
+          <div class="omProfilePromptText">
+            <div class="omProfilePromptTitle">铃湾已经记下一些事了，也可以先更清楚地记住你</div>
+            <div class="omProfilePromptHint">写下一页“关于你”，以后再回来看这些记忆时，会更容易串起来。</div>
+          </div>
+          <button class="primary" @click.stop="$emit('go', 'memory-create')">先写下“关于你”</button>
+        </div>
+
         <div
           v-if="primaryIdentityMemory"
           class="omPrimaryMemoryCard"
@@ -250,6 +261,34 @@ function observationTypeLabel(type) {
 .omEmptyAction{ margin-top: 8px; }
 
 .omMemoryList{ display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+.omProfilePrompt{
+  grid-column: 1 / -1;
+  padding: 14px 16px;
+  border: 1px dashed rgba(232,133,106,.36);
+  border-radius: 16px;
+  background: rgba(255,249,244,.82);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.omProfilePromptText{
+  min-width: 0;
+}
+
+.omProfilePromptTitle{
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.omProfilePromptHint{
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+}
 
 .omPrimaryMemoryCard{
   grid-column: 1 / -1;
@@ -390,6 +429,10 @@ function observationTypeLabel(type) {
 
 @media (max-width: 760px){
   .omMemoryList{ grid-template-columns: 1fr; }
+  .omProfilePrompt{
+    flex-direction: column;
+    align-items: stretch;
+  }
   .omMemoriesHead{
     flex-direction: column;
     align-items: stretch;
