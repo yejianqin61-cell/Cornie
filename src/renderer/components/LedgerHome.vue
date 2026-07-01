@@ -162,6 +162,25 @@ const trendXAxisTicks = computed(() => {
   }))
 })
 
+const trendPointMarkers = computed(() =>
+  dailyTrendPoints.value.flatMap((point, index) => ([
+    {
+      key: `${point.date}-expense`,
+      kind: 'expense',
+      x: getTrendX(index, dailyTrendPoints.value.length),
+      y: getTrendY(point.expense || 0, trendChartStats.value.safeMaxValue),
+      label: `${point.date} 支出 ¥${Number(point.expense || 0).toFixed(2)}`
+    },
+    {
+      key: `${point.date}-income`,
+      kind: 'income',
+      x: getTrendX(index, dailyTrendPoints.value.length),
+      y: getTrendY(point.income || 0, trendChartStats.value.safeMaxValue),
+      label: `${point.date} 收入 ¥${Number(point.income || 0).toFixed(2)}`
+    }
+  ]))
+)
+
 const hasTrendChart = computed(() => dailyTrendPoints.value.length >= 2)
 const chartPathExpense = computed(() => buildLinePath(dailyTrendPoints.value, 'expense', trendChartStats.value.safeMaxValue))
 const chartPathIncome = computed(() => buildLinePath(dailyTrendPoints.value, 'income', trendChartStats.value.safeMaxValue))
@@ -357,6 +376,10 @@ function formatCurrencyTick(value) {
   return `¥${amount.toFixed(amount > 0 && amount < 10 ? 1 : 0)}`
 }
 
+function formatCurrencyLabel(value) {
+  return `¥${Number(value || 0).toFixed(2)}`
+}
+
 function getTrendX(index, total) {
   const { width, paddingLeft, paddingRight } = trendChartFrame
   if (total <= 1) return paddingLeft
@@ -520,7 +543,7 @@ onBeforeUnmount(() => {
       <div class="lchart card">
         <div class="lchartHead">
           <div class="lchartTitle">这几天的收支走势</div>
-          <div class="lchartHint">红线看支出，绿线看收入，方便快速判断最近哪几天波动更大。</div>
+          <div class="lchartHint">红线看支出，绿线看收入，横轴是日期，纵轴是金额，点一下日历也不会把这张月度趋势图切碎。</div>
         </div>
         <div v-if="dailyTrendPoints.length === 0" class="lchartEmpty">这个月还没有记录，所以暂时看不到走势。</div>
         <div v-else-if="!hasTrendChart" class="lchartEmpty">目前只有一天的记录，等多记几笔后，这里就能看出变化趋势了。</div>
@@ -550,6 +573,20 @@ onBeforeUnmount(() => {
               :y2="trendChartFrame.height - trendChartFrame.paddingBottom"
             />
             <text
+              class="ltrendAxisTitle y"
+              :x="14"
+              :y="trendChartFrame.paddingTop + 10"
+            >
+              金额
+            </text>
+            <text
+              class="ltrendAxisTitle x"
+              :x="trendChartFrame.width - trendChartFrame.paddingRight"
+              :y="trendChartFrame.height - 8"
+            >
+              日期
+            </text>
+            <text
               v-for="tick in trendYAxisTicks"
               :key="`ylabel-${tick.value}`"
               class="ltrendTickLabel y"
@@ -569,12 +606,23 @@ onBeforeUnmount(() => {
             </text>
             <path v-if="chartPathExpense" :d="chartPathExpense" fill="none" stroke="var(--danger)" stroke-width="3" stroke-linecap="round"></path>
             <path v-if="chartPathIncome" :d="chartPathIncome" fill="none" stroke="var(--success)" stroke-width="3" stroke-linecap="round"></path>
+            <g v-for="marker in trendPointMarkers" :key="marker.key">
+              <title>{{ marker.label }}</title>
+              <circle
+                :cx="marker.x"
+                :cy="marker.y"
+                r="3.5"
+                class="ltrendPoint"
+                :class="marker.kind"
+              />
+            </g>
           </svg>
           <div class="ltrendLegend">
             <span><i class="legendDot exp"></i>支出趋势线</span>
             <span><i class="legendDot inc"></i>收入趋势线</span>
             <span class="ltrendAxisHint">横轴：日期</span>
             <span class="ltrendAxisHint">纵轴：金额</span>
+            <span class="ltrendAxisHint">本月最高单日波动：{{ formatCurrencyLabel(trendChartStats.maxValue) }}</span>
           </div>
         </div>
       </div>
@@ -807,6 +855,16 @@ onBeforeUnmount(() => {
   font-size: 10px;
 }
 
+.ltrendAxisTitle{
+  fill: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.ltrendAxisTitle.x{
+  text-anchor: end;
+}
+
 .ltrendTickLabel.y{
   text-anchor: end;
 }
@@ -822,6 +880,19 @@ onBeforeUnmount(() => {
   gap: 14px;
   font-size: 12px;
   color: var(--muted);
+}
+
+.ltrendPoint{
+  stroke: #FFFDFC;
+  stroke-width: 1.5;
+}
+
+.ltrendPoint.expense{
+  fill: var(--danger);
+}
+
+.ltrendPoint.income{
+  fill: var(--success);
 }
 
 .ltrendAxisHint{
