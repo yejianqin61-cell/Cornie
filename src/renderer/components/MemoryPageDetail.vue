@@ -1,6 +1,12 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { archiveMemoryWikiPage, createMemoryWikiPage, getMemoryWikiPage, updateMemoryWikiPage } from '../api'
+import {
+  archiveMemoryWikiPage,
+  createMemoryWikiPage,
+  getMemoryWikiPage,
+  getMemoryWikiPageSourceTrace,
+  updateMemoryWikiPage
+} from '../api'
 
 const props = defineProps({
   id: { type: String, default: '' }
@@ -46,21 +52,32 @@ const saving = ref(false)
 const deleting = ref(false)
 const errorMsg = ref('')
 const dirty = ref(false)
+const sourceTrace = ref(null)
 
 const isCreateMode = computed(() => !props.id)
 const pageTypeHint = computed(() =>
   PAGE_TYPES.find((item) => item.value === page.value.pageType)?.hint || '把这页记忆写成以后想再翻回来的样子。'
 )
+const pageTypeLabel = computed(() =>
+  PAGE_TYPES.find((item) => item.value === page.value.pageType)?.label || '长期记忆'
+)
 const submitLabel = computed(() => {
   if (saving.value) return isCreateMode.value ? '创建中…' : '保存中…'
   return isCreateMode.value ? '创建这页记忆' : '保存修改'
 })
+const relatedPages = computed(() => Array.isArray(sourceTrace.value?.relatedPages) ? sourceTrace.value.relatedPages : [])
+const chatSources = computed(() => Array.isArray(sourceTrace.value?.chatSources) ? sourceTrace.value.chatSources : [])
+const observationSources = computed(() => Array.isArray(sourceTrace.value?.observationSources) ? sourceTrace.value.observationSources : [])
+const hasSourceSummary = computed(() =>
+  relatedPages.value.length > 0 || chatSources.value.length > 0 || observationSources.value.length > 0
+)
 
 async function loadPage() {
   if (isCreateMode.value) {
     page.value = createEmptyPage()
     errorMsg.value = ''
     dirty.value = false
+    sourceTrace.value = null
     return
   }
 
@@ -75,6 +92,8 @@ async function loadPage() {
       summary: loaded?.summary || '',
       content: loaded?.content || loaded?.body || ''
     }
+    const traceData = await getMemoryWikiPageSourceTrace(props.id)
+    sourceTrace.value = traceData?.trace || null
     dirty.value = false
   } catch (e) {
     errorMsg.value = '这页记忆暂时没打开成功，稍后再试一次吧。'
@@ -85,6 +104,16 @@ async function loadPage() {
 
 function markDirty() {
   dirty.value = true
+}
+
+function summarizePageType(pageType) {
+  return PAGE_TYPES.find((item) => item.value === pageType)?.label || '长期记忆'
+}
+
+function shortPreview(text, maxLen = 56) {
+  const normalized = String(text || '').replace(/\s+/g, ' ').trim()
+  if (!normalized) return '铃湾当时没有留下更多文字。'
+  return normalized.length > maxLen ? `${normalized.slice(0, maxLen)}…` : normalized
 }
 
 async function save() {
@@ -161,7 +190,57 @@ onMounted(loadPage)
       <div class="mdetailIntro">
         <div class="mdetailMode">{{ isCreateMode ? '新建长期记忆' : '编辑长期记忆' }}</div>
         <div class="mdetailHint">{{ pageTypeHint }}</div>
+        <div class="mdetailTypePill">{{ pageTypeLabel }}</div>
       </div>
+
+      <section v-if="!isCreateMode" class="mdetailSource cardShell">
+        <div class="sectionTitle">这页记忆是怎么来的</div>
+        <div v-if="hasSourceSummary" class="sourceSummaryGrid">
+          <div class="sourceSummaryCard">
+            <div class="sourceSummaryValue">{{ chatSources.length }}</div>
+            <div class="sourceSummaryLabel">聊天来源</div>
+          </div>
+          <div class="sourceSummaryCard">
+            <div class="sourceSummaryValue">{{ observationSources.length }}</div>
+            <div class="sourceSummaryLabel">观察记录</div>
+          </div>
+          <div class="sourceSummaryCard">
+            <div class="sourceSummaryValue">{{ relatedPages.length }}</div>
+            <div class="sourceSummaryLabel">相关记忆</div>
+          </div>
+        </div>
+        <div v-else class="mdetailMuted">这页记忆目前更像是你主动写下来的，铃湾还没有翻出更多来源线索。</div>
+
+        <div v-if="chatSources.length > 0" class="sourceBlock">
+          <div class="sourceBlockTitle">铃湾是从这些聊天里慢慢记住它的</div>
+          <div class="sourceList">
+            <div v-for="item in chatSources.slice(0, 3)" :key="`${item.date}-${item.messageId}`" class="sourceItem">
+              <div class="sourceItemTitle">{{ item.date || '聊天记录' }}</div>
+              <div class="sourceItemBody">{{ shortPreview(item.preview || item.title) }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="observationSources.length > 0" class="sourceBlock">
+          <div class="sourceBlockTitle">这些观察记录也在帮铃湾确认它</div>
+          <div class="sourceList">
+            <div v-for="item in observationSources.slice(0, 3)" :key="item.observationId || item.title" class="sourceItem">
+              <div class="sourceItemTitle">{{ item.title || '观察记录' }}</div>
+              <div class="sourceItemBody">{{ item.date || '没有日期信息' }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div v-if="relatedPages.length > 0" class="sourceBlock">
+          <div class="sourceBlockTitle">和它有关的记忆</div>
+          <div class="relatedPageList">
+            <div v-for="item in relatedPages" :key="item.pageId || item.id" class="relatedPageItem">
+              <div class="relatedPageTitle">{{ item.title || '未命名记忆' }}</div>
+              <div class="relatedPageMeta">{{ summarizePageType(item.pageType) }}</div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <label class="mdetailField">
         <span>记忆类型</span>
@@ -262,8 +341,96 @@ onMounted(loadPage)
   font-weight: 800;
 }
 
+.mdetailTypePill{
+  align-self: flex-start;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(232, 133, 106, 0.12);
+  color: var(--text);
+  font-size: 12px;
+}
+
 .mdetailHint{
   font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.cardShell{
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  background: #fffdfc;
+}
+
+.sectionTitle{
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.sourceSummaryGrid{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.sourceSummaryCard{
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
+  background: #fff;
+}
+
+.sourceSummaryValue{
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.sourceSummaryLabel{
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.sourceBlock{
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sourceBlockTitle{
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sourceList,
+.relatedPageList{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sourceItem,
+.relatedPageItem{
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: #fff;
+}
+
+.sourceItemTitle,
+.relatedPageTitle{
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sourceItemBody,
+.relatedPageMeta,
+.mdetailMuted{
+  margin-top: 4px;
+  font-size: 12px;
   color: var(--muted);
   line-height: 1.6;
 }
@@ -325,6 +492,10 @@ onMounted(loadPage)
 
   .mdetailActions{
     flex-direction: column;
+  }
+
+  .sourceSummaryGrid{
+    grid-template-columns: 1fr;
   }
 }
 </style>
