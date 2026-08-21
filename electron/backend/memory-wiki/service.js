@@ -612,11 +612,11 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
   const topicIndex = await createTopicIndexStore(baseDir)
   const governanceStore = await createMemoryWikiGovernanceStore(baseDir)
 
-  // 452：跨轮页面缓存（读侧短 TTL，写侧必失效）。
-  const pageCache = createPageCache()
+  // 452：跨轮页面缓存（读侧短 TTL，写侧必失效；命名空间=baseDir，跨实例共享）。
+  const pageCache = createPageCache({ namespace: `${baseDir}::page` })
 
   // 464：来源追溯缓存（短 TTL，页面/来源变更时与 pageCache 同步失效）。
-  const traceCache = createPageCache({ ttlMs: 60_000 })
+  const traceCache = createPageCache({ ttlMs: 60_000, namespace: `${baseDir}::trace` })
 
   // 452/464：页面与追溯缓存写侧统一失效。
   function invalidatePageCaches(pageId) {

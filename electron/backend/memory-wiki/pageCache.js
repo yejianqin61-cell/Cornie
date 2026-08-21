@@ -1,36 +1,51 @@
-// 452：记忆页跨轮短 TTL 缓存（进程内）。
-// 读侧缓存，写侧必失效（由 memory-wiki 服务在写入路径调用 invalidate）。
-export function createPageCache({ ttlMs = 5 * 60 * 1000 } = {}) {
-  const store = new Map()
+// 452/464：记忆页跨轮短 TTL 缓存（进程内、按命名空间共享）。
+// 多个 memory-wiki service 实例（路由/身份 upsert/提炼轮各自创建）共享同一底层存储，
+// 因此写侧失效（invalidate）能跨实例生效，避免"另一实例读到过期页"。
+// 命名空间用 baseDir + kind，避免不同记忆根目录或页面/追溯两类缓存互相串扰。
+const SHARED_CACHE = new Map()
 
+function buildKey(namespace, id) {
+  return `${namespace}::${id}`
+}
+
+export function createPageCache({ ttlMs = 5 * 60 * 1000, namespace = 'default' } = {}) {
   return {
-    get(pageId) {
-      if (!pageId) return null
-      const entry = store.get(pageId)
+    get(id) {
+      if (!id) return null
+      const key = buildKey(namespace, id)
+      const entry = SHARED_CACHE.get(key)
       if (!entry) return null
       if (Date.now() - entry.timestamp > ttlMs) {
-        store.delete(pageId)
+        SHARED_CACHE.delete(key)
         return null
       }
-      return entry.page
+      return entry.value
     },
 
-    set(pageId, page) {
-      if (!pageId || !page) return
-      store.set(pageId, { page, timestamp: Date.now() })
+    set(id, value) {
+      if (!id || !value) return
+      SHARED_CACHE.set(buildKey(namespace, id), { value, timestamp: Date.now() })
     },
 
-    invalidate(pageId) {
-      if (!pageId) return
-      store.delete(pageId)
+    invalidate(id) {
+      if (!id) return
+      SHARED_CACHE.delete(buildKey(namespace, id))
     },
 
     clear() {
-      store.clear()
+      for (const key of [...SHARED_CACHE.keys()]) {
+        if (key.startsWith(`${namespace}::`)) {
+          SHARED_CACHE.delete(key)
+        }
+      }
     },
 
     size() {
-      return store.size
+      let count = 0
+      for (const key of SHARED_CACHE.keys()) {
+        if (key.startsWith(`${namespace}::`)) count += 1
+      }
+      return count
     }
   }
 }
