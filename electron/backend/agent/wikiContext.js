@@ -236,64 +236,16 @@ function scoreTopic(item) {
   return importanceScore + dateScore + pageScore
 }
 
-function buildPageSummaryLine(page) {
-  const importance = normalizeString(page.importance) || 'medium'
-  const summary = normalizeString(page.summary) || '暂无摘要'
-  return `- [${importance}] ${page.title}: ${summary}`
-}
-
-function identityProfileNeedsExtendedDetails(page, normalizedQuery = '', queryTerms = []) {
-  const queryText = normalizeString(normalizedQuery).toLowerCase()
-  if (!queryText && (!Array.isArray(queryTerms) || queryTerms.length === 0)) {
-    return false
-  }
-
-  const stressorHaystack = [
-    page?.currentFocus,
-    page?.stressors,
-    page?.identitySummary,
-    page?.lifeStageSummary
-  ]
-    .map((item) => normalizeString(item).toLowerCase())
-    .filter(Boolean)
-    .join(' ')
-
-  const communicationHaystack = [
-    page?.communicationPreference,
-    page?.identitySummary,
-    page?.summary
-  ]
-    .map((item) => normalizeString(item).toLowerCase())
-    .filter(Boolean)
-    .join(' ')
-
-  const stressorTerms = ['压力', '焦虑', '累', '疲惫', '崩溃', '难', '熬夜', '求职', '考试', '项目']
-  const communicationTerms = ['温柔', '陪伴', '安慰', '记住', '上下文', '沟通', '说话', '克制', '陪我']
-  if (
-    (stressorHaystack && stressorTerms.some((term) => queryText.includes(term))) ||
-    (communicationHaystack && communicationTerms.some((term) => queryText.includes(term)))
-  ) {
-    return true
-  }
-
-  const haystack = [stressorHaystack, communicationHaystack].filter(Boolean).join(' ')
-  if (!haystack || !Array.isArray(queryTerms) || queryTerms.length === 0) {
-    return false
-  }
-
-  return queryTerms.some((term) => haystack.includes(term))
-}
-
-function buildIdentityProfileSummaryLine(page, normalizedQuery = '', queryTerms = []) {
+// 451：L0 画像卡 + L1 目录条目的"三信号"（摘要 + 重要性 + 最近提及/更新时间）。
+// 449 结论：四类注入侧规则降级为目录排序信号；画像卡扩展字段（压力/沟通）以 ownerConfirmed 为可信度门控，
+// 不再用词表决定"是否注入"（字段级注入改由钻取决定，见 452/453）。
+function buildProfileCardLine(page) {
   const userName = normalizeString(page.userName) || normalizeString(page.title) || '未命名用户'
   const preferredName = normalizeString(page.preferredName)
   const relationship = normalizeString(page.cornieRelationship)
   const identitySummary = normalizeString(page.identitySummary) || normalizeString(page.summary)
   const lifeStageSummary = normalizeString(page.lifeStageSummary)
   const currentFocus = normalizeString(page.currentFocus)
-  const stressors = normalizeString(page.stressors)
-  const communicationPreference = normalizeString(page.communicationPreference)
-  const includeExtendedDetails = identityProfileNeedsExtendedDetails(page, normalizedQuery, queryTerms)
 
   const parts = [
     `名字：${userName}`,
@@ -301,75 +253,28 @@ function buildIdentityProfileSummaryLine(page, normalizedQuery = '', queryTerms 
     relationship && `关系：${relationship}`,
     identitySummary,
     lifeStageSummary,
-    currentFocus && `当前关注：${currentFocus}`,
-    includeExtendedDetails && stressors && `压力：${stressors}`,
-    includeExtendedDetails && communicationPreference && `沟通偏好：${communicationPreference}`
+    currentFocus && `当前关注：${currentFocus}`
   ].filter(Boolean)
 
-  return `- [identity] ${userName}: ${parts.join('；') || '暂无主身份摘要'}`
-}
-
-function buildIdentityPreferenceSummaryLine(page) {
-  const preferenceType = normalizeString(page.preferenceType) || '未分类'
-  const stance = normalizeString(page.stance) || '未标注立场'
-  const stabilityLevel = normalizeString(page.stabilityLevel) || 'medium'
-  const summary = normalizeString(page.summary) || '暂无偏好摘要'
-  return `- [preference/${preferenceType}/${stabilityLevel}] ${page.title}: ${stance}；${summary}`
-}
-
-function personNeedsRiskyDetails(page, normalizedQuery = '', queryTerms = []) {
-  if (page?.ownerConfirmed === true) {
-    return true
+  if (page.ownerConfirmed === true) {
+    const stressors = normalizeString(page.stressors)
+    const communicationPreference = normalizeString(page.communicationPreference)
+    if (stressors) parts.push(`压力：${stressors}`)
+    if (communicationPreference) parts.push(`沟通偏好：${communicationPreference}`)
   }
 
-  const queryText = normalizeString(normalizedQuery).toLowerCase()
-  if (!queryText && (!Array.isArray(queryTerms) || queryTerms.length === 0)) {
-    return false
-  }
-
-  const riskyTerms = [
-    '重要', '很重要', '意义', '回忆', '想念', '怀念', '初恋', '前任', '关系', '感情',
-    '喜欢', '爱', '温柔', '害羞', '内向', '性格', '为什么', '怎么看', '意味着'
-  ]
-  if (riskyTerms.some((item) => queryText.includes(item))) {
-    return true
-  }
-
-  if (!Array.isArray(queryTerms) || queryTerms.length === 0) {
-    return false
-  }
-
-  return queryTerms.some((term) => riskyTerms.includes(term))
+  return `- [identity] ${userName}：${parts.join('；') || '暂无主身份摘要'}`
 }
 
-function buildIdentityPersonSummaryLine(page, normalizedQuery = '', queryTerms = []) {
-  const personName = normalizeString(page.personName) || normalizeString(page.title) || '未命名人物'
-  const relationshipToUser = normalizeString(page.relationshipToUser)
-  const roleSummary = normalizeString(page.roleSummary)
-  const personalitySummary = normalizeString(page.personalitySummary)
-  const meaningToUser = normalizeString(page.meaningToUser)
-  const sharedExperienceSummary = normalizeString(page.sharedExperienceSummary) || normalizeString(page.summary)
-  const firstKnownPeriod = normalizeString(page.firstKnownPeriod)
-  const timelineSummary = normalizeString(page.timelineSummary)
-  const includeRiskyDetails = personNeedsRiskyDetails(page, normalizedQuery, queryTerms)
-
-  return `- [person] ${personName}: ${[
-    relationshipToUser && `关系：${relationshipToUser}`,
-    firstKnownPeriod && `首次已知：${firstKnownPeriod}`,
-    roleSummary,
-    includeRiskyDetails && personalitySummary,
-    includeRiskyDetails && meaningToUser && `意义：${meaningToUser}`,
-    sharedExperienceSummary,
-    timelineSummary && `时间线：${timelineSummary}`
-  ].filter(Boolean).join('；') || '暂无人物摘要'}`
-}
-
-function buildIdentityTraitSummaryLine(page) {
-  const traitType = normalizeString(page.traitType) || '未分类'
-  const confidenceLevel = normalizeString(page.confidenceLevel) || 'low'
-  const stabilityLevel = normalizeString(page.stabilityLevel) || 'low'
-  const summary = normalizeString(page.traitSummary) || normalizeString(page.summary) || '暂无侧写摘要'
-  return `- [trait/${traitType}/${confidenceLevel}/${stabilityLevel}] ${page.title}: ${summary}`
+function buildDirectoryLine(page) {
+  const pageType = normalizeString(page.pageType) || 'page'
+  const importance = normalizeString(page.importance) || 'medium'
+  const summary = normalizeString(page.summary) || '暂无摘要'
+  const timeSignal =
+    normalizeString(page.lastMentionedAt)?.slice(0, 10) ||
+    normalizeString(page.lastUpdatedAt)?.slice(0, 10) ||
+    ''
+  return `- [${pageType}/${importance}] ${page.title}：${summary}${timeSignal ? ` · ${timeSignal}` : ''}`
 }
 
 function buildTopicSummaryLine(item) {
@@ -400,60 +305,26 @@ export async function buildWikiContext(
     ]
 
     const primaryIdentityProfile = selectPrimaryIdentityProfile(activePageSummaries)
-    const matchedPreferencePages = queryTerms.length === 0
-      ? []
-      : pageSummaries
-          .filter(isIdentityPreferencePage)
-          .filter((page) => pageMatchesAnyKeyword(page, queryTerms))
-          .sort((a, b) => comparePages(a, b, { normalizedQuery, queryTerms }))
-    const matchedTraitPages = queryTerms.length === 0
-      ? []
-      : pageSummaries
-          .filter((page) => isIdentityTraitPage(page) && page.status !== 'archived')
-          .filter((page) => traitMatchesEmotionalScene(page, queryTerms))
-          .sort((a, b) => comparePages(a, b, { normalizedQuery, queryTerms }))
+    const primaryId = primaryIdentityProfile ? getPageStableId(primaryIdentityProfile) : ''
 
-    const matchedPreferenceIds = new Set(matchedPreferencePages.map((item) => getPageStableId(item)).filter(Boolean))
-    const matchedTraitIds = new Set(matchedTraitPages.map((item) => getPageStableId(item)).filter(Boolean))
-    const otherPages = [...pageSummaries]
-      .filter((page) => !primaryIdentityProfile || getPageStableId(page) !== getPageStableId(primaryIdentityProfile))
-      .filter((page) => !matchedPreferenceIds.has(getPageStableId(page)))
-      .filter((page) => !matchedTraitIds.has(getPageStableId(page)))
-      .filter((page) => {
-        if (queryTerms.length === 0 && isIdentityTraitPage(page) && normalizeString(page.status) === 'review') {
-          return false
-        }
-        return true
-      })
+    // 451：L0 = 画像卡 + 已确认重要人物；L1 = 其余页面按"重要性 + ownerConfirmed + 摘要 + 查询命中"排序取 top-N。
+    // 449：词表仅参与排序，不再充当"是否注入字段/是否展示页面"的门控（字段级注入改由钻取决定）。
+    const stablePersonPages = pageSummaries
+      .filter((page) => isStableImportantPersonPage(page))
       .sort((a, b) => comparePages(a, b, { normalizedQuery, queryTerms }))
-
-    const stablePersonPages = otherPages.filter((page) =>
-      isStableImportantPersonPage(page) &&
-      (queryTerms.length === 0 || personMatchesQuery(page, normalizedQuery, queryTerms))
-    )
     const stablePersonIds = new Set(stablePersonPages.map((item) => getPageStableId(item)).filter(Boolean))
-    const remainingPages = otherPages
+
+    const l1Pages = pageSummaries
+      .filter((page) => getPageStableId(page) !== primaryId)
       .filter((page) => !stablePersonIds.has(getPageStableId(page)))
-      .filter((page) => {
-        if (isIdentityPersonPage(page) && !personMatchesQuery(page, normalizedQuery, queryTerms)) {
-          return false
-        }
-        if (isIdentityPreferencePage(page) && !pageMatchesAnyKeyword(page, queryTerms)) {
-          return false
-        }
-        if (isIdentityTraitPage(page) && !traitMatchesEmotionalScene(page, queryTerms)) {
-          return false
-        }
-        return true
-      })
+      .sort((a, b) => comparePages(a, b, { normalizedQuery, queryTerms }))
+      .slice(0, pageLimit)
 
     const selectedPages = [
       ...(primaryIdentityProfile ? [primaryIdentityProfile] : []),
       ...stablePersonPages,
-      ...matchedPreferencePages,
-      ...matchedTraitPages,
-      ...remainingPages
-    ].slice(0, pageLimit)
+      ...l1Pages
+    ]
 
     const topics = await topicIndex.list()
     const selectedTopics = [...topics]
@@ -472,25 +343,10 @@ export async function buildWikiContext(
 
     const memorySummaryLines = []
     if (primaryIdentityProfile) {
-      memorySummaryLines.push(buildIdentityProfileSummaryLine(primaryIdentityProfile, normalizedQuery, queryTerms))
+      memorySummaryLines.push(buildProfileCardLine(primaryIdentityProfile))
     }
-
-    memorySummaryLines.push(
-      ...selectedPages
-        .filter((page) => !primaryIdentityProfile || getPageStableId(page) !== getPageStableId(primaryIdentityProfile))
-        .filter((page) => {
-          if (queryTerms.length === 0 && isIdentityPreferencePage(page)) {
-            return false
-          }
-          return true
-        })
-        .map((page) => {
-          if (isIdentityPersonPage(page)) return buildIdentityPersonSummaryLine(page, normalizedQuery, queryTerms)
-          if (isIdentityPreferencePage(page)) return buildIdentityPreferenceSummaryLine(page)
-          if (isIdentityTraitPage(page)) return buildIdentityTraitSummaryLine(page)
-          return buildPageSummaryLine(page)
-        })
-    )
+    memorySummaryLines.push(...stablePersonPages.map(buildDirectoryLine))
+    memorySummaryLines.push(...l1Pages.map(buildDirectoryLine))
 
     const memorySummary = memorySummaryLines.length === 0
       ? '当前没有可注入的长期记忆 wiki 页面。'
