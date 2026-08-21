@@ -89,17 +89,6 @@ export function createConfirmService(store) {
       })
     },
 
-    reject(id) {
-      if (!id) throw badRequest('confirmation id is required')
-      const confirmation = requireExisting(id)
-      ensurePending(confirmation)
-      return updatePendingConfirmationStatus(store, {
-        id,
-        status: 'rejected',
-        resolvedAt: Date.now()
-      })
-    },
-
     async executeApprovedConfirmation(id) {
       if (!id) throw badRequest('confirmation id is required')
       const confirmation = requireExisting(id)

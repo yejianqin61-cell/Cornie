@@ -36,24 +36,6 @@ function summarizeTools() {
   return tools.map((tool) => `- ${tool.name} [${tool.riskLevel}]：${tool.description}`).join('\n')
 }
 
-function summarizeTodos(store) {
-  const items = listTodoEntries(store, { status: 'pending' }).slice(0, 5)
-  if (items.length === 0) {
-    return '当前没有未完成待办。'
-  }
-
-  return items.map((item) => `- ${item.title}${item.dueAt ? `（${item.dueAt}）` : ''}`).join('\n')
-}
-
-function summarizeSchedules(store) {
-  const items = listScheduleEntries(store, { status: 'scheduled' }).slice(0, 5)
-  if (items.length === 0) {
-    return '当前没有近期日程。'
-  }
-
-  return items.map((item) => `- ${item.title} @ ${item.startAt}`).join('\n')
-}
-
 export async function buildConversationContext(store, { date, baseDir = process.cwd() }) {
   const observation = createObservationService(store)
   const messages = getMessagesByDate(store, date)

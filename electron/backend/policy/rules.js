@@ -421,9 +421,11 @@ function applyLegacyMemoryDeprecationRule(toolCall) {
   }
 }
 
-function applyLedgerRule(toolCall, sourceText, options = {}) {
+// BE-07：三个 apply*Rule（Ledger/Todo/Schedule）表驱动合并为单一类目域规则。
+// 域差异（validateToolCall 有无、categoryRuleCopy、域数据）全部由 domainRegistry 注册数据驱动。
+function applyCategoryDomainRule(toolCall, sourceText, options = {}) {
   const registration = categoryDomainRegistry.getDomainByActionTool(toolCall.tool_name)
-  if (registration?.domain !== 'ledger') {
+  if (!registration) {
     return null
   }
 
@@ -443,60 +445,6 @@ function applyLedgerRule(toolCall, sourceText, options = {}) {
     vagueNameReason: copy.vagueNameReason,
     createConfirmReason: copy.createConfirmReason
   })
-}
-
-function applyTodoRule(toolCall, sourceText, options = {}) {
-  const registration = categoryDomainRegistry.getDomainByActionTool(toolCall.tool_name)
-  if (registration?.domain !== 'todo') {
-    return null
-  }
-
-  const copy = registration.categoryRuleCopy ?? {}
-  return applyCandidateResolution({
-    store: options.store,
-    toolCall,
-    sourceText,
-    domain: registration.domain,
-    missingQuestion: copy.missingQuestion,
-    vagueNameQuestion: copy.vagueNameQuestion,
-    vagueNameReason: copy.vagueNameReason,
-    createConfirmReason: copy.createConfirmReason
-  })
-}
-
-function applyScheduleRule(toolCall, sourceText, options = {}) {
-  const registration = categoryDomainRegistry.getDomainByActionTool(toolCall.tool_name)
-  if (registration?.domain !== 'schedule') {
-    return null
-  }
-
-  const copy = registration.categoryRuleCopy ?? {}
-  return applyCandidateResolution({
-    store: options.store,
-    toolCall,
-    sourceText,
-    domain: registration.domain,
-    missingQuestion: copy.missingQuestion,
-    vagueNameQuestion: copy.vagueNameQuestion,
-    vagueNameReason: copy.vagueNameReason,
-    createConfirmReason: copy.createConfirmReason
-  })
-}
-
-function applyMemoryRule(toolCall, sourceText) {
-  if (!toolCall.tool_name.startsWith('memory.')) {
-    return null
-  }
-
-  return {
-    decision: 'confirm',
-    confirmRequest: buildConfirmRequest(
-      toolCall,
-      '长期记忆写入属于高风险动作，需要主人确认。',
-      sourceText
-    ),
-    toolCall
-  }
 }
 
 function applyMemoryWikiRule(toolCall, sourceText) {
@@ -620,11 +568,8 @@ export function evaluateToolRule(toolCall, sourceText, options = {}) {
   return (
     applyLegacyMemoryDeprecationRule(toolCall) ??
     toolNotRegistered(toolCall) ??
-    applyLedgerRule(toolCall, sourceText, options) ??
-    applyTodoRule(toolCall, sourceText, options) ??
-    applyScheduleRule(toolCall, sourceText, options) ??
+    applyCategoryDomainRule(toolCall, sourceText, options) ??
     applySystemReadRule(toolCall) ??
-    applyMemoryRule(toolCall, sourceText) ??
     applyMemoryWikiRule(toolCall, sourceText) ??
     applyHighRiskRule(toolCall, sourceText) ?? {
       decision: 'allow',
