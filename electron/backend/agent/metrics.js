@@ -149,7 +149,7 @@ export function classifyModelError(error) {
   const name = error?.name
   const kind = error?.kind
   const message = String(error?.message || error || '')
-  if (name === 'AbortError' || kind === 'aborted') {
+  if (name === 'AbortError' || kind === 'aborted' || error?.code === 'aborted') {
     return { status: 'aborted', errorCode: 'aborted' }
   }
   if (kind === 'timeout' || /timeout/i.test(message)) {

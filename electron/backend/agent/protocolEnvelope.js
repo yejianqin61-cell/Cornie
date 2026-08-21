@@ -6,11 +6,7 @@
 // 消除双份实现与漂移（此前 executor 版缺 lookupContexts 分支）。
 
 import { buildJsonRepairPrompt, parseModelJson } from './jsonProtocol.js'
-import {
-  buildLookupFollowupPrompt,
-  buildToolFollowupPrompt,
-  estimateLegacyLookupFollowupPromptLength
-} from './promptBuilder.js'
+import { buildLookupFollowupPrompt, buildToolFollowupPrompt } from './promptBuilder.js'
 import { recordModelCallTelemetry } from './metrics.js'
 import { chat } from '../model/deepseek/client.js'
 
@@ -90,9 +86,15 @@ export function buildToolFollowupMessages(
   { maxHistory = null, phase = null } = {}
 ) {
   const hasLookup = Array.isArray(lookupContexts) && lookupContexts.length > 0
-  const followupPrompt = hasLookup
+  // BE-09：lookup 分支经 buildLookupFollowupPrompt 返回 { prompt, chars, legacyChars }，非 lookup 分支直接构造等价结构
+  const followupBuilt = hasLookup
     ? buildLookupFollowupPrompt({ assistantReply, toolResult, lookupContexts })
-    : buildToolFollowupPrompt({ assistantReply, toolResult })
+    : {
+        prompt: buildToolFollowupPrompt({ assistantReply, toolResult }),
+        chars: null,
+        legacyChars: null
+      }
+  const followupPrompt = followupBuilt.prompt
 
   const nextMessages = trimMessages(
     [
@@ -120,10 +122,10 @@ export function buildToolFollowupMessages(
     messages: nextMessages,
     promptMetrics: {
       phase: phase ?? (hasLookup ? 'lookup_followup' : 'tool_followup'),
-      promptChars: followupPrompt.length,
+      promptChars: followupBuilt.chars ?? followupPrompt.length,
       legacyPromptCharsEstimate: hasLookup
-        ? estimateLegacyLookupFollowupPromptLength({ assistantReply, toolResult, lookupContexts })
-        : followupPrompt.length
+        ? followupBuilt.legacyChars
+        : followupBuilt.legacyChars ?? followupPrompt.length
     }
   }
 }

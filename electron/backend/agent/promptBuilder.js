@@ -149,8 +149,9 @@ export function buildWriteIntentRecoveryPrompt(message) {
   ].join('\n')
 }
 
+// BE-09：单一 builder 返回 { prompt, chars, legacyChars }，删除 estimate 双实现（此前仅 toolResult 序列化方式不同）。
 export function buildLookupFollowupPrompt({ assistantReply, toolResult, lookupContexts }) {
-  return [
+  const promptText = [
     '你刚刚完成的是一轮只读补查，不是最终写入。',
     buildCategoryLookupFollowupRules(),
     '仍然只能输出一个合法 JSON 对象；如果需要继续动作，可以输出 tool_call；如果信息仍不足，输出 reply。',
@@ -158,17 +159,21 @@ export function buildLookupFollowupPrompt({ assistantReply, toolResult, lookupCo
     `只读补查摘要：${JSON.stringify(lookupContexts)}`,
     `补查工具结果摘要：${JSON.stringify(summarizeLookupToolResult(toolResult))}`
   ].join('\n')
-}
 
-export function estimateLegacyLookupFollowupPromptLength({ assistantReply, toolResult, lookupContexts }) {
-  return [
+  const legacyText = [
     '你刚刚完成的是一轮只读补查，不是最终写入。',
     buildCategoryLookupFollowupRules(),
     '仍然只能输出一个合法 JSON 对象；如果需要继续动作，可以输出 tool_call；如果信息仍不足，输出 reply。',
     `你上一轮对主人说的话：${assistantReply}`,
     `只读补查摘要：${JSON.stringify(lookupContexts)}`,
     `原始工具结果：${JSON.stringify(toolResult)}`
-  ].join('\n').length
+  ].join('\n')
+
+  return {
+    prompt: promptText,
+    chars: promptText.length,
+    legacyChars: legacyText.length
+  }
 }
 
 // 记忆提炼轮次（Memory Distillation Turn）prompt（443）：
