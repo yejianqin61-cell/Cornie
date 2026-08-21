@@ -592,6 +592,14 @@ function buildGovernanceRequestFromOrphanItem(item) {
   }
 }
 
+// 460：巡检治理请求去重指纹（requestType + 关联实体 + 问题标题）。
+function buildInspectionDedupeKey(request) {
+  const pageIds = Array.isArray(request.pageIds) ? request.pageIds.join('|') : ''
+  const topicKeys = Array.isArray(request.topicKeys) ? request.topicKeys.join('|') : ''
+  const title = normalizeString(request.title)
+  return `${request.requestType}::${pageIds}::${topicKeys}::${title}`
+}
+
 export async function createMemoryWikiService({ baseDir, store } = {}) {
   if (!baseDir) {
     throw new Error('memory wiki service baseDir is required')
@@ -1177,14 +1185,30 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
     async enqueueInspectionGovernanceRequests() {
       const created = []
 
+      // 460：按问题指纹去重，避免同一问题反复入队产生噪音治理请求。
+      const existing = await governanceStore.list()
+      const seenKeys = new Set(
+        existing
+          .filter((item) => ['pending', 'deferred'].includes(normalizeString(item.status)))
+          .map((item) => buildInspectionDedupeKey(item))
+      )
+
       const brokenLinks = await this.inspectBrokenLinks()
       for (const issue of brokenLinks.issues ?? []) {
-        created.push(await governanceStore.create(buildGovernanceRequestFromBrokenLinkIssue(issue)))
+        const request = buildGovernanceRequestFromBrokenLinkIssue(issue)
+        const key = buildInspectionDedupeKey(request)
+        if (seenKeys.has(key)) continue
+        seenKeys.add(key)
+        created.push(await governanceStore.create(request))
       }
 
       const orphanPages = await this.inspectOrphanPages()
       for (const item of orphanPages.items ?? []) {
-        created.push(await governanceStore.create(buildGovernanceRequestFromOrphanItem(item)))
+        const request = buildGovernanceRequestFromOrphanItem(item)
+        const key = buildInspectionDedupeKey(request)
+        if (seenKeys.has(key)) continue
+        seenKeys.add(key)
+        created.push(await governanceStore.create(request))
       }
 
       return {

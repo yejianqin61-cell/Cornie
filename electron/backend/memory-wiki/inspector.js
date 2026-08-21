@@ -46,8 +46,10 @@ export async function createMemoryWikiInspector({ store, memoryWikiService, topi
   if (!memoryWikiService) throw new Error('memoryWikiService is required')
   if (!topicIndex) throw new Error('topicIndex is required')
 
+  // 460：单次遍历——list() 只读 page-index 轻索引，再统一 hydrate 一次，
+  // 避免"listSummaries（内部已逐页读取）+ 再逐个 get"的双重全量扫描。
   async function listPages() {
-    const summaries = await memoryWikiService.listSummaries({})
+    const summaries = await memoryWikiService.list({})
     const pages = await Promise.all(summaries.map((item) => memoryWikiService.get(item.pageId)))
     return pages.filter(Boolean)
   }
