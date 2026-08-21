@@ -34,3 +34,6 @@ tmp/
 # 本地记忆运行数据（Cornie-019 卫生建议）：不再跟踪
 data/memory-wiki/
 
+# BE-05 telemetry 运行数据（本地 JSONL 落盘）：不再跟踪
+data/telemetry/
+
