@@ -455,9 +455,10 @@ async function selectVersion(versionId) {
   errorMsg.value = ''
   try {
     selectedVersionId.value = versionId
+    // 458：对比"所选历史版本 vs 当前页"，修复此前版本自比（恒为无变更）。
     const data = await getMemoryWikiPageVersionDiff(pageForm.value.pageId, {
       fromVersionId: versionId,
-      toVersionId: versionId
+      toVersionId: 'current'
     })
     versionDiff.value = data.diff
   } catch (error) {

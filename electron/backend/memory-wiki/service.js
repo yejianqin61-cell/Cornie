@@ -1096,6 +1096,13 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
       if (!pageId) throw new Error('memory wiki pageId is required')
       if (!fromVersionId) throw new Error('memory wiki fromVersionId is required')
       if (!toVersionId) throw new Error('memory wiki toVersionId is required')
+
+      // 458：toVersionId='current' 表示"所选版本 vs 当前页"（修复前端版本自比）。
+      if (toVersionId === 'current') {
+        const currentPage = await this.get(pageId)
+        if (!currentPage) throw new Error(`memory wiki page not found: ${pageId}`)
+        return versionStore.diffVersions({ pageId, fromVersionId, toVersionId, currentPage })
+      }
       return versionStore.diffVersions({ pageId, fromVersionId, toVersionId })
     },
 
@@ -1124,10 +1131,7 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
         filePath: existing.filePath
       })
 
-      await versionStore.snapshotPage(restored, {
-        reason: 'after_rollback',
-        sourceVersionId: versionId
-      })
+      // 458：回滚只保留 before 快照，after 快照默认不拍，避免版本膨胀。
       await writeAudit({
         eventType: 'page_rolled_back',
         pageId,
