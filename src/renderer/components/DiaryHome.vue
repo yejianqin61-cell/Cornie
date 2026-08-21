@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { getEntry, listEntries, listOnThisDay } from '../api'
+import { getEntry, listEntries, listOnThisDay, listObservations } from '../api'
 import CornieDiaryMarkdown from './CornieDiaryMarkdown.vue'
 
 function pad2(n) { return String(n).padStart(2, '0') }
@@ -11,6 +11,7 @@ const todayStr = toISODate(today)
 
 const entry = ref({ userText: '', cornieText: '' })
 const onThisDayItems = ref([])
+const todayObservations = ref([])
 const loading = ref(false)
 const loadingOtd = ref(false)
 
@@ -36,6 +37,12 @@ onMounted(async () => {
     onThisDayItems.value = data.items || []
   } catch { /* ignore */ }
   finally { loadingOtd.value = false }
+
+  // R-08：当天观察联动——摘要展示 + 跳观察日志
+  try {
+    const data = await listObservations({ date: todayStr, limit: 3 })
+    todayObservations.value = data?.observations || []
+  } catch { /* ignore */ }
 })
 
 function emitGo(where) {
@@ -73,6 +80,21 @@ function emitGo(where) {
           <CornieDiaryMarkdown :content="entry.cornieText" />
         </div>
         <div class="previewHint" v-else>铃湾还没写今天的日记。</div>
+      </div>
+    </div>
+
+    <!-- R-08：当天观察联动 -->
+    <div class="todayObsCard card">
+      <div class="todayObsHead">
+        <div class="todayObsTitle">今天的观察</div>
+        <button class="ghost" @click="$emit('go-observe')">看全部观察</button>
+      </div>
+      <div v-if="todayObservations.length === 0" class="todayObsEmpty">今天还没有留下观察。</div>
+      <div v-else class="todayObsList">
+        <div v-for="item in todayObservations.slice(0, 3)" :key="item.id" class="todayObsItem">
+          <div class="todayObsItemTitle">{{ item.title }}</div>
+          <div class="todayObsItemSnippet">{{ (item.content || '').slice(0, 50) }}</div>
+        </div>
       </div>
     </div>
 
@@ -168,6 +190,25 @@ function emitGo(where) {
 @media (max-width: 760px){
   .previewGrid{ grid-template-columns: 1fr; }
 }
+
+/* ─── 当天观察（R-08） ─── */
+.todayObsCard{ padding: 16px 20px; }
+.todayObsHead{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.todayObsTitle{ font-weight: 700; }
+.todayObsEmpty{ color: var(--muted); font-size: 13px; }
+.todayObsList{ display: flex; flex-direction: column; gap: 8px; }
+.todayObsItem{
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+}
+.todayObsItemTitle{ font-weight: 600; font-size: 13px; }
+.todayObsItemSnippet{ font-size: 12px; color: var(--muted); margin-top: 2px; }
 
 /* ─── 往年今日 ─── */
 .otdCard{ padding: 16px 20px; }

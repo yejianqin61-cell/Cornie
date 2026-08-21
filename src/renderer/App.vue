@@ -176,6 +176,7 @@ onMounted(async () => {
         <DiaryHome
           v-if="diaryView === 'home'"
           @go="(v) => diaryView = v"
+          @go-observe="mode = 'observe'"
         />
         <DiaryEditor
           v-else-if="diaryView === 'editor'"
