@@ -15,7 +15,7 @@
     "test:frontend:coverage": "powershell -NoProfile -Command \"if (Test-Path 'coverage/frontend') { Remove-Item -LiteralPath 'coverage/frontend' -Recurse -Force }; vitest run --coverage\"",
     "clean:tmp": "node scripts/cleanup-runtime-artifacts.mjs",
     "clean:root-tmp": "node scripts/cleanup-root-tmp-sqlite.mjs",
-    "check:cleanliness": "node scripts/check-repo-cleanliness.mjs",
+    "check:cleanliness": "node scripts/check-repo-cleanliness.mjs && node scripts/scan-unused-components.mjs",
     "test:fast": "node scripts/run-tests.mjs fast",
     "test:integration": "node scripts/run-tests.mjs integration",
     "test:full": "node scripts/run-tests.mjs full",
