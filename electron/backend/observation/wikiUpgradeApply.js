@@ -101,13 +101,17 @@ async function appendObservationSource(memoryWiki, pageId, observation) {
 
 async function dispatchUpgradeAction(store, request, { baseDir, observation, date, messageId, userMessage }) {
   const action = normalizeString(request?.payload?.action)
+  // 446：治理请求的 candidate 直接来自提炼轮次 payload；
+  // 无 candidate 时交由 upsert 决定（正则退场后即 skipped）。
+  const candidate = request?.payload?.candidate
 
   if (action === 'upgrade_identity_profile_from_observation') {
     return upsertIdentityProfileFromConversation(store, {
       baseDir,
       date,
       messageId,
-      userMessage
+      userMessage,
+      candidate
     })
   }
 
@@ -116,7 +120,8 @@ async function dispatchUpgradeAction(store, request, { baseDir, observation, dat
       baseDir,
       date,
       messageId,
-      userMessage
+      userMessage,
+      candidate
     })
   }
 
@@ -125,7 +130,8 @@ async function dispatchUpgradeAction(store, request, { baseDir, observation, dat
       baseDir,
       date,
       messageId,
-      userMessage
+      userMessage,
+      candidate
     })
   }
 
@@ -135,7 +141,8 @@ async function dispatchUpgradeAction(store, request, { baseDir, observation, dat
       date,
       messageId,
       userMessage,
-      observation
+      observation,
+      candidate
     })
   }
 
