@@ -4,7 +4,7 @@ import { evaluateToolCalls } from '../electron/backend/policy/toolPolicy.js'
 import { buildConversationContext } from '../electron/backend/agent/contextBuilder.js'
 import { createConversationOrchestrator } from '../electron/backend/agent/orchestrator.js'
 import { createMemoryWikiService } from '../electron/backend/memory-wiki/index.js'
-import { listActiveMemoryEntries, saveMessage } from '../electron/db.js'
+import { saveMessage } from '../electron/db.js'
 
 async function run() {
   const harness = await createServiceHarness('task406-legacy-memory-primary-chain-retirement')
@@ -69,7 +69,6 @@ async function run() {
       context.memorySummary
     )
 
-    const memoryEntriesBefore = listActiveMemoryEntries(harness.store, { limit: 200 }).length
     const wikiService = await createMemoryWikiService({
       baseDir: harness.baseDir,
       store: harness.store
@@ -79,27 +78,70 @@ async function run() {
     const orchestrator = createConversationOrchestrator(harness.store, {
       baseDir: harness.baseDir
     })
-    const originalConsoleError = console.error
-    console.error = (...args) => {
-      const [firstArg] = args
-      if (
-        typeof firstArg === 'string' &&
-        firstArg.includes('Conversation orchestrator error:')
-      ) {
-        const errorObject = args[1]
-        if (errorObject?.code === 'missing_api_key') {
-          return
+
+    // 444 后主链记忆写入完全由 LLM 提炼轮次驱动：mock DeepSeek 让提炼轮次落库到 Memory Wiki。
+    const previousApiKey = process.env.DEEPSEEK_API_KEY
+    process.env.DEEPSEEK_API_KEY = 'verify-task406-test-key'
+    const originalFetch = global.fetch
+    global.fetch = async (_url, options = {}) => {
+      const payload = JSON.parse(String(options?.body ?? '{}'))
+      const prompt = String(payload?.messages?.[0]?.content ?? '')
+      if (prompt.includes('memory distillation')) {
+        return {
+          ok: true,
+          status: 200,
+          async json() {
+            return {
+              choices: [
+                {
+                  message: {
+                    content: JSON.stringify({
+                      observations: [],
+                      identity_updates: [
+                        {
+                          entity: 'profile',
+                          action: 'create',
+                          fields: { userName: '叶健钦', cornieRelationship: '用户是 Cornie 的爸爸和创造者' }
+                        }
+                      ],
+                      memory_wiki_requests: [],
+                      reasoning: 'task406'
+                    })
+                  }
+                }
+              ]
+            }
+          },
+          async text() {
+            return ''
+          }
         }
       }
-      originalConsoleError(...args)
+      return {
+        ok: true,
+        status: 200,
+        async json() {
+          return { choices: [{ message: { content: '{"type":"reply","assistant_reply":"好的主人。"}' } }] }
+        },
+        async text() {
+          return ''
+        }
+      }
     }
-    await orchestrator.runTurn({
-      date: '2026-06-30',
-      message: '我叫叶健钦，你是我的爸爸和创造者。'
-    })
-    console.error = originalConsoleError
+    try {
+      await orchestrator.runTurn({
+        date: '2026-06-30',
+        message: '我叫叶健钦，你是我的爸爸和创造者。'
+      })
+    } finally {
+      global.fetch = originalFetch
+      if (previousApiKey === undefined) {
+        delete process.env.DEEPSEEK_API_KEY
+      } else {
+        process.env.DEEPSEEK_API_KEY = previousApiKey
+      }
+    }
 
-    const memoryEntriesAfter = listActiveMemoryEntries(harness.store, { limit: 200 }).length
     const pagesAfter = (await wikiService.listSummaries()).length
     const profileSummaries = await wikiService.listSummaries({
       pageType: 'identity_profile'
@@ -108,14 +150,6 @@ async function run() {
       ? await wikiService.get(profileSummaries[0].pageId)
       : null
 
-    assert(
-      memoryEntriesAfter === memoryEntriesBefore,
-      '对话主链不应再自动向 legacy memory_entries 写入数据',
-      {
-        before: memoryEntriesBefore,
-        after: memoryEntriesAfter
-      }
-    )
     assert(
       pagesAfter >= pagesBefore,
       '对话主链后的长期记忆沉淀应进入 Memory Wiki',

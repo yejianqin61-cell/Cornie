@@ -6,7 +6,6 @@ import { evaluateToolCalls } from '../../electron/backend/policy/toolPolicy.js'
 import { registerLedgerTools } from '../../electron/backend/ledger/tools.js'
 import { registerTodoTools } from '../../electron/backend/todo/tools.js'
 import { registerScheduleTools } from '../../electron/backend/schedule/tools.js'
-import { registerMemoryTools } from '../../electron/backend/memory/tools.js'
 import { registerSystemTools } from '../../electron/backend/system/tools.js'
 import { registerMemoryWikiTools } from '../../electron/backend/memory-wiki/tools.js'
 import { registerTool } from '../../electron/backend/tools/registry.js'
@@ -28,7 +27,6 @@ async function createStore(caseName) {
   registerLedgerTools(store, { registerTool })
   registerTodoTools(store, { registerTool })
   registerScheduleTools(store, { registerTool })
-  registerMemoryTools(store, { registerTool })
   registerSystemTools(store, { registerTool })
   await registerMemoryWikiTools({ baseDir, store }, { registerTool })
 
@@ -116,33 +114,6 @@ async function testDenyUnknownTool() {
   }
 }
 
-async function testConfirmMemoryWrite() {
-  const harness = await createStore('confirm-memory-write')
-  try {
-    const decision = evaluateToolCalls(
-      [
-        {
-          tool_name: 'memory.create',
-          arguments: {
-            kind: 'preference',
-            title: '喜欢猫咪',
-            content: '主人明显表达喜欢猫咪。'
-          }
-        }
-      ],
-      {
-        sourceText: '我很喜欢猫咪',
-        store: harness.store
-      }
-    )
-
-    assert(decision.decision === 'confirm', 'expected confirm decision', decision)
-    assert(decision.confirmRequest?.toolName === 'memory.create', 'expected memory.create confirm request', decision)
-  } finally {
-    harness.close()
-  }
-}
-
 async function testConfirmMemoryWikiGovernance() {
   const harness = await createStore('confirm-memory-wiki')
   try {
@@ -206,7 +177,6 @@ const tests = [
   ['allow system read', testAllowSystemRead],
   ['ask_back missing ledger amount', testAskBackMissingLedgerAmount],
   ['deny unknown tool', testDenyUnknownTool],
-  ['confirm memory write', testConfirmMemoryWrite],
   ['confirm memory wiki governance', testConfirmMemoryWikiGovernance],
   ['confirm high risk ledger delete', testConfirmHighRiskLedgerDelete]
 ]
