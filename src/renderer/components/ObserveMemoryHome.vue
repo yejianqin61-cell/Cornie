@@ -27,7 +27,23 @@ const MEMORY_TYPE_LABELS = {
   identity_profile: '关于你',
   identity_person: '重要的人',
   identity_preference: '你的偏好',
-  identity_trait: '你的特征'
+  identity_trait: '你的特征',
+  event: '生活事件',
+  topic: '主题',
+  goal: '目标',
+  project: '项目',
+  routine: '习惯',
+  need: '需要',
+  preference: '偏好',
+  dislike: '不喜欢',
+  person: '人物'
+}
+
+const MEMORY_TYPE_ICONS = {
+  identity_profile: '✨',
+  identity_person: '👤',
+  identity_preference: '👍',
+  identity_trait: '🧩'
 }
 
 const primaryIdentityMemory = ref(null)
@@ -127,6 +143,10 @@ function observationTypeLabel(type) {
 
 function memoryTypeLabel(type) {
   return MEMORY_TYPE_LABELS[type] || '长期记忆'
+}
+
+function memoryTypeIcon(type) {
+  return MEMORY_TYPE_ICONS[type] || '📌'
 }
 
 function normalizeDateText(value) {
@@ -252,6 +272,7 @@ function formatLatestObservationUpdate(items) {
           @click="$emit('go', 'memory-detail', primaryIdentityMemory.id)"
         >
           <div class="omPrimaryEyebrow">铃湾现在最先记住的你</div>
+          <div class="omMemoryType">{{ memoryTypeIcon(primaryIdentityMemory.pageType) }} {{ memoryTypeLabel(primaryIdentityMemory.pageType) }}</div>
           <div class="omPrimaryTitle">{{ primaryIdentityMemory.title }}</div>
           <div class="omPrimarySummary">
             {{ truncated(primaryIdentityMemory.summary || primaryIdentityMemory.content || '先把最重要的自己留在这里。', 120) }}
@@ -264,7 +285,7 @@ function formatLatestObservationUpdate(items) {
           class="omMemoryCard"
           @click="$emit('go', 'memory-detail', mem.id)"
         >
-          <div class="omMemoryType">{{ memoryTypeLabel(mem.pageType) }}</div>
+          <div class="omMemoryType">{{ memoryTypeIcon(mem.pageType) }} {{ memoryTypeLabel(mem.pageType) }}</div>
           <div class="omMemoryTitle">{{ mem.title }}</div>
           <div class="omMemorySnippet" v-if="mem.summary">{{ truncated(mem.summary, 100) }}</div>
           <div class="omMemorySnippet" v-else>{{ truncated(mem.content, 100) }}</div>
@@ -512,6 +533,10 @@ function formatLatestObservationUpdate(items) {
   font-size: 11px;
   letter-spacing: .04em;
   color: var(--muted);
+}
+
+.omPrimaryMemoryCard .omMemoryType{
+  margin-top: 6px;
 }
 
 .omPrimaryTitle{

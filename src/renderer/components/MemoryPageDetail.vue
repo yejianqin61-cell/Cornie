@@ -18,24 +18,71 @@ const PAGE_TYPES = [
   {
     value: 'identity_profile',
     label: '关于你',
+    icon: '✨',
     hint: '记下你的名字、身份、你和铃湾的关系，或者你最近的人生状态。'
   },
   {
     value: 'identity_person',
     label: '重要的人',
+    icon: '👤',
     hint: '记下你在意的人、你们的关系，还有你想保留的共同经历。'
   },
   {
     value: 'identity_preference',
     label: '你的偏好',
+    icon: '👍',
     hint: '记下你喜欢什么、不喜欢什么，或者你更习惯怎样被照顾。'
   },
   {
     value: 'identity_trait',
     label: '你的特征',
+    icon: '🧩',
     hint: '记下比较稳定的性格、表达方式，或你面对压力时的样子。'
   }
 ]
+
+// 普通记忆页类型（非身份类），与 identity 四类在列表与详情中做分组/标签差异表达
+const ORDINARY_PAGE_TYPES = [
+  {
+    value: 'event',
+    label: '生活事件',
+    icon: '📖',
+    hint: '记下一件发生过、以后想再翻回来的经历。'
+  },
+  {
+    value: 'topic',
+    label: '主题',
+    icon: '🗂️',
+    hint: '把一个反复出现的话题收成一页，方便以后慢慢看。'
+  },
+  {
+    value: 'goal',
+    label: '目标',
+    icon: '🎯',
+    hint: '记下你想推进的目标，或这段时间最想做成的事。'
+  },
+  {
+    value: 'project',
+    label: '项目',
+    icon: '📁',
+    hint: '为一件正在进行的事或一段计划单独留一页。'
+  },
+  {
+    value: 'routine',
+    label: '习惯',
+    icon: '🔁',
+    hint: '记下你稳定的习惯和日常节奏，铃湾会慢慢学着照顾它。'
+  },
+  {
+    value: 'need',
+    label: '需要',
+    icon: '💡',
+    hint: '记下你需要什么、在意什么，方便铃湾更好地照顾你。'
+  }
+]
+
+const ALL_PAGE_TYPES = [...PAGE_TYPES, ...ORDINARY_PAGE_TYPES]
+const IDENTITY_PAGE_TYPES = new Set(PAGE_TYPES.map((item) => item.value))
 
 function createEmptyPage() {
   return {
@@ -46,90 +93,112 @@ function createEmptyPage() {
   }
 }
 
-const page = ref(createEmptyPage())
+const page = ref(null)
 const loading = ref(false)
 const saving = ref(false)
 const deleting = ref(false)
+const loadFailed = ref(false)
+const confirmDelete = ref(false)
 const errorMsg = ref('')
 const dirty = ref(false)
 const sourceTrace = ref(null)
 
 const isCreateMode = computed(() => !props.id)
+const isIdentityType = computed(() => Boolean(page.value && IDENTITY_PAGE_TYPES.has(page.value.pageType)))
+const pageTypeMeta = computed(() =>
+  ALL_PAGE_TYPES.find((item) => item.value === page.value?.pageType) || null
+)
+const pageTypeIcon = computed(() => pageTypeMeta.value?.icon || '📌')
 const pageTypeHint = computed(() =>
-  PAGE_TYPES.find((item) => item.value === page.value.pageType)?.hint || '把这页记忆写成以后想再翻回来的样子。'
+  pageTypeMeta.value?.hint || '把这页记忆写成以后想再翻回来的样子。'
 )
 const pageTypeLabel = computed(() =>
-  PAGE_TYPES.find((item) => item.value === page.value.pageType)?.label || '长期记忆'
+  pageTypeMeta.value?.label || '长期记忆'
 )
 const pageGuide = computed(() => {
-  if (page.value.pageType === 'identity_profile') {
+  if (page.value?.pageType === 'identity_profile') {
     return {
       eyebrow: '最核心的一页',
       title: '这里最适合写“你是谁”',
       body: '名字、你和铃湾的关系、你最近的人生状态，或者你最希望被怎样记住，都可以慢慢放在这里。'
     }
   }
-  if (page.value.pageType === 'identity_person') {
+  if (page.value?.pageType === 'identity_person') {
     return {
       eyebrow: '重要的人',
       title: '把这个人留得更清楚一点',
       body: '可以写他是谁、你们是什么关系、哪些共同经历最值得被留下来。'
     }
   }
-  if (page.value.pageType === 'identity_preference') {
+  if (page.value?.pageType === 'identity_preference') {
     return {
       eyebrow: '你的偏好',
       title: '把舒服和不舒服都说清楚',
       body: '喜欢什么、不喜欢什么、怎样的陪伴方式会更让你安心，这里都可以记下来。'
     }
   }
+  if (page.value?.pageType === 'identity_trait') {
+    return {
+      eyebrow: '你的特征',
+      title: '把稳定的小习惯和性格样子留下来',
+      body: '比如你的表达方式、习惯、压力大的时候会有什么反应，这些都能帮铃湾更懂你。'
+    }
+  }
   return {
-    eyebrow: '你的特征',
-    title: '把稳定的小习惯和性格样子留下来',
-    body: '比如你的表达方式、习惯、压力大的时候会有什么反应，这些都能帮铃湾更懂你。'
+    eyebrow: '一页想留住的记忆',
+    title: '把这件想记住的事写下来',
+    body: '可以写下发生了什么、为什么想留住它，也可以留一点以后翻到这里时能想起来的线索。'
   }
 })
 const titleLabel = computed(() => {
-  if (page.value.pageType === 'identity_profile') return '这页想记住的名字或主题'
-  if (page.value.pageType === 'identity_person') return '这个人的名字'
-  if (page.value.pageType === 'identity_preference') return '这个偏好的名字'
-  return '这个特征的名字'
+  if (page.value?.pageType === 'identity_profile') return '这页想记住的名字或主题'
+  if (page.value?.pageType === 'identity_person') return '这个人的名字'
+  if (page.value?.pageType === 'identity_preference') return '这个偏好的名字'
+  if (page.value?.pageType === 'identity_trait') return '这个特征的名字'
+  return '这页记忆的名字'
 })
 const titlePlaceholder = computed(() => {
-  if (page.value.pageType === 'identity_profile') return '比如：叶健钦、现在的我、铃湾记住的我'
-  if (page.value.pageType === 'identity_person') return '比如：钟奕菲、大学室友、妈妈'
-  if (page.value.pageType === 'identity_preference') return '比如：喜欢被温柔回应、讨厌临时变动'
-  return '比如：容易心软、睡前爱刷手机、压力大时会沉默'
+  if (page.value?.pageType === 'identity_profile') return '比如：叶健钦、现在的我、铃湾记住的我'
+  if (page.value?.pageType === 'identity_person') return '比如：钟奕菲、大学室友、妈妈'
+  if (page.value?.pageType === 'identity_preference') return '比如：喜欢被温柔回应、讨厌临时变动'
+  if (page.value?.pageType === 'identity_trait') return '比如：容易心软、睡前爱刷手机、压力大时会沉默'
+  return '比如：一次旅行、最近在追的剧、想学的新东西'
 })
 const summaryLabel = computed(() => {
-  if (page.value.pageType === 'identity_profile') return '一句话介绍你自己'
-  if (page.value.pageType === 'identity_person') return '一句话记住这个人'
-  if (page.value.pageType === 'identity_preference') return '一句话记住这个偏好'
-  return '一句话记住这个特征'
+  if (page.value?.pageType === 'identity_profile') return '一句话介绍你自己'
+  if (page.value?.pageType === 'identity_person') return '一句话记住这个人'
+  if (page.value?.pageType === 'identity_preference') return '一句话记住这个偏好'
+  if (page.value?.pageType === 'identity_trait') return '一句话记住这个特征'
+  return '一句话记住这件事'
 })
 const summaryPlaceholder = computed(() => {
-  if (page.value.pageType === 'identity_profile') return '先用一两句话写下“你是谁”和“铃湾最该记住什么”。'
-  if (page.value.pageType === 'identity_person') return '先用一两句话写下这个人对你来说最重要的意义。'
-  if (page.value.pageType === 'identity_preference') return '先用一两句话写下这个偏好为什么重要。'
-  return '先用一两句话写下这个特征最常出现的样子。'
+  if (page.value?.pageType === 'identity_profile') return '先用一两句话写下“你是谁”和“铃湾最该记住什么”。'
+  if (page.value?.pageType === 'identity_person') return '先用一两句话写下这个人对你来说最重要的意义。'
+  if (page.value?.pageType === 'identity_preference') return '先用一两句话写下这个偏好为什么重要。'
+  if (page.value?.pageType === 'identity_trait') return '先用一两句话写下这个特征最常出现的样子。'
+  return '先用一两句话写下这件事最值得记住的地方。'
 })
 const contentLabel = computed(() => {
-  if (page.value.pageType === 'identity_profile') return '更完整地写下你自己'
-  if (page.value.pageType === 'identity_person') return '更完整地写下这个人'
-  if (page.value.pageType === 'identity_preference') return '更完整地写下这个偏好'
-  return '更完整地写下这个特征'
+  if (page.value?.pageType === 'identity_profile') return '更完整地写下你自己'
+  if (page.value?.pageType === 'identity_person') return '更完整地写下这个人'
+  if (page.value?.pageType === 'identity_preference') return '更完整地写下这个偏好'
+  if (page.value?.pageType === 'identity_trait') return '更完整地写下这个特征'
+  return '更完整地写下这件事'
 })
 const contentPlaceholder = computed(() => {
-  if (page.value.pageType === 'identity_profile') {
+  if (page.value?.pageType === 'identity_profile') {
     return '可以写你的名字、身份、你和铃湾的关系、最近的状态，或者你最希望以后被怎样理解。'
   }
-  if (page.value.pageType === 'identity_person') {
+  if (page.value?.pageType === 'identity_person') {
     return '可以写他是谁、你们怎么认识、关系怎样变化、有哪些重要经历，或者你为什么不想忘记这个人。'
   }
-  if (page.value.pageType === 'identity_preference') {
+  if (page.value?.pageType === 'identity_preference') {
     return '可以写这个偏好出现在哪些情景、什么会让你更舒服、什么会让你不舒服。'
   }
-  return '可以写这个特征常出现在哪些时候、它怎样影响你的表达、情绪或选择。'
+  if (page.value?.pageType === 'identity_trait') {
+    return '可以写这个特征常出现在哪些时候、它怎样影响你的表达、情绪或选择。'
+  }
+  return '可以写这件事发生在什么时候、当时是怎样的，以及你为什么想把它留在这里。'
 })
 const personPrompts = computed(() => {
   if (page.value.pageType !== 'identity_person') return []
@@ -164,6 +233,8 @@ async function loadPage() {
   if (isCreateMode.value) {
     page.value = createEmptyPage()
     errorMsg.value = ''
+    loadFailed.value = false
+    confirmDelete.value = false
     dirty.value = false
     sourceTrace.value = null
     return
@@ -171,6 +242,8 @@ async function loadPage() {
 
   loading.value = true
   errorMsg.value = ''
+  loadFailed.value = false
+  confirmDelete.value = false
   try {
     const data = await getMemoryWikiPage(props.id)
     const loaded = data.page || data
@@ -184,6 +257,9 @@ async function loadPage() {
     sourceTrace.value = traceData?.trace || null
     dirty.value = false
   } catch (e) {
+    // 加载失败：绝不拿空表单覆盖真实页面，只展示纯错误态
+    page.value = null
+    loadFailed.value = true
     errorMsg.value = '这页记忆暂时没打开成功，稍后再试一次吧。'
   } finally {
     loading.value = false
@@ -195,7 +271,7 @@ function markDirty() {
 }
 
 function summarizePageType(pageType) {
-  return PAGE_TYPES.find((item) => item.value === pageType)?.label || '长期记忆'
+  return ALL_PAGE_TYPES.find((item) => item.value === pageType)?.label || '长期记忆'
 }
 
 function shortPreview(text, maxLen = 56) {
@@ -240,8 +316,7 @@ async function save() {
 }
 
 async function archivePage() {
-  if (!props.id) return
-  if (!confirm('要把这页记忆收起来吗？它会先从普通列表里消失。')) return
+  if (!props.id || !confirmDelete.value) return
 
   deleting.value = true
   errorMsg.value = ''
@@ -263,25 +338,53 @@ onMounted(loadPage)
     <header class="mdetailHead">
       <button class="ghost" @click="$emit('back')">← 返回记忆列表</button>
       <div class="mdetailActions">
-        <button v-if="!isCreateMode" class="ghost dangerGhost" :disabled="saving || deleting" @click="archivePage">
+        <button
+          v-if="!isCreateMode && !loadFailed"
+          class="ghost dangerGhost"
+          :disabled="saving || deleting"
+          @click="confirmDelete = true"
+        >
           {{ deleting ? '整理中…' : '删除这页' }}
         </button>
-        <button class="primary" :disabled="saving || (!dirty && !isCreateMode)" @click="save">
+        <button class="primary" :disabled="saving || loadFailed || (!dirty && !isCreateMode)" @click="save">
           {{ submitLabel }}
         </button>
       </div>
     </header>
 
     <div v-if="loading" class="mdetailLoading">加载中…</div>
-    <div v-else-if="errorMsg && !page" class="mdetailError">{{ errorMsg }}</div>
-    <div v-else class="mdetailCard card">
+    <div v-else-if="loadFailed" class="mdetailLoadError">
+      <div class="mdetailLoadErrorTitle">这页记忆暂时没打开成功</div>
+      <div class="mdetailLoadErrorHint">可能是它刚被整理过，稍后再试一次就好。</div>
+      <div class="mdetailLoadErrorActions">
+        <button class="ghost" @click="$emit('back')">← 返回记忆列表</button>
+        <button class="primary" @click="loadPage">再试一次</button>
+      </div>
+    </div>
+    <div v-else-if="page" class="mdetailCard card">
       <div class="mdetailIntro">
         <div class="mdetailMode">{{ isCreateMode ? '新建长期记忆' : '编辑长期记忆' }}</div>
         <div class="mdetailHint">{{ pageTypeHint }}</div>
-        <div class="mdetailTypePill">{{ pageTypeLabel }}</div>
+        <div class="mdetailTypePill" :class="{ mdetailTypePillOrdinary: !isIdentityType }">
+          {{ pageTypeIcon }} {{ pageTypeLabel }}
+        </div>
       </div>
 
-      <section class="mdetailGuide" :class="{ mdetailGuidePrimary: page.pageType === 'identity_profile' }">
+      <section
+        v-if="confirmDelete && !isCreateMode"
+        class="mdetailConfirm cardShell"
+      >
+        <div class="mdetailConfirmTitle">要把这页记忆收起来吗？</div>
+        <div class="mdetailConfirmHint">收起后它会先从普通列表里消失，你写下的内容本身不会被改动。</div>
+        <div class="mdetailConfirmActions">
+          <button class="ghost" :disabled="deleting" @click="confirmDelete = false">再想想</button>
+          <button class="danger" :disabled="deleting" @click="archivePage">
+            {{ deleting ? '整理中…' : '确认删除' }}
+          </button>
+        </div>
+      </section>
+
+      <section class="mdetailGuide" :class="{ mdetailGuidePrimary: page.pageType === 'identity_profile', mdetailGuideOrdinary: !isIdentityType }">
         <div class="mdetailGuideEyebrow">{{ pageGuide.eyebrow }}</div>
         <div class="mdetailGuideTitle">{{ pageGuide.title }}</div>
         <div class="mdetailGuideBody">{{ pageGuide.body }}</div>
@@ -380,7 +483,12 @@ onMounted(loadPage)
       <label class="mdetailField">
         <span>记忆类型</span>
         <select v-model="page.pageType" @change="markDirty">
-          <option v-for="item in PAGE_TYPES" :key="item.value" :value="item.value">{{ item.label }}</option>
+          <optgroup label="关于你的记忆">
+            <option v-for="item in PAGE_TYPES" :key="item.value" :value="item.value">{{ item.label }}</option>
+          </optgroup>
+          <optgroup label="其他想记住的">
+            <option v-for="item in ORDINARY_PAGE_TYPES" :key="item.value" :value="item.value">{{ item.label }}</option>
+          </optgroup>
         </select>
       </label>
 
@@ -456,6 +564,38 @@ onMounted(loadPage)
   font-size: 13px;
 }
 
+.mdetailLoadError{
+  flex: 1;
+  border: 1px dashed rgba(217,106,92,.35);
+  border-radius: 16px;
+  background: rgba(217,106,92,.05);
+  padding: 40px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+}
+
+.mdetailLoadErrorTitle{
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.mdetailLoadErrorHint{
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.mdetailLoadErrorActions{
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+}
+
 .mdetailCard{
   flex: 1;
   overflow-y: auto;
@@ -485,6 +625,11 @@ onMounted(loadPage)
   font-size: 12px;
 }
 
+.mdetailTypePillOrdinary{
+  background: rgba(0,0,0,.05);
+  color: var(--muted);
+}
+
 .mdetailHint{
   font-size: 13px;
   color: var(--muted);
@@ -509,6 +654,11 @@ onMounted(loadPage)
 
 .mdetailGuideProfile{
   background: linear-gradient(180deg, rgba(255,248,242,.94), #fff);
+}
+
+.mdetailGuideOrdinary{
+  background: linear-gradient(180deg, rgba(244,247,250,.94), #fff);
+  border-color: rgba(120,140,160,.16);
 }
 
 .mdetailGuideEyebrow{
@@ -545,6 +695,31 @@ onMounted(loadPage)
   font-size: 13px;
   color: var(--muted);
   line-height: 1.6;
+}
+
+.mdetailConfirm{
+  border-color: rgba(217,106,92,.28);
+  background: #fffdfb;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mdetailConfirmTitle{
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.mdetailConfirmHint{
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.mdetailConfirmActions{
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
 }
 
 .cardShell{

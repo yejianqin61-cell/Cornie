@@ -16,32 +16,63 @@ const PAGE_TYPE_LABELS = {
   identity_trait: '你的特征'
 }
 
+const PAGE_TYPE_ICONS = {
+  identity_profile: '✨',
+  identity_person: '👤',
+  identity_preference: '👍',
+  identity_trait: '🧩'
+}
+
+const ORDINARY_PAGE_TYPE_LABELS = {
+  event: '生活事件',
+  topic: '主题',
+  goal: '目标',
+  project: '项目',
+  routine: '习惯',
+  need: '需要',
+  preference: '偏好',
+  dislike: '不喜欢',
+  person: '人物'
+}
+
 const GROUP_DEFINITIONS = [
   {
     key: 'identity_profile',
     title: '关于你',
+    icon: '✨',
     hint: '这里放着铃湾最想认真记住的你。名字、关系、近况，都会慢慢收在这里。',
     emptyText: '这里还没有“关于你”的长期记忆。'
   },
   {
     key: 'identity_person',
     title: '重要的人',
+    icon: '👤',
     hint: '你在意的人、想记住的人、和他们有关的共同经历，都可以留在这里。',
     emptyText: '你还没有写下特别想记住的人。'
   },
   {
     key: 'identity_preference',
     title: '你的偏好',
+    icon: '👍',
     hint: '喜欢什么、不喜欢什么、怎样会让你舒服一点，铃湾都会慢慢学。',
     emptyText: '铃湾还在慢慢认识你的喜欢与不喜欢。'
   },
   {
     key: 'identity_trait',
     title: '你的特征',
+    icon: '🧩',
     hint: '你的习惯、表达方式、面对压力时的样子，也值得被好好记住。',
     emptyText: '这里还没有记下你的习惯和特征。'
   }
 ]
+
+const ORDINARY_GROUP = {
+  key: 'other',
+  title: '其他记忆',
+  icon: '📌',
+  hint: '想记住的事、主题、目标和计划，都可以单独留一页慢慢看。',
+  emptyText: '这里还没有其他想单独留一页的记忆。'
+}
 
 const pages = ref([])
 const loading = ref(false)
@@ -53,19 +84,23 @@ const preferenceAndTraitCount = computed(() =>
   pages.value.filter((page) => page.pageType === 'identity_preference' || page.pageType === 'identity_trait').length
 )
 
-const groupedSections = computed(() =>
-  GROUP_DEFINITIONS.map((group) => ({
+const groupedSections = computed(() => [
+  ...GROUP_DEFINITIONS.map((group) => ({
     ...group,
     pages: pages.value.filter((page) => page.pageType === group.key)
-  }))
-)
+  })),
+  {
+    ...ORDINARY_GROUP,
+    pages: pages.value.filter((page) => !IDENTITY_MEMORY_PAGE_TYPES.has(page.pageType))
+  }
+])
 
 async function refresh() {
   loading.value = true
   errorMsg.value = ''
   try {
     const data = await listMemoryWikiPages({ status: 'active' })
-    pages.value = (data?.pages || []).filter((page) => IDENTITY_MEMORY_PAGE_TYPES.has(page.pageType))
+    pages.value = data?.pages || []
   } catch (e) {
     errorMsg.value = e?.message || '加载失败'
   } finally {
@@ -79,7 +114,11 @@ function truncated(text, maxLen = 100) {
 }
 
 function pageTypeLabel(pageType) {
-  return PAGE_TYPE_LABELS[pageType] || '长期记忆'
+  return PAGE_TYPE_LABELS[pageType] || ORDINARY_PAGE_TYPE_LABELS[pageType] || '长期记忆'
+}
+
+function pageTypeIcon(pageType) {
+  return PAGE_TYPE_ICONS[pageType] || '📌'
 }
 
 function cardSummary(page) {
@@ -152,7 +191,7 @@ onMounted(refresh)
         >
           <div class="mlistSectionHead">
             <div>
-              <div class="mlistSectionTitle">{{ section.title }}</div>
+              <div class="mlistSectionTitle">{{ section.icon }} {{ section.title }}</div>
               <div class="mlistSectionHint">{{ section.hint }}</div>
             </div>
             <div class="mlistSectionCount">{{ section.pages.length }} 页</div>
@@ -171,7 +210,7 @@ onMounted(refresh)
               @click="$emit('go', 'memory-detail', page.id)"
             >
               <div class="mlistCardTop">
-                <div class="mlistCardType">{{ pageTypeLabel(page.pageType) }}</div>
+                <div class="mlistCardType">{{ pageTypeIcon(page.pageType) }} {{ pageTypeLabel(page.pageType) }}</div>
                 <div class="mlistCardMeta">{{ formatDate(page.updatedAt) }}</div>
               </div>
               <div class="mlistCardTitle">{{ page.title }}</div>
