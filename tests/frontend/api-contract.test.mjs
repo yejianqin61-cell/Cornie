@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
+  ApiError,
+  apiFetch,
   archiveMemoryWikiPage,
   cancelSchedule,
   clearModelSettings,
@@ -62,6 +64,7 @@ import {
   sendMessage,
   setMemoryWikiImportance,
   setMemoryWikiStatus,
+  streamConversation,
   submitConfirmationDecision,
   updateLedgerCategory,
   updateLedgerEntry,
@@ -728,5 +731,263 @@ describe('renderer api contract', () => {
     }))
 
     await expect(getModelStatus()).rejects.toThrow('HTTP 502')
+  })
+})
+
+describe('renderer request layer hardening', () => {
+  const enc = (s) => new TextEncoder().encode(s)
+
+  /** SSE 响应 mock：按块依次吐字节。 */
+  function streamResponse(chunks) {
+    let i = 0
+    return {
+      ok: true,
+      status: 200,
+      text: async () => '',
+      body: {
+        getReader: () => ({
+          read: async () => {
+            if (i >= chunks.length) return { done: true, value: undefined }
+            const value = chunks[i]
+            i += 1
+            return { done: false, value }
+          }
+        })
+      }
+    }
+  }
+
+  it('rejects with kind timeout when a request exceeds the default 30s timeout', async () => {
+    vi.useFakeTimers()
+    try {
+      globalThis.fetch = vi.fn(() => new Promise(() => {})) // 永不 resolve
+      const pending = listEntries({ month: '2026-06' })
+      // fake timers 推进时拒绝先于断言发生，先挂占位 handler 避免 Node 未处理拒绝告警
+      pending.catch(() => {})
+      await vi.advanceTimersByTimeAsync(30_000)
+      await expect(pending).rejects.toMatchObject({
+        name: 'ApiError',
+        kind: 'timeout',
+        message: expect.stringContaining('timed out after 30000ms')
+      })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('honors a custom timeoutMs override', async () => {
+    vi.useFakeTimers()
+    try {
+      globalThis.fetch = vi.fn(() => new Promise(() => {}))
+      const pending = apiFetch('/entries', { timeoutMs: 5_000 })
+      pending.catch(() => {})
+      await vi.advanceTimersByTimeAsync(4_999)
+      // 未到超时点：仍 pending
+      await expect(Promise.race([pending.then(() => 'resolved'), Promise.resolve('pending')])).resolves.toBe('pending')
+      await vi.advanceTimersByTimeAsync(1)
+      await expect(pending).rejects.toMatchObject({ name: 'ApiError', kind: 'timeout' })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('aborts the in-flight request when an external signal fires', async () => {
+    const controller = new AbortController()
+    globalThis.fetch = vi.fn(() => new Promise(() => {}))
+    const pending = apiFetch('/entries?month=2026-06', { signal: controller.signal })
+    controller.abort()
+    await expect(pending).rejects.toMatchObject({ name: 'AbortError' })
+  })
+
+  it('rejects immediately when the external signal is already aborted', async () => {
+    const controller = new AbortController()
+    controller.abort()
+    globalThis.fetch = vi.fn(() => new Promise(() => {}))
+    await expect(apiFetch('/entries', { signal: controller.signal })).rejects.toMatchObject({
+      name: 'AbortError'
+    })
+  })
+
+  it('classifies http 400 with a JSON error body', async () => {
+    globalThis.fetch = vi.fn(async () => ({
+      ok: false,
+      status: 400,
+      json: async () => ({}),
+      text: async () => JSON.stringify({ error: 'invalid date format' })
+    }))
+
+    await expect(getEntry('2026-06-27')).rejects.toMatchObject({
+      name: 'ApiError',
+      kind: 'http',
+      status: 400,
+      message: 'invalid date format'
+    })
+  })
+
+  it('classifies http 500 with a plain text body', async () => {
+    globalThis.fetch = vi.fn(async () => ({
+      ok: false,
+      status: 500,
+      json: async () => ({}),
+      text: async () => 'Internal Server Error'
+    }))
+
+    await expect(regenerateCornie('2026-06-27')).rejects.toMatchObject({
+      name: 'ApiError',
+      kind: 'http',
+      status: 500,
+      message: 'Internal Server Error'
+    })
+  })
+
+  it('falls back to response text when the JSON error field is not a string', async () => {
+    const body = JSON.stringify({ error: { code: 1 } })
+    globalThis.fetch = vi.fn(async () => ({
+      ok: false,
+      status: 422,
+      json: async () => ({}),
+      text: async () => body
+    }))
+
+    await expect(sendMessage('hi', '2026-06-27')).rejects.toMatchObject({
+      kind: 'http',
+      status: 422,
+      message: body
+    })
+  })
+
+  it('classifies a network rejection (fetch TypeError) as network', async () => {
+    globalThis.fetch = vi.fn(async () => {
+      throw new TypeError('Failed to fetch')
+    })
+
+    await expect(listEntries()).rejects.toMatchObject({
+      name: 'ApiError',
+      kind: 'network'
+    })
+  })
+
+  it('keeps ApiError readable through name/message like a plain Error', async () => {
+    const err = new ApiError('http', 'boom', { status: 503 })
+    expect(err).toBeInstanceOf(Error)
+    expect(err.name).toBe('ApiError')
+    expect(err.kind).toBe('http')
+    expect(err.status).toBe(503)
+    expect(err.message).toBe('boom')
+    expect(`${err}`).toContain('boom')
+  })
+
+  describe('streamConversation hardening', () => {
+    it('streams delta events and resolves with the done result', async () => {
+      globalThis.fetch = vi.fn(async () => streamResponse([
+        enc('data: {"kind":"delta","text":"你"}\n'),
+        enc('data: {"kind":"delta","text":"好"}\ndata: {"kind":"done","result":{"cornieMessage":{"id":"m1","content":"你好"}}}\n')
+      ]))
+
+      const deltas = []
+      const result = await streamConversation(
+        { message: 'hi', date: '2026-06-27' },
+        (d) => deltas.push(d)
+      )
+      expect(deltas).toEqual(['你', '好'])
+      expect(result).toEqual({ cornieMessage: { id: 'm1', content: '你好' } })
+    })
+
+    it('throws a protocol error when the stream emits a kind:error event', async () => {
+      globalThis.fetch = vi.fn(async () => streamResponse([
+        enc('data: {"kind":"error","error":"upstream exploded"}\n')
+      ]))
+
+      await expect(
+        streamConversation({ message: 'hi', date: '2026-06-27' }, () => {})
+      ).rejects.toMatchObject({ name: 'ApiError', kind: 'protocol', message: 'upstream exploded' })
+    })
+
+    it('throws a protocol error when the stream ends before a done event', async () => {
+      globalThis.fetch = vi.fn(async () => streamResponse([
+        enc('data: {"kind":"delta","text":"hi"}\n')
+      ]))
+
+      const deltas = []
+      await expect(
+        streamConversation({ message: 'hi', date: '2026-06-27' }, (d) => deltas.push(d))
+      ).rejects.toMatchObject({ kind: 'protocol', message: 'stream ended prematurely' })
+      expect(deltas).toEqual(['hi'])
+    })
+
+    it('skips malformed data lines without failing the stream', async () => {
+      globalThis.fetch = vi.fn(async () => streamResponse([
+        enc('data: not-json\n'),
+        enc('data: {"kind":"delta","text":"ok"}\ndata: {"kind":"done","result":{"ok":true}}\n')
+      ]))
+
+      const deltas = []
+      const result = await streamConversation(
+        { message: 'hi', date: '2026-06-27' },
+        (d) => deltas.push(d)
+      )
+      expect(deltas).toEqual(['ok'])
+      expect(result).toEqual({ ok: true })
+    })
+
+    it('parses a final data line that has no trailing newline', async () => {
+      globalThis.fetch = vi.fn(async () => streamResponse([
+        enc('data: {"kind":"delta","text":"a"}\n'),
+        enc('data: {"kind":"done","result":{"ok":true}}') // 无结尾换行
+      ]))
+
+      const deltas = []
+      const result = await streamConversation(
+        { message: 'hi', date: '2026-06-27' },
+        (d) => deltas.push(d)
+      )
+      expect(deltas).toEqual(['a'])
+      expect(result).toEqual({ ok: true })
+    })
+
+    it('stops reading and no longer calls onDelta after external abort', async () => {
+      const controller = new AbortController()
+      globalThis.fetch = vi.fn((url, init) => Promise.resolve({
+        ok: true,
+        status: 200,
+        text: async () => '',
+        body: {
+          getReader: () => ({
+            read: () => new Promise((resolve, reject) => {
+              init.signal.addEventListener('abort', () => {
+                reject(new DOMException('The operation was aborted.', 'AbortError'))
+              })
+            })
+          })
+        }
+      }))
+
+      const deltas = []
+      const pending = streamConversation(
+        { message: 'hi', date: '2026-06-27' },
+        (d) => deltas.push(d),
+        { signal: controller.signal }
+      )
+      controller.abort()
+      await expect(pending).rejects.toMatchObject({ name: 'AbortError' })
+      expect(deltas).toEqual([])
+    })
+
+    it('rejects with kind timeout when streaming exceeds the timeout', async () => {
+      vi.useFakeTimers()
+      try {
+        globalThis.fetch = vi.fn(() => new Promise(() => {}))
+        const pending = streamConversation(
+          { message: 'hi', date: '2026-06-27' },
+          () => {},
+          { timeoutMs: 5_000 }
+        )
+        pending.catch(() => {})
+        await vi.advanceTimersByTimeAsync(5_000)
+        await expect(pending).rejects.toMatchObject({ name: 'ApiError', kind: 'timeout' })
+      } finally {
+        vi.useRealTimers()
+      }
+    })
   })
 })
