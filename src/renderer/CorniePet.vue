@@ -1,6 +1,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useChat } from './composables/useChat'
+import { today } from './utils/date'
 
 const hover = ref(false)
 const pinned = ref(false)
@@ -66,10 +67,6 @@ const petStateClass = computed(() => {
 })
 
 const isExpanded = computed(() => hover.value || pinned.value || focused.value)
-
-function today() {
-  return new Date().toISOString().slice(0, 10)
-}
 
 function onEnter() {
   hover.value = true

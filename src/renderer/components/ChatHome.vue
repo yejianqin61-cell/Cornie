@@ -1,6 +1,7 @@
 <script setup>
 import { computed, nextTick, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { useChat } from '../composables/useChat'
+import { today } from '../utils/date'
 import ConfirmCard from './ConfirmCard.vue'
 import AskBackBubble from './AskBackBubble.vue'
 import ToolResultPanel from './ToolResultPanel.vue'
@@ -103,7 +104,7 @@ async function jumpToBottom() {
 }
 
 onMounted(async () => {
-  const date = new Date().toISOString().slice(0, 10)
+  const date = today()
   await loadConversation(date)
   await restorePendingConfirmations(date)
   await scrollToBottom(true)

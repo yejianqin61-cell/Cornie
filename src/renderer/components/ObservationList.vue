@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { createObservation, deleteObservation, listObservations } from '../api'
+import { today } from '../utils/date'
 
 const OBSERVATION_TYPES = [
   { value: '', label: '全部小事' },
@@ -12,7 +13,7 @@ const OBSERVATION_TYPES = [
 ]
 
 function getTodayDate() {
-  return new Date().toISOString().slice(0, 10)
+  return today()
 }
 
 function formatDateLabel(date) {

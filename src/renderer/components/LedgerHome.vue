@@ -9,6 +9,7 @@ import {
   listLedgerCategories
 } from '../api'
 import { listenDataChanged } from '../syncSignals'
+import { today } from '../utils/date'
 import LedgerCalendar from './LedgerCalendar.vue'
 
 const entries = ref([])
@@ -22,7 +23,7 @@ const form = ref({
   categoryId: '',
   categoryName: '',
   item: '',
-  occurredAt: new Date().toISOString().slice(0, 10)
+  occurredAt: today()
 })
 const saving = ref(false)
 const creatingCategory = ref(false)
@@ -425,7 +426,7 @@ async function submitEntry() {
       categoryId: '',
       categoryName: '',
       item: '',
-      occurredAt: new Date().toISOString().slice(0, 10)
+      occurredAt: today()
     }
     showForm.value = false
     await refresh()

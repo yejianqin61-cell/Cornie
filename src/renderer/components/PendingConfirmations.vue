@@ -1,13 +1,12 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { listConfirmations, submitConfirmationDecision } from '../api'
+import { today } from '../utils/date'
 
 const confirmations = ref([])
 const loading = ref(false)
 const processingId = ref(null)
 const errorMsg = ref('')
-
-function today() { return new Date().toISOString().slice(0, 10) }
 
 // Only keep the 4 allowed confirmation types for normal users
 const ALLOWED_TYPES = ['category_create', 'high_risk_delete', 'overwrite', 'high_risk_memory_write']

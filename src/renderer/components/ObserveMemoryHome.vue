@@ -2,6 +2,7 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { listMemoryWikiPages, listObservations } from '../api'
 import { listenDataChanged } from '../syncSignals'
+import { formatDate, today } from '../utils/date'
 
 const IDENTITY_MEMORY_PAGE_TYPES = new Set([
   'identity_profile',
@@ -95,7 +96,7 @@ async function refreshMemories() {
 }
 
 function getTodayDate() {
-  return new Date().toISOString().slice(0, 10)
+  return today()
 }
 
 async function refreshObservations() {
@@ -155,7 +156,7 @@ function normalizeDateText(value) {
   if (/^\d{4}-\d{2}-\d{2}/.test(text)) return text.slice(0, 10)
   const parsed = new Date(text)
   if (Number.isNaN(parsed.getTime())) return ''
-  return parsed.toISOString().slice(0, 10)
+  return formatDate(parsed)
 }
 
 function formatLatestMemoryUpdate(pages) {

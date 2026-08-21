@@ -7,15 +7,12 @@ import {
   submitConfirmationDecision
 } from '../api'
 import { collectChangedDomains, emitDataChanged } from '../syncSignals'
+import { today } from '../utils/date'
 
 export function useChat() {
   const messages = ref([])
   const sending = ref(false)
   let syncTimer = null
-
-  function today() {
-    return new Date().toISOString().slice(0, 10)
-  }
 
   function pushChatItem(item) {
     messages.value.push({
