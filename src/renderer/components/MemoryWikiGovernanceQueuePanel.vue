@@ -27,7 +27,6 @@ function handleSectionChange(event) {
     <div class="cardHead">
       <div>
         <div class="cardTitle">治理待审核区</div>
-        <div class="cardSubhint">这里放的是治理建议，不会直接改数据，先给主人过目再决定怎么处理。</div>
       </div>
       <div class="cardFilters">
         <select :value="filterStatus" @change="handleStatusChange">

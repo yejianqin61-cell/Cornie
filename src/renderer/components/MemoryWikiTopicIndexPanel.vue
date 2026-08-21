@@ -15,9 +15,7 @@ const emit = defineEmits(['select-topic', 'save-topic-aliases'])
     <div class="cardHead">
       <div>
         <div class="cardTitle">Topic Index</div>
-        <div class="cardSubhint">主题索引更像一张导航图，帮主人快速找到某个关键词都在哪几天、哪几页里出现过。</div>
       </div>
-      <div class="cardHint">这里能看到主题关键词、热度、日期，以及它们连到了哪些记忆页面。</div>
     </div>
 
     <div class="topicGrid">

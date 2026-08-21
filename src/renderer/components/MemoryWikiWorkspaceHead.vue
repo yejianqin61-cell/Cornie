@@ -11,9 +11,6 @@ const emit = defineEmits(['run-inspection', 'refresh'])
   <header class="workspaceHead">
     <div>
       <div class="workspaceTitle">Memory Wiki 工作台</div>
-      <div class="workspaceHint">
-        主人可以直接看长期记忆页面、主题索引、治理待审核池，还有那些需要你亲自点头的高风险动作。
-      </div>
     </div>
     <div class="headActions">
       <button :disabled="saving" @click="emit('run-inspection')">

@@ -15,9 +15,7 @@ const emit = defineEmits(['select-version'])
     <div class="cardHead">
       <div>
         <div class="cardTitle">版本历史与回滚</div>
-        <div class="cardSubhint">先看版本列表，再选一个版本。这样主人不需要手输版本 ID，也更不容易回滚错页。</div>
       </div>
-      <div class="cardHint">每次重要修改前后留下的快照，都会在这里排开给你看。</div>
     </div>
 
     <div v-if="!pageId" class="emptyDetail compactEmpty">

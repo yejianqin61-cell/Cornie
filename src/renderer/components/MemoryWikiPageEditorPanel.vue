@@ -55,9 +55,6 @@ const relatedPageSelectionModel = computed({
     <div class="cardHead">
       <div>
         <div class="cardTitle">{{ selectedPage ? '编辑页面' : '新建页面' }}</div>
-        <div class="cardSubhint">
-          {{ selectedPage ? '正在整理这页长期记忆的标题、摘要、正文和重要性。' : '先写标题和摘要，再慢慢把这一页记忆补完整。' }}
-        </div>
       </div>
       <button v-if="selectedPage" @click="emit('reset')">新建页面</button>
     </div>
@@ -313,9 +310,6 @@ const relatedPageSelectionModel = computed({
 
     <div v-if="pageForm.pageId && pageForm.pageType.startsWith('identity_')" class="detailSection">
       <div class="evidenceTitle">Identity 关系链路</div>
-      <div class="cardSubhint">
-        Identity 页不应该只是孤零零的一页。把“这个人是谁、属于谁、和哪些偏好或特征有关”串起来，铃湾后面召回会稳定很多。
-      </div>
 
       <div v-if="identityRelationshipRules.length > 0" class="suggestionList">
         <div v-for="item in identityRelationshipRules" :key="item" class="suggestionItem">{{ item }}</div>
@@ -372,9 +366,6 @@ const relatedPageSelectionModel = computed({
 
     <div v-if="pageForm.pageId && pageForm.pageType === 'identity_person'" class="detailSection">
       <div class="evidenceTitle">人物页联动 Topic</div>
-      <div class="cardSubhint">
-        给重要人物页挂上一个主题索引键。以后主人提到这个名字、别名，或相关人物线索时，铃湾就更容易优先召回这页人物记忆。
-      </div>
       <div class="formGrid topicLinkGrid">
         <label>
           <span>主题关键词</span>

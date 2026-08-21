@@ -15,9 +15,7 @@ const emit = defineEmits(['approve', 'defer', 'reject'])
     <div class="cardHead">
       <div>
         <div class="cardTitle">治理详情</div>
-        <div class="cardSubhint">先看清楚为什么建议这样处理，再决定是接受、稍后再看，还是直接驳回。</div>
       </div>
-      <div class="cardHint">巡检入池的修复建议、归档候选，都会在这里等你慢慢看。</div>
     </div>
 
     <div v-if="detail" class="governanceDetail">

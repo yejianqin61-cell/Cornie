@@ -26,7 +26,6 @@ function handleStatusChange(event) {
     <div class="cardHead">
       <div>
         <div class="cardTitle">高风险确认中心</div>
-        <div class="cardSubhint">这里放的是会真正触发动作的高风险请求，所以铃湾一定会先停下来问你。</div>
       </div>
       <div class="cardFilters">
         <select :value="filterStatus" @change="handleStatusChange">

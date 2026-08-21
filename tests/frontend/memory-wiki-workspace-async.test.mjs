@@ -391,7 +391,8 @@ describe('MemoryWikiWorkspace async flow', () => {
     const resetButton = wrapper.findAll('button').find((button) => button.text() === '新建页面')
     await resetButton.trigger('click')
     await flushPromises()
-    expect(wrapper.text()).toContain('先写标题和摘要，再慢慢把这一页记忆补完整。')
+    // R-09：新建面板标题仍在（说明文案已精简删除）
+    expect(wrapper.text()).toContain('新建页面')
 
     const titleInput = wrapper.find('input[placeholder="输入页面标题"]')
     await titleInput.setValue('记忆治理')
@@ -485,7 +486,8 @@ describe('MemoryWikiWorkspace async flow', () => {
     const governanceRow = wrapper.findAll('.workspaceCard .entryRow').find((row) => row.text().includes('建议合并龙虾相关页面'))
     await governanceRow.trigger('click')
     await flushPromises()
-    expect(wrapper.text()).toContain('这里放的是治理建议，不会直接改数据，先给主人过目再决定怎么处理。')
+    // R-09：治理面板卡头说明已精简删除，断言结构标题与内容
+    expect(wrapper.text()).toContain('治理待审核区')
     expect(wrapper.text()).toContain('当前待处理 2 项')
     expect(wrapper.text()).toContain('当前筛选：pending · 全部分区 · 2 条结果')
     expect(wrapper.text()).toContain('内容高度重复，建议合并。')

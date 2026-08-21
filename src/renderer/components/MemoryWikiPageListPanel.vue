@@ -24,7 +24,6 @@ function handleStatusChange(event) {
     <div class="cardHead">
       <div>
         <div class="cardTitle">记忆页面</div>
-        <div class="cardSubhint">先从页面总览看清楚：哪些记忆正在使用，哪些只是暂存，哪些已经归档。</div>
       </div>
       <div class="cardFilters">
         <select :value="filterType" @change="handleTypeChange">
