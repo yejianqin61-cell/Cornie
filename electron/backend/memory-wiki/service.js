@@ -5,6 +5,7 @@ import { createMemoryWikiInspector } from './inspector.js'
 import { createTopicIndexStore } from './topicIndex.js'
 import { createMemoryWikiGovernanceStore } from './governanceStore.js'
 import { applyObservationWikiUpgradeRequest } from '../observation/wikiUpgradeApply.js'
+import { applyObservationCompressionRequest } from '../observation/compressionApply.js'
 import { normalizePageStatus } from './pageModel.js'
 import { getMessagesByDate, getObservationLog } from '../../db.js'
 
@@ -1209,6 +1210,11 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
 
     async applyGovernanceUpgradeRequest(requestId) {
       if (!requestId) throw new Error('memory governance requestId is required')
+      const request = await governanceStore.get(requestId)
+      if (!request) throw new Error(`governance request not found: ${requestId}`)
+      if (normalizeString(request.queueSection) === 'observation_archive_candidates') {
+        return applyObservationCompressionRequest(store, { baseDir, requestId })
+      }
       return applyObservationWikiUpgradeRequest(store, {
         baseDir,
         requestId
