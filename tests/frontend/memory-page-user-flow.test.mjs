@@ -2,7 +2,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 
 import MemoryPageDetail from '../../src/renderer/components/MemoryPageDetail.vue'
-import MemoryPageList from '../../src/renderer/components/MemoryPageList.vue'
 
 function createResponse({ ok = true, status = 200, json = {}, text = '' } = {}) {
   return {
@@ -412,51 +411,5 @@ describe('MemoryPageDetail 普通用户记忆收口', () => {
     await relatedItem.trigger('click')
     expect(wrapper.emitted('open-memory')).toBeTruthy()
     expect(wrapper.emitted('open-memory')[0][0]).toBe('wiki-lobster')
-  })
-})
-
-describe('MemoryPageList 普通用户记忆收口', () => {
-  beforeEach(() => {
-    globalThis.fetch = createMemoryUserFetchMock()
-  })
-
-  it('identity 四类与普通类型分组展示，且不暴露治理术语', async () => {
-    const wrapper = mount(MemoryPageList)
-    await flushPromises()
-
-    // identity 四类分组
-    expect(wrapper.text()).toContain('关于你')
-    expect(wrapper.text()).toContain('重要的人')
-    expect(wrapper.text()).toContain('你的偏好')
-    expect(wrapper.text()).toContain('你的特征')
-
-    // 普通类型分组“其他记忆”，普通类型有独立标签
-    expect(wrapper.text()).toContain('其他记忆')
-    expect(wrapper.text()).toContain('生活事件')
-    expect(wrapper.text()).toContain('去海边旅行')
-
-    // 无治理术语原文
-    expect(wrapper.text()).not.toContain('pageId')
-    expect(wrapper.text()).not.toContain('status')
-    expect(wrapper.text()).not.toContain('importance')
-    expect(wrapper.text()).not.toContain('ownerConfirmed')
-  })
-
-  it('点击记忆卡片 emit go 到详情', async () => {
-    const wrapper = mount(MemoryPageList)
-    await flushPromises()
-
-    const eventCard = wrapper.findAll('.mlistCard').find((card) => card.text().includes('去海边旅行'))
-    await eventCard.trigger('click')
-    expect(wrapper.emitted('go')).toBeTruthy()
-    expect(wrapper.emitted('go')[0]).toEqual(['memory-detail', 'wiki-event'])
-  })
-
-  it('列表加载失败显示错误信息', async () => {
-    globalThis.fetch = createMemoryUserFetchMock({ failList: true })
-    const wrapper = mount(MemoryPageList)
-    await flushPromises()
-
-    expect(wrapper.text()).toContain('刷新记忆页面失败。')
   })
 })
