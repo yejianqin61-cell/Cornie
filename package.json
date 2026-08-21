@@ -99,6 +99,7 @@
     "verify:task138": "node scripts/verify-task138-frontend-async-flows.mjs",
     "verify:task139": "node scripts/verify-task139-frontend-coverage-audit.mjs",
     "verify:task140": "node scripts/verify-task140-app-diary-flows.mjs",
+    "verify:9.0": "node scripts/verify-9.0-memory-distillation.mjs",
     "verify:8.1": "node scripts/verify-8.1.mjs",
     "verify:8.2": "node scripts/verify-8.2.mjs",
     "verify:8.3": "node scripts/verify-8.3.mjs",
