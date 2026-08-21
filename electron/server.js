@@ -24,11 +24,12 @@ import { observationRoutes } from './backend/observation/routes.js'
 import { registerObservationTools } from './backend/observation/tools.js'
 import { registerSystemTools } from './backend/system/tools.js'
 import { createMemoryWikiService, createTopicIndexStore } from './backend/memory-wiki/index.js'
+import { registerMemoryWikiTools } from './backend/memory-wiki/tools.js'
 import { memoryWikiRoutes } from './backend/memory-wiki/routes.js'
 import { applyPersistedModelSettingsToEnv, createSettingsService } from './backend/settings/service.js'
 import { settingsRoutes } from './backend/settings/routes.js'
 
-export function createServer({ store }) {
+export function createServer({ store, baseDir = process.cwd() }) {
   const app = express()
   app.use(express.json({ limit: '1mb' }))
   applyPersistedModelSettingsToEnv(store)
@@ -77,7 +78,6 @@ export function createServer({ store }) {
 
   app.use('/api', observationRoutes({ store }))
 
-  const baseDir = process.cwd()
   let memoryWikiReady = null
   async function getMemoryWikiDeps() {
     if (!memoryWikiReady) {
@@ -107,10 +107,16 @@ export function createServer({ store }) {
   registerObservationTools(store, { registerTool })
   registerSystemTools(store, { registerTool })
 
+  // 记忆工具接线（450 / D-01）：注册 memory_wiki.* / memory_index.* / memory_governance.* 工具，
+  // 使"模型工具集 = 人类接口集"运行时生效；baseDir 与提炼轮次等共用 main.js 启动链传入的同一来源。
+  registerMemoryWikiTools({ baseDir, store }, { registerTool }).catch((error) => {
+    console.error('Memory wiki tools registration failed:', error)
+  })
+
   const confirm = createConfirmService(store)
   app.use('/api', confirmRoutes({ confirm }))
 
-  const conversation = conversationService(store)
+  const conversation = conversationService(store, { baseDir })
   app.use('/api', conversationRoutes({ conversation }))
 
   app.get('/api/model/status', async (_req, res) => {

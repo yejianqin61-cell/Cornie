@@ -17,6 +17,16 @@ let cornieWindow = null
 let cornieDragState = null
 let cornieAlwaysOnTop = DEFAULT_CORNIE_ALWAYS_ON_TOP
 
+function broadcastDataChanged(detail, senderWebContents = null) {
+  const windows = [mainWindow, cornieWindow].filter((win) => win && !win.isDestroyed())
+  for (const win of windows) {
+    if (senderWebContents && win.webContents === senderWebContents) continue
+    try {
+      win.webContents.send('cornie:data-changed', detail)
+    } catch {}
+  }
+}
+
 function clampCornieWindowPosition(win, x, y) {
   const bounds = { x, y, width: 1, height: 1 }
   const display = screen.getDisplayMatching(bounds)
@@ -95,10 +105,16 @@ function createCornieWindow() {
 let serverInstance = null
 let store = null
 
+// 记忆数据（data/memory-wiki）根目录：开发态用项目根（cwd），打包后固定到 userData，
+// 由启动链解析一次并显式传入 createServer，消除各模块 process.cwd() 分散取值（450）。
+function resolveMemoryBaseDir() {
+  return isDev ? process.cwd() : app.getPath('userData')
+}
+
 async function startLocalApi() {
   const dbPath = path.join(app.getPath('userData'), 'cornie.sqlite3')
   store = await openDb(dbPath)
-  const api = createServer({ store })
+  const api = createServer({ store, baseDir: resolveMemoryBaseDir() })
 
   serverInstance = api.listen(5174, '127.0.0.1')
 }
@@ -145,6 +161,10 @@ app.whenReady().then(async () => {
     }
     mainWindow.show()
     mainWindow.focus()
+  })
+
+  ipcMain.on('cornie:data-changed', (evt, detail) => {
+    broadcastDataChanged(detail, evt.sender)
   })
 
   ipcMain.handle('cornie:get-always-on-top', () => cornieAlwaysOnTop)
