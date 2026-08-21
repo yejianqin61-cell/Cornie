@@ -206,7 +206,7 @@ function formatLatestObservationUpdate(items) {
     <div class="omQuick card">
       <div class="omQuickTitle">记下一件小事</div>
       <div class="omQuickHint">
-        去<a href="#" @click.prevent="$emit('goChat')">聊天</a>
+        去<button class="omQuickLink" type="button" @click="$emit('goChat')">聊天</button>
         页告诉铃湾你想记住什么，她会帮你整理好。比如"我今天去了一个新咖啡馆"。
       </div>
     </div>
@@ -723,5 +723,16 @@ function formatLatestObservationUpdate(items) {
   }
   .omObserveOverview{ grid-template-columns: 1fr; }
   .omObserveList{ grid-template-columns: 1fr; }
+}
+
+/* FE-10：内联链接样式按钮（替代 a[href=#] 死链），键盘可达、语义正确。 */
+.omQuickLink{
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: #E8856A;
+  text-decoration: underline;
+  cursor: pointer;
 }
 </style>

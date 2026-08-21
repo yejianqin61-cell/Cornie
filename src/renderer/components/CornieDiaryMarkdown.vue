@@ -5,6 +5,11 @@ const props = defineProps({
   content: {
     type: String,
     default: ''
+  },
+  // 允许渲染的最大标题级别（1-3）。设为 0 时标题全部降级为 div（用于摘要/按钮内等非文档场景，避免 button 内嵌套 h1-h3）。
+  headingLevel: {
+    type: Number,
+    default: 3
   }
 })
 
@@ -118,9 +123,12 @@ const blocks = computed(() => parseMarkdown(props.content))
 <template>
   <div class="cornieMarkdown">
     <template v-for="(block, index) in blocks" :key="`${block.type}-${index}`">
-      <h1 v-if="block.type === 'heading' && block.level === 1" class="mdH1" v-html="block.html"></h1>
-      <h2 v-else-if="block.type === 'heading' && block.level === 2" class="mdH2" v-html="block.html"></h2>
-      <h3 v-else-if="block.type === 'heading' && block.level === 3" class="mdH3" v-html="block.html"></h3>
+      <template v-if="block.type === 'heading'">
+        <h1 v-if="block.level === 1 && headingLevel >= 1" class="mdH1" v-html="block.html"></h1>
+        <h2 v-else-if="block.level === 2 && headingLevel >= 2" class="mdH2" v-html="block.html"></h2>
+        <h3 v-else-if="block.level === 3 && headingLevel >= 3" class="mdH3" v-html="block.html"></h3>
+        <div v-else class="mdHeadingFlat" v-html="block.html"></div>
+      </template>
       <blockquote v-else-if="block.type === 'quote'" class="mdQuote" v-html="block.html"></blockquote>
       <ul v-else-if="block.type === 'list'" class="mdList">
         <li v-for="(item, itemIndex) in block.items" :key="itemIndex" v-html="item"></li>

@@ -72,7 +72,7 @@ onMounted(refresh)
       >
         <div class="reviewDate">{{ e.date }}</div>
         <div class="reviewExcerpt">
-          <CornieDiaryMarkdown :content="e.cornieText || '铃湾那天没有留下文字。'" />
+          <CornieDiaryMarkdown :content="e.cornieText || '铃湾那天没有留下文字。'" :heading-level="0" />
         </div>
       </button>
     </div>

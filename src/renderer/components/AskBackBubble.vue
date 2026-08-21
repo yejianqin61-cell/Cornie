@@ -22,24 +22,25 @@ const props = defineProps({
 </template>
 
 <style scoped>
+/* FE-10：配色对齐全局暖色主题（原深蓝黑底为旧样式残留）。 */
 .askBackBubble{
   width: 100%;
   padding: 10px 12px;
   border-radius: 14px;
-  border: 1px solid rgba(125,211,252,.22);
-  background: rgba(8,47,73,.42);
+  border: 1px solid rgba(232,133,106,.25);
+  background: rgba(232,133,106,.06);
 }
 
 .askBackRole{
   font-size: 10px;
-  color: rgba(125,211,252,.72);
+  color: var(--muted);
 }
 
 .askBackQuestion{
   margin-top: 4px;
   font-size: 12px;
   line-height: 1.5;
-  color: rgba(224,242,254,.95);
+  color: inherit;
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -48,12 +49,12 @@ const props = defineProps({
   margin-top: 6px;
   font-size: 11px;
   line-height: 1.45;
-  color: rgba(186,230,253,.72);
+  color: var(--muted);
   white-space: pre-wrap;
   word-break: break-word;
 }
 
 .askBackReasonLabel{
-  color: rgba(224,242,254,.82);
+  color: inherit;
 }
 </style>

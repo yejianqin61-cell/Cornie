@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useModelSettings } from './composables/useModelSettings'
 import ChatHome from './components/ChatHome.vue'
 import ChatDayView from './components/ChatDayView.vue'
@@ -63,13 +63,18 @@ const {
 
 const isGuideVisible = computed(() => !modelStatus.value.configured)
 
-watch(mode, () => {
+// FE-10：视图切换后焦点落位主内容区（键盘操作连续）。
+const mainPanelRef = ref(null)
+
+watch(mode, async () => {
   chatView.value = 'home'
   chatHistoryDate.value = ''
   chatFocusMessageId.value = ''
   diaryView.value = 'home'
   omView.value = 'home'
   settingsView.value = 'home'
+  await nextTick()
+  mainPanelRef.value?.focus()
 })
 
 onMounted(async () => {
@@ -109,7 +114,7 @@ onMounted(async () => {
     </nav>
 
     <!-- 右侧主区 -->
-    <main class="mainPanel">
+    <main ref="mainPanelRef" tabindex="-1" class="mainPanel">
       <header class="topBar">
         <div class="topTitle">{{ modeMeta.label }}</div>
         <div class="topHint">{{ modeMeta.hint }}</div>
@@ -370,6 +375,10 @@ onMounted(async () => {
   flex-direction:column;
   gap: 14px;
   min-height: 0;
+}
+/* FE-10：容器接收焦点但不高亮（内容元素各自有可见焦点）。 */
+.mainPanel:focus{
+  outline: none;
 }
 
 .topBar{
