@@ -1,96 +1,33 @@
 <script setup>
-import { ref, onMounted } from 'vue'
-import { getModelStatus, getModelSettings, saveModelSettings, clearModelSettings } from '../api'
+import { onMounted } from 'vue'
+import { useModelSettings } from '../composables/useModelSettings'
 
 const emit = defineEmits(['back', 'updated'])
 
-const modelStatus = ref({ ok: false, configured: false, model: '' })
-const modelSettings = ref({ configured: false, maskedApiKey: '' })
-const form = ref({ apiKey: '', baseUrl: '', model: 'deepseek-chat', timeoutMs: '30000' })
-const saving = ref(false)
-const loading = ref(true)
-const errorMsg = ref('')
-const noticeMsg = ref('')
-
-function toFriendlyError(error) {
-  const raw = String(error?.message || error || '').trim()
-  if (!raw) return '铃湾刚刚没把设置收好，我们再试一次就好。'
-  if (/apiKey is required/i.test(raw)) return 'API Key 不能为空。'
-  if (/invalid timeout/i.test(raw)) return '超时毫秒要填成正整数。'
-  if (/http_|request_failed|fetch|network|timeout/i.test(raw))
-    return '铃湾敲门时没收到回应，检查一下网络或地址。'
-  return '保存没成功，检查一下输入再试一次。'
-}
-
-async function refreshState() {
-  loading.value = true
-  try {
-    const [statusData, settingsData] = await Promise.all([getModelStatus(), getModelSettings()])
-    modelStatus.value = statusData
-    modelSettings.value = settingsData.settings
-    form.value = {
-      apiKey: '',
-      baseUrl: settingsData.settings.baseUrl || '',
-      model: settingsData.settings.model || 'deepseek-chat',
-      timeoutMs: settingsData.settings.timeoutMs ? String(settingsData.settings.timeoutMs) : '30000'
-    }
-  } catch { /* ignore */ }
-  finally { loading.value = false }
-}
+const {
+  modelSettings,
+  form,
+  saving,
+  loading,
+  errorMsg,
+  noticeMsg,
+  refresh,
+  check: checkOnly,
+  submit,
+  reset
+} = useModelSettings()
 
 async function save() {
-  saving.value = true
-  errorMsg.value = ''
-  noticeMsg.value = ''
-  try {
-    await saveModelSettings({
-      apiKey: form.value.apiKey,
-      baseUrl: form.value.baseUrl,
-      model: form.value.model,
-      timeoutMs: form.value.timeoutMs
-    })
-    noticeMsg.value = '铃湾已经把钥匙收好啦。'
-    await refreshState()
-    emit('updated')
-  } catch (e) {
-    errorMsg.value = toFriendlyError(e)
-  } finally {
-    saving.value = false
-  }
+  const ok = await submit()
+  if (ok) emit('updated')
 }
 
 async function clearAll() {
-  saving.value = true
-  errorMsg.value = ''
-  noticeMsg.value = ''
-  try {
-    await clearModelSettings()
-    noticeMsg.value = '已清空本地保存的钥匙。'
-    await refreshState()
-    emit('updated')
-  } catch (e) {
-    errorMsg.value = toFriendlyError(e)
-  } finally {
-    saving.value = false
-  }
+  const ok = await reset()
+  if (ok) emit('updated')
 }
 
-async function checkOnly() {
-  loading.value = true
-  errorMsg.value = ''
-  try {
-    const data = await getModelStatus()
-    modelStatus.value = data
-    if (data.ok) noticeMsg.value = '铃湾已经连上啦！'
-    else noticeMsg.value = '还没连上，检查下钥匙和网络。'
-  } catch {
-    errorMsg.value = '检测失败，稍后再试。'
-  } finally {
-    loading.value = false
-  }
-}
-
-onMounted(refreshState)
+onMounted(refresh)
 </script>
 
 <template>

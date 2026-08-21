@@ -260,7 +260,7 @@ describe('App settings async flow', () => {
       expect.stringContaining('/api/settings/model'),
       expect.objectContaining({ method: 'DELETE' })
     )
-    expect(wrapper.text()).toContain('已清空本地保存的钥匙。')
+    expect(wrapper.text()).toContain('已经把本地保存的钥匙收起来啦。')
     // 清空后回到未配置状态，清空钥匙按钮随之隐藏
     expect(wrapper.findAll('button').find((button) => button.text() === '清空钥匙')).toBeUndefined()
   })
@@ -393,6 +393,6 @@ describe('App settings async flow', () => {
     await clearButton.trigger('click')
     await flushPromises()
 
-    expect(wrapper.text()).toContain('保存没成功，检查一下输入再试一次。')
+    expect(wrapper.text()).toContain('这次保存没成功，不过别担心，我们检查一下输入内容再试一次就好。')
   })
 })
