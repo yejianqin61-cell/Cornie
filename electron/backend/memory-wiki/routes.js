@@ -10,7 +10,17 @@ export function memoryWikiRoutes({ memoryWiki, topicIndex }) {
     asyncHandler(async (req, res) => {
       const pageType = req.query.pageType ? requireString(req.query.pageType, 'pageType', { maxLen: 64 }) : undefined
       const status = req.query.status ? requireString(req.query.status, 'status', { maxLen: 64 }) : undefined
-      res.json({ items: await memoryWiki.listSummaries({ pageType, status }) })
+      const limit = req.query.limit
+      const offset = req.query.offset
+
+      // 463：分页透传；hydrate=false 时返回轻索引摘要（按需拉全量详情）。
+      const options = req.query.hydrate === 'false' ? { hydrate: false } : {}
+      const filters = { pageType, status }
+      if (limit !== undefined) filters.limit = limit
+      if (offset !== undefined) filters.offset = offset
+
+      const items = await memoryWiki.listSummaries(filters, options)
+      res.json({ items, total: items.length, limit: filters.limit ?? null, offset: filters.offset ?? null })
     })
   )
 

@@ -960,17 +960,37 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
       return compressed
     },
 
-    async list({ pageType, status } = {}) {
-      const items = await storage.listIndexedPages()
-      return items.filter((item) => {
-        if (pageType && item.pageType !== pageType) return false
-        if (status && item.status !== status) return false
-        return true
-      })
+    async list({ pageType, status, limit, offset } = {}) {
+      let items = await storage.listIndexedPages()
+      if (pageType) {
+        items = items.filter((item) => item.pageType === pageType)
+      }
+      if (status) {
+        items = items.filter((item) => item.status === status)
+      }
+
+      // 463：分页（offset/limit 作用于轻索引条目）
+      const normalizedOffset = Number.parseInt(String(offset ?? ''), 10)
+      const normalizedLimit = Number.parseInt(String(limit ?? ''), 10)
+      if (Number.isFinite(normalizedOffset) && normalizedOffset > 0) {
+        items = items.slice(normalizedOffset)
+      }
+      if (Number.isFinite(normalizedLimit) && normalizedLimit > 0) {
+        items = items.slice(0, normalizedLimit)
+      }
+
+      return items
     },
 
-    async listSummaries(filters = {}) {
+    async listSummaries(filters = {}, options = {}) {
       const pages = await this.list(filters)
+
+      // 463：hydrate:false 时直接用 page-index 轻索引产出摘要（正文类字段按需延迟读取），
+      // 供目录/巡检等"只看元信息"的场景避免逐页读文件。
+      if (options.hydrate === false) {
+        return pages.map((item) => summarizePage(item))
+      }
+
       const hydratedPages = await Promise.all(
         pages.map(async (item) => {
           if (!item?.pageId) {

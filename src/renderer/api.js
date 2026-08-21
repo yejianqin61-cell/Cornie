@@ -441,10 +441,12 @@ export async function reorderScheduleCategory(id, sortOrder) {
 
 // ─── memory wiki ─────────────────────────────────────────────
 
-export async function listMemoryWikiPages({ pageType, status } = {}) {
+export async function listMemoryWikiPages({ pageType, status, limit, offset } = {}) {
   const params = new URLSearchParams()
   if (pageType) params.set('pageType', pageType)
   if (status) params.set('status', status)
+  if (Number.isFinite(Number(limit)) && Number(limit) > 0) params.set('limit', String(limit))
+  if (Number.isFinite(Number(offset)) && Number(offset) > 0) params.set('offset', String(offset))
   const qs = params.toString()
   const data = await apiFetch(`/memory-wiki/pages${qs ? `?${qs}` : ''}`)
   const items = Array.isArray(data?.items)
