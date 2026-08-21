@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { createMemoryWikiService, buildPageSlug } from '../electron/backend/memory-wiki/index.js'
+import { createPageCache } from '../electron/backend/memory-wiki/pageCache.js'
 
 // 456：slug 数据修复（D-16）。
 // 检测 pageId/slug 与 title 不一致的页面，按 title 重建 slug：
@@ -51,6 +52,8 @@ export async function repairSlugMismatches({ baseDir = process.cwd(), store = nu
       slug: newSlug,
       filePath: ''
     })
+    // 绕过 service 直写后，失效共享页面缓存（命名空间与 service 一致）。
+    createPageCache({ namespace: `${baseDir}::page` }).invalidate(page.pageId)
 
     if (oldPath && oldPath !== normalizeString(updated.filePath)) {
       await fs.promises.rm(oldPath, { force: true })

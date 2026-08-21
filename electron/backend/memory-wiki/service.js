@@ -940,6 +940,7 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
             filePath: fullPage.filePath,
             relatedPageIds: related.filter((id) => id !== pageId)
           })
+          invalidatePageCaches(item.pageId)
         }
         await writeAudit({
           eventType: 'page_deleted',
