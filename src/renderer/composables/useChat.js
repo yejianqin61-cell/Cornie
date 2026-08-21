@@ -3,6 +3,7 @@ import {
   getConversation,
   listConfirmations,
   sendMessage,
+  streamConversation,
   submitConfirmationDecision
 } from '../api'
 import { collectChangedDomains, emitDataChanged } from '../syncSignals'
@@ -156,6 +157,67 @@ export function useChat() {
     }
   }
 
+  // 454：流式发送——最终回复逐字渲染；tool_call 信封不流式（由服务端保证）。
+  async function streamSend(text) {
+    if (!text || sending.value) return null
+    sending.value = true
+
+    const tempId = `temp-user-${Date.now()}`
+    const liveId = `live-cornie-${Date.now()}`
+
+    pushChatItem({
+      kind: 'message',
+      role: 'user',
+      content: text,
+      id: tempId,
+      pendingSync: true
+    })
+
+    pushChatItem({
+      kind: 'message',
+      role: 'cornie',
+      content: '',
+      id: liveId,
+      streaming: true
+    })
+
+    const appendDelta = (delta) => {
+      const target = messages.value.find((item) => item.id === liveId)
+      if (target) {
+        target.content += delta
+      }
+    }
+
+    try {
+      const data = await streamConversation({ message: text, date: today() }, appendDelta)
+      if (data?.userMessage?.id) {
+        replaceMessageById(tempId, { id: data.userMessage.id, pendingSync: false })
+      }
+
+      if (data?.cornieMessage?.content) {
+        replaceMessageById(liveId, {
+          id: data.cornieMessage.id,
+          content: data.cornieMessage.content,
+          streaming: false,
+          pendingSync: false
+        })
+      } else {
+        replaceMessageById(liveId, { streaming: false, error: true })
+      }
+      return data
+    } catch {
+      replaceMessageById(tempId, { pendingSync: false, error: true })
+      replaceMessageById(liveId, {
+        content: '唔...我好像走神了，能再说一遍吗？',
+        streaming: false,
+        error: true
+      })
+      return null
+    } finally {
+      sending.value = false
+    }
+  }
+
   async function handleConfirmAction(action, item) {
     if (!item?.pendingConfirmationId || item.status !== 'pending') return
 
@@ -290,6 +352,7 @@ export function useChat() {
     messages,
     sending,
     send,
+    streamSend,
     pushChatItem,
     appendResponse,
     setConfirmMessageState,

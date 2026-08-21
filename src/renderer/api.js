@@ -49,6 +49,63 @@ export async function sendMessage(message, date) {
   })
 }
 
+// 454：流式对话（SSE）。逐块回调 delta 文本，返回最终结果。
+export async function streamConversation({ message, date }, onDelta) {
+  const response = await fetch(`${API_BASE}/conversations/stream`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message, date })
+  })
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => '')
+    throw new Error(`stream conversation failed: ${response.status} ${text}`)
+  }
+
+  const reader = response.body?.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  let result = null
+
+  async function readChunk() {
+    if (!reader) return null
+    const { done, value } = await reader.read()
+    if (done) return null
+    buffer += decoder.decode(value, { stream: true })
+
+    let newlineIndex
+    while ((newlineIndex = buffer.indexOf('\n')) !== -1) {
+      const line = buffer.slice(0, newlineIndex).trim()
+      buffer = buffer.slice(newlineIndex + 1)
+      if (!line.startsWith('data:')) continue
+      const data = line.slice(5).trim()
+      if (!data) continue
+
+      let event
+      try {
+        event = JSON.parse(data)
+      } catch {
+        continue
+      }
+
+      if (event?.kind === 'delta' && typeof event.text === 'string') {
+        onDelta?.(event.text)
+      } else if (event?.kind === 'done') {
+        result = event.result
+      } else if (event?.kind === 'error') {
+        throw new Error(event.error || 'stream conversation error')
+      }
+    }
+    return true
+  }
+
+  while ((await readChunk()) !== null) {
+    // drain
+  }
+
+  return result
+}
+
 export async function getConversation(date) {
   return apiFetch(`/conversations/${encodeURIComponent(date)}`)
 }

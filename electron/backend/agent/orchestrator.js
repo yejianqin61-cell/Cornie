@@ -10,7 +10,7 @@ import {
 } from './promptBuilder.js'
 import { estimateLegacyLookupFollowupPromptLength } from './promptBuilder.js'
 import { evaluateToolCalls } from '../policy/toolPolicy.js'
-import { chat } from '../model/deepseek/client.js'
+import { chat, chatStream } from '../model/deepseek/client.js'
 import { executeToolCalls } from '../tools/gateway.js'
 import { createConfirmService } from '../confirm/service.js'
 import { runMemoryDistillation } from './memoryDistillation.js'
@@ -101,6 +101,28 @@ async function requestProtocolEnvelope(messages, telemetry, phase = 'conversatio
 
 function buildProtocolFallbackReply() {
   return '唔……小铃湾这次没有把话说明白，主人可以再说一遍吗？'
+}
+
+// 454：说话段——把编排结果用铃湾口吻流式重说一遍（纯文本，逐块回调）。
+function buildSpeakPrompt(assistantReply) {
+  return [
+    '你是 Cornie（铃湾），一只温柔、童真、带一点调皮的小山羊，正趴在主人的屏幕角落。',
+    '主人刚跟你说了一句话，你心里已经想好怎么回应了。',
+    '请把下面这版回应，用你自己的口吻重新说一遍（一两句话，语气自然，不要加引号、不要解释、不要 Markdown）。',
+    `你心里想好的回应：${assistantReply}`
+  ].join('\n')
+}
+
+async function streamFinalSpeak(assistantReply, onDelta) {
+  const { content } = await chatStream(
+    {
+      messages: [{ role: 'system', content: buildSpeakPrompt(assistantReply) }],
+      temperature: 0.7,
+      maxTokens: 300
+    },
+    onDelta
+  )
+  return normalizeString(content) || null
 }
 
 function normalizeString(value) {
@@ -221,7 +243,7 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd() 
   const confirm = createConfirmService(store)
 
   return {
-    async runTurn({ date, message }) {
+    async runTurn({ date, message, streamFinalReply = false, onFinalDelta = null }) {
       const telemetry = createTurnTelemetry({
         source: 'conversation',
         date,
@@ -415,7 +437,18 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd() 
             }
           }
         } else {
-          finalReply = firstEnvelope.assistant_reply
+          // 454：说话段——直接回复时可选流式重说（tool_call 信封不流式）。
+          if (streamFinalReply && typeof onFinalDelta === 'function') {
+            try {
+              const streamed = await streamFinalSpeak(firstEnvelope.assistant_reply, onFinalDelta)
+              finalReply = streamed ?? firstEnvelope.assistant_reply
+            } catch (error) {
+              console.error('Stream final speak failed, falling back to envelope reply:', error)
+              finalReply = firstEnvelope.assistant_reply
+            }
+          } else {
+            finalReply = firstEnvelope.assistant_reply
+          }
         }
       } catch (error) {
         console.error('Conversation orchestrator error:', error)
