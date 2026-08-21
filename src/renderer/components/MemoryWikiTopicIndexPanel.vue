@@ -50,7 +50,7 @@ const emit = defineEmits(['select-topic', 'save-topic-aliases'])
           <span>别名（逗号分隔）</span>
           <input v-model="topicDetail.aliasesText" />
         </label>
-        <button :disabled="saving" @click="emit('save-topic-aliases')">保存主题别名</button>
+        <button class="primary" :disabled="saving" @click="emit('save-topic-aliases')">保存主题别名</button>
       </div>
       <div v-else class="emptyDetail">点一个主题，我就把它的索引详情展开给主人看。</div>
     </div>

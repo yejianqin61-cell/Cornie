@@ -77,7 +77,7 @@ const emit = defineEmits(['approve', 'defer', 'reject'])
       </div>
 
       <div class="actionRow">
-        <button :disabled="saving || detail.status === 'approved'" @click="emit('approve')">
+        <button class="primary" :disabled="saving || detail.status === 'approved'" @click="emit('approve')">
           标记已处理
         </button>
         <button :disabled="saving || detail.status === 'deferred'" @click="emit('defer')">

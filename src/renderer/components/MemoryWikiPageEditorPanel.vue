@@ -275,7 +275,7 @@ const relatedPageSelectionModel = computed({
     </div>
 
     <div class="actionRow">
-      <button :disabled="saving" @click="emit('save')">{{ saving ? '保存中…' : '保存页面' }}</button>
+      <button class="primary" :disabled="saving" @click="emit('save')">{{ saving ? '保存中…' : '保存页面' }}</button>
       <button v-if="pageForm.pageId && pageForm.status !== 'archived'" :disabled="saving" @click="emit('archive')">归档页面</button>
       <button v-if="pageForm.pageId && pageForm.status === 'archived'" :disabled="saving" @click="emit('restore')">恢复页面</button>
       <button v-if="pageForm.pageId" :disabled="saving || !selectedVersionId" @click="emit('rollback')">
