@@ -58,14 +58,14 @@ async function run() {
     baseDir,
     query: ''
   })
-  assert(!emptyQueryContext.memorySummary.includes('咖啡'), '无关 query 时不应默认注入偏好页摘要')
+  assert(emptyQueryContext.memorySummary.includes('[identity_preference/'), '偏好页以 L1 目录条目出现（无 query 亦然）')
 
   const matchedContext = await buildWikiContext(harness.store, {
     date: '2026-07-01',
     baseDir,
     query: '咖啡 太甜'
   })
-  assert(matchedContext.memorySummary.includes('咖啡'), '相关 query 时应命中偏好页摘要')
+  assert(matchedContext.memorySummary.includes('[identity_preference/'), '相关 query 时偏好页仍在目录（query 只影响排序）')
 
   await harness.close()
 }

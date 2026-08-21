@@ -27,8 +27,14 @@ async function testMemoryWikiLifecycle() {
     const restored = await service.restore(created.pageId)
     assert(restored.status === 'active', 'expected restored status', restored)
 
-    const linked = await service.linkRelatedPages(created.pageId, ['page-cornie'])
-    assert(linked.relatedPageIds.includes('page-cornie'), 'expected related page linked', linked)
+    // 关联到真实存在的页面（linkRelatedPages 校验对端存在）
+    const related = await service.create({
+      pageType: 'event',
+      title: '相关页',
+      summary: '被关联页面'
+    })
+    const linked = await service.linkRelatedPages(created.pageId, [related.pageId])
+    assert(linked.relatedPageIds.includes(related.pageId), 'expected related page linked', linked)
 
     const versions = await service.listVersions(created.pageId)
     assert(versions.length >= 3, 'expected multiple versions created', versions)

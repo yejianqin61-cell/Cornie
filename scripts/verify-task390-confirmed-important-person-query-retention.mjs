@@ -59,7 +59,7 @@ async function run() {
       pageLimit: 4,
       topicLimit: 4
     })
-    assert(relatedContext.memorySummary.includes('[person] 钟奕菲'), '命中人物 query 时，高权重已确认人物页应保留轻量痕迹')
+    assert(relatedContext.memorySummary.includes('[identity_person/critical] 钟奕菲'), '命中人物 query 时，高权重已确认人物页应保留在 L0 目录')
 
     const unrelatedContext = await buildWikiContext(harness.store, {
       date: '2026-06-30',
@@ -68,7 +68,7 @@ async function run() {
       pageLimit: 4,
       topicLimit: 4
     })
-    assert(!unrelatedContext.memorySummary.includes('[person] 钟奕菲'), '无关 query 下不应强行塞入无关人物页')
+    assert(unrelatedContext.memorySummary.includes('[identity_person/critical] 钟奕菲'), '已确认高权重人物在 L0 稳定保留，不随 query 消失')
 
     const unconfirmedContext = await buildWikiContext(harness.store, {
       date: '2026-06-30',
@@ -84,7 +84,7 @@ async function run() {
       pageLimit: 4,
       topicLimit: 4
     })
-    assert(confirmedContext.memorySummary.includes('[person] 钟奕菲'), '已确认高权重人物在多人混合 query 下仍应稳定保留')
+    assert(confirmedContext.memorySummary.includes('[identity_person/critical] 钟奕菲'), '已确认高权重人物在多人混合 query 下仍应稳定保留在 L0')
     assert(
       !confirmedContext.selectedPages
         .slice(0, 2)

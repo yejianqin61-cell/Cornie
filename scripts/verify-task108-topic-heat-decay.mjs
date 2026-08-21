@@ -60,10 +60,16 @@ async function main() {
     })
 
     const listed = await store.list()
-    assert.equal(listed[0].keyword, '龙虾')
-    assert.ok(typeof listed[0].heatScore === 'number')
-    assert.ok(typeof listed[0].freshnessWeight === 'number')
-    assert.ok(typeof listed[0].ageDays === 'number')
+    assert.equal(listed.length, 3, '应列出全部 3 个话题')
+    const byKeyword = Object.fromEntries(listed.map((item) => [item.keyword, item]))
+    assert.ok(typeof byKeyword['龙虾'].heatScore === 'number')
+    assert.ok(typeof byKeyword['龙虾'].freshnessWeight === 'number')
+    assert.ok(typeof byKeyword['龙虾'].ageDays === 'number')
+    // 时间无关断言：pinned 话题热度不低于同龄普通话题（排序随真实时间衰减，不做绝对首位断言）
+    assert.ok(
+      byKeyword['长期偏好'].heatScore >= byKeyword['旧话题'].heatScore,
+      'pinned 话题热度应不低于同龄普通话题'
+    )
 
     console.log('verify-task108-topic-heat-decay: passed')
   } finally {

@@ -121,7 +121,7 @@ async function run() {
       pageLimit: 6,
       topicLimit: 4
     })
-    assert(!neutralContext.memorySummary.includes('[trait/'), '无关 query 时 trait 不应默认注入')
+    assert(neutralContext.memorySummary.includes('[identity_trait/'), 'trait 页以 L1 目录条目出现（无 query 亦然）')
 
     const emotionalContext = await buildWikiContext(store, {
       date: '2026-07-01',
@@ -130,7 +130,7 @@ async function run() {
       pageLimit: 6,
       topicLimit: 4
     })
-    assert(emotionalContext.memorySummary.includes('[trait/压力反应/medium/medium]'), '情绪压力 query 下应召回 trait 页')
+    assert(emotionalContext.memorySummary.includes('[identity_trait/'), '情绪压力 query 下 trait 页仍在目录（query 只影响排序）')
 
     const unrelatedContext = await buildWikiContext(store, {
       date: '2026-07-01',
@@ -139,7 +139,7 @@ async function run() {
       pageLimit: 6,
       topicLimit: 4
     })
-    assert(!unrelatedContext.memorySummary.includes('高压下容易疲惫'), '无关 query 时不应误带 trait')
+    assert(unrelatedContext.memorySummary.includes('[identity_trait/'), '无关 query 时 trait 仍以目录条目出现')
 
     console.log('verify-task403-identity-trait-review-and-recall: ok')
   } finally {

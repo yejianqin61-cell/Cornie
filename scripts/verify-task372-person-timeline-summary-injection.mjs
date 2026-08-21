@@ -49,19 +49,17 @@ async function run() {
     assert(page.firstKnownPeriod.length > 0, '人物页应存在 firstKnownPeriod')
     assert(page.timelineSummary.length > 0, '人物页应存在 timelineSummary')
 
-    // task 377 起 personNeedsRiskyDetails 仅对 ownerConfirmed 或风险词查询放开"意义"注入；
-    // 本脚本验证"已确认人物页"的宽松注入路径，故先把页面置为已确认（与 task 377 文档一致，不改断言）。
-    await memoryWiki.setOwnerConfirmed(people[0].pageId, true)
-
+    // 451：人物页以目录条目出现（紧凑三信号：摘要+重要性+最近提及），
+    // 时间脉络/意义等字段级信息改由钻取读取，不再拼入注入摘要。
     const wikiContext = await buildWikiContext(store, {
       date: '2026-06-30',
       baseDir,
       query: '钟奕菲 2021 冬天 2022 夏天'
     })
 
-    assert(wikiContext.memorySummary.includes('首次已知：'), 'memory summary 应暴露人物首次已知阶段')
-    assert(wikiContext.memorySummary.includes('时间线：'), 'memory summary 应暴露人物时间线字段')
-    assert(wikiContext.memorySummary.includes('意义：'), 'memory summary 不应破坏既有人物意义字段表达')
+    assert(wikiContext.memorySummary.includes('[identity_person/high] 钟奕菲：'), '人物页应以目录条目格式出现')
+    assert(wikiContext.memorySummary.includes('钟奕菲'), '人物目录条目应含标题')
+    assert(!wikiContext.memorySummary.includes('首次已知：'), '不再使用旧 per-type 注入格式（字段改由钻取读取）')
 
     console.log('verify-task372-person-timeline-summary-injection: ok')
   } finally {

@@ -37,9 +37,10 @@ async function run() {
     pageLimit: 4,
     topicLimit: 4
   })
-  assert(!neutralContext.memorySummary.includes('[person] 钟奕菲'), '非极高权重人物无 query 时不应默认进入主链')
-  assert(!neutralContext.memorySummary.includes('意义：'), '普通场景下不应默认注入人物意义字段')
-  assert(!neutralContext.memorySummary.includes('温柔'), '普通场景下不应默认注入人物性格字段')
+  // 451：人物页以紧凑目录条目出现（`[type/importance] title：summary · date`）；
+  // summary 由服务自动拼写，可能含性格/意义内容，但不再由词表门控决定是否展示。
+  assert(neutralContext.memorySummary.includes('[identity_person/high] 钟奕菲：'), '人物页以目录条目格式出现')
+  assert(!neutralContext.memorySummary.includes('[person] '), '不再使用旧 per-type 注入格式')
 
   const emotionalContext = await buildWikiContext(harness.store, {
     date: '2026-06-30',
@@ -48,8 +49,8 @@ async function run() {
     pageLimit: 4,
     topicLimit: 4
   })
-  assert(emotionalContext.memorySummary.includes('意义：是我前进的动力'), '情感相关 query 下应按需注入人物意义字段')
-  assert(emotionalContext.memorySummary.includes('温柔'), '情感相关 query 下应按需注入人物性格字段')
+  assert(emotionalContext.memorySummary.includes('[identity_person/high] 钟奕菲：'), 'query 下人物仍以目录条目出现（query 只影响排序）')
+  assert(!emotionalContext.memorySummary.includes('[person] '), '情绪 query 不恢复旧 per-type 注入格式')
 
   await harness.close()
   console.log('verify-task377-person-risky-summary-gating: ok')

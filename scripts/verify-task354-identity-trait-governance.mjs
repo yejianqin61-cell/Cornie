@@ -58,19 +58,20 @@ async function run() {
   assert(refreshedPage.evidenceCount === 2, '重复 trait 证据应累加')
   assert(refreshedPage.confidenceLevel === 'medium', '重复证据后置信度应提升到 medium')
 
+  // 451：trait 页以目录条目形式出现（摘要+重要性+时间），不再由情绪词表门控注入。
   const unrelatedContext = await buildWikiContext(harness.store, {
     date: '2026-07-01',
     baseDir,
     query: ''
   })
-  assert(!unrelatedContext.memorySummary.includes('高压下容易疲惫'), '无关 query 时不应默认注入 trait 摘要')
+  assert(unrelatedContext.memorySummary.includes('[identity_trait/medium] 高压下容易疲惫'), 'trait 页应以目录条目形式出现')
 
   const emotionalContext = await buildWikiContext(harness.store, {
     date: '2026-07-01',
     baseDir,
     query: '最近好累 压力很大'
   })
-  assert(emotionalContext.memorySummary.includes('高压下容易疲惫'), '情绪相关 query 时应命中 trait 摘要')
+  assert(emotionalContext.memorySummary.includes('高压下容易疲惫'), 'trait 目录条目应在（query 只影响排序）')
 
   await harness.close()
 }

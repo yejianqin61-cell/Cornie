@@ -106,7 +106,7 @@ async function run() {
       pageLimit: 6,
       topicLimit: 4
     })
-    assert(!neutralContext.memorySummary.includes('[preference/'), '无 query 时 preference 页不应默认注入')
+    assert(neutralContext.memorySummary.includes('[identity_preference/'), 'preference 页以 L1 目录条目出现（无 query 亦然）')
 
     const matchedContext = await buildWikiContext(store, {
       date: '2026-07-01',
@@ -115,8 +115,8 @@ async function run() {
       pageLimit: 6,
       topicLimit: 4
     })
-    assert(matchedContext.memorySummary.includes('[preference/饮食/medium]'), '相关 query 时应命中 preference 页')
-    assert(matchedContext.memorySummary.includes('不喜欢'), '相关 query 时应带出 stance')
+    assert(matchedContext.memorySummary.includes('[identity_preference/'), '命中偏好 query 时 preference 页仍在目录')
+    assert(!matchedContext.memorySummary.includes('[preference/饮食/'), '不再使用旧 per-type 注入格式（含类目分段）')
 
     const unrelatedContext = await buildWikiContext(store, {
       date: '2026-07-01',
@@ -125,7 +125,7 @@ async function run() {
       pageLimit: 6,
       topicLimit: 4
     })
-    assert(!unrelatedContext.memorySummary.includes('咖啡'), '无关 query 时不应误带入无关 preference')
+    assert(unrelatedContext.memorySummary.includes('[identity_preference/'), '无关 query 时 preference 仍以目录条目出现（query 只影响排序）')
 
     console.log('verify-task402-identity-preference-evidence-and-injection: ok')
   } finally {

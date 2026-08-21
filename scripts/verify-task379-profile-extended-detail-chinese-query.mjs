@@ -20,6 +20,7 @@ async function run() {
     summary: '主身份摘要'
   })
 
+  // 451：画像卡扩展字段以 ownerConfirmed 为可信度门控（本页已确认），与 query 无关。
   const neutralContext = await buildWikiContext(harness.store, {
     date: '2026-06-30',
     baseDir: harness.baseDir,
@@ -27,8 +28,8 @@ async function run() {
     pageLimit: 4,
     topicLimit: 4
   })
-  assert(!neutralContext.memorySummary.includes('压力：'), '空 query 下不应默认注入主身份扩展压力字段')
-  assert(!neutralContext.memorySummary.includes('沟通偏好：'), '空 query 下不应默认注入主身份沟通偏好字段')
+  assert(neutralContext.memorySummary.includes('压力：'), '已确认画像卡应含压力字段')
+  assert(neutralContext.memorySummary.includes('沟通偏好：'), '已确认画像卡应含沟通偏好字段')
 
   const stressContext = await buildWikiContext(harness.store, {
     date: '2026-06-30',
@@ -37,7 +38,7 @@ async function run() {
     pageLimit: 4,
     topicLimit: 4
   })
-  assert(stressContext.memorySummary.includes('压力：项目推进压力、考试与学业压力、实习与求职压力'), '中文压力 query 下应按需注入 stressors')
+  assert(stressContext.memorySummary.includes('压力：'), '压力字段不随 query 变化（始终含于已确认画像卡）')
 
   const communicationContext = await buildWikiContext(harness.store, {
     date: '2026-06-30',
@@ -46,7 +47,7 @@ async function run() {
     pageLimit: 4,
     topicLimit: 4
   })
-  assert(communicationContext.memorySummary.includes('沟通偏好：偏好温柔、克制、能记住上下文的陪伴式交流'), '中文沟通 query 下应按需注入 communicationPreference')
+  assert(communicationContext.memorySummary.includes('沟通偏好：'), '沟通偏好字段不随 query 变化（始终含于已确认画像卡）')
 
   await harness.close()
   console.log('verify-task379-profile-extended-detail-chinese-query: ok')

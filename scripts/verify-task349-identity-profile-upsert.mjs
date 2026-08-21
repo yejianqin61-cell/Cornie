@@ -76,16 +76,26 @@ async function run() {
     baseDir,
     query: ''
   })
-  assert(!unrelatedContext.memorySummary.includes('沟通偏好：'), '无关 query 时不应默认展开沟通偏好')
-  assert(!unrelatedContext.memorySummary.includes('压力：'), '无关 query 时不应默认展开压力细节')
+  assert(!unrelatedContext.memorySummary.includes('沟通偏好：'), '未确认画像卡不应展开沟通偏好')
+  assert(!unrelatedContext.memorySummary.includes('压力：'), '未确认画像卡不应展开压力细节')
 
+  // 451：字段级注入不再由 query 门控；压力/沟通以 ownerConfirmed 为可信度门控。
   const relatedContext = await buildWikiContext(harness.store, {
     date: '2026-07-01',
     baseDir,
     query: '最近压力很大 项目 实习 温柔 记住上下文'
   })
-  assert(relatedContext.memorySummary.includes('压力：'), '相关 query 时应展开压力细节')
-  assert(relatedContext.memorySummary.includes('沟通偏好：'), '相关 query 时应展开沟通偏好')
+  assert(!relatedContext.memorySummary.includes('压力：'), '未确认画像卡不随 query 展开压力')
+  assert(!relatedContext.memorySummary.includes('沟通偏好：'), '未确认画像卡不随 query 展开沟通偏好')
+
+  await memoryWiki.setOwnerConfirmed(summaries[0].pageId, true)
+  const confirmedContext = await buildWikiContext(harness.store, {
+    date: '2026-07-01',
+    baseDir,
+    query: ''
+  })
+  assert(confirmedContext.memorySummary.includes('压力：'), '确认后画像卡应展开压力细节')
+  assert(confirmedContext.memorySummary.includes('沟通偏好：'), '确认后画像卡应展开沟通偏好')
 
   const conflict = await upsertIdentityProfileFromConversation(harness.store, {
     baseDir,

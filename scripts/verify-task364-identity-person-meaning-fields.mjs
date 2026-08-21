@@ -51,7 +51,8 @@ async function run() {
       baseDir,
       query: '钟奕菲 对我很重要 温柔'
     })
-    assert(wikiContext.memorySummary.includes('意义：'), '相关 query 下人物摘要应带出意义字段')
+    // 451：人物页以目录条目出现（紧凑三信号），字段级"意义/性格"改由钻取读取。
+    assert(wikiContext.memorySummary.includes('钟奕菲'), '相关 query 下人物页应出现在目录')
 
     const governanceRequests = await memoryWiki.listGovernanceRequests({
       requestType: 'identity_person_review',

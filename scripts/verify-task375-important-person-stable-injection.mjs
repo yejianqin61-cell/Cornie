@@ -45,8 +45,8 @@ async function run() {
     topicLimit: 4
   })
 
-  assert(context.memorySummary.includes('[person] 钟奕菲'), '无 query 时高优先级人物页应稳定进入主链摘要')
-  assert(!context.memorySummary.includes('偏好摘要0'), '无 query 时未命中的 preference 页不应抢占主链注入名额')
+  assert(context.memorySummary.includes('[identity_person/critical] 钟奕菲'), '无 query 时高优先级人物页应稳定进入 L0 目录')
+  assert(context.memorySummary.includes('[identity_preference/'), 'preference 页以目录条目形式出现在 L1')
 
   await harness.close()
   console.log('verify-task375-important-person-stable-injection: ok')

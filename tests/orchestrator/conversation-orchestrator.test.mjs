@@ -75,11 +75,12 @@ async function testConfirmPath() {
           assistant_reply: '我想把这个偏好写进长期记忆。',
           tool_calls: [
             {
-              tool_name: 'memory.create',
+              tool_name: 'memory_wiki.create_page',
               arguments: {
-                kind: 'preference',
+                pageType: 'preference',
                 title: '喜欢猫咪',
-                content: '主人喜欢猫咪'
+                summary: '主人喜欢猫咪',
+                body: '主人喜欢猫咪。'
               }
             }
           ]
@@ -208,7 +209,12 @@ async function testDirtyJsonRepairPath() {
   try {
     let callCount = 0
     const result = await withMockedFetch(
-      buildMockFetch(async () => {
+      buildMockFetch(async (payload) => {
+        const prompt = String(payload?.messages?.[0]?.content ?? '')
+        // 443：记忆提炼轮是独立调用，返回空决策，不计入对话协议调用数。
+        if (prompt.includes('memory distillation')) {
+          return JSON.stringify({ observations: [], identity_updates: [], memory_wiki_requests: [], reasoning: '' })
+        }
         callCount += 1
         if (callCount === 1) {
           return '当然可以呀\n```json\n{"type":"reply","assistant_reply":"小铃湾在呢。"}\n```'
@@ -237,7 +243,11 @@ async function testInvalidJsonRepairRetryPath() {
   try {
     let callCount = 0
     const result = await withMockedFetch(
-      buildMockFetch(async () => {
+      buildMockFetch(async (payload) => {
+        const prompt = String(payload?.messages?.[0]?.content ?? '')
+        if (prompt.includes('memory distillation')) {
+          return JSON.stringify({ observations: [], identity_updates: [], memory_wiki_requests: [], reasoning: '' })
+        }
         callCount += 1
         if (callCount === 1) {
           return '这不是合法 json'

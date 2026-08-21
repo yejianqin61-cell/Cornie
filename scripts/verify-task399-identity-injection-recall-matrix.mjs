@@ -74,11 +74,11 @@ async function run() {
       pageLimit: 6,
       topicLimit: 4
     })
-    assert(neutralContext.memorySummary.includes('[identity] 叶健钦'), '主身份页应默认稳定注入')
-    assert(neutralContext.memorySummary.includes('[person] 钟奕菲'), '极高权重已确认人物应允许保留轻量痕迹')
-    assert(!neutralContext.memorySummary.includes('普通朋友摘要'), '普通高权重人物无 query 时不应默认注入')
-    assert(!neutralContext.memorySummary.includes('[preference/'), '偏好页无 query 时不应默认注入')
-    assert(!neutralContext.memorySummary.includes('[trait/'), 'trait 页无 query 时不应默认注入')
+    assert(neutralContext.memorySummary.includes('[identity] 叶健钦'), '主身份页应默认稳定注入（L0 画像卡）')
+    assert(neutralContext.memorySummary.includes('[identity_person/critical] 钟奕菲'), '极高权重已确认人物应保留在 L0')
+    assert(neutralContext.memorySummary.includes('[identity_person/high] 普通朋友'), '普通高权重人物以 L1 目录条目出现')
+    assert(neutralContext.memorySummary.includes('[identity_preference/'), '偏好页以 L1 目录条目出现')
+    assert(neutralContext.memorySummary.includes('[identity_trait/'), 'trait 页以 L1 目录条目出现')
 
     const personContext = await buildWikiContext(harness.store, {
       date: '2026-06-30',
@@ -87,7 +87,7 @@ async function run() {
       pageLimit: 6,
       topicLimit: 4
     })
-    assert(personContext.memorySummary.includes('[person] 钟奕菲'), '命中人物 query 时应召回相关人物页')
+    assert(personContext.memorySummary.includes('[identity_person/critical] 钟奕菲'), '命中人物 query 时人物页保留在目录')
 
     const preferenceContext = await buildWikiContext(harness.store, {
       date: '2026-06-30',
@@ -96,7 +96,7 @@ async function run() {
       pageLimit: 6,
       topicLimit: 4
     })
-    assert(preferenceContext.memorySummary.includes('[preference/饮食/'), '命中偏好 query 时应召回 preference 页')
+    assert(preferenceContext.memorySummary.includes('[identity_preference/'), '命中偏好 query 时 preference 页在目录（query 只影响排序）')
 
     const traitContext = await buildWikiContext(harness.store, {
       date: '2026-06-30',
@@ -105,7 +105,7 @@ async function run() {
       pageLimit: 6,
       topicLimit: 4
     })
-    assert(traitContext.memorySummary.includes('[trait/压力反应/'), '命中情绪压力 query 时应召回 trait 页')
+    assert(traitContext.memorySummary.includes('[identity_trait/'), '命中情绪压力 query 时 trait 页在目录（query 只影响排序）')
 
     console.log('verify-task399-identity-injection-recall-matrix: ok')
   } finally {
