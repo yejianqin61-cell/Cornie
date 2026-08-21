@@ -83,6 +83,20 @@ const ORDINARY_GROUP = {
 const pages = ref([])
 const loading = ref(false)
 const errorMsg = ref('')
+const loadingMore = ref(false)
+const hasMore = ref(false)
+const pageSize = 20
+
+// R-05：类型 Tab——全部 / 身份 4 类 / 其他记忆（普通类型不再只并进"其他"一锅端）
+const PAGE_TYPE_TABS = [
+  { key: '', label: '全部' },
+  { key: 'identity_profile', label: '关于你' },
+  { key: 'identity_person', label: '重要的人' },
+  { key: 'identity_preference', label: '你的偏好' },
+  { key: 'identity_trait', label: '你的特征' },
+  { key: 'other', label: '其他记忆' }
+]
+const activeType = ref('')
 
 const profileCount = computed(() => pages.value.filter((page) => page.pageType === 'identity_profile').length)
 const personCount = computed(() => pages.value.filter((page) => page.pageType === 'identity_person').length)
@@ -101,17 +115,61 @@ const groupedSections = computed(() => [
   }
 ])
 
+function sortByUpdatedDesc(list) {
+  return [...list].sort((a, b) => String(b?.updatedAt || b?.createdAt || '').localeCompare(String(a?.updatedAt || a?.createdAt || '')))
+}
+
 async function refresh() {
   loading.value = true
   errorMsg.value = ''
   try {
-    const data = await listMemoryWikiPages({ status: 'active' })
-    pages.value = data?.pages || []
+    // R-05：分页拉取；'other' Tab 拉全部后前端过滤普通类型（普通类型量小，可接受）
+    const data = await listMemoryWikiPages({
+      status: 'active',
+      pageType: activeType.value && activeType.value !== 'other' ? activeType.value : undefined,
+      limit: pageSize,
+      offset: 0
+    })
+    let items = data?.pages || []
+    if (activeType.value === 'other') {
+      items = items.filter((page) => !IDENTITY_MEMORY_PAGE_TYPES.has(page.pageType))
+    }
+    pages.value = sortByUpdatedDesc(items)
+    hasMore.value = items.length === pageSize
   } catch (e) {
     errorMsg.value = e?.message || '加载失败'
   } finally {
     loading.value = false
   }
+}
+
+async function loadMore() {
+  if (loadingMore.value || !hasMore.value) return
+  loadingMore.value = true
+  try {
+    const data = await listMemoryWikiPages({
+      status: 'active',
+      pageType: activeType.value && activeType.value !== 'other' ? activeType.value : undefined,
+      limit: pageSize,
+      offset: pages.value.length
+    })
+    let items = data?.pages || []
+    if (activeType.value === 'other') {
+      items = items.filter((page) => !IDENTITY_MEMORY_PAGE_TYPES.has(page.pageType))
+    }
+    pages.value = sortByUpdatedDesc([...pages.value, ...items])
+    hasMore.value = items.length === pageSize
+  } catch (e) {
+    errorMsg.value = e?.message || '加载失败'
+  } finally {
+    loadingMore.value = false
+  }
+}
+
+function selectType(key) {
+  if (activeType.value === key) return
+  activeType.value = key
+  refresh()
 }
 
 function truncated(text, maxLen = 100) {
@@ -149,6 +207,20 @@ onMounted(refresh)
       </div>
       <button class="primary" @click="$emit('go', 'memory-create')">新建记忆</button>
     </header>
+
+    <!-- R-05：类型 Tab（册子化翻阅） -->
+    <div class="mlistTabs">
+      <button
+        v-for="tab in PAGE_TYPE_TABS"
+        :key="tab.key"
+        class="mlistTab"
+        :class="{ active: activeType === tab.key }"
+        type="button"
+        @click="selectType(tab.key)"
+      >
+        {{ tab.label }}
+      </button>
+    </div>
 
     <div v-if="errorMsg" class="mlistError">{{ errorMsg }}</div>
     <div v-if="loading" class="mlistLoading">翻翻记忆…</div>
@@ -225,6 +297,13 @@ onMounted(refresh)
           </div>
         </section>
       </div>
+
+      <!-- R-05：分页加载更多 -->
+      <div v-if="hasMore" class="mlistMore">
+        <button class="ghost" type="button" :disabled="loadingMore" @click="loadMore">
+          {{ loadingMore ? '加载中…' : '加载更多' }}
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -262,6 +341,33 @@ onMounted(refresh)
   font-size: 12px;
   color: var(--muted);
   margin-top: 2px;
+}
+
+/* R-05：类型 Tab */
+.mlistTabs{
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.mlistTab{
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 13px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  cursor: pointer;
+}
+.mlistTab.active{
+  border-color: rgba(232,133,106,.4);
+  background: rgba(232,133,106,.08);
+  color: #C96F52;
+  font-weight: 600;
+}
+
+.mlistMore{
+  display: flex;
+  justify-content: center;
+  padding: 6px 0 2px;
 }
 
 .mlistError{
