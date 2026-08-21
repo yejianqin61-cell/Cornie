@@ -227,6 +227,74 @@ const relatedPageIssues = computed(() =>
   Array.isArray(pageSourceTrace.value?.relatedIssues) ? pageSourceTrace.value.relatedIssues : []
 )
 
+function formatWorkspaceError(error, action = '处理长期记忆页面') {
+  const rawMessage = error?.message || String(error || '')
+  const message = String(rawMessage || '').trim()
+
+  if (!message) {
+    return `${action}时出了点小问题，请稍后再试一次。`
+  }
+
+  if (message.includes('memory wiki page already exists')) {
+    return '这个页面标题已经存在了，请换一个标题，或者先看看列表里是不是已经有同名页面。'
+  }
+
+  if (message.includes('invalid memory wiki frontmatter line')) {
+    return '有一页长期记忆文档的结构已经损坏，工作台暂时无法完整读取。请先修复那一页，再继续创建或编辑。'
+  }
+
+  if (message.includes('memory wiki page is missing frontmatter boundary')) {
+    return '有一页长期记忆文档缺少必要的页面头信息，工作台目前没法正确读取它。'
+  }
+
+  if (message.includes('memory wiki page frontmatter is not closed')) {
+    return '有一页长期记忆文档的页面头信息没有正确结束，工作台暂时无法读取。'
+  }
+
+  if (message.includes('unsupported memory wiki page type')) {
+    return '当前页面类型暂时不被支持，请重新选择页面类型后再试。'
+  }
+
+  if (message.includes('memory wiki page not found')) {
+    return '这页长期记忆可能已经被删除或移动了，刷新列表后再试一次吧。'
+  }
+
+  if (message.includes('Failed to fetch')) {
+    return '暂时连不上长期记忆服务，请确认应用后端已经正常启动。'
+  }
+
+  return message
+}
+
+function normalizeWorkspaceText(value) {
+  return String(value ?? '').trim()
+}
+
+function buildWorkspaceSlug(value) {
+  const normalized = normalizeWorkspaceText(value)
+    .toLowerCase()
+    .replace(/['"`]/g, '')
+    .replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+
+  return normalized || 'untitled'
+}
+
+function findDuplicatePageSummary({ pageId = '', pageType = '', title = '' } = {}) {
+  const normalizedPageType = normalizeWorkspaceText(pageType)
+  const targetSlug = buildWorkspaceSlug(title)
+
+  if (!normalizedPageType || !targetSlug) return null
+
+  return pages.value.find((item) => {
+    if (String(item.pageId || '') === String(pageId || '')) return false
+    if (normalizeWorkspaceText(item.pageType) !== normalizedPageType) return false
+    const itemSlug = buildWorkspaceSlug(item.slug || item.title || '')
+    return itemSlug === targetSlug
+  }) || null
+}
+
 async function refreshPages() {
   const data = await listMemoryWikiPages({
     pageType: pageFilterType.value || undefined,
@@ -269,7 +337,7 @@ async function refreshAll() {
   try {
     await Promise.all([refreshPages(), refreshTopicItems(), refreshGovernanceItems(), refreshConfirmations()])
   } catch (error) {
-    errorMsg.value = error?.message || String(error)
+    errorMsg.value = formatWorkspaceError(error, '加载长期记忆工作台')
   } finally {
     loading.value = false
   }
@@ -329,7 +397,7 @@ async function selectPage(pageId) {
     pageSourceTrace.value = traceData.trace || null
     relatedPageSelection.value = Array.isArray(traceData.trace?.page?.relatedPageIds) ? [...traceData.trace.page.relatedPageIds] : []
   } catch (error) {
-    errorMsg.value = error?.message || String(error)
+    errorMsg.value = formatWorkspaceError(error, '读取页面详情')
   } finally {
     loading.value = false
   }
@@ -348,7 +416,7 @@ async function selectTopic(normalizedKey) {
     }
     topicSourceTrace.value = traceData.trace || null
   } catch (error) {
-    errorMsg.value = error?.message || String(error)
+    errorMsg.value = formatWorkspaceError(error, '读取主题索引')
   } finally {
     loading.value = false
   }
@@ -362,7 +430,7 @@ async function selectGovernance(requestId) {
     const data = await getMemoryWikiGovernanceRequest(requestId)
     governanceDetail.value = data.item
   } catch (error) {
-    errorMsg.value = error?.message || String(error)
+    errorMsg.value = formatWorkspaceError(error, '读取治理请求')
   } finally {
     loading.value = false
   }
@@ -393,7 +461,7 @@ async function selectVersion(versionId) {
     })
     versionDiff.value = data.diff
   } catch (error) {
-    errorMsg.value = error?.message || String(error)
+    errorMsg.value = formatWorkspaceError(error, '读取版本差异')
   } finally {
     loading.value = false
   }
@@ -403,9 +471,23 @@ async function savePage() {
   saving.value = true
   errorMsg.value = ''
   try {
+    const title = normalizeWorkspaceText(pageForm.value.title)
+    if (!title) {
+      throw new Error('请先填写页面标题。')
+    }
+
+    const duplicatePage = findDuplicatePageSummary({
+      pageId: pageForm.value.pageId,
+      pageType: pageForm.value.pageType,
+      title
+    })
+    if (duplicatePage) {
+      throw new Error(`页面标题重复：已存在“${duplicatePage.title || duplicatePage.pageId}”，请换一个标题。`)
+    }
+
     const payload = {
       pageType: pageForm.value.pageType,
-      title: pageForm.value.title,
+      title,
       userName: pageForm.value.userName,
       preferredName: pageForm.value.preferredName,
       cornieRelationship: pageForm.value.cornieRelationship,
@@ -463,7 +545,7 @@ async function savePage() {
     await refreshPages()
     await refreshTopicItems()
   } catch (error) {
-    errorMsg.value = error?.message || String(error)
+    errorMsg.value = formatWorkspaceError(error, pageForm.value.pageId ? '保存页面' : '创建页面')
   } finally {
     saving.value = false
   }
@@ -478,7 +560,7 @@ async function archivePage() {
     await refreshPages()
     await selectPage(pageForm.value.pageId)
   } catch (error) {
-    errorMsg.value = error?.message || String(error)
+    errorMsg.value = formatWorkspaceError(error, '归档页面')
   } finally {
     saving.value = false
   }
@@ -493,7 +575,7 @@ async function restorePage() {
     await refreshPages()
     await selectPage(pageForm.value.pageId)
   } catch (error) {
-    errorMsg.value = error?.message || String(error)
+    errorMsg.value = formatWorkspaceError(error, '恢复页面')
   } finally {
     saving.value = false
   }
@@ -508,7 +590,7 @@ async function rollbackPage() {
     await refreshPages()
     await selectPage(pageForm.value.pageId)
   } catch (error) {
-    errorMsg.value = error?.message || String(error)
+    errorMsg.value = formatWorkspaceError(error, '回滚页面')
   } finally {
     saving.value = false
   }
@@ -528,7 +610,7 @@ async function saveTopicAliases() {
     await refreshTopicItems()
     await selectTopic(topicDetail.value.normalizedKey)
   } catch (error) {
-    errorMsg.value = error?.message || String(error)
+    errorMsg.value = formatWorkspaceError(error, '保存主题别名')
   } finally {
     saving.value = false
   }
@@ -545,7 +627,7 @@ async function saveRelatedPages() {
     await refreshPages()
     await selectPage(pageForm.value.pageId)
   } catch (error) {
-    errorMsg.value = error?.message || String(error)
+    errorMsg.value = formatWorkspaceError(error, '保存页面关联')
   } finally {
     saving.value = false
   }
@@ -574,7 +656,7 @@ async function linkSelectedPageToTopic() {
     await selectPage(pageForm.value.pageId)
     await selectTopic(pageTopicKeyword.value.trim().toLowerCase())
   } catch (error) {
-    errorMsg.value = error?.message || String(error)
+    errorMsg.value = formatWorkspaceError(error, '绑定主题索引')
   } finally {
     saving.value = false
   }
@@ -587,7 +669,7 @@ async function runInspectionScan() {
     await enqueueMemoryWikiInspectionScan()
     await refreshGovernanceItems()
   } catch (error) {
-    errorMsg.value = error?.message || String(error)
+    errorMsg.value = formatWorkspaceError(error, '发起巡检')
   } finally {
     saving.value = false
   }
@@ -603,7 +685,7 @@ async function changeGovernanceStatus(requestId, status) {
       await selectGovernance(requestId)
     }
   } catch (error) {
-    errorMsg.value = error?.message || String(error)
+    errorMsg.value = formatWorkspaceError(error, '更新治理请求状态')
   } finally {
     saving.value = false
   }

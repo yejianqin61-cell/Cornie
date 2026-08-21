@@ -207,20 +207,26 @@ onBeforeUnmount(() => {
       @select-date="selectCalendarDate"
     />
 
-    <div class="stoolbar card">
-      <div class="stoolbarTop">
-        <div class="stoolbarInfo">
-          <div class="stoolbarLabel">当前查看</div>
-          <div class="stoolbarText">{{ currentFilterLabel }}</div>
-        </div>
-        <div class="stoolbarActions">
-          <button class="ghost" type="button" @click="jumpToToday">回到今天</button>
-          <button class="ghost" type="button" :disabled="!selectedDate" @click="clearDateFilter">清除筛选</button>
-          <button class="ghost" type="button" @click="$emit('go', 'category')">管理类目</button>
-          <button class="primary" type="button" @click="showForm = !showForm">{{ showForm ? '收起新增' : '新增安排' }}</button>
+    <div class="scontrolRow" :class="{ expanded: showForm }">
+      <div class="stoolbar card">
+        <div class="stoolbarTop">
+          <div class="stoolbarInfo">
+            <div class="stoolbarLabel">当前查看</div>
+            <div class="stoolbarText">{{ currentFilterLabel }}</div>
+            <div class="stoolbarHint">
+              {{ selectedDate ? '换个日期就能快速切到那一天。' : '先看整个月，再点某一天细看安排。' }}
+            </div>
+          </div>
+          <div class="stoolbarActions">
+            <button class="ghost" type="button" @click="jumpToToday">回到今天</button>
+            <button class="ghost" type="button" :disabled="!selectedDate" @click="clearDateFilter">清除筛选</button>
+            <button class="ghost" type="button" @click="$emit('go', 'category')">管理类目</button>
+            <button class="primary" type="button" @click="showForm = !showForm">{{ showForm ? '收起新增' : '新增安排' }}</button>
+          </div>
         </div>
       </div>
-      <div v-if="showForm" class="squickInline">
+
+      <div v-if="showForm" class="squickCard card">
         <div class="squickHead">
           <div>
             <div class="squickTitle">新增安排</div>
@@ -288,6 +294,17 @@ onBeforeUnmount(() => {
 .ssummary{ background: var(--schedule-tint); padding: 12px 20px; text-align: center; }
 .ssumText{ font-size: 15px; }
 
+.scontrolRow{
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+}
+
+.scontrolRow.expanded{
+  grid-template-columns: minmax(320px, 1.15fr) minmax(320px, .95fr);
+  align-items: start;
+}
+
 .stoolbar{
   padding: 12px 16px;
   background: #FFFDFC;
@@ -317,6 +334,12 @@ onBeforeUnmount(() => {
   color: var(--text);
 }
 
+.stoolbarHint{
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 .stoolbarActions{
   display: flex;
   flex-wrap: wrap;
@@ -324,10 +347,9 @@ onBeforeUnmount(() => {
   justify-content: flex-end;
 }
 
-.squickInline{
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid var(--border);
+.squickCard{
+  padding: 12px 16px;
+  background: #FFFDFC;
 }
 .squickHead{ display: flex; justify-content: space-between; align-items: center; }
 .squickTitle{ font-weight: 700; }
@@ -372,6 +394,10 @@ onBeforeUnmount(() => {
 .sdel{ color: var(--danger); }
 
 @media (max-width: 720px){
+  .scontrolRow.expanded{
+    grid-template-columns: 1fr;
+  }
+
   .stoolbarTop,
   .squickHead,
   .slistHead{

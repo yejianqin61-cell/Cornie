@@ -103,17 +103,53 @@ function createRepositoryDescriptor({
   driver,
   queryContractVersion = 2,
   capabilities,
-  availableDrivers = Object.values(CHATLOG_REPOSITORY_DRIVERS)
+  availableDrivers = Object.values(CHATLOG_REPOSITORY_DRIVERS),
+  runtimeStatus = null
 } = {}) {
   return {
     driver,
     queryContractVersion,
     capabilities: capabilities ?? buildRepositoryCapabilities(),
-    availableDrivers
+    availableDrivers,
+    runtimeStatus
   }
 }
 
-export function createSqlJsChatlogRepository(store) {
+function buildRuntimeStatus({
+  requestedDriver,
+  effectiveDriver,
+  dbPath,
+  usingFallback = false,
+  fallbackReason = '',
+  initializationOk = true,
+  initializationError = '',
+  detail = ''
+} = {}) {
+  return {
+    requestedDriver: requestedDriver || 'auto',
+    effectiveDriver: effectiveDriver || 'unknown',
+    dbPath: normalizeString(dbPath),
+    usingFallback,
+    fallbackReason: normalizeString(fallbackReason),
+    initialization: {
+      ok: initializationOk,
+      error: normalizeString(initializationError),
+      detail: normalizeString(detail)
+    }
+  }
+}
+
+export function createSqlJsChatlogRepository(store, { requestedDriver, fallbackReason } = {}) {
+  const runtimeStatus = buildRuntimeStatus({
+    requestedDriver,
+    effectiveDriver: CHATLOG_REPOSITORY_DRIVERS.sqljs,
+    dbPath: store?.dbPath,
+    usingFallback: true,
+    fallbackReason: fallbackReason || 'sqljs_compatibility_path_selected',
+    initializationOk: true,
+    detail: 'Using compatibility chatlog repository backed by sql.js helpers.'
+  })
+
   const descriptor = createRepositoryDescriptor({
     driver: CHATLOG_REPOSITORY_DRIVERS.sqljs,
     capabilities: buildRepositoryCapabilities({
@@ -121,11 +157,15 @@ export function createSqlJsChatlogRepository(store) {
       supportsNativeKeywordSearch: false,
       migrationReady: true,
       status: 'active'
-    })
+    }),
+    runtimeStatus
   })
 
   return {
     ...descriptor,
+    getRuntimeStatus() {
+      return { ...runtimeStatus }
+    },
     getMessagesByDate(date) {
       return getMessagesByDate(store, date)
     },
@@ -260,7 +300,32 @@ function createReadonlyBetterSqliteConnection(dbPath) {
   })
 }
 
-export function createBetterSqlite3ChatlogRepository({ dbPath } = {}) {
+function probeBetterSqlite3Connection(dbPath) {
+  const database = createReadonlyBetterSqliteConnection(dbPath)
+  try {
+    database.prepare('select 1').get()
+    return {
+      ok: true,
+      error: '',
+      detail: 'Readonly better-sqlite3 connection is available.'
+    }
+  } finally {
+    database.close()
+  }
+}
+
+export function createBetterSqlite3ChatlogRepository({ dbPath, requestedDriver } = {}) {
+  const probe = probeBetterSqlite3Connection(dbPath)
+  const runtimeStatus = buildRuntimeStatus({
+    requestedDriver,
+    effectiveDriver: CHATLOG_REPOSITORY_DRIVERS.betterSqlite3,
+    dbPath,
+    usingFallback: false,
+    initializationOk: probe.ok,
+    initializationError: probe.error,
+    detail: probe.detail
+  })
+
   const descriptor = createRepositoryDescriptor({
     driver: CHATLOG_REPOSITORY_DRIVERS.betterSqlite3,
     capabilities: buildRepositoryCapabilities({
@@ -268,7 +333,8 @@ export function createBetterSqlite3ChatlogRepository({ dbPath } = {}) {
       supportsNativeKeywordSearch: true,
       migrationReady: true,
       status: 'active'
-    })
+    }),
+    runtimeStatus
   })
 
   function withDatabase(callback) {
@@ -325,6 +391,9 @@ export function createBetterSqlite3ChatlogRepository({ dbPath } = {}) {
 
   return {
     ...descriptor,
+    getRuntimeStatus() {
+      return { ...runtimeStatus }
+    },
     getMessagesByDate(date) {
       return withDatabase((database) =>
         database
@@ -432,17 +501,24 @@ export function createBetterSqlite3ChatlogRepository({ dbPath } = {}) {
 
 export function createChatlogRepository(store, { driver, dbPath } = {}) {
   const normalizedDriver = normalizeString(driver)
+  const resolvedDbPath = dbPath ?? store?.dbPath
   const effectiveDriver =
     normalizedDriver ||
-    (normalizeString(dbPath ?? store?.dbPath) ? CHATLOG_REPOSITORY_DRIVERS.betterSqlite3 : CHATLOG_REPOSITORY_DRIVERS.sqljs)
+    (normalizeString(resolvedDbPath) ? CHATLOG_REPOSITORY_DRIVERS.betterSqlite3 : CHATLOG_REPOSITORY_DRIVERS.sqljs)
 
   if (effectiveDriver === CHATLOG_REPOSITORY_DRIVERS.sqljs) {
-    return createSqlJsChatlogRepository(store)
+    return createSqlJsChatlogRepository(store, {
+      requestedDriver: normalizedDriver || 'auto',
+      fallbackReason: normalizeString(resolvedDbPath)
+        ? 'sqljs_explicitly_selected'
+        : 'db_path_unavailable_using_sqljs_compatibility'
+    })
   }
 
   if (effectiveDriver === CHATLOG_REPOSITORY_DRIVERS.betterSqlite3) {
     return createBetterSqlite3ChatlogRepository({
-      dbPath: dbPath ?? store?.dbPath
+      dbPath: resolvedDbPath,
+      requestedDriver: normalizedDriver || 'auto'
     })
   }
 

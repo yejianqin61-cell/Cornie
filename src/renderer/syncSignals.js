@@ -1,14 +1,22 @@
 const CORNIE_DATA_CHANGED_EVENT = 'cornie:data-changed'
+let remoteSyncBound = false
 
 export function emitDataChanged(detail) {
   if (typeof window === 'undefined') return
   window.dispatchEvent(new CustomEvent(CORNIE_DATA_CHANGED_EVENT, { detail }))
+  try {
+    window.cornieDesktop?.broadcastDataChanged?.(detail)
+  } catch {
+    // ignore cross-window sync failure
+  }
 }
 
 export function listenDataChanged(handler) {
   if (typeof window === 'undefined' || typeof handler !== 'function') {
     return () => {}
   }
+
+  ensureRemoteDataSync()
 
   const wrapped = (event) => {
     handler(event?.detail || {})
@@ -18,6 +26,17 @@ export function listenDataChanged(handler) {
   return () => {
     window.removeEventListener(CORNIE_DATA_CHANGED_EVENT, wrapped)
   }
+}
+
+function ensureRemoteDataSync() {
+  if (remoteSyncBound || typeof window === 'undefined') return
+  const subscribe = window.cornieDesktop?.onDataChanged
+  if (typeof subscribe !== 'function') return
+
+  remoteSyncBound = true
+  subscribe((detail) => {
+    window.dispatchEvent(new CustomEvent(CORNIE_DATA_CHANGED_EVENT, { detail }))
+  })
 }
 
 export function collectChangedDomains(results = []) {

@@ -383,138 +383,163 @@ export async function buildWikiContext(
   store,
   { date, baseDir, query = '', pageLimit = DEFAULT_MEMORY_PAGE_LIMIT, topicLimit = DEFAULT_TOPIC_LIMIT } = {}
 ) {
-  const memoryWiki = await createMemoryWikiService({ baseDir })
-  const topicIndex = await createTopicIndexStore(baseDir)
   const chatlog = createChatlogService(store)
   const observation = createObservationService(store)
   const normalizedQuery = normalizeString(query).toLowerCase()
   const queryTerms = splitQueryTerms(normalizedQuery)
 
-  const activePageSummaries = await memoryWiki.listSummaries({ status: 'active' })
-  const reviewTraitSummaries = await memoryWiki.listSummaries({ pageType: IDENTITY_TRAIT_PAGE_TYPE, status: 'review' })
-  const pageSummaries = [
-    ...activePageSummaries,
-    ...reviewTraitSummaries.filter((item) => normalizeString(item?.pageId))
-  ]
+  try {
+    const memoryWiki = await createMemoryWikiService({ baseDir })
+    const topicIndex = await createTopicIndexStore(baseDir)
 
-  const primaryIdentityProfile = selectPrimaryIdentityProfile(activePageSummaries)
-  const matchedPreferencePages = queryTerms.length === 0
-    ? []
-    : pageSummaries
-        .filter(isIdentityPreferencePage)
-        .filter((page) => pageMatchesAnyKeyword(page, queryTerms))
-        .sort((a, b) => comparePages(a, b, { normalizedQuery, queryTerms }))
-  const matchedTraitPages = queryTerms.length === 0
-    ? []
-    : pageSummaries
-        .filter((page) => isIdentityTraitPage(page) && page.status !== 'archived')
-        .filter((page) => traitMatchesEmotionalScene(page, queryTerms))
-        .sort((a, b) => comparePages(a, b, { normalizedQuery, queryTerms }))
+    const activePageSummaries = await memoryWiki.listSummaries({ status: 'active' })
+    const reviewTraitSummaries = await memoryWiki.listSummaries({ pageType: IDENTITY_TRAIT_PAGE_TYPE, status: 'review' })
+    const pageSummaries = [
+      ...activePageSummaries,
+      ...reviewTraitSummaries.filter((item) => normalizeString(item?.pageId))
+    ]
 
-  const matchedPreferenceIds = new Set(matchedPreferencePages.map((item) => getPageStableId(item)).filter(Boolean))
-  const matchedTraitIds = new Set(matchedTraitPages.map((item) => getPageStableId(item)).filter(Boolean))
-  const otherPages = [...pageSummaries]
-    .filter((page) => !primaryIdentityProfile || getPageStableId(page) !== getPageStableId(primaryIdentityProfile))
-    .filter((page) => !matchedPreferenceIds.has(getPageStableId(page)))
-    .filter((page) => !matchedTraitIds.has(getPageStableId(page)))
-    .filter((page) => {
-      if (queryTerms.length === 0 && isIdentityTraitPage(page) && normalizeString(page.status) === 'review') {
-        return false
-      }
-      return true
-    })
-    .sort((a, b) => comparePages(a, b, { normalizedQuery, queryTerms }))
+    const primaryIdentityProfile = selectPrimaryIdentityProfile(activePageSummaries)
+    const matchedPreferencePages = queryTerms.length === 0
+      ? []
+      : pageSummaries
+          .filter(isIdentityPreferencePage)
+          .filter((page) => pageMatchesAnyKeyword(page, queryTerms))
+          .sort((a, b) => comparePages(a, b, { normalizedQuery, queryTerms }))
+    const matchedTraitPages = queryTerms.length === 0
+      ? []
+      : pageSummaries
+          .filter((page) => isIdentityTraitPage(page) && page.status !== 'archived')
+          .filter((page) => traitMatchesEmotionalScene(page, queryTerms))
+          .sort((a, b) => comparePages(a, b, { normalizedQuery, queryTerms }))
 
-  const stablePersonPages = otherPages.filter((page) =>
-    isStableImportantPersonPage(page) &&
-    (queryTerms.length === 0 || personMatchesQuery(page, normalizedQuery, queryTerms))
-  )
-  const stablePersonIds = new Set(stablePersonPages.map((item) => getPageStableId(item)).filter(Boolean))
-  const remainingPages = otherPages
-    .filter((page) => !stablePersonIds.has(getPageStableId(page)))
-    .filter((page) => {
-      if (isIdentityPersonPage(page) && !personMatchesQuery(page, normalizedQuery, queryTerms)) {
-        return false
-      }
-      if (isIdentityPreferencePage(page) && !pageMatchesAnyKeyword(page, queryTerms)) {
-        return false
-      }
-      if (isIdentityTraitPage(page) && !traitMatchesEmotionalScene(page, queryTerms)) {
-        return false
-      }
-      return true
-    })
-
-  const selectedPages = [
-    ...(primaryIdentityProfile ? [primaryIdentityProfile] : []),
-    ...stablePersonPages,
-    ...matchedPreferencePages,
-    ...matchedTraitPages,
-    ...remainingPages
-  ].slice(0, pageLimit)
-
-  const topics = await topicIndex.list()
-  const selectedTopics = [...topics]
-    .sort((a, b) => {
-      const queryHitA = normalizedQuery && normalizeString(`${a.keyword} ${(a.aliases ?? []).join(' ')} ${a.note}`).toLowerCase().includes(normalizedQuery) ? 1 : 0
-      const queryHitB = normalizedQuery && normalizeString(`${b.keyword} ${(b.aliases ?? []).join(' ')} ${b.note}`).toLowerCase().includes(normalizedQuery) ? 1 : 0
-      if (queryHitA !== queryHitB) return queryHitB - queryHitA
-      return scoreTopic(b) - scoreTopic(a)
-    })
-    .slice(0, topicLimit)
-
-  const chatHits = normalizedQuery
-    ? chatlog.searchDatesByKeyword(normalizedQuery).entries.slice(0, DEFAULT_MESSAGE_HIT_LIMIT)
-    : []
-  const todayObservations = observation.listTodayForWikiRecall(date)
-
-  const memorySummaryLines = []
-  if (primaryIdentityProfile) {
-    memorySummaryLines.push(buildIdentityProfileSummaryLine(primaryIdentityProfile, normalizedQuery, queryTerms))
-  }
-
-  memorySummaryLines.push(
-    ...selectedPages
+    const matchedPreferenceIds = new Set(matchedPreferencePages.map((item) => getPageStableId(item)).filter(Boolean))
+    const matchedTraitIds = new Set(matchedTraitPages.map((item) => getPageStableId(item)).filter(Boolean))
+    const otherPages = [...pageSummaries]
       .filter((page) => !primaryIdentityProfile || getPageStableId(page) !== getPageStableId(primaryIdentityProfile))
+      .filter((page) => !matchedPreferenceIds.has(getPageStableId(page)))
+      .filter((page) => !matchedTraitIds.has(getPageStableId(page)))
       .filter((page) => {
-        if (queryTerms.length === 0 && isIdentityPreferencePage(page)) {
+        if (queryTerms.length === 0 && isIdentityTraitPage(page) && normalizeString(page.status) === 'review') {
           return false
         }
         return true
       })
-      .map((page) => {
-        if (isIdentityPersonPage(page)) return buildIdentityPersonSummaryLine(page, normalizedQuery, queryTerms)
-        if (isIdentityPreferencePage(page)) return buildIdentityPreferenceSummaryLine(page)
-        if (isIdentityTraitPage(page)) return buildIdentityTraitSummaryLine(page)
-        return buildPageSummaryLine(page)
+      .sort((a, b) => comparePages(a, b, { normalizedQuery, queryTerms }))
+
+    const stablePersonPages = otherPages.filter((page) =>
+      isStableImportantPersonPage(page) &&
+      (queryTerms.length === 0 || personMatchesQuery(page, normalizedQuery, queryTerms))
+    )
+    const stablePersonIds = new Set(stablePersonPages.map((item) => getPageStableId(item)).filter(Boolean))
+    const remainingPages = otherPages
+      .filter((page) => !stablePersonIds.has(getPageStableId(page)))
+      .filter((page) => {
+        if (isIdentityPersonPage(page) && !personMatchesQuery(page, normalizedQuery, queryTerms)) {
+          return false
+        }
+        if (isIdentityPreferencePage(page) && !pageMatchesAnyKeyword(page, queryTerms)) {
+          return false
+        }
+        if (isIdentityTraitPage(page) && !traitMatchesEmotionalScene(page, queryTerms)) {
+          return false
+        }
+        return true
       })
-  )
 
-  const memorySummary = memorySummaryLines.length === 0
-    ? '当前没有可注入的长期记忆 wiki 页面。'
-    : memorySummaryLines.join('\n')
+    const selectedPages = [
+      ...(primaryIdentityProfile ? [primaryIdentityProfile] : []),
+      ...stablePersonPages,
+      ...matchedPreferencePages,
+      ...matchedTraitPages,
+      ...remainingPages
+    ].slice(0, pageLimit)
 
-  const topicSummary = selectedTopics.length === 0
-    ? '当前没有高相关主题索引。'
-    : selectedTopics.map(buildTopicSummaryLine).join('\n')
+    const topics = await topicIndex.list()
+    const selectedTopics = [...topics]
+      .sort((a, b) => {
+        const queryHitA = normalizedQuery && normalizeString(`${a.keyword} ${(a.aliases ?? []).join(' ')} ${a.note}`).toLowerCase().includes(normalizedQuery) ? 1 : 0
+        const queryHitB = normalizedQuery && normalizeString(`${b.keyword} ${(b.aliases ?? []).join(' ')} ${b.note}`).toLowerCase().includes(normalizedQuery) ? 1 : 0
+        if (queryHitA !== queryHitB) return queryHitB - queryHitA
+        return scoreTopic(b) - scoreTopic(a)
+      })
+      .slice(0, topicLimit)
 
-  const chatSummary = chatHits.length === 0
-    ? '当前没有命中的历史聊天日期。'
-    : chatHits.map((item) => `- ${item.date}（命中 ${item.matchedCount} 条）`).join('\n')
+    const chatHits = normalizedQuery
+      ? chatlog.searchDatesByKeyword(normalizedQuery).entries.slice(0, DEFAULT_MESSAGE_HIT_LIMIT)
+      : []
+    const todayObservations = observation.listTodayForWikiRecall(date)
 
-  const observationSummary = todayObservations.length === 0
-    ? '当前没有今日观察补充。'
-    : todayObservations.map((item) => `- [${item.type}] ${item.title}`).join('\n')
+    const memorySummaryLines = []
+    if (primaryIdentityProfile) {
+      memorySummaryLines.push(buildIdentityProfileSummaryLine(primaryIdentityProfile, normalizedQuery, queryTerms))
+    }
 
-  return {
-    memorySummary,
-    topicSummary,
-    chatSummary,
-    observationSummary,
-    primaryIdentityProfile,
-    selectedPages,
-    selectedTopics,
-    chatHits,
-    todayObservations
+    memorySummaryLines.push(
+      ...selectedPages
+        .filter((page) => !primaryIdentityProfile || getPageStableId(page) !== getPageStableId(primaryIdentityProfile))
+        .filter((page) => {
+          if (queryTerms.length === 0 && isIdentityPreferencePage(page)) {
+            return false
+          }
+          return true
+        })
+        .map((page) => {
+          if (isIdentityPersonPage(page)) return buildIdentityPersonSummaryLine(page, normalizedQuery, queryTerms)
+          if (isIdentityPreferencePage(page)) return buildIdentityPreferenceSummaryLine(page)
+          if (isIdentityTraitPage(page)) return buildIdentityTraitSummaryLine(page)
+          return buildPageSummaryLine(page)
+        })
+    )
+
+    const memorySummary = memorySummaryLines.length === 0
+      ? '当前没有可注入的长期记忆 wiki 页面。'
+      : memorySummaryLines.join('\n')
+
+    const topicSummary = selectedTopics.length === 0
+      ? '当前没有高相关主题索引。'
+      : selectedTopics.map(buildTopicSummaryLine).join('\n')
+
+    const chatSummary = chatHits.length === 0
+      ? '当前没有命中的历史聊天日期。'
+      : chatHits.map((item) => `- ${item.date}（命中 ${item.matchedCount} 条）`).join('\n')
+
+    const observationSummary = todayObservations.length === 0
+      ? '当前没有今日观察补充。'
+      : todayObservations.map((item) => `- [${item.type}] ${item.title}`).join('\n')
+
+    return {
+      memorySummary,
+      topicSummary,
+      chatSummary,
+      observationSummary,
+      primaryIdentityProfile,
+      selectedPages,
+      selectedTopics,
+      chatHits,
+      todayObservations
+    }
+  } catch (error) {
+    console.error('Wiki context fallback activated:', error)
+    const chatHits = normalizedQuery
+      ? chatlog.searchDatesByKeyword(normalizedQuery).entries.slice(0, DEFAULT_MESSAGE_HIT_LIMIT)
+      : []
+    const todayObservations = observation.listTodayForWikiRecall(date)
+
+    return {
+      memorySummary: '长期记忆暂时读取失败，本轮先不注入记忆页面。',
+      topicSummary: '主题索引暂时读取失败。',
+      chatSummary: chatHits.length === 0
+        ? '当前没有命中的历史聊天日期。'
+        : chatHits.map((item) => `- ${item.date}（命中 ${item.matchedCount} 条）`).join('\n'),
+      observationSummary: todayObservations.length === 0
+        ? '当前没有今日观察补充。'
+        : todayObservations.map((item) => `- [${item.type}] ${item.title}`).join('\n'),
+      primaryIdentityProfile: null,
+      selectedPages: [],
+      selectedTopics: [],
+      chatHits,
+      todayObservations
+    }
   }
 }

@@ -265,6 +265,21 @@ function applyResolvedCandidate(toolCall, matchResult) {
   }
 }
 
+function applyImplicitCategory(toolCall, category) {
+  if (!category?.id || !category?.name) {
+    return toolCall
+  }
+
+  return {
+    ...toolCall,
+    arguments: {
+      ...(toolCall.arguments ?? {}),
+      categoryId: category.id,
+      categoryName: category.name
+    }
+  }
+}
+
 function matchExistingCategory(store, toolCall, sourceText, domain) {
   if (!store) {
     return null
@@ -305,6 +320,23 @@ function applyCandidateResolution({
   const domainCopy = registration.categoryRuleCopy ?? {}
 
   if (!categoryId && !categoryName && !needsNewCategory) {
+    const implicitCategory = registration.inferImplicitCategory?.(store, {
+      toolName: toolCall.tool_name,
+      sourceText
+    })
+    if (implicitCategory) {
+      const resolvedToolCall = applyImplicitCategory(toolCall, implicitCategory)
+      buildResolvedAudit(resolvedToolCall, domain, sourceText, {
+        selectedCandidate: implicitCategory,
+        candidates: [implicitCategory],
+        reason: `未显式提供类目，自动回落到默认${domainLabel}类目“${implicitCategory.name}”`
+      })
+      return {
+        decision: 'allow',
+        toolCall: resolvedToolCall
+      }
+    }
+
     return buildCategoryAskBack(
       toolCall,
       missingQuestion,

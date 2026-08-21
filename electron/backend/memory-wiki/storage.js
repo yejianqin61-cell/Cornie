@@ -21,6 +21,21 @@ function toScalarValue(value) {
   return String(value)
 }
 
+function encodeScalarValue(value) {
+  return toScalarValue(value)
+    .replace(/\\/g, '\\\\')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .replace(/\n/g, '\\n')
+}
+
+function decodeScalarValue(value) {
+  return String(value ?? '')
+    .replace(/\\\\/g, '\u0000')
+    .replace(/\\n/g, '\n')
+    .replace(/\u0000/g, '\\')
+}
+
 function serializeArrayItem(value) {
   if (typeof value === 'string') return value
   if (typeof value === 'number' || typeof value === 'boolean') return String(value)
@@ -29,7 +44,7 @@ function serializeArrayItem(value) {
 }
 
 function parseScalarValue(value) {
-  const normalized = normalizeString(value)
+  const normalized = normalizeString(decodeScalarValue(value))
   if (normalized === 'true') return true
   if (normalized === 'false') return false
   return normalized
@@ -111,7 +126,7 @@ function serializeMetadata(page) {
       }
       continue
     }
-    lines.push(`${key}: ${toScalarValue(rawValue)}`)
+    lines.push(`${key}: ${encodeScalarValue(rawValue)}`)
   }
   lines.push(FRONTMATTER_BOUNDARY, '')
   return lines.join('\n')
@@ -139,6 +154,7 @@ function parseFrontmatter(text) {
 
   const metadata = {}
   let activeArrayKey = null
+  let activeScalarKey = null
 
   for (const line of frontmatterText.split('\n')) {
     if (!line.trim()) continue
@@ -147,6 +163,7 @@ function parseFrontmatter(text) {
     if (arrayMatch) {
       activeArrayKey = arrayMatch[1]
       metadata[activeArrayKey] = []
+      activeScalarKey = null
       continue
     }
 
@@ -158,10 +175,27 @@ function parseFrontmatter(text) {
 
     activeArrayKey = null
     const scalarMatch = line.match(/^([a-z0-9_]+):\s*(.*)$/i)
+    if (scalarMatch) {
+      activeScalarKey = scalarMatch[1]
+      metadata[activeScalarKey] = parseScalarValue(scalarMatch[2])
+      continue
+    }
+
+    // Allow manually edited frontmatter to continue the previous scalar field
+    // on the next line instead of failing the whole page read.
+    if (activeScalarKey) {
+      const previousValue = metadata[activeScalarKey]
+      const continuation = normalizeString(line)
+      metadata[activeScalarKey] =
+        typeof previousValue === 'string' && previousValue
+          ? `${previousValue}\n${continuation}`
+          : continuation
+      continue
+    }
+
     if (!scalarMatch) {
       throw new Error(`invalid memory wiki frontmatter line: ${line}`)
     }
-    metadata[scalarMatch[1]] = parseScalarValue(scalarMatch[2])
   }
 
   return { metadata, body }

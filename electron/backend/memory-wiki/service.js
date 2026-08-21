@@ -637,11 +637,15 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
       if (!existing) {
         throw new Error(`memory wiki page not found: ${pageId}`)
       }
+      const normalizedInput = normalizeStructuredPageInput(input)
+      if (normalizedInput.pageType && normalizedInput.pageType !== existing.pageType) {
+        throw new Error('memory wiki pageType cannot be changed on update; create a new page instead')
+      }
 
       await versionStore.snapshotPage(existing, { reason: 'before_update' })
       const updated = await storage.updatePage({
         ...existing,
-        ...normalizeStructuredPageInput(input),
+        ...normalizedInput,
         pageId: existing.pageId
       })
       await ensureIdentityTraitGovernanceCandidate(governanceStore, updated)
@@ -930,8 +934,21 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
       const pages = await this.list(filters)
       const hydratedPages = await Promise.all(
         pages.map(async (item) => {
-          const fullPage = item?.pageId ? await this.get(item.pageId) : null
-          return fullPage ?? item
+          if (!item?.pageId) {
+            return item
+          }
+
+          try {
+            const fullPage = await this.get(item.pageId)
+            return fullPage ?? item
+          } catch (error) {
+            console.error('Memory wiki page hydration skipped:', {
+              pageId: item.pageId,
+              title: item.title,
+              error: error?.message ?? String(error)
+            })
+            return item
+          }
         })
       )
       return hydratedPages.map((item) => summarizePage(item))

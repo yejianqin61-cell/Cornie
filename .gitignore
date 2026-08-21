@@ -31,3 +31,6 @@ tmp/
 *.sqlite3
 *.db
 
+# 本地记忆运行数据（Cornie-019 卫生建议）：不再跟踪
+data/memory-wiki/
+

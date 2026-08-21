@@ -256,6 +256,17 @@ const todoRegistration = {
     }
     return createTodoService(store).listCategories()
   },
+  inferImplicitCategory(store) {
+    if (!store) {
+      return null
+    }
+    const categories = createTodoService(store).listCategories()
+    return (
+      categories.find((item) => item.id === 'todo_general' && item.isActive !== false) ??
+      categories.find((item) => item.name === '待办' && item.isActive !== false) ??
+      null
+    )
+  },
   buildCategoryCreateToolCall({ proposedCategoryName }) {
     return {
       tool_name: 'todo_category.create',
@@ -323,6 +334,17 @@ const scheduleRegistration = {
       return []
     }
     return createScheduleService(store).listCategories()
+  },
+  inferImplicitCategory(store) {
+    if (!store) {
+      return null
+    }
+    const categories = createScheduleService(store).listCategories()
+    return (
+      categories.find((item) => item.id === 'schedule_general' && item.isActive !== false) ??
+      categories.find((item) => item.name === '日程' && item.isActive !== false) ??
+      null
+    )
   },
   buildCategoryCreateToolCall({ proposedCategoryName }) {
     return {
