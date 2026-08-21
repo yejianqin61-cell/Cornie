@@ -2,9 +2,10 @@
 // T-02：记忆 Wiki 双栏容器（Cornie-024）——左文件树 + 右正文阅读/编辑。
 // 替代旧"列表视图 → 详情视图"跳转：选树节点即右侧加载，新建就地开空编辑页。
 
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { listMemoryWikiPages } from '../api'
 import { listenDataChanged } from '../syncSignals'
+import { useDebouncedValue } from '../composables/useTimers'
 import MemoryWikiTree from './MemoryWikiTree.vue'
 import MemoryPageDetail from './MemoryPageDetail.vue'
 
@@ -14,6 +15,25 @@ const pages = ref([])
 const loading = ref(false)
 const selectedId = ref('')
 const creating = ref(false)
+const searchQuery = ref('')
+
+// T-03：树顶搜索——标题/别名/摘要模糊匹配（防抖 220ms）
+const filteredPages = ref([])
+useDebouncedValue(searchQuery, 220, (value) => {
+  const keyword = String(value || '').trim().toLowerCase()
+  if (!keyword) {
+    filteredPages.value = pages.value
+    return
+  }
+  filteredPages.value = pages.value.filter((page) => {
+    return [page?.title, page?.aliasesText, page?.summary]
+      .filter(Boolean)
+      .some((text) => String(text).toLowerCase().includes(keyword))
+  })
+})
+
+const isSearching = computed(() => String(searchQuery.value || '').trim().length > 0)
+const searchNoResult = computed(() => isSearching.value && filteredPages.value.length === 0)
 
 async function refresh() {
   try {
@@ -25,6 +45,17 @@ async function refresh() {
     // 选中页被删除/归档移除后清空选中
     if (selectedId.value && !pages.value.some((p) => p.id === selectedId.value)) {
       selectedId.value = ''
+    }
+    // 同步当前搜索过滤
+    if (String(searchQuery.value || '').trim()) {
+      const keyword = String(searchQuery.value).trim().toLowerCase()
+      filteredPages.value = pages.value.filter((page) =>
+        [page?.title, page?.aliasesText, page?.summary]
+          .filter(Boolean)
+          .some((text) => String(text).toLowerCase().includes(keyword))
+      )
+    } else {
+      filteredPages.value = pages.value
     }
   } catch {
     // 加载失败静默（树为空态）
@@ -84,18 +115,30 @@ function onOpenMemory(id) {
   <div class="wikiHome">
     <div class="wikiHead">
       <div class="wikiTitle">记忆 Wiki</div>
+      <input
+        v-model="searchQuery"
+        class="wikiSearch"
+        type="text"
+        placeholder="搜索记忆…"
+      />
       <button class="primary" type="button" @click="startCreate">新建记忆</button>
     </div>
 
     <div class="wikiBody">
       <aside class="wikiSidebar">
         <div v-if="loading" class="wikiSideLoading">加载中…</div>
-        <MemoryWikiTree
-          v-else
-          :pages="pages"
-          :selected-id="selectedId"
-          @select="selectPage"
-        />
+        <template v-else>
+          <div v-if="isSearching" class="wikiSearchMeta">
+            {{ searchNoResult ? '没有找到相关的记忆' : `搜索结果：${filteredPages.length} 条` }}
+          </div>
+          <div v-if="searchNoResult" class="wikiSearchEmpty">换个关键词试试。</div>
+          <MemoryWikiTree
+            v-else
+            :pages="filteredPages"
+            :selected-id="selectedId"
+            @select="selectPage"
+          />
+        </template>
       </aside>
 
       <main class="wikiContent">
@@ -145,6 +188,25 @@ function onOpenMemory(id) {
   border-radius: 18px;
 }
 .wikiTitle{ font-size: 18px; font-weight: 800; }
+
+/* T-03：搜索框 */
+.wikiSearch{
+  width: 220px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  font-size: 13px;
+  background: var(--surface-2, #fff);
+}
+.wikiSearch:focus{ outline: none; border-color: rgba(232,133,106,.4); }
+
+.wikiSearchMeta{
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--muted);
+  border-bottom: 1px solid rgba(0,0,0,.05);
+}
+.wikiSearchEmpty{ padding: 20px 12px; text-align: center; font-size: 13px; color: var(--muted); }
 
 .wikiBody{
   flex: 1;

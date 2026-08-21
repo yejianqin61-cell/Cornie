@@ -1,5 +1,5 @@
 import { flushPromises, mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('../../src/renderer/api', () => ({
   listMemoryWikiPages: vi.fn()
@@ -9,12 +9,16 @@ import * as api from '../../src/renderer/api'
 import MemoryWikiHome from '../../src/renderer/components/MemoryWikiHome.vue'
 import MemoryPageDetail from '../../src/renderer/components/MemoryPageDetail.vue'
 
-function makePage(id, pageType, title, status = 'active') {
-  return { id, pageId: id, pageType, title, status, content: `内容${id}` }
+function makePage(id, pageType, title, status = 'active', extra = {}) {
+  return { id, pageId: id, pageType, title, status, content: `内容${id}`, ...extra }
 }
 
 beforeEach(() => {
   vi.clearAllMocks()
+})
+
+afterEach(() => {
+  vi.useRealTimers()
 })
 
 describe('T-02 双栏容器', () => {
@@ -97,5 +101,81 @@ describe('T-02 双栏容器', () => {
 
     expect(wrapper.text()).toContain('从左边选一页')
     wrapper.unmount()
+  })
+
+  // T-03：树顶搜索
+  describe('T-03 树顶搜索', () => {
+    async function mountWithPages(wrapperPages) {
+      // active/archived 两批请求：active 返回页面，archived 返回空（避免重复）
+      api.listMemoryWikiPages.mockImplementation(async ({ status } = {}) => ({
+        pages: status === 'archived' ? [] : wrapperPages
+      }))
+      const wrapper = mount(MemoryWikiHome, {
+        global: { stubs: { MemoryPageDetail: true } }
+      })
+      await flushPromises()
+      return wrapper
+    }
+
+    it('按标题搜索命中并过滤树', async () => {
+      vi.useFakeTimers()
+      const wrapper = await mountWithPages([
+        makePage('p1', 'identity_profile', '我的身份页'),
+        makePage('p2', 'topic', '龙虾主题')
+      ])
+      const input = wrapper.find('input[placeholder="搜索记忆…"]')
+      await input.setValue('龙虾')
+      await vi.advanceTimersByTimeAsync(300)
+      await flushPromises()
+
+      expect(wrapper.text()).toContain('搜索结果：1 条')
+      // 主题目录默认折叠：目录计数为 1，展开后文件可见
+      expect(wrapper.text()).not.toContain('我的身份页')
+      const topicDir = wrapper.findAll('.treeDir').find((n) => n.text().includes('主题'))
+      await topicDir.trigger('click')
+      expect(wrapper.text()).toContain('龙虾主题')
+      wrapper.unmount()
+    })
+
+    it('按别名与摘要搜索命中', async () => {
+      vi.useFakeTimers()
+      const wrapper = await mountWithPages([
+        makePage('p1', 'identity_person', '钟奕菲', 'active', { aliasesText: '小菲, 菲宝' }),
+        makePage('p2', 'event', '某事件', 'active', { summary: '记得那天去吃了火锅' })
+      ])
+      const input = wrapper.find('input[placeholder="搜索记忆…"]')
+      await input.setValue('菲宝')
+      await vi.advanceTimersByTimeAsync(300)
+      await flushPromises()
+      // 身份目录默认展开：文件直接可见
+      expect(wrapper.text()).toContain('钟奕菲')
+      expect(wrapper.text()).not.toContain('某事件')
+
+      await input.setValue('火锅')
+      await vi.advanceTimersByTimeAsync(300)
+      await flushPromises()
+      // 事件目录默认折叠：展开后可见
+      const eventDir = wrapper.findAll('.treeDir').find((n) => n.text().includes('事件'))
+      await eventDir.trigger('click')
+      expect(wrapper.text()).toContain('某事件')
+      wrapper.unmount()
+    })
+
+    it('无结果显示空态，清空恢复完整树', async () => {
+      vi.useFakeTimers()
+      const wrapper = await mountWithPages([makePage('p1', 'identity_profile', '我的身份页')])
+      const input = wrapper.find('input[placeholder="搜索记忆…"]')
+      await input.setValue('不存在的词')
+      await vi.advanceTimersByTimeAsync(300)
+      await flushPromises()
+      expect(wrapper.text()).toContain('没有找到相关的记忆')
+
+      await input.setValue('')
+      await vi.advanceTimersByTimeAsync(300)
+      await flushPromises()
+      expect(wrapper.text()).toContain('我的身份页')
+      expect(wrapper.text()).not.toContain('没有找到相关的记忆')
+      wrapper.unmount()
+    })
   })
 })
