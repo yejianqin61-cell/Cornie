@@ -9,16 +9,18 @@ export function diaryService(store) {
     upsertUserText: ({ date, userText, cornieText }) => upsertUserText(store, { date, userText, cornieText }),
     listOnThisDay: ({ date, limit }) => listOnThisDay(store, { date, limit }),
 
-    generateCornie: async ({ date }) => {
+    generateCornie: async ({ date }, options = {}) => {
+      // BE-06：无日记条目的日期不抛 TypeError——userText 缺失按空串处理。
+      const existing = getEntry(store, date)
       const wikiContext = await buildWikiContext(store, {
         date,
         baseDir: process.cwd(),
-        query: getEntry(store, date).userText
+        query: existing?.userText ?? ''
       })
       const diary = await generateCornieDiary(store, {
         date,
         memorySummary: wikiContext.memorySummary
-      })
+      }, options)
 
       return setCornieText(store, { date, cornieText: diary })
     },

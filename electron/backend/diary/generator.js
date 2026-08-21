@@ -24,14 +24,14 @@ function buildMemoryText(memorySummary) {
   return memorySummary
 }
 
-async function generateDiaryDraft(prompt) {
+async function generateDiaryDraft(prompt, chatFn) {
   let combined = ''
   let currentPrompt = prompt
   let round = 0
   let lastFinishReason = null
 
   while (round < 4) {
-    const result = await generate({
+    const result = await chatFn({
       prompt: currentPrompt,
       temperature: 0.7,
       maxTokens: round === 0 ? 1100 : 500
@@ -84,8 +84,9 @@ async function generateDiaryDraft(prompt) {
   return combined
 }
 
-export async function generateCornieDiary(store, { date, memorySummary = '' }) {
-  const entry = getEntry(store, date)
+export async function generateCornieDiary(store, { date, memorySummary = '' }, { chatFn = generate } = {}) {
+  // BE-06：当天无日记条目时 getEntry 返回 null——兜底为空对象，不抛 TypeError。
+  const entry = getEntry(store, date) ?? {}
   const observation = createObservationService(store)
   const observations = observation.listTodayForDiary(date)
   const onThisDay = listOnThisDay(store, { date, limit: 10 })
@@ -111,7 +112,7 @@ export async function generateCornieDiary(store, { date, memorySummary = '' }) {
   ].join('\n')
 
   try {
-    const text = await generateDiaryDraft(prompt)
+    const text = await generateDiaryDraft(prompt, chatFn)
     if (text) return text
   } catch (error) {
     console.error('DeepSeek diary generation error:', error)
