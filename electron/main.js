@@ -114,7 +114,7 @@ function resolveMemoryBaseDir() {
 async function startLocalApi() {
   const dbPath = path.join(app.getPath('userData'), 'cornie.sqlite3')
   store = await openDb(dbPath)
-  const api = createServer({ store, baseDir: resolveMemoryBaseDir() })
+  const api = await createServer({ store, baseDir: resolveMemoryBaseDir() })
 
   serverInstance = api.listen(5174, '127.0.0.1')
 }

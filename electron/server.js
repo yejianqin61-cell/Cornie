@@ -30,7 +30,7 @@ import { applyPersistedModelSettingsToEnv, createSettingsService } from './backe
 import { settingsRoutes } from './backend/settings/routes.js'
 import { listTelemetryRecords } from './backend/agent/telemetryStore.js'
 
-export function createServer({ store, baseDir = process.cwd() }) {
+export async function createServer({ store, baseDir = process.cwd() }) {
   const app = express()
   app.use(express.json({ limit: '1mb' }))
   applyPersistedModelSettingsToEnv(store)
@@ -117,9 +117,8 @@ export function createServer({ store, baseDir = process.cwd() }) {
 
   // 记忆工具接线（450 / D-01）：注册 memory_wiki.* / memory_index.* / memory_governance.* 工具，
   // 使"模型工具集 = 人类接口集"运行时生效；baseDir 与提炼轮次等共用 main.js 启动链传入的同一来源。
-  registerMemoryWikiTools({ baseDir, store }, { registerTool }).catch((error) => {
-    console.error('Memory wiki tools registration failed:', error)
-  })
+  // BE-08：await 注册——失败显式抛错退出启动（不再静默 console），且先于 conversation 路由挂载，消除首轮竞态。
+  await registerMemoryWikiTools({ baseDir, store }, { registerTool })
 
   const confirm = createConfirmService(store)
   app.use('/api', confirmRoutes({ confirm }))

@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto'
 
 import { openDb } from '../../electron/db.js'
 import { executeToolCalls } from '../../electron/backend/tools/gateway.js'
-import { getTool, listTools, registerTool } from '../../electron/backend/tools/registry.js'
+import { getTool, listTools, registerTool, clearTools } from '../../electron/backend/tools/registry.js'
 import { getToolRiskLevel } from '../../electron/backend/policy/riskLevels.js'
 import { registerSystemTools } from '../../electron/backend/system/tools.js'
 import { registerTodoTools } from '../../electron/backend/todo/tools.js'
@@ -13,6 +13,7 @@ import { cleanupSqliteFile, createRuntimeSqlitePath } from '../../scripts/tmp-ar
 async function withStore(caseName, run) {
   const dbPath = await createRuntimeSqlitePath(`tools-test-${caseName}-${randomUUID()}`)
   const store = await openDb(dbPath)
+  clearTools() // 每个用例独立 registry（BE-08 重名检测要求）
   try {
     return await run(store)
   } finally {
@@ -110,11 +111,27 @@ async function testGatewayHandlerFailureWrapping() {
   assert(result.results[0].error?.message === 'boom', 'expected failure message preserved', result)
 }
 
+// BE-08：重名注册必须抛错（不静默覆盖）
+async function testDuplicateRegistrationThrows() {
+  const toolName = `test.dupe.${randomUUID()}`
+  registerTool({ name: toolName, description: 'first definition', riskLevel: 'low', handler: () => null })
+  let threw = false
+  try {
+    registerTool({ name: toolName, description: 'second definition', riskLevel: 'low', handler: () => null })
+  } catch (error) {
+    threw = true
+    assert(String(error.message).includes('duplicate tool registration'), 'expected duplicate message', error.message)
+    assert(String(error.message).includes(toolName), 'expected tool name in message', error.message)
+  }
+  assert(threw === true, 'expected duplicate registration to throw')
+}
+
 const tests = [
   ['registry and risk levels', testRegistryAndRiskLevels],
   ['gateway success and result wrapping', testGatewaySuccessAndResultWrapping],
   ['gateway tool not found', testGatewayToolNotFound],
-  ['gateway handler failure wrapping', testGatewayHandlerFailureWrapping]
+  ['gateway handler failure wrapping', testGatewayHandlerFailureWrapping],
+  ['duplicate tool registration throws', testDuplicateRegistrationThrows]
 ]
 
 let passed = 0

@@ -1,14 +1,37 @@
 import { Router } from 'express'
 import { createObservationService } from './service.js'
+import { asyncHandler } from '../http/middleware.js'
+import { badRequest } from '../http/errors.js'
+import { requireISODate } from '../validators.js'
+
+// BE-08：observation 路由统一 asyncHandler 风格，并补齐日期/limit 参数校验（原手写 try/catch+next）。
+
+function parseOptionalDate(value, fieldName) {
+  if (value === undefined) return undefined
+  return requireISODate(String(value), fieldName)
+}
+
+function parseOptionalLimit(value, fallback) {
+  if (value === undefined) return fallback
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    throw badRequest('invalid limit', undefined, 'invalid_limit')
+  }
+  return parsed
+}
 
 export function observationRoutes({ store }) {
   const router = Router()
   const observation = createObservationService(store)
 
-  router.get('/observations', (req, res, next) => {
-    try {
-      const { date, from, to, type, q, limit } = req.query
-      const parsedLimit = limit ? Number(limit) : undefined
+  router.get(
+    '/observations',
+    asyncHandler((req, res) => {
+      const { type, q, limit } = req.query
+      const date = parseOptionalDate(req.query.date, 'date')
+      const from = parseOptionalDate(req.query.from, 'from')
+      const to = parseOptionalDate(req.query.to, 'to')
+      const parsedLimit = parseOptionalLimit(limit, undefined)
       let result
       if (date) {
         result = observation.listByRange({
@@ -34,12 +57,17 @@ export function observationRoutes({ store }) {
         policy: observation.getPromptPolicy(),
         policySummary: observation.getPromptPolicySummary()
       })
-    } catch (error) { next(error) }
-  })
+    })
+  )
 
-  router.get('/observations/recall', (req, res, next) => {
-    try {
-      const { date, from, to, type, q, topic, person, limit } = req.query
+  router.get(
+    '/observations/recall',
+    asyncHandler((req, res) => {
+      const { type, q, topic, person } = req.query
+      const date = parseOptionalDate(req.query.date, 'date')
+      const from = parseOptionalDate(req.query.from, 'from')
+      const to = parseOptionalDate(req.query.to, 'to')
+      const limit = parseOptionalLimit(req.query.limit, 50)
       const result = observation.listByRecall({
         date: date || undefined,
         from: from || undefined,
@@ -48,7 +76,7 @@ export function observationRoutes({ store }) {
         q: q || undefined,
         topic: topic || undefined,
         person: person || undefined,
-        limit: limit ? Number(limit) : 50
+        limit
       })
       res.json({
         observations: result,
@@ -64,19 +92,21 @@ export function observationRoutes({ store }) {
         policy: observation.getPromptPolicy(),
         policySummary: observation.getPromptPolicySummary()
       })
-    } catch (error) { next(error) }
-  })
+    })
+  )
 
-  router.get('/observations/:id', (req, res, next) => {
-    try {
+  router.get(
+    '/observations/:id',
+    asyncHandler((req, res) => {
       const result = observation.get(req.params.id)
       if (!result) return res.status(404).json({ error: '找不到这条观察记录' })
       res.json({ observation: result })
-    } catch (error) { next(error) }
-  })
+    })
+  )
 
-  router.post('/observations', (req, res, next) => {
-    try {
+  router.post(
+    '/observations',
+    asyncHandler((req, res) => {
       const result = observation.addNote({
         date: req.body.date,
         type: req.body.type || 'misc',
@@ -86,11 +116,12 @@ export function observationRoutes({ store }) {
         sourceText: req.body.sourceText || null
       })
       res.status(201).json({ observation: result })
-    } catch (error) { next(error) }
-  })
+    })
+  )
 
-  router.put('/observations/:id', (req, res, next) => {
-    try {
+  router.put(
+    '/observations/:id',
+    asyncHandler((req, res) => {
       const result = observation.updateNote({
         id: req.params.id,
         date: req.body.date,
@@ -102,15 +133,16 @@ export function observationRoutes({ store }) {
       })
       if (!result) return res.status(404).json({ error: '找不到这条观察记录' })
       res.json({ observation: result })
-    } catch (error) { next(error) }
-  })
+    })
+  )
 
-  router.delete('/observations/:id', (req, res, next) => {
-    try {
+  router.delete(
+    '/observations/:id',
+    asyncHandler((req, res) => {
       observation.deleteNote({ id: req.params.id })
       res.status(204).end()
-    } catch (error) { next(error) }
-  })
+    })
+  )
 
   return router
 }

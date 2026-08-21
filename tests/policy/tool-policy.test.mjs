@@ -8,7 +8,7 @@ import { registerTodoTools } from '../../electron/backend/todo/tools.js'
 import { registerScheduleTools } from '../../electron/backend/schedule/tools.js'
 import { registerSystemTools } from '../../electron/backend/system/tools.js'
 import { registerMemoryWikiTools } from '../../electron/backend/memory-wiki/tools.js'
-import { registerTool } from '../../electron/backend/tools/registry.js'
+import { registerTool, clearTools } from '../../electron/backend/tools/registry.js'
 import { cleanupSqliteFile, createRuntimeSqlitePath, createRuntimeTempDir } from '../../scripts/tmp-artifacts.mjs'
 
 function assert(condition, message, details = null) {
@@ -24,6 +24,7 @@ async function createStore(caseName) {
   const baseDir = await createRuntimeTempDir(`policy-test-${caseName}-${randomUUID()}`)
   cleanupSqliteFile(dbPath)
   const store = await openDb(dbPath)
+  clearTools() // 每个用例独立 registry（BE-08 重名检测要求）
   registerLedgerTools(store, { registerTool })
   registerTodoTools(store, { registerTool })
   registerScheduleTools(store, { registerTool })
