@@ -73,6 +73,41 @@ function buildChatRef({ date, messageId }) {
   return `${normalizeString(date)}#${normalizeString(messageId)}`
 }
 
+const IDENTITY_PERSON_CANDIDATE_FIELDS = [
+  'personName',
+  'relationshipToUser',
+  'roleSummary',
+  'personalitySummary',
+  'meaningToUser',
+  'sharedExperienceSummary',
+  'timelineSummary',
+  'firstKnownPeriod',
+  'emotionalWeight'
+]
+
+// LLM 提炼轮次提议的人物候选（443/445）：仅接受白名单字段，personName 必填。
+// 正则 buildCandidate 仅作为过渡期默认值，随 444 正则全面弃用后删除。
+function normalizePersonCandidate(candidate) {
+  if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) {
+    return null
+  }
+
+  const normalized = {}
+  for (const field of IDENTITY_PERSON_CANDIDATE_FIELDS) {
+    const snakeCase = field.replace(/[A-Z]/g, (ch) => `_${ch.toLowerCase()}`)
+    const value = normalizeString(candidate[field] ?? candidate[snakeCase])
+    if (value) {
+      normalized[field] = value
+    }
+  }
+
+  if (!normalized.personName) {
+    return null
+  }
+
+  return normalized
+}
+
 function cleanupPersonName(value) {
   const cleaned = stripTrailingParticles(value)
   if (!cleaned || cleaned.length > 24) return ''
@@ -574,10 +609,11 @@ export async function upsertIdentityPersonFromConversation(
     date,
     messageId,
     userMessage,
-    observation
+    observation,
+    candidate
   } = {}
 ) {
-  const candidate = buildCandidate(userMessage)
+  candidate = normalizePersonCandidate(candidate) ?? buildCandidate(userMessage)
   if (!candidate) {
     return { action: 'skipped', reason: 'no_candidate' }
   }

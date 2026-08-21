@@ -182,6 +182,36 @@ function normalizeKey(value) {
   return normalizeString(value).toLowerCase()
 }
 
+const IDENTITY_PROFILE_CANDIDATE_FIELDS = [
+  'userName',
+  'preferredName',
+  'cornieRelationship',
+  'identitySummary',
+  'lifeStageSummary',
+  'currentFocus',
+  'stressors',
+  'communicationPreference'
+]
+
+// LLM 提炼轮次提议的身份候选（443/445）：仅接受白名单字段，全部为空视为无候选。
+// 正则 buildCandidate 仅作为过渡期默认值，随 444 正则全面弃用后删除。
+function normalizeProfileCandidate(candidate) {
+  if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) {
+    return null
+  }
+
+  const normalized = {}
+  for (const field of IDENTITY_PROFILE_CANDIDATE_FIELDS) {
+    const snakeCase = field.replace(/[A-Z]/g, (ch) => `_${ch.toLowerCase()}`)
+    const value = normalizeString(candidate[field] ?? candidate[snakeCase])
+    if (value) {
+      normalized[field] = value
+    }
+  }
+
+  return Object.keys(normalized).length > 0 ? normalized : null
+}
+
 function buildChatRef({ date, messageId }) {
   return `${normalizeString(date)}#${normalizeString(messageId)}`
 }
@@ -440,10 +470,11 @@ export async function upsertIdentityProfileFromConversation(
     baseDir = process.cwd(),
     date,
     messageId,
-    userMessage
+    userMessage,
+    candidate
   } = {}
 ) {
-  const candidate = buildCandidate(userMessage)
+  candidate = normalizeProfileCandidate(candidate) ?? buildCandidate(userMessage)
   if (!candidate) {
     return { action: 'skipped', reason: 'no_candidate' }
   }

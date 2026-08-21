@@ -42,6 +42,28 @@ function buildChatRef({ date, messageId }) {
   return `${normalizeString(date)}#${normalizeString(messageId)}`
 }
 
+// LLM 提炼轮次提议的偏好候选（443/445）：title 必填。
+// 正则 buildCandidate 仅作为过渡期默认值，随 444 正则全面弃用后删除。
+function normalizePreferenceCandidate(candidate) {
+  if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) {
+    return null
+  }
+
+  const title = normalizeString(candidate.title)
+  if (!title) {
+    return null
+  }
+
+  return {
+    title,
+    stance: normalizeString(candidate.stance),
+    preferenceType: normalizeString(candidate.preferenceType ?? candidate.preference_type),
+    triggerKeywords: Array.isArray(candidate.triggerKeywords)
+      ? candidate.triggerKeywords.map((item) => normalizeString(item)).filter(Boolean)
+      : []
+  }
+}
+
 function guessPreferenceType(target, rawMessage) {
   const text = `${normalizeString(target)} ${normalizeString(rawMessage)}`
 
@@ -253,10 +275,11 @@ export async function upsertIdentityPreferenceFromConversation(
     baseDir = process.cwd(),
     date,
     messageId,
-    userMessage
+    userMessage,
+    candidate
   } = {}
 ) {
-  const candidate = buildCandidate(userMessage)
+  candidate = normalizePreferenceCandidate(candidate) ?? buildCandidate(userMessage)
   if (!candidate) {
     return { action: 'skipped', reason: 'no_candidate' }
   }

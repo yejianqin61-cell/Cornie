@@ -26,6 +26,28 @@ function buildChatRef({ date, messageId }) {
   return `${normalizeString(date)}#${normalizeString(messageId)}`
 }
 
+// LLM 提炼轮次提议的侧写候选（443/445）：title 必填。
+// 正则 buildCandidate 仅作为过渡期默认值，随 444 正则全面弃用后删除。
+function normalizeTraitCandidate(candidate) {
+  if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) {
+    return null
+  }
+
+  const title = normalizeString(candidate.title)
+  if (!title) {
+    return null
+  }
+
+  return {
+    title,
+    traitType: normalizeString(candidate.traitType ?? candidate.trait_type),
+    traitSummary: normalizeString(candidate.traitSummary ?? candidate.trait_summary),
+    triggerKeywords: Array.isArray(candidate.triggerKeywords)
+      ? candidate.triggerKeywords.map((item) => normalizeString(item)).filter(Boolean)
+      : []
+  }
+}
+
 function buildSourceRef({ date, messageId, userMessage }) {
   return {
     kind: 'chat',
@@ -239,10 +261,11 @@ export async function upsertIdentityTraitFromConversation(
     baseDir = process.cwd(),
     date,
     messageId,
-    userMessage
+    userMessage,
+    candidate
   } = {}
 ) {
-  const candidate = buildCandidate(userMessage)
+  candidate = normalizeTraitCandidate(candidate) ?? buildCandidate(userMessage)
   if (!candidate) {
     return { action: 'skipped', reason: 'no_candidate' }
   }
