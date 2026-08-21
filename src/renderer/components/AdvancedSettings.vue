@@ -6,7 +6,8 @@ const advancedMode = ref(false)
 const activePanel = ref('') // '' | 'memory-wiki' | 'versions' | 'rollback' | 'governance' | 'inspection' | 'audit'
 
 const panels = [
-  { id: 'memory-wiki', label: 'Memory Wiki 工作台', hint: '页面管理、主题索引等完整功能' },
+  // R-07：与前台"记忆 Wiki"入口分工——本工作台定位为治理/高级功能，日常翻阅与编辑在前台
+  { id: 'memory-wiki', label: '记忆治理工作台', hint: '版本回滚、主题索引、治理审核、巡检与审计' },
   { id: 'versions', label: '版本历史', hint: '查看页面的历史版本' },
   { id: 'rollback', label: '页面回滚', hint: '将页面恢复到历史版本' },
   { id: 'governance', label: '治理审核池', hint: '待审核的治理请求' },
