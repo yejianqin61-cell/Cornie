@@ -269,14 +269,18 @@ async function buildDistillationInput({ store, baseDir, date, history = [], user
   let memorySummaryLines = []
   try {
     const memoryWiki = await createMemoryWikiService({ baseDir, store })
-    const summaries = await memoryWiki.listSummaries({ status: 'active' })
+    // 466：提炼轮输入用轻索引（hydrate:false，不逐页读文件），仅主身份页按需 hydrate 一次。
+    const summaries = await memoryWiki.listSummaries({ status: 'active' }, { hydrate: false })
     const primary = summaries.find((item) => item?.pageType === 'identity_profile')
     const rest = summaries
       .filter((item) => item?.pageId !== primary?.pageId)
       .slice(0, DISTILLATION_MEMORY_PAGE_LIMIT)
 
     if (primary) {
-      memorySummaryLines.push(`- [identity] ${primary.title}: ${primary.summary || '暂无摘要'}`)
+      const fullProfile = primary.pageId ? await memoryWiki.get(primary.pageId) : null
+      const title = fullProfile?.title || primary.title
+      const summary = fullProfile?.summary || primary.summary || '暂无摘要'
+      memorySummaryLines.push(`- [identity] ${title}: ${summary}`)
     }
     for (const summary of rest) {
       memorySummaryLines.push(`- [${summary.pageType}] ${summary.title}: ${summary.summary || '暂无摘要'}`)
