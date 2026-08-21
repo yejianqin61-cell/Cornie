@@ -69,10 +69,16 @@ function buildObservationSourceRef(observation) {
   }
 }
 
-async function applyOwnerConfirmed(memoryWiki, pageId) {
+async function applyOwnerConfirmed(memoryWiki, pageId, applyAction) {
   const page = await memoryWiki.get(pageId)
   if (!page) {
     throw new Error(`memory wiki page not found after upgrade apply: ${pageId}`)
+  }
+
+  // 447：仅当真实写入且无冲突（created/updated）时才置已确认；
+  // conflict/noop 等场景保持原状态，等待人类治理。
+  if (!['created', 'updated'].includes(normalizeString(applyAction))) {
+    return page
   }
 
   const shouldActivateTrait =
@@ -199,7 +205,7 @@ export async function applyObservationWikiUpgradeRequest(
   }
 
   const memoryWiki = await createMemoryWikiService({ baseDir, store })
-  const confirmedPage = await applyOwnerConfirmed(memoryWiki, applyResult.pageId)
+  const confirmedPage = await applyOwnerConfirmed(memoryWiki, applyResult.pageId, applyResult.action)
   await appendObservationSource(memoryWiki, confirmedPage.pageId, observation)
   const approvedRequest = await governanceStore.updateStatus(requestId, 'approved')
   const finalPage = await memoryWiki.get(confirmedPage.pageId)
