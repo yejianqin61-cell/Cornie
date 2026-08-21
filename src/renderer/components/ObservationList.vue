@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { createObservation, deleteObservation, listObservations } from '../api'
 import { today } from '../utils/date'
+import { useDebouncedValue } from '../composables/useTimers'
 
 const OBSERVATION_TYPES = [
   { value: '', label: '全部小事' },
@@ -140,12 +141,9 @@ watch([activeTab, selectedDate, selectedType], () => {
   refresh()
 })
 
-let keywordTimer = null
-watch(keyword, () => {
-  if (keywordTimer) clearTimeout(keywordTimer)
-  keywordTimer = setTimeout(() => {
-    refresh()
-  }, 220)
+// FE-04：防抖搜索接入统一定时器工具，组件卸载自动清理，不再悬挂裸 setTimeout。
+useDebouncedValue(keyword, 220, () => {
+  refresh()
 })
 
 onMounted(refresh)

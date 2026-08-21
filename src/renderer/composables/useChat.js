@@ -13,6 +13,7 @@ export function useChat() {
   const messages = ref([])
   const sending = ref(false)
   let syncTimer = null
+  let visibilityHandler = null
 
   function pushChatItem(item) {
     messages.value.push({
@@ -313,10 +314,29 @@ export function useChat() {
 
     stopConversationSync()
 
+    // FE-04：防重入——上一次同步未完成时跳过本轮，避免慢响应下请求叠加。
+    let syncing = false
     const runSync = async () => {
-      if (typeof document !== 'undefined' && document.hidden) return
-      await syncConversation(syncDate)
-      await onAfterSync?.()
+      if (syncing) return
+      syncing = true
+      try {
+        if (typeof document !== 'undefined' && document.hidden) return
+        await syncConversation(syncDate)
+        await onAfterSync?.()
+      } finally {
+        syncing = false
+      }
+    }
+
+    // FE-04：窗口隐藏时定时器仍走（runSync 内部跳过），恢复可见立即补一次同步。
+    const onVisibilityChange = () => {
+      if (typeof document !== 'undefined' && !document.hidden) {
+        runSync()
+      }
+    }
+    visibilityHandler = onVisibilityChange
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', onVisibilityChange)
     }
 
     syncTimer = window.setInterval(() => {
@@ -330,6 +350,10 @@ export function useChat() {
     if (syncTimer) {
       window.clearInterval(syncTimer)
       syncTimer = null
+    }
+    if (typeof document !== 'undefined' && visibilityHandler) {
+      document.removeEventListener('visibilitychange', visibilityHandler)
+      visibilityHandler = null
     }
   }
 
