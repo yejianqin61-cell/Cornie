@@ -28,6 +28,13 @@ import {
   updateTopicIndexAliases
 } from '../api'
 import ConfirmCard from './ConfirmCard.vue'
+// FE-09：工作台按职责拆分——各区块独立组件，本文件只做组合与状态协调。
+import MemoryWikiGovernanceQueuePanel from './MemoryWikiGovernanceQueuePanel.vue'
+import MemoryWikiPageEditorPanel from './MemoryWikiPageEditorPanel.vue'
+import MemoryWikiPageListPanel from './MemoryWikiPageListPanel.vue'
+import MemoryWikiTopicIndexPanel from './MemoryWikiTopicIndexPanel.vue'
+import MemoryWikiVersionPanel from './MemoryWikiVersionPanel.vue'
+import MemoryWikiWorkspaceHead from './MemoryWikiWorkspaceHead.vue'
 
 const loading = ref(false)
 const saving = ref(false)
@@ -766,571 +773,87 @@ onMounted(refreshAll)
 
 <template>
   <section class="workspaceShell">
-    <header class="workspaceHead">
-      <div>
-        <div class="workspaceTitle">Memory Wiki 工作台</div>
-        <div class="workspaceHint">
-          主人可以直接看长期记忆页面、主题索引、治理待审核池，还有那些需要你亲自点头的高风险动作。
-        </div>
-      </div>
-      <div class="headActions">
-        <button :disabled="saving" @click="runInspectionScan">{{ saving ? '处理中…' : '运行巡检入池' }}</button>
-        <button :disabled="loading" @click="refreshAll">{{ loading ? '刷新中…' : '刷新全部' }}</button>
-      </div>
-    </header>
+    <MemoryWikiWorkspaceHead
+      :loading="loading"
+      :saving="saving"
+      @run-inspection="runInspectionScan"
+      @refresh="refreshAll"
+    />
 
     <div v-if="errorMsg" class="workspaceError">{{ errorMsg }}</div>
 
     <div class="workspaceGrid">
-      <section class="workspaceCard">
-        <div class="cardHead">
-          <div>
-            <div class="cardTitle">记忆页面</div>
-            <div class="cardSubhint">先从页面总览看清楚：哪些记忆正在使用，哪些只是暂存，哪些已经归档。</div>
-          </div>
-          <div class="cardFilters">
-            <select v-model="pageFilterType" @change="refreshPages">
-              <option value="">全部类型</option>
-              <option value="topic">topic</option>
-              <option value="person">person</option>
-              <option value="event">event</option>
-              <option value="preference">preference</option>
-              <option value="identity_profile">identity_profile</option>
-              <option value="identity_person">identity_person</option>
-              <option value="identity_preference">identity_preference</option>
-              <option value="identity_trait">identity_trait</option>
-            </select>
-            <select v-model="pageFilterStatus" @change="refreshPages">
-              <option value="">全部状态</option>
-              <option value="active">active</option>
-              <option value="inactive">inactive</option>
-              <option value="archived">archived</option>
-            </select>
-          </div>
-        </div>
+    <MemoryWikiPageListPanel
+      :pages="pages"
+      :selected-page-id="selectedPageId"
+      :filter-type="pageFilterType"
+      :filter-status="pageFilterStatus"
+      @select-page="selectPage"
+      @update:filter-type="pageFilterType = $event"
+      @update:filter-status="pageFilterStatus = $event"
+      @change="refreshPages"
+    />
 
-        <div v-if="pages.length === 0" class="emptyState">
-          这里暂时还没有记忆页面。等铃湾和主人慢慢把重要的人、事、偏好记下来，这里就会热闹起来。
-        </div>
+    <MemoryWikiPageEditorPanel
+      :selected-page="selectedPage"
+      :page-form="pageForm"
+      :saving="saving"
+      :page-source-trace="pageSourceTrace"
+      :selected-version-id="selectedVersionId"
+      :identity-page-options="identityPageOptions"
+      :identity-relationship-rules="identityRelationshipRules"
+      :identity-relationship-candidates="identityRelationshipCandidates"
+      :identity-relationship-warnings="identityRelationshipWarnings"
+      :related-page-issues="relatedPageIssues"
+      :related-page-selection="relatedPageSelection"
+      :page-topic-keyword="pageTopicKeyword"
+      :page-topic-aliases-text="pageTopicAliasesText"
+      :page-topic-note="pageTopicNote"
+      @reset="resetPageForm"
+      @save="savePage"
+      @archive="archivePage"
+      @restore="restorePage"
+      @rollback="rollbackPage"
+      @save-related-pages="saveRelatedPages"
+      @link-topic="linkSelectedPageToTopic"
+      @update:page-topic-keyword="pageTopicKeyword = $event"
+      @update:page-topic-aliases-text="pageTopicAliasesText = $event"
+      @update:page-topic-note="pageTopicNote = $event"
+      @update:related-page-selection="relatedPageSelection = $event"
+    />
 
-        <div v-else class="entryList">
-          <button
-            v-for="page in pages"
-            :key="page.pageId"
-            class="entryRow"
-            :class="{ active: page.pageId === selectedPageId }"
-            @click="selectPage(page.pageId)"
-          >
-            <div>
-              <div class="entryMain">{{ page.title }}</div>
-              <div class="entryMeta">{{ page.pageType }} · {{ page.status }} · {{ page.importance }}</div>
-            </div>
-          </button>
-        </div>
-      </section>
+    <MemoryWikiVersionPanel
+      :page-id="pageForm.pageId"
+      :page-versions="pageVersions"
+      :selected-version-id="selectedVersionId"
+      :selected-version="selectedVersion"
+      :version-diff="versionDiff"
+      @select-version="selectVersion"
+    />
 
-      <section class="workspaceCard">
-        <div class="cardHead">
-          <div>
-            <div class="cardTitle">{{ selectedPage ? '编辑页面' : '新建页面' }}</div>
-            <div class="cardSubhint">
-              {{ selectedPage ? '正在整理这页长期记忆的标题、摘要、正文和重要性。' : '先写标题和摘要，再慢慢把这一页记忆补完整。' }}
-            </div>
-          </div>
-          <button v-if="selectedPage" @click="resetPageForm">新建页面</button>
-        </div>
+    <MemoryWikiTopicIndexPanel
+      :topic-items="topicItems"
+      :selected-topic-key="selectedTopicKey"
+      :topic-detail="topicDetail"
+      :topic-source-trace="topicSourceTrace"
+      :saving="saving"
+      @select-topic="selectTopic"
+      @save-topic-aliases="saveTopicAliases"
+    />
 
-        <div class="formGrid">
-          <label>
-            <span>页面类型</span>
-            <select v-model="pageForm.pageType">
-              <option value="topic">topic</option>
-              <option value="person">person</option>
-              <option value="event">event</option>
-              <option value="preference">preference</option>
-              <option value="identity_profile">identity_profile</option>
-              <option value="identity_person">identity_person</option>
-              <option value="identity_preference">identity_preference</option>
-              <option value="identity_trait">identity_trait</option>
-            </select>
-          </label>
-          <label>
-            <span>状态</span>
-            <select v-model="pageForm.status">
-              <option value="active">active</option>
-              <option value="inactive">inactive</option>
-              <option value="archived">archived</option>
-            </select>
-          </label>
-          <label class="span2">
-            <span>标题</span>
-            <input v-model="pageForm.title" placeholder="输入页面标题" />
-          </label>
-          <template v-if="pageForm.pageType === 'identity_profile'">
-            <label>
-              <span>用户名字</span>
-              <input v-model="pageForm.userName" placeholder="例如：叶健钦" />
-            </label>
-            <label>
-              <span>偏好称呼</span>
-              <input v-model="pageForm.preferredName" placeholder="例如：爸爸" />
-            </label>
-            <label class="span2">
-              <span>与 Cornie 的关系</span>
-              <input v-model="pageForm.cornieRelationship" placeholder="例如：用户是 Cornie 的创造者，也是 Cornie 的爸爸" />
-            </label>
-            <label class="span2">
-              <span>身份摘要</span>
-              <textarea v-model="pageForm.identitySummary" rows="3" placeholder="例如：当前处于项目、考试、实习与求职压力交织阶段。" />
-            </label>
-            <label class="span2">
-              <span>阶段概况</span>
-              <textarea v-model="pageForm.lifeStageSummary" rows="3" placeholder="例如：学业推进中，同时承担多个个人项目与求职任务。" />
-            </label>
-            <label>
-              <span>当前关注</span>
-              <input v-model="pageForm.currentFocus" placeholder="例如：项目推进、考试、实习" />
-            </label>
-            <label>
-              <span>主要压力</span>
-              <input v-model="pageForm.stressors" placeholder="例如：时间压力、项目并行、求职焦虑" />
-            </label>
-            <label class="span2">
-              <span>沟通偏好</span>
-              <textarea v-model="pageForm.communicationPreference" rows="2" placeholder="例如：希望被温柔、克制、记得上下文地陪伴。" />
-            </label>
-          </template>
-          <template v-if="pageForm.pageType === 'identity_preference'">
-            <label>
-              <span>偏好类型</span>
-              <select v-model="pageForm.preferenceType">
-                <option value="">未分类</option>
-                <option value="饮食">饮食</option>
-                <option value="交流">交流</option>
-                <option value="风格">风格</option>
-                <option value="作息">作息</option>
-                <option value="情感表达">情感表达</option>
-              </select>
-            </label>
-            <label>
-              <span>立场</span>
-              <select v-model="pageForm.stance">
-                <option value="">未标注</option>
-                <option value="喜欢">喜欢</option>
-                <option value="不喜欢">不喜欢</option>
-                <option value="中性偏好">中性偏好</option>
-              </select>
-            </label>
-            <label>
-              <span>稳定性</span>
-              <select v-model="pageForm.stabilityLevel">
-                <option value="low">low</option>
-                <option value="medium">medium</option>
-                <option value="high">high</option>
-              </select>
-            </label>
-            <label>
-              <span>证据计数</span>
-              <input v-model="pageForm.evidenceCount" type="number" min="0" />
-            </label>
-            <label class="span2">
-              <span>最近确认时间</span>
-              <input v-model="pageForm.lastConfirmedAt" placeholder="例如：2026-06-29" />
-            </label>
-            <label class="span2">
-              <span>触发关键词（逗号分隔）</span>
-              <input v-model="pageForm.triggerKeywordsText" placeholder="例如：奶茶, 咖啡, 甜度" />
-            </label>
-          </template>
-          <template v-if="pageForm.pageType === 'identity_person'">
-            <label>
-              <span>人物名字</span>
-              <input v-model="pageForm.personName" placeholder="例如：钟奕菲" />
-            </label>
-            <label>
-              <span>与用户关系</span>
-              <input v-model="pageForm.relationshipToUser" placeholder="例如：初恋、朋友、家人" />
-            </label>
-            <label class="span2">
-              <span>身份摘要</span>
-              <textarea v-model="pageForm.roleSummary" rows="2" placeholder="例如：用户人生中具有高情感权重的重要人物。" />
-            </label>
-            <label class="span2">
-              <span>性格摘要</span>
-              <textarea v-model="pageForm.personalitySummary" rows="2" placeholder="例如：温柔、害羞、内向。" />
-            </label>
-            <label class="span2">
-              <span>共同经历</span>
-              <textarea v-model="pageForm.sharedExperienceSummary" rows="3" placeholder="例如：2021年冬天相恋，2022年春天疏远，2022年夏天决裂。" />
-            </label>
-            <label>
-              <span>情感权重</span>
-              <input v-model="pageForm.emotionalWeight" placeholder="例如：high / 很高" />
-            </label>
-            <label>
-              <span>首次已知阶段</span>
-              <input v-model="pageForm.firstKnownPeriod" placeholder="例如：2021年冬天" />
-            </label>
-            <label class="span2">
-              <span>时间线摘要</span>
-              <textarea v-model="pageForm.timelineSummary" rows="2" placeholder="例如：相恋-疏远-决裂。" />
-            </label>
-          </template>
-          <template v-if="pageForm.pageType === 'identity_trait'">
-            <label>
-              <span>侧写类型</span>
-              <select v-model="pageForm.traitType">
-                <option value="">未分类</option>
-                <option value="性格倾向">性格倾向</option>
-                <option value="情绪模式">情绪模式</option>
-                <option value="沟通风格">沟通风格</option>
-                <option value="压力反应">压力反应</option>
-                <option value="关系状态">关系状态</option>
-              </select>
-            </label>
-            <label>
-              <span>置信度</span>
-              <select v-model="pageForm.confidenceLevel">
-                <option value="low">low</option>
-                <option value="medium">medium</option>
-                <option value="high">high</option>
-              </select>
-            </label>
-            <label>
-              <span>稳定性</span>
-              <select v-model="pageForm.stabilityLevel">
-                <option value="low">low</option>
-                <option value="medium">medium</option>
-                <option value="high">high</option>
-              </select>
-            </label>
-            <label>
-              <span>主人确认</span>
-              <select v-model="pageForm.ownerConfirmed">
-                <option :value="false">未确认</option>
-                <option :value="true">已确认</option>
-              </select>
-            </label>
-            <label class="span2">
-              <span>侧写摘要</span>
-              <textarea v-model="pageForm.traitSummary" rows="3" placeholder="例如：高压时容易疲惫，但会努力把情绪转成行动。" />
-            </label>
-            <label>
-              <span>证据计数</span>
-              <input v-model="pageForm.evidenceCount" type="number" min="0" />
-            </label>
-            <label>
-              <span>最近确认时间</span>
-              <input v-model="pageForm.lastConfirmedAt" placeholder="例如：2026-06-29" />
-            </label>
-            <label class="span2">
-              <span>触发关键词（逗号分隔）</span>
-              <input v-model="pageForm.triggerKeywordsText" placeholder="例如：压力, 焦虑, 安慰, 累" />
-            </label>
-          </template>
-          <label class="span2">
-            <span>摘要</span>
-            <textarea v-model="pageForm.summary" rows="4" placeholder="写一段简短摘要" />
-          </label>
-          <label class="span2">
-            <span>正文</span>
-            <textarea v-model="pageForm.body" rows="10" placeholder="这里是页面正文 Markdown" />
-          </label>
-          <label class="span2">
-            <span>别名（逗号分隔）</span>
-            <input v-model="pageForm.aliasesText" placeholder="例如：龙虾, 澳洲龙虾" />
-          </label>
-          <label>
-            <span>重要性</span>
-            <select v-model="pageForm.importance">
-              <option value="low">low</option>
-              <option value="medium">medium</option>
-              <option value="high">high</option>
-              <option value="critical">critical</option>
-            </select>
-          </label>
-          <label>
-            <span>页面 ID</span>
-            <input :value="pageForm.pageId || '保存后生成'" disabled />
-          </label>
-        </div>
-
-        <div class="actionRow">
-          <button :disabled="saving" @click="savePage">{{ saving ? '保存中…' : '保存页面' }}</button>
-          <button v-if="pageForm.pageId && pageForm.status !== 'archived'" :disabled="saving" @click="archivePage">归档页面</button>
-          <button v-if="pageForm.pageId && pageForm.status === 'archived'" :disabled="saving" @click="restorePage">恢复页面</button>
-          <button v-if="pageForm.pageId" :disabled="saving || !selectedVersionId" @click="rollbackPage">
-            {{ selectedVersionId ? '回滚到当前选中版本' : '先选择版本再回滚' }}
-          </button>
-        </div>
-
-        <div v-if="pageSourceTrace && pageForm.pageId" class="detailSection">
-          <div class="evidenceTitle">来源追溯</div>
-          <div class="detailMeta">关联页面：{{ (pageSourceTrace.relatedPages || []).map((item) => item.title).join(', ') || '无' }}</div>
-          <div class="detailMeta">聊天来源：{{ (pageSourceTrace.chatSources || []).map((item) => item.date).join(', ') || '无' }}</div>
-          <div class="detailMeta">观察来源：{{ (pageSourceTrace.observationSources || []).map((item) => item.title).join(', ') || '无' }}</div>
-          <div v-if="(pageSourceTrace.chatSources || []).length > 0" class="evidenceBlock">
-            <div class="evidenceTitle">聊天片段</div>
-            <div class="evidenceCards">
-              <div v-for="item in pageSourceTrace.chatSources" :key="`${item.date}-${item.messageId}`" class="evidenceCard">
-                <div class="evidenceSummary">{{ item.title }}</div>
-                <div class="detailMeta">{{ item.preview || '原消息已不可读' }}</div>
-              </div>
-            </div>
-          </div>
-          <div v-if="(pageSourceTrace.observationSources || []).length > 0" class="evidenceBlock">
-            <div class="evidenceTitle">观察记录</div>
-            <div class="evidenceCards">
-              <div v-for="item in pageSourceTrace.observationSources" :key="item.observationId" class="evidenceCard">
-                <div class="evidenceSummary">{{ item.title }}</div>
-                <div class="detailMeta">{{ item.preview || '原观察记录已不可读' }}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="pageForm.pageId && pageForm.pageType.startsWith('identity_')" class="detailSection">
-          <div class="evidenceTitle">Identity 关系链路</div>
-          <div class="cardSubhint">
-            Identity 页不应该只是孤零零的一页。把“这个人是谁、属于谁、和哪些偏好或特征有关”串起来，铃湾后面召回会稳定很多。
-          </div>
-
-          <div v-if="identityRelationshipRules.length > 0" class="suggestionList">
-            <div v-for="item in identityRelationshipRules" :key="item" class="suggestionItem">{{ item }}</div>
-          </div>
-
-          <div class="formGrid relationshipGrid">
-            <label class="span2">
-              <span>关联 Identity 页面</span>
-              <select v-model="relatedPageSelection" multiple size="6">
-                <option v-for="item in identityPageOptions" :key="item.pageId" :value="item.pageId">
-                  {{ item.title }} · {{ item.pageType }} · {{ item.status }}
-                </option>
-              </select>
-            </label>
-          </div>
-
-          <div class="actionRow">
-            <button :disabled="saving" @click="saveRelatedPages">{{ saving ? '保存中…' : '保存关系链路' }}</button>
-          </div>
-
-          <div v-if="identityRelationshipCandidates.length > 0" class="detailSection">
-            <div class="evidenceTitle">推荐补链</div>
-            <div class="suggestionList">
-              <div
-                v-for="item in identityRelationshipCandidates"
-                :key="item.pageId"
-                class="suggestionItem"
-              >
-                {{ item.title }} · {{ item.pageType }} · {{ item.linked ? '已关联' : '可补充关联' }}
-              </div>
-            </div>
-          </div>
-
-          <div v-if="identityRelationshipWarnings.length > 0" class="detailSection">
-            <div class="evidenceTitle">治理提醒</div>
-            <div class="suggestionList">
-              <div v-for="item in identityRelationshipWarnings" :key="item" class="suggestionItem warningItem">{{ item }}</div>
-            </div>
-          </div>
-
-          <div v-if="relatedPageIssues.length > 0" class="detailSection">
-            <div class="evidenceTitle">关联异常</div>
-            <div class="suggestionList">
-              <div
-                v-for="item in relatedPageIssues"
-                :key="`${item.issueType}-${item.relatedPageId}`"
-                class="suggestionItem warningItem"
-              >
-                {{ item.message || `${item.issueType} · ${item.relatedPageId}` }}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="pageForm.pageId && pageForm.pageType === 'identity_person'" class="detailSection">
-          <div class="evidenceTitle">人物页联动 Topic</div>
-          <div class="cardSubhint">
-            给重要人物页挂上一个主题索引键。以后主人提到这个名字、别名，或相关人物线索时，铃湾就更容易优先召回这页人物记忆。
-          </div>
-          <div class="formGrid topicLinkGrid">
-            <label>
-              <span>主题关键词</span>
-              <input v-model="pageTopicKeyword" placeholder="例如：钟奕菲" />
-            </label>
-            <label>
-              <span>沿用重要性</span>
-              <input :value="pageForm.importance" disabled />
-            </label>
-            <label class="span2">
-              <span>主题别名（逗号分隔）</span>
-              <input v-model="pageTopicAliasesText" placeholder="例如：奕菲, 钟同学" />
-            </label>
-            <label class="span2">
-              <span>索引备注</span>
-              <textarea v-model="pageTopicNote" rows="3" placeholder="给这个人物主题留一句简短备注" />
-            </label>
-          </div>
-          <div class="actionRow">
-            <button :disabled="saving || !pageTopicKeyword.trim()" @click="linkSelectedPageToTopic">
-              {{ saving ? '联动中…' : '联动到 Topic Index' }}
-            </button>
-          </div>
-        </div>
-      </section>
-
-      <section class="workspaceCard span2">
-        <div class="cardHead">
-          <div>
-            <div class="cardTitle">版本历史与回滚</div>
-            <div class="cardSubhint">先看版本列表，再选一个版本。这样主人不需要手输版本 ID，也更不容易回滚错页。</div>
-          </div>
-          <div class="cardHint">每次重要修改前后留下的快照，都会在这里排开给你看。</div>
-        </div>
-
-        <div v-if="!pageForm.pageId" class="emptyDetail compactEmpty">
-          先从左边选中一个记忆页面，我就把这页的版本历史整理给你看。
-        </div>
-
-        <div v-else class="versionGrid">
-          <div v-if="pageVersions.length === 0" class="emptyDetail compactEmpty">
-            这页目前还没有可用的历史版本记录。
-          </div>
-
-          <div v-else class="versionList">
-            <button
-              v-for="item in pageVersions"
-              :key="item.versionId"
-              class="entryRow"
-              :class="{ active: item.versionId === selectedVersionId }"
-              @click="selectVersion(item.versionId)"
-            >
-              <div>
-                <div class="entryMain">{{ item.reason || 'snapshot' }}</div>
-                <div class="entryMeta">{{ item.versionId }} · {{ item.createdAt || '未知时间' }}</div>
-              </div>
-            </button>
-          </div>
-
-          <div class="versionDetail">
-            <div v-if="selectedVersion" class="governanceDetail">
-              <div class="detailTitle">已选版本</div>
-              <div class="detailMeta">版本 ID：{{ selectedVersion.versionId }}</div>
-              <div class="detailMeta">快照原因：{{ selectedVersion.reason || 'snapshot' }}</div>
-              <div class="detailMeta">创建时间：{{ selectedVersion.createdAt || '未知时间' }}</div>
-
-              <div v-if="versionDiff" class="evidenceBlock">
-                <div class="evidenceTitle">版本摘要</div>
-                <div class="detailMeta">标题变更：{{ versionDiff.titleChanged ? '是' : '否' }}</div>
-                <div class="detailMeta">摘要变更：{{ versionDiff.summaryChanged ? '是' : '否' }}</div>
-                <div class="detailMeta">正文变更：{{ versionDiff.bodyChanged ? '是' : '否' }}</div>
-                <div class="detailMeta">状态变更：{{ versionDiff.statusChanged ? '是' : '否' }}</div>
-                <div class="detailMeta">重要性变更：{{ versionDiff.importanceChanged ? '是' : '否' }}</div>
-                <pre class="evidenceItem">回滚后将把当前页面恢复到这个历史快照。</pre>
-              </div>
-            </div>
-            <div v-else class="emptyDetail compactEmpty">
-              点左边某个版本，我就把这个版本的关键信息展开给你看。
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="workspaceCard span2">
-        <div class="cardHead">
-          <div>
-            <div class="cardTitle">Topic Index</div>
-            <div class="cardSubhint">主题索引更像一张导航图，帮主人快速找到某个关键词都在哪几天、哪几页里出现过。</div>
-          </div>
-          <div class="cardHint">这里能看到主题关键词、热度、日期，以及它们连到了哪些记忆页面。</div>
-        </div>
-
-        <div class="topicGrid">
-          <div v-if="topicItems.length === 0" class="emptyDetail">
-            现在还没有可用的主题索引。等记忆页面和聊天慢慢积累起来，这里就会帮你把关键词串起来。
-          </div>
-
-          <div v-else class="topicList">
-            <button
-              v-for="item in topicItems"
-              :key="item.normalizedKey"
-              class="entryRow"
-              :class="{ active: item.normalizedKey === selectedTopicKey }"
-              @click="selectTopic(item.normalizedKey)"
-            >
-              <div>
-                <div class="entryMain">{{ item.keyword || item.normalizedKey }}</div>
-                <div class="entryMeta">heat {{ item.heatScore ?? 0 }} · {{ item.pageIds?.length || 0 }} pages</div>
-              </div>
-            </button>
-          </div>
-
-          <div class="topicDetail" v-if="topicDetail">
-            <div class="detailTitle">{{ topicDetail.keyword || topicDetail.normalizedKey }}</div>
-            <div class="detailMeta">索引键：{{ topicDetail.normalizedKey }}</div>
-            <div class="detailMeta">主题热度：{{ topicDetail.heatScore ?? 0 }}</div>
-            <div class="detailMeta">相关日期：{{ (topicDetail.dates || []).join(', ') || '无' }}</div>
-            <div class="detailMeta">关联页面：{{ (topicDetail.pageIds || topicDetail.memoryPageIds || []).join(', ') || '无' }}</div>
-            <div class="detailMeta">聊天来源：{{ (topicSourceTrace?.chatSources || []).map((item) => item.date).join(', ') || '无' }}</div>
-            <div class="detailMeta">观察来源：{{ (topicSourceTrace?.observationSources || []).map((item) => item.title).join(', ') || '无' }}</div>
-            <label class="topicAliases">
-              <span>别名（逗号分隔）</span>
-              <input v-model="topicDetail.aliasesText" />
-            </label>
-            <button :disabled="saving" @click="saveTopicAliases">保存主题别名</button>
-          </div>
-          <div v-else class="emptyDetail">点一个主题，我就把它的索引详情展开给主人看。</div>
-        </div>
-      </section>
-
-      <section class="workspaceCard">
-        <div class="cardHead">
-          <div>
-            <div class="cardTitle">治理待审核区</div>
-            <div class="cardSubhint">这里放的是治理建议，不会直接改数据，先给主人过目再决定怎么处理。</div>
-          </div>
-          <div class="cardFilters">
-            <select v-model="governanceFilterStatus" @change="refreshGovernanceItems">
-              <option value="">全部状态</option>
-              <option value="pending">pending</option>
-              <option value="approved">approved</option>
-              <option value="rejected">rejected</option>
-              <option value="deferred">deferred</option>
-            </select>
-            <select v-model="governanceFilterSection" @change="refreshGovernanceItems">
-              <option value="">全部分区</option>
-              <option v-for="section in governanceSections" :key="section" :value="section">{{ section }}</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="queueSummary">
-          当前待处理 <strong>{{ pendingGovernanceCount }}</strong> 项
-        </div>
-
-        <div class="filterSummary">
-          当前筛选：{{ governanceFilterSummary }}
-        </div>
-
-        <div v-if="governanceItems.length === 0" class="emptyDetail compactEmpty">
-          现在没有新的治理建议。等巡检或整理过程发现问题，这里会再提醒你。
-        </div>
-
-        <div v-else class="entryList">
-          <button
-            v-for="item in governanceItems"
-            :key="item.requestId"
-            class="entryRow"
-            :class="{ active: item.requestId === selectedGovernanceId }"
-            @click="selectGovernance(item.requestId)"
-          >
-            <div>
-              <div class="entryMain">{{ item.title || item.requestType }}</div>
-              <div class="entryMeta">{{ item.queueSection }} · {{ item.status }} · {{ item.riskLevel }}</div>
-            </div>
-          </button>
-        </div>
-      </section>
+    <MemoryWikiGovernanceQueuePanel
+      :governance-items="governanceItems"
+      :selected-governance-id="selectedGovernanceId"
+      :filter-status="governanceFilterStatus"
+      :filter-section="governanceFilterSection"
+      :sections="governanceSections"
+      :pending-count="pendingGovernanceCount"
+      :filter-summary="governanceFilterSummary"
+      @select-governance="selectGovernance"
+      @update:filter-status="governanceFilterStatus = $event"
+      @update:filter-section="governanceFilterSection = $event"
+      @change="refreshGovernanceItems"
+    />
 
       <section class="workspaceCard">
         <div class="cardHead">

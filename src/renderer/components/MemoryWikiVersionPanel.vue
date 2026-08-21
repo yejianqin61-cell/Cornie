@@ -1,0 +1,180 @@
+<script setup>
+defineProps({
+  pageId: { type: String, default: '' },
+  pageVersions: { type: Array, default: () => [] },
+  selectedVersionId: { type: String, default: '' },
+  selectedVersion: { type: Object, default: null },
+  versionDiff: { type: Object, default: null }
+})
+
+const emit = defineEmits(['select-version'])
+</script>
+
+<template>
+  <section class="workspaceCard span2">
+    <div class="cardHead">
+      <div>
+        <div class="cardTitle">版本历史与回滚</div>
+        <div class="cardSubhint">先看版本列表，再选一个版本。这样主人不需要手输版本 ID，也更不容易回滚错页。</div>
+      </div>
+      <div class="cardHint">每次重要修改前后留下的快照，都会在这里排开给你看。</div>
+    </div>
+
+    <div v-if="!pageId" class="emptyDetail compactEmpty">
+      先从左边选中一个记忆页面，我就把这页的版本历史整理给你看。
+    </div>
+
+    <div v-else class="versionGrid">
+      <div v-if="pageVersions.length === 0" class="emptyDetail compactEmpty">
+        这页目前还没有可用的历史版本记录。
+      </div>
+
+      <div v-else class="versionList">
+        <button
+          v-for="item in pageVersions"
+          :key="item.versionId"
+          class="entryRow"
+          :class="{ active: item.versionId === selectedVersionId }"
+          @click="emit('select-version', item.versionId)"
+        >
+          <div>
+            <div class="entryMain">{{ item.reason || 'snapshot' }}</div>
+            <div class="entryMeta">{{ item.versionId }} · {{ item.createdAt || '未知时间' }}</div>
+          </div>
+        </button>
+      </div>
+
+      <div class="versionDetail">
+        <div v-if="selectedVersion" class="governanceDetail">
+          <div class="detailTitle">已选版本</div>
+          <div class="detailMeta">版本 ID：{{ selectedVersion.versionId }}</div>
+          <div class="detailMeta">快照原因：{{ selectedVersion.reason || 'snapshot' }}</div>
+          <div class="detailMeta">创建时间：{{ selectedVersion.createdAt || '未知时间' }}</div>
+
+          <div v-if="versionDiff" class="evidenceBlock">
+            <div class="evidenceTitle">版本摘要</div>
+            <div class="detailMeta">标题变更：{{ versionDiff.titleChanged ? '是' : '否' }}</div>
+            <div class="detailMeta">摘要变更：{{ versionDiff.summaryChanged ? '是' : '否' }}</div>
+            <div class="detailMeta">正文变更：{{ versionDiff.bodyChanged ? '是' : '否' }}</div>
+            <div class="detailMeta">状态变更：{{ versionDiff.statusChanged ? '是' : '否' }}</div>
+            <div class="detailMeta">重要性变更：{{ versionDiff.importanceChanged ? '是' : '否' }}</div>
+            <pre class="evidenceItem">回滚后将把当前页面恢复到这个历史快照。</pre>
+          </div>
+        </div>
+        <div v-else class="emptyDetail compactEmpty">
+          点左边某个版本，我就把这个版本的关键信息展开给你看。
+        </div>
+      </div>
+    </div>
+  </section>
+</template>
+
+<style scoped>
+.workspaceCard{
+  background: rgba(255,255,255,.05);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 16px;
+  display:flex;
+  flex-direction:column;
+  gap: 14px;
+  min-height: 0;
+}
+.span2{ grid-column: 1 / -1; }
+.cardHead{
+  display:flex;
+  justify-content: space-between;
+  align-items:flex-start;
+  gap: 12px;
+}
+.cardTitle{ font-weight: 800; font-size: 16px; }
+.cardHint{ color: var(--muted); font-size: 12px; max-width: 360px; text-align: right; line-height: 1.5; }
+.cardSubhint{ margin-top: 4px; color: var(--muted); font-size: 12px; }
+.versionGrid{
+  display:grid;
+  grid-template-columns: minmax(260px, 360px) minmax(0, 1fr);
+  gap: 14px;
+  min-height: 0;
+}
+.versionList{
+  display:flex;
+  flex-direction:column;
+  gap: 8px;
+  overflow:auto;
+}
+.versionDetail{
+  min-width: 0;
+}
+.entryRow{
+  text-align:left;
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 16px;
+}
+.entryRow.active{
+  background: rgba(125,211,252,.12);
+  border-color: rgba(125,211,252,.35);
+}
+.entryMain{ font-weight: 700; }
+.entryMeta{ margin-top: 4px; font-size: 12px; color: var(--muted); }
+.governanceDetail{
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(255,255,255,.03);
+  padding: 16px;
+}
+.detailTitle{ font-weight: 800; font-size: 18px; }
+.detailMeta{ margin-top: 8px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.evidenceBlock{
+  margin-top: 14px;
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
+}
+.evidenceTitle{
+  font-size: 13px;
+  font-weight: 700;
+}
+.evidenceItem{
+  margin: 0;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(15,23,42,.55);
+  color: rgba(226,232,240,.92);
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow:auto;
+}
+.emptyDetail{
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: rgba(255,255,255,.03);
+  padding: 16px;
+  color: var(--muted);
+  display:grid;
+  place-items:center;
+  min-height: 180px;
+  text-align:center;
+  line-height: 1.6;
+}
+.compactEmpty{
+  min-height: 120px;
+}
+@media (max-width: 720px){
+  .cardHead{
+    flex-direction: column;
+  }
+  .cardHint{
+    text-align:left;
+  }
+}
+@media (max-width: 1120px){
+  .versionGrid{
+    grid-template-columns: 1fr;
+  }
+}
+</style>

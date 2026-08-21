@@ -84,6 +84,91 @@ const ORDINARY_PAGE_TYPES = [
 const ALL_PAGE_TYPES = [...PAGE_TYPES, ...ORDINARY_PAGE_TYPES]
 const IDENTITY_PAGE_TYPES = new Set(PAGE_TYPES.map((item) => item.value))
 
+// FE-09：页面类型文案/引导/提示字段收敛为配置表——新增类型只加配置，不改 if 链。
+const PAGE_TYPE_COPY = {
+  identity_profile: {
+    guide: {
+      eyebrow: '最核心的一页',
+      title: '这里最适合写“你是谁”',
+      body: '名字、你和铃湾的关系、你最近的人生状态，或者你最希望被怎样记住，都可以慢慢放在这里。'
+    },
+    titleLabel: '这页想记住的名字或主题',
+    titlePlaceholder: '比如：叶健钦、现在的我、铃湾记住的我',
+    summaryLabel: '一句话介绍你自己',
+    summaryPlaceholder: '先用一两句话写下“你是谁”和“铃湾最该记住什么”。',
+    contentLabel: '更完整地写下你自己',
+    contentPlaceholder: '可以写你的名字、身份、你和铃湾的关系、最近的状态，或者你最希望以后被怎样理解。',
+    prompts: [
+      '你叫什么？如果铃湾平时有更亲近的叫法，也可以一起写下来。',
+      '你和铃湾是什么关系？你希望她怎样理解你们之间的连接？',
+      '你最近正在经历什么阶段？生活、学业、工作、情绪都可以简单提一下。',
+      '你现在最在意什么？最近最想守住、推进，或最想被理解的是什么？'
+    ]
+  },
+  identity_person: {
+    guide: {
+      eyebrow: '重要的人',
+      title: '把这个人留得更清楚一点',
+      body: '可以写他是谁、你们是什么关系、哪些共同经历最值得被留下来。'
+    },
+    titleLabel: '这个人的名字',
+    titlePlaceholder: '比如：钟奕菲、大学室友、妈妈',
+    summaryLabel: '一句话记住这个人',
+    summaryPlaceholder: '先用一两句话写下这个人对你来说最重要的意义。',
+    contentLabel: '更完整地写下这个人',
+    contentPlaceholder: '可以写他是谁、你们怎么认识、关系怎样变化、有哪些重要经历，或者你为什么不想忘记这个人。',
+    prompts: [
+      '你们是什么关系？这个人最常以什么身份出现在你的生活里？',
+      '你对他的第一印象或最深印象是什么？',
+      '你们之间有什么共同经历，是你很想留下来的？',
+      '这个人为什么重要？这段关系对你意味着什么？'
+    ]
+  },
+  identity_preference: {
+    guide: {
+      eyebrow: '你的偏好',
+      title: '把舒服和不舒服都说清楚',
+      body: '喜欢什么、不喜欢什么、怎样的陪伴方式会更让你安心，这里都可以记下来。'
+    },
+    titleLabel: '这个偏好的名字',
+    titlePlaceholder: '比如：喜欢被温柔回应、讨厌临时变动',
+    summaryLabel: '一句话记住这个偏好',
+    summaryPlaceholder: '先用一两句话写下这个偏好为什么重要。',
+    contentLabel: '更完整地写下这个偏好',
+    contentPlaceholder: '可以写这个偏好出现在哪些情景、什么会让你更舒服、什么会让你不舒服。',
+    prompts: []
+  },
+  identity_trait: {
+    guide: {
+      eyebrow: '你的特征',
+      title: '把稳定的小习惯和性格样子留下来',
+      body: '比如你的表达方式、习惯、压力大的时候会有什么反应，这些都能帮铃湾更懂你。'
+    },
+    titleLabel: '这个特征的名字',
+    titlePlaceholder: '比如：容易心软、睡前爱刷手机、压力大时会沉默',
+    summaryLabel: '一句话记住这个特征',
+    summaryPlaceholder: '先用一两句话写下这个特征最常出现的样子。',
+    contentLabel: '更完整地写下这个特征',
+    contentPlaceholder: '可以写这个特征常出现在哪些时候、它怎样影响你的表达、情绪或选择。',
+    prompts: []
+  }
+}
+
+const DEFAULT_PAGE_COPY = {
+  guide: {
+    eyebrow: '一页想留住的记忆',
+    title: '把这件想记住的事写下来',
+    body: '可以写下发生了什么、为什么想留住它，也可以留一点以后翻到这里时能想起来的线索。'
+  },
+  titleLabel: '这页记忆的名字',
+  titlePlaceholder: '比如：一次旅行、最近在追的剧、想学的新东西',
+  summaryLabel: '一句话记住这件事',
+  summaryPlaceholder: '先用一两句话写下这件事最值得记住的地方。',
+  contentLabel: '更完整地写下这件事',
+  contentPlaceholder: '可以写这件事发生在什么时候、当时是怎样的，以及你为什么想把它留在这里。',
+  prompts: []
+}
+
 function createEmptyPage() {
   return {
     pageType: 'identity_profile',
@@ -115,109 +200,15 @@ const pageTypeHint = computed(() =>
 const pageTypeLabel = computed(() =>
   pageTypeMeta.value?.label || '长期记忆'
 )
-const pageGuide = computed(() => {
-  if (page.value?.pageType === 'identity_profile') {
-    return {
-      eyebrow: '最核心的一页',
-      title: '这里最适合写“你是谁”',
-      body: '名字、你和铃湾的关系、你最近的人生状态，或者你最希望被怎样记住，都可以慢慢放在这里。'
-    }
-  }
-  if (page.value?.pageType === 'identity_person') {
-    return {
-      eyebrow: '重要的人',
-      title: '把这个人留得更清楚一点',
-      body: '可以写他是谁、你们是什么关系、哪些共同经历最值得被留下来。'
-    }
-  }
-  if (page.value?.pageType === 'identity_preference') {
-    return {
-      eyebrow: '你的偏好',
-      title: '把舒服和不舒服都说清楚',
-      body: '喜欢什么、不喜欢什么、怎样的陪伴方式会更让你安心，这里都可以记下来。'
-    }
-  }
-  if (page.value?.pageType === 'identity_trait') {
-    return {
-      eyebrow: '你的特征',
-      title: '把稳定的小习惯和性格样子留下来',
-      body: '比如你的表达方式、习惯、压力大的时候会有什么反应，这些都能帮铃湾更懂你。'
-    }
-  }
-  return {
-    eyebrow: '一页想留住的记忆',
-    title: '把这件想记住的事写下来',
-    body: '可以写下发生了什么、为什么想留住它，也可以留一点以后翻到这里时能想起来的线索。'
-  }
-})
-const titleLabel = computed(() => {
-  if (page.value?.pageType === 'identity_profile') return '这页想记住的名字或主题'
-  if (page.value?.pageType === 'identity_person') return '这个人的名字'
-  if (page.value?.pageType === 'identity_preference') return '这个偏好的名字'
-  if (page.value?.pageType === 'identity_trait') return '这个特征的名字'
-  return '这页记忆的名字'
-})
-const titlePlaceholder = computed(() => {
-  if (page.value?.pageType === 'identity_profile') return '比如：叶健钦、现在的我、铃湾记住的我'
-  if (page.value?.pageType === 'identity_person') return '比如：钟奕菲、大学室友、妈妈'
-  if (page.value?.pageType === 'identity_preference') return '比如：喜欢被温柔回应、讨厌临时变动'
-  if (page.value?.pageType === 'identity_trait') return '比如：容易心软、睡前爱刷手机、压力大时会沉默'
-  return '比如：一次旅行、最近在追的剧、想学的新东西'
-})
-const summaryLabel = computed(() => {
-  if (page.value?.pageType === 'identity_profile') return '一句话介绍你自己'
-  if (page.value?.pageType === 'identity_person') return '一句话记住这个人'
-  if (page.value?.pageType === 'identity_preference') return '一句话记住这个偏好'
-  if (page.value?.pageType === 'identity_trait') return '一句话记住这个特征'
-  return '一句话记住这件事'
-})
-const summaryPlaceholder = computed(() => {
-  if (page.value?.pageType === 'identity_profile') return '先用一两句话写下“你是谁”和“铃湾最该记住什么”。'
-  if (page.value?.pageType === 'identity_person') return '先用一两句话写下这个人对你来说最重要的意义。'
-  if (page.value?.pageType === 'identity_preference') return '先用一两句话写下这个偏好为什么重要。'
-  if (page.value?.pageType === 'identity_trait') return '先用一两句话写下这个特征最常出现的样子。'
-  return '先用一两句话写下这件事最值得记住的地方。'
-})
-const contentLabel = computed(() => {
-  if (page.value?.pageType === 'identity_profile') return '更完整地写下你自己'
-  if (page.value?.pageType === 'identity_person') return '更完整地写下这个人'
-  if (page.value?.pageType === 'identity_preference') return '更完整地写下这个偏好'
-  if (page.value?.pageType === 'identity_trait') return '更完整地写下这个特征'
-  return '更完整地写下这件事'
-})
-const contentPlaceholder = computed(() => {
-  if (page.value?.pageType === 'identity_profile') {
-    return '可以写你的名字、身份、你和铃湾的关系、最近的状态，或者你最希望以后被怎样理解。'
-  }
-  if (page.value?.pageType === 'identity_person') {
-    return '可以写他是谁、你们怎么认识、关系怎样变化、有哪些重要经历，或者你为什么不想忘记这个人。'
-  }
-  if (page.value?.pageType === 'identity_preference') {
-    return '可以写这个偏好出现在哪些情景、什么会让你更舒服、什么会让你不舒服。'
-  }
-  if (page.value?.pageType === 'identity_trait') {
-    return '可以写这个特征常出现在哪些时候、它怎样影响你的表达、情绪或选择。'
-  }
-  return '可以写这件事发生在什么时候、当时是怎样的，以及你为什么想把它留在这里。'
-})
-const personPrompts = computed(() => {
-  if (page.value.pageType !== 'identity_person') return []
-  return [
-    '你们是什么关系？这个人最常以什么身份出现在你的生活里？',
-    '你对他的第一印象或最深印象是什么？',
-    '你们之间有什么共同经历，是你很想留下来的？',
-    '这个人为什么重要？这段关系对你意味着什么？'
-  ]
-})
-const profilePrompts = computed(() => {
-  if (page.value.pageType !== 'identity_profile') return []
-  return [
-    '你叫什么？如果铃湾平时有更亲近的叫法，也可以一起写下来。',
-    '你和铃湾是什么关系？你希望她怎样理解你们之间的连接？',
-    '你最近正在经历什么阶段？生活、学业、工作、情绪都可以简单提一下。',
-    '你现在最在意什么？最近最想守住、推进，或最想被理解的是什么？'
-  ]
-})
+const pageCopy = computed(() => PAGE_TYPE_COPY[page.value?.pageType] || DEFAULT_PAGE_COPY)
+const pageGuide = computed(() => pageCopy.value.guide)
+const titleLabel = computed(() => pageCopy.value.titleLabel)
+const titlePlaceholder = computed(() => pageCopy.value.titlePlaceholder)
+const summaryLabel = computed(() => pageCopy.value.summaryLabel)
+const summaryPlaceholder = computed(() => pageCopy.value.summaryPlaceholder)
+const contentLabel = computed(() => pageCopy.value.contentLabel)
+const contentPlaceholder = computed(() => pageCopy.value.contentPlaceholder)
+const pagePrompts = computed(() => pageCopy.value.prompts || [])
 const submitLabel = computed(() => {
   if (saving.value) return isCreateMode.value ? '创建中…' : '保存中…'
   return isCreateMode.value ? '创建这页记忆' : '保存修改'
@@ -393,14 +384,14 @@ onMounted(loadPage)
       <section v-if="page.pageType === 'identity_profile'" class="mdetailGuide mdetailGuideProfile">
         <div class="mdetailGuideEyebrow">写“关于你”的时候，可以先留下这些</div>
         <div class="mdetailPromptList">
-          <div v-for="item in profilePrompts" :key="item" class="mdetailPromptItem">{{ item }}</div>
+          <div v-for="item in pagePrompts" :key="item" class="mdetailPromptItem">{{ item }}</div>
         </div>
       </section>
 
       <section v-if="page.pageType === 'identity_person'" class="mdetailGuide mdetailGuidePerson">
         <div class="mdetailGuideEyebrow">写这个人的时候，可以顺着想</div>
         <div class="mdetailPromptList">
-          <div v-for="item in personPrompts" :key="item" class="mdetailPromptItem">{{ item }}</div>
+          <div v-for="item in pagePrompts" :key="item" class="mdetailPromptItem">{{ item }}</div>
         </div>
       </section>
 
