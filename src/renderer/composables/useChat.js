@@ -27,12 +27,11 @@ export function useChat() {
   }
 
   function replaceMessageById(id, patch) {
-    const index = findMessageIndexById(id)
-    if (index < 0) return false
-    messages.value[index] = {
-      ...messages.value[index],
-      ...patch
-    }
+    const existing = messages.value.find((item) => item.id === id)
+    if (!existing) return false
+    const merged = { ...existing, ...patch }
+    // R-02：upsert 语义——先移除所有同 id 旧项再追加合并项，杜绝同 id 并存（轮询与流式占位替换竞态）。
+    messages.value = [...messages.value.filter((item) => item.id !== id), merged]
     return true
   }
 
@@ -40,6 +39,11 @@ export function useChat() {
     return messages.value.some((item) => {
       if (item.kind !== 'message') return false
       if (item.id === msg.id) return true
+      // R-02：cornie 消息按 role+content 去重（放宽，不再要求 pendingSync）。
+      // 覆盖"轮询拉到 DB 正式消息 vs 本地已上屏（含流式占位累积到同内容）"的竞态重复。
+      if (item.role === 'cornie' && msg.role === 'cornie') {
+        return item.content === msg.content
+      }
       return (
         item.role === (msg.role === 'user' ? 'user' : 'cornie') &&
         item.content === msg.content &&
@@ -370,6 +374,7 @@ export function useChat() {
     send,
     streamSend,
     pushChatItem,
+    replaceMessageById,
     appendResponse,
     setConfirmMessageState,
     handleConfirmAction,

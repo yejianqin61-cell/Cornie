@@ -67,7 +67,11 @@ describe('FE-05 竞态守卫', () => {
     const wrapper = mount(ChatHistory)
     await flushPromises()
 
-    // 初始 selectedDate = 今天(2026-08-21)，消息请求挂起
+    // 显式固定初始日期（不依赖"今天"——跨天后 today() 会变，mock 固定为 2026-08-21）
+    wrapper.vm.selectedDate = '2026-08-21'
+    await flushPromises()
+
+    // 初始 selectedDate = 2026-08-21，消息请求挂起
     expect(pending['2026-08-21']?.length).toBeGreaterThanOrEqual(1)
 
     // 快速切到 2026-08-20（旧请求被守卫中止）
