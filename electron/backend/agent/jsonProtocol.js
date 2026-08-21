@@ -206,7 +206,7 @@ export function parseModelJson(text) {
     throw protocolError('model output is empty')
   }
 
-  const candidates = [text.trim(), extractCodeBlockJson(text), extractBalancedJson(text)].filter(Boolean)
+  const candidates = extractJsonCandidates(text)
   const errors = []
   const seen = new Set()
 
@@ -226,6 +226,15 @@ export function parseModelJson(text) {
     reason: reason?.message ?? 'unknown',
     rawText: text
   })
+}
+
+// 通用 JSON 候选提取：全文 / Markdown 代码块 / 括号配对截取。
+// 供协议信封（parseModelJson）与记忆提炼轮次（memoryDistillation）共用。
+export function extractJsonCandidates(text) {
+  if (typeof text !== 'string' || !text.trim()) {
+    return []
+  }
+  return [text.trim(), extractCodeBlockJson(text), extractBalancedJson(text)].filter(Boolean)
 }
 
 export function buildJsonRepairPrompt(rawText) {

@@ -20,7 +20,45 @@ const JSON_PROTOCOL = `你必须严格使用 JSON 协议回复，只能输出一
 如果需要调用工具，输出：
 {"type":"tool_call","assistant_reply":"你对主人说的话","tool_calls":[{"tool_name":"tool.name","arguments":{}}]}
 
-如果你不确定是否需要工具，优先使用 reply。`
+如果你不确定是否需要工具，优先使用 reply。
+
+重要约束：
+- 只要主人是在要求你“记账、记录待办、记录日程、创建、修改、删除”这类会影响数据的动作，你就不能只用 reply 假装已经完成，必须输出 tool_call。
+- 在工具真正执行成功之前，不要对主人说“已经记上了”“已经写进去了”“成功创建了”这类成功话术。
+- 如果信息还不够，就用 reply 继续追问；如果工具执行失败，就如实说明失败，不要假装成功。`
+
+const TOOL_SCHEMA_RULES = `业务写入工具的字段要求：
+
+1. 记账
+- 支出：ledger.add_expense
+- 收入：ledger.add_income
+- 必填字段：amount, occurredAt
+- 常用字段：item, merchant, sourceText, categoryId/categoryName
+- occurredAt 使用 YYYY-MM-DD 或完整 ISO 时间
+
+2. 待办
+- 创建：todo.create
+- 更新：todo.update
+- 必填字段：title
+- 常用字段：description, dueAt, sourceText, categoryId/categoryName
+- 如果主人只说“记个待办”“提醒我做某事”，优先抽取 title；如果没说类目，可以先使用已有默认待办类目
+
+3. 日程
+- 创建：schedule.create
+- 更新：schedule.update
+- 必填字段：title, startAt
+- 常用字段：endAt, location, sourceText, categoryId/categoryName
+- startAt/endAt 必须是明确时间，优先输出 ISO 风格时间，例如 2026-07-03T14:00:00
+- 如果主人给了时间区间，例如“下午2点到5点”，要同时给 startAt 和 endAt
+- 如果主人没明确类目，可以先使用已有默认日程类目
+
+4. 承接上一轮上下文
+- 如果主人这一轮只是在补充上一轮缺失的信息，例如只回复“2026年啊”“归到学习”“就是数学建模分享会”，你要结合最近对话摘要，把它补全成完整 tool_call。
+- 只要现在的信息已经足够落库，就不要继续闲聊式 reply，直接输出 tool_call。
+
+5. 成功与失败
+- 只有在工具真正执行成功后的 followup 阶段，才能说“已经记好了”“已经写进去了”。
+- 如果当前信息不足以形成合法工具参数，就用 reply 明确指出缺哪一个字段。`
 
 const CATEGORY_MAPPING_PROTOCOL = buildCategoryMappingProtocol()
 
@@ -65,7 +103,7 @@ function summarizeLookupToolResult(toolResult) {
 }
 
 export function buildConversationPrompt({ context }) {
-  return [CORNIE_PERSONA, JSON_PROTOCOL, CATEGORY_MAPPING_PROTOCOL, buildContextSection(context)].join('\n\n')
+  return [CORNIE_PERSONA, JSON_PROTOCOL, TOOL_SCHEMA_RULES, CATEGORY_MAPPING_PROTOCOL, buildContextSection(context)].join('\n\n')
 }
 
 export function buildToolFollowupPrompt({ assistantReply, toolResult }) {
@@ -77,6 +115,18 @@ export function buildToolFollowupPrompt({ assistantReply, toolResult }) {
     '仍然只能输出一个合法 JSON 对象，并且此轮只能输出 reply。',
     `你上一轮对主人说的话：${assistantReply}`,
     `工具执行结果：${JSON.stringify(toolResult)}`
+  ].join('\n')
+}
+
+export function buildWriteIntentRecoveryPrompt(message) {
+  return [
+    '你刚才没有正确处理一个会写入数据的请求。',
+    '这一次不要闲聊，不要假装已经成功。',
+    '仍然只能输出一个合法 JSON 对象。',
+    '如果当前信息已经足够写入，就必须输出 tool_call。',
+    '如果当前信息还不够，就输出 reply，并明确指出还缺少哪个字段。',
+    '记录日程时，优先使用 schedule.create 或 schedule.update，并保证包含 title 与 startAt；如果用户给了时间区间，也要尽量带上 endAt。',
+    `主人这一轮原话：${message}`
   ].join('\n')
 }
 
@@ -100,4 +150,101 @@ export function estimateLegacyLookupFollowupPromptLength({ assistantReply, toolR
     `只读补查摘要：${JSON.stringify(lookupContexts)}`,
     `原始工具结果：${JSON.stringify(toolResult)}`
   ].join('\n').length
+}
+
+// 记忆提炼轮次（Memory Distillation Turn）prompt（443）：
+// "是否计入记忆、记什么内容"的语义判定权交给 LLM，后端只负责执行与治理。
+// 输入为当日对话片段 + 今日观察摘要 + 相关记忆页摘要，输出为结构化决策 JSON。
+export function buildMemoryDistillationPrompt({
+  date,
+  recentMessages = [],
+  todayObservations = [],
+  memorySummaryLines = []
+}) {
+  const conversationBlock = Array.isArray(recentMessages) && recentMessages.length > 0
+    ? recentMessages
+        .map((item) => {
+          const role = normalizePromptString(item?.role) === 'user' ? '主人' : '铃湾'
+          return `- ${role}：${truncatePromptText(normalizePromptString(item?.content), 200)}`
+        })
+        .join('\n')
+    : '（本轮没有可用的对话片段）'
+
+  const observationBlock = Array.isArray(todayObservations) && todayObservations.length > 0
+    ? todayObservations
+        .map((item) => `- [${normalizePromptString(item?.type) || 'misc'}] ${normalizePromptString(item?.title)}：${truncatePromptText(normalizePromptString(item?.content), 120)}`)
+        .join('\n')
+    : '（今日暂无观察日志）'
+
+  const memoryBlock = Array.isArray(memorySummaryLines) && memorySummaryLines.length > 0
+    ? memorySummaryLines.join('\n')
+    : '（暂无相关长期记忆页面）'
+
+  return [
+    '你是铃湾的记忆提炼官（memory distillation turn）。主人刚和铃湾说完一轮话，请判断这轮对话中有哪些信息值得沉淀进长期记忆，并只输出一个 JSON 对象作为决策。',
+    '',
+    '【输入材料】',
+    `今天日期：${normalizePromptString(date) || '未知'}`,
+    '',
+    '## 今日对话（最近几条）',
+    conversationBlock,
+    '',
+    '## 今日已有观察日志',
+    observationBlock,
+    '',
+    '## 相关长期记忆页摘要',
+    memoryBlock,
+    '',
+    '【判定规则】',
+    '1. observations：只有当对话中出现了明确的、值得长期记住的事实或事件时才提议 create；内容必须是"事实提炼"，绝不能是对话原话的拼接或流水账；如果与今日已有观察重复则 skip；对同一事实的补充用 update（需带 observationId）。',
+    '2. identity_updates：只有当主人明确说出或强烈暗示身份信息时才提议（名字、称呼、与铃湾的关系、人生阶段、当前关注、压力、沟通偏好、重要人物、偏好、性格侧写）；疑问句、否定句（如"我不累""没有压力""我叫啥名字啊"）不得提取；已有记忆页已包含相同信息时 skip。',
+    '3. memory_wiki_requests：仅在信息足以支撑创建/更新长期记忆页面时提议；合并/回滚/归档/删除等破坏性动作仍可提出，但会交由人类审核。',
+    '4. 不要过度记录：绝大多数闲聊轮次应该输出空数组。',
+    '5. reasoning 不超过一句话。',
+    '',
+    '【输出格式】只输出一个 JSON 对象，不要输出解释、前后缀文字或 Markdown 代码块：',
+    JSON.stringify(MEMORY_DISTILLATION_OUTPUT_SCHEMA_EXAMPLE, null, 2)
+  ].join('\n')
+}
+
+function normalizePromptString(value) {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
+function truncatePromptText(value, maxLength) {
+  const text = normalizePromptString(value)
+  if (text.length <= maxLength) return text
+  return `${text.slice(0, maxLength)}…`
+}
+
+const MEMORY_DISTILLATION_OUTPUT_SCHEMA_EXAMPLE = {
+  observations: [
+    { action: 'create', type: 'event', title: '标题', content: '事实提炼，非原话', observationId: '' }
+  ],
+  identity_updates: [
+    {
+      entity: 'profile',
+      action: 'create',
+      fields: { userName: '', preferredName: '', cornieRelationship: '', identitySummary: '', lifeStageSummary: '', currentFocus: '', stressors: '', communicationPreference: '' }
+    },
+    {
+      entity: 'person',
+      action: 'create',
+      fields: { personName: '', relationshipToUser: '', roleSummary: '', personalitySummary: '', meaningToUser: '', sharedExperienceSummary: '', timelineSummary: '', firstKnownPeriod: '', emotionalWeight: '' }
+    },
+    {
+      entity: 'preference',
+      action: 'create',
+      fields: { title: '', stance: '喜欢', preferenceType: '', triggerKeywords: [] }
+    },
+    {
+      entity: 'trait',
+      action: 'create',
+      fields: { title: '', traitType: '', traitSummary: '', triggerKeywords: [] }
+    }
+  ],
+  memory_wiki_requests: [
+    { action: 'create_page', pageType: 'event', title: '', summary: '', body: '', importance: 'medium', pageId: '', targetPageId: '', sourcePageId: '', versionId: '' }
+  ],
+  reasoning: '不超过一句话'
 }

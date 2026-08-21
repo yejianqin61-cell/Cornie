@@ -5,19 +5,15 @@ import { buildConversationContext } from './contextBuilder.js'
 import {
   buildConversationPrompt,
   buildLookupFollowupPrompt,
-  buildToolFollowupPrompt
+  buildToolFollowupPrompt,
+  buildWriteIntentRecoveryPrompt
 } from './promptBuilder.js'
 import { estimateLegacyLookupFollowupPromptLength } from './promptBuilder.js'
 import { evaluateToolCalls } from '../policy/toolPolicy.js'
 import { chat } from '../model/deepseek/client.js'
 import { executeToolCalls } from '../tools/gateway.js'
-import { createObservationService } from '../observation/service.js'
-import { enqueueObservationWikiUpgradeCandidates } from '../observation/wikiUpgrade.js'
 import { createConfirmService } from '../confirm/service.js'
-import { upsertIdentityProfileFromConversation } from '../identity/profileUpsert.js'
-import { upsertIdentityPreferenceFromConversation } from '../identity/preferenceUpsert.js'
-import { upsertIdentityTraitFromConversation } from '../identity/traitUpsert.js'
-import { upsertIdentityPersonFromConversation } from '../identity/personUpsert.js'
+import { runMemoryDistillation } from './memoryDistillation.js'
 import {
   attachContextTelemetry,
   captureInitialPromptTelemetry,
@@ -91,6 +87,32 @@ async function requestProtocolEnvelope(messages, telemetry, phase = 'conversatio
 
 function buildProtocolFallbackReply() {
   return '唔……小铃湾这次没有把话说明白，主人可以再说一遍吗？'
+}
+
+function normalizeString(value) {
+  return typeof value === 'string' ? value.trim() : ''
+}
+
+function looksLikeWriteIntent(text) {
+  const normalized = normalizeString(text)
+  if (!normalized) return false
+  return /(记账|记一笔|记录日程|记日程|新增日程|创建日程|安排一下|记录待办|记待办|新增待办|创建待办|帮我记下|帮我记录)/.test(normalized)
+}
+
+function hasSuccessfulWriteToolResult(results = []) {
+  return (Array.isArray(results) ? results : []).some((item) => {
+    if (item?.ok === false) return false
+    const name = String(item?.tool_name || '')
+    return [
+      'ledger.add_expense',
+      'ledger.add_income',
+      'ledger.update_entry',
+      'todo.create',
+      'todo.update',
+      'schedule.create',
+      'schedule.update'
+    ].includes(name)
+  })
 }
 
 function buildBaseMessages(history, context) {
@@ -182,7 +204,6 @@ function logLookupAudit(message, lookupContexts) {
 }
 
 export function createConversationOrchestrator(store, { baseDir = process.cwd() } = {}) {
-  const observation = createObservationService(store)
   const confirm = createConfirmService(store)
 
   return {
@@ -214,7 +235,26 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd() 
       const toolRoundState = createToolRoundState()
 
       try {
-        const firstEnvelope = await requestProtocolEnvelope(baseMessages, telemetry, 'conversation_initial')
+        let firstEnvelope = await requestProtocolEnvelope(baseMessages, telemetry, 'conversation_initial')
+
+        if (firstEnvelope.type === 'reply' && looksLikeWriteIntent(message)) {
+          const recoveryPrompt = buildWriteIntentRecoveryPrompt(message)
+          const recoveryMessages = trimMessages([
+            ...baseMessages,
+            { role: 'assistant', content: firstEnvelope.assistant_reply },
+            { role: 'user', content: recoveryPrompt }
+          ])
+          recordFollowupPromptTelemetry(telemetry, {
+            phase: 'write_intent_recovery',
+            promptChars: recoveryPrompt.length,
+            legacyPromptCharsEstimate: recoveryPrompt.length
+          })
+          firstEnvelope = await requestProtocolEnvelope(
+            recoveryMessages,
+            telemetry,
+            'conversation_write_intent_recovery'
+          )
+        }
 
         if (firstEnvelope.type === 'tool_call') {
           requestedToolCalls = Array.isArray(firstEnvelope.tool_calls) ? firstEnvelope.tool_calls : []
@@ -347,6 +387,16 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd() 
         console.error('Conversation orchestrator error:', error)
       }
 
+      if (looksLikeWriteIntent(message) && !hasSuccessfulWriteToolResult(toolExecution.results)) {
+        const normalizedReply = normalizeString(finalReply)
+        if (
+          /(成功|已经|记上|写进|记录好了|创建好了|安排好了|稳稳写进|稳稳记下|补上了)/.test(normalizedReply) &&
+          !/(失败|没成功|没有成功|还需要|再告诉|请告诉|缺少|漏掉|不确定)/.test(normalizedReply)
+        ) {
+          finalReply = '爸爸～小铃湾这次其实还没有真的写进去，所以不敢骗你说成功啦。你再给我补充一下关键信息，或者让我重新记一次，好不好？'
+        }
+      }
+
       const cornieMessage = saveMessage(store, {
         id: randomUUID(),
         date,
@@ -369,78 +419,21 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd() 
         }
       }
 
-      let observationRecord = null
+      // 记忆提炼轮次（443）：是否计入记忆、记什么内容由 LLM 决定。
+      // LLM 不可用时本轮零写入记忆（V1.1 决策，正则已弃用）。
+      let memoryDistillation = null
       try {
-        observationRecord = observation.recordConversationTurn({
+        memoryDistillation = await runMemoryDistillation({
+          store,
+          baseDir,
           date,
           userMessage: message,
           cornieMessage: finalReply,
-          messageId: userMessage.id
-        })
-      } catch (error) {
-        console.error('Observation write error:', error)
-      }
-
-      try {
-        if (observationRecord) {
-          await enqueueObservationWikiUpgradeCandidates(store, {
-            baseDir,
-            observation: observationRecord,
-            userMessage: message,
-            messageId: userMessage.id
-          })
-        }
-      } catch (error) {
-        console.error('Observation wiki upgrade candidate error:', error)
-      }
-
-      try {
-        const identityWrite = await upsertIdentityProfileFromConversation(store, {
-          baseDir,
-          date,
           messageId: userMessage.id,
-          userMessage: message
-        })
-
-        if (identityWrite?.action === 'conflict') {
-          console.warn('Identity profile conflict detected:', identityWrite.conflicts)
-        }
-      } catch (error) {
-        console.error('Identity profile upsert error:', error)
-      }
-
-      try {
-        await upsertIdentityPreferenceFromConversation(store, {
-          baseDir,
-          date,
-          messageId: userMessage.id,
-          userMessage: message
+          history
         })
       } catch (error) {
-        console.error('Identity preference upsert error:', error)
-      }
-
-      try {
-        await upsertIdentityTraitFromConversation(store, {
-          baseDir,
-          date,
-          messageId: userMessage.id,
-          userMessage: message
-        })
-      } catch (error) {
-        console.error('Identity trait upsert error:', error)
-      }
-
-      try {
-        await upsertIdentityPersonFromConversation(store, {
-          baseDir,
-          date,
-          messageId: userMessage.id,
-          userMessage: message,
-          observation: observationRecord
-        })
-      } catch (error) {
-        console.error('Identity person upsert error:', error)
+        console.error('Memory distillation error:', error)
       }
 
       return {
@@ -449,6 +442,7 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd() 
         toolExecution,
         policyDecision,
         pendingConfirmation,
+        memoryDistillation,
         telemetry: finalizeTurnTelemetry(telemetry, {
           policyDecision: policyDecision.decision,
           pendingConfirmation: Boolean(pendingConfirmation),
