@@ -164,10 +164,9 @@ onMounted(refresh)
 <template>
   <div class="olist">
     <header class="olistHead">
-      <button class="ghost" @click="$emit('back')">← 返回观察与记忆</button>
+      <button class="ghost" @click="$emit('back')">← 返回</button>
       <div class="olistHeadBody">
         <div class="olistTitle">观察记录</div>
-        <div class="olistHint">这里放着铃湾替你留住的小事。不是每句聊天都会留下来，只有值得记一下的片段，才会慢慢收在这里。</div>
       </div>
       <button class="primary" @click="showAdd = !showAdd">
         {{ showAdd ? '先不记了' : '记一件小事' }}
@@ -177,14 +176,6 @@ onMounted(refresh)
     <div class="olistTabs">
       <button class="tabBtn" :class="{ active: activeTab === 'today' }" @click="setTab('today')">今天的小事</button>
       <button class="tabBtn" :class="{ active: activeTab === 'history' }" @click="setTab('history')">回翻以前</button>
-    </div>
-
-    <div class="olistGuide card">
-      <div class="olistGuideTitle">观察和长期记忆不太一样</div>
-      <div class="olistGuideText">
-        观察更像当天留下来的生活片段，先帮你把事情留住。真正跨很多天都重要的内容，铃湾才会慢慢整理进长期记忆。
-      </div>
-      <div class="olistGuideSoft">{{ activeTab === 'today' ? todaySummary : '历史页适合按日期、类型或关键词慢慢回翻。' }}</div>
     </div>
 
     <div v-if="errorMsg" class="olistError">{{ errorMsg }}</div>

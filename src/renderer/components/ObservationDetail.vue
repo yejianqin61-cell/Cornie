@@ -10,24 +10,19 @@ const emit = defineEmits(['back', 'deleted'])
 
 const OBSERVATION_TYPES = {
   event: {
-    label: '生活事件',
-    guide: '这类观察通常是今天发生过的一件事，适合记下事情本身和当时的情景。'
+    label: '生活事件'
   },
   fact: {
-    label: '事实片段',
-    guide: '这类观察更像一条客观事实，重点是把值得留下来的信息记清楚。'
+    label: '事实片段'
   },
   emotion: {
-    label: '情绪变化',
-    guide: '这类观察适合记下当时的情绪起伏，以及是什么让情绪有了变化。'
+    label: '情绪变化'
   },
   preference: {
-    label: '偏好线索',
-    guide: '这类观察通常是在慢慢发现你喜欢什么、不喜欢什么，或怎样会更舒服。'
+    label: '偏好线索'
   },
   misc: {
-    label: '小事记录',
-    guide: '这类观察像一张生活便签，先把小事留下来，之后再决定它重不重要。'
+    label: '小事记录'
   }
 }
 
@@ -108,12 +103,6 @@ async function remove() {
         <span>{{ obs.date }}</span>
         <span class="odetailType">{{ typeMeta.label }}</span>
       </div>
-
-      <section class="odetailGuide">
-        <div class="odetailGuideEyebrow">这是一条怎样的小事</div>
-        <div class="odetailGuideTitle">{{ typeMeta.label }}</div>
-        <div class="odetailGuideBody">{{ typeMeta.guide }}</div>
-      </section>
 
       <label class="odetailField">
         <span>这件小事的标题</span>

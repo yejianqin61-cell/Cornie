@@ -545,7 +545,7 @@ onBeforeUnmount(() => {
       <div class="lchart card">
         <div class="lchartHead">
           <div class="lchartTitle">这几天的收支走势</div>
-          <div class="lchartHint">红线看支出，绿线看收入，横轴是日期，纵轴是金额，点一下日历也不会把这张月度趋势图切碎。</div>
+          <div class="lchartHint">支出 / 收入</div>
         </div>
         <div v-if="dailyTrendPoints.length === 0" class="lchartEmpty">这个月还没有记录，所以暂时看不到走势。</div>
         <div v-else-if="!hasTrendChart" class="lchartEmpty">目前只有一天的记录，等多记几笔后，这里就能看出变化趋势了。</div>
