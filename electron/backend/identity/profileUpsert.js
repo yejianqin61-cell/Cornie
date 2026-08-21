@@ -14,160 +14,6 @@ function stripTrailingParticles(value) {
   return normalizeString(value).replace(/[。！!？?,，、；;：:“”"'`~\s]+$/g, '').trim()
 }
 
-function pickFirstMatch(text, patterns) {
-  for (const pattern of patterns) {
-    const match = text.match(pattern)
-    if (match?.[1]) {
-      return stripTrailingParticles(match[1])
-    }
-  }
-  return ''
-}
-
-function extractUserName(userMessage) {
-  const text = normalizeString(userMessage)
-  if (!text) return ''
-
-  const directName = pickFirstMatch(text, [
-    /(?:^|[\s，。！？；,!?])我叫([^\s，。！？；,!?]{1,24})/,
-    /(?:^|[\s，。！？；,!?])我的名字叫([^\s，。！？；,!?]{1,24})/,
-    /(?:^|[\s，。！？；,!?])我是([^\s，。！？；,!?]{1,24})(?:呀|哦|啦|呢)?$/
-  ])
-
-  if (!directName) return ''
-
-  const blocked = new Set([
-    '你爸爸',
-    '你的爸爸',
-    '你爹',
-    '你的创造者',
-    '学生',
-    '男生',
-    '女生',
-    '人类',
-    '主人'
-  ])
-
-  return blocked.has(directName) ? '' : directName
-}
-
-function extractPreferredName(userMessage) {
-  const text = normalizeString(userMessage)
-  if (!text) return ''
-
-  return pickFirstMatch(text, [
-    /(?:你|以后|之后)?(?:可以|就)?(?:叫我|喊我|称呼我)([^\s，。！？；,!?]{1,24})/,
-    /我希望你(?:叫我|喊我|称呼我)([^\s，。！？；,!?]{1,24})/
-  ])
-}
-
-function extractCornieRelationship(userMessage) {
-  const text = normalizeString(userMessage)
-  if (!text) return ''
-
-  const relationshipPatterns = [
-    { pattern: /我是你(?:的)?爸爸/, value: '用户是 Cornie 的爸爸' },
-    { pattern: /我是你(?:的)?创造者/, value: '用户是 Cornie 的创造者' },
-    { pattern: /我是你的主人/, value: '用户是 Cornie 的主人' },
-    { pattern: /你是我(?:的)?女儿/, value: '用户视 Cornie 为自己的女儿' },
-    { pattern: /你是我(?:的)?宝宝/, value: '用户视 Cornie 为自己的宝宝' }
-  ]
-
-  for (const item of relationshipPatterns) {
-    if (item.pattern.test(text)) {
-      return item.value
-    }
-  }
-
-  return ''
-}
-
-function detectLifeStageSummary(userMessage) {
-  const text = normalizeString(userMessage)
-  if (!text) return ''
-
-  const hasStudyPressure = /考试|期末|assignment|作业|学校|上课|学习|学业/.test(text)
-  const hasCareerPressure = /实习|找工作|求职|面试|就业/.test(text)
-  const hasProjectPressure = /项目|开发|毕设|论文/.test(text)
-
-  if (hasStudyPressure && hasCareerPressure && hasProjectPressure) {
-    return '当前处于学业、项目、实习与求职压力交织阶段。'
-  }
-  if (hasStudyPressure && hasCareerPressure) {
-    return '当前处于学业与实习求职并行阶段。'
-  }
-  if (hasStudyPressure && hasProjectPressure) {
-    return '当前处于学业与项目并行推进阶段。'
-  }
-  if (hasCareerPressure && hasProjectPressure) {
-    return '当前处于项目与实习求职并行推进阶段。'
-  }
-  if (hasStudyPressure) {
-    return '当前处于学业压力较集中的阶段。'
-  }
-  if (hasCareerPressure) {
-    return '当前处于实习求职压力较集中的阶段。'
-  }
-  if (hasProjectPressure) {
-    return '当前处于项目推进压力较集中的阶段。'
-  }
-
-  return ''
-}
-
-function detectCurrentFocus(userMessage) {
-  const text = normalizeString(userMessage)
-  if (!text) return ''
-
-  const focus = []
-  if (/项目|开发|毕设|论文/.test(text)) focus.push('项目推进')
-  if (/考试|期末|assignment|作业|学习|学业/.test(text)) focus.push('考试与学业')
-  if (/实习|找工作|求职|面试|就业/.test(text)) focus.push('实习与求职')
-
-  return focus.length > 0 ? focus.join('、') : ''
-}
-
-function detectStressors(userMessage) {
-  const text = normalizeString(userMessage)
-  if (!text) return ''
-
-  const stressSignals = /累|好累|压力|焦虑|难|熬夜|忙不过来|崩|烦/.test(text)
-  if (!stressSignals) {
-    return ''
-  }
-
-  const stressors = []
-  if (/项目|开发|毕设|论文/.test(text)) stressors.push('项目推进压力')
-  if (/考试|期末|assignment|作业|学习|学业/.test(text)) stressors.push('考试与学业压力')
-  if (/实习|找工作|求职|面试|就业/.test(text)) stressors.push('实习与求职压力')
-
-  return stressors.length > 0 ? stressors.join('、') : '近期压力感较明显。'
-}
-
-function detectCommunicationPreference(userMessage) {
-  const text = normalizeString(userMessage)
-  if (!text) return ''
-
-  const segments = [
-    /温柔/.test(text) && '偏好温柔表达',
-    /克制/.test(text) && '偏好克制表达',
-    /记住上下文|记得上下文|记住我说的话|别忘|记性/.test(text) && '希望被稳定记住上下文',
-    /陪伴感|陪着我|陪我/.test(text) && '希望有陪伴感'
-  ].filter(Boolean)
-
-  return segments.length > 0 ? segments.join('；') : ''
-}
-
-function detectIdentitySummary(userMessage) {
-  const lifeStageSummary = detectLifeStageSummary(userMessage)
-  const currentFocus = detectCurrentFocus(userMessage)
-
-  if (lifeStageSummary && currentFocus) {
-    return `${lifeStageSummary} 当前主要关注 ${currentFocus}。`
-  }
-  return lifeStageSummary || (currentFocus ? `当前主要关注 ${currentFocus}。` : '')
-}
-
 function buildSourceRef({ date, messageId, userMessage }) {
   return {
     kind: 'chat',
@@ -194,7 +40,7 @@ const IDENTITY_PROFILE_CANDIDATE_FIELDS = [
 ]
 
 // LLM 提炼轮次提议的身份候选（443/445）：仅接受白名单字段，全部为空视为无候选。
-// 正则 buildCandidate 仅作为过渡期默认值，随 444 正则全面弃用后删除。
+// 正则提取已随 444 全面弃用，候选只来自 LLM。
 function normalizeProfileCandidate(candidate) {
   if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) {
     return null
@@ -370,41 +216,6 @@ async function ensureProfileConflictGovernanceCandidate(memoryWiki, page, candid
   })
 }
 
-function buildCandidate(userMessage) {
-  const userName = extractUserName(userMessage)
-  const preferredName = extractPreferredName(userMessage)
-  const cornieRelationship = extractCornieRelationship(userMessage)
-  const identitySummary = detectIdentitySummary(userMessage)
-  const lifeStageSummary = detectLifeStageSummary(userMessage)
-  const currentFocus = detectCurrentFocus(userMessage)
-  const stressors = detectStressors(userMessage)
-  const communicationPreference = detectCommunicationPreference(userMessage)
-
-  if (
-    !userName &&
-    !preferredName &&
-    !cornieRelationship &&
-    !identitySummary &&
-    !lifeStageSummary &&
-    !currentFocus &&
-    !stressors &&
-    !communicationPreference
-  ) {
-    return null
-  }
-
-  return {
-    userName,
-    preferredName,
-    cornieRelationship,
-    identitySummary,
-    lifeStageSummary,
-    currentFocus,
-    stressors,
-    communicationPreference
-  }
-}
-
 async function getPrimaryIdentityProfile(memoryWiki) {
   const pages = await memoryWiki.listSummaries({
     pageType: IDENTITY_PROFILE_PAGE_TYPE,
@@ -460,10 +271,6 @@ async function ensureProfileTopicLink({ baseDir, page, date, messageId, candidat
   return topicIndex.get(normalizedKey)
 }
 
-export function extractIdentityProfileCandidate(userMessage) {
-  return buildCandidate(userMessage)
-}
-
 export async function upsertIdentityProfileFromConversation(
   store,
   {
@@ -474,7 +281,7 @@ export async function upsertIdentityProfileFromConversation(
     candidate
   } = {}
 ) {
-  candidate = normalizeProfileCandidate(candidate) ?? buildCandidate(userMessage)
+  candidate = normalizeProfileCandidate(candidate)
   if (!candidate) {
     return { action: 'skipped', reason: 'no_candidate' }
   }

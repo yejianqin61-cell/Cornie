@@ -14,7 +14,11 @@ async function run() {
     baseDir,
     date: '2026-06-30',
     messageId: 'msg-1',
-    userMessage: '我叫叶健钦，我是你的创造者，也是你爸爸。'
+    userMessage: '我叫叶健钦，我是你的创造者，也是你爸爸。',
+    candidate: {
+      userName: '叶健钦',
+      cornieRelationship: '用户是 Cornie 的创造者和爸爸'
+    }
   })
 
   assert(first.action === 'created', '首次身份声明应创建主身份页')
@@ -33,7 +37,11 @@ async function run() {
     baseDir,
     date: '2026-06-30',
     messageId: 'msg-2',
-    userMessage: '以后你叫我爸爸。'
+    userMessage: '以后你叫我爸爸。',
+    candidate: {
+      userName: '叶健钦',
+      preferredName: '爸爸'
+    }
   })
 
   assert(['updated', 'noop'].includes(second.action), '补充称呼应更新或保持无噪音')
@@ -45,7 +53,14 @@ async function run() {
     baseDir,
     date: '2026-07-01',
     messageId: 'msg-2b',
-    userMessage: '我最近好多项目、考试、assignment，还要找实习，压力真的很大。我希望你温柔一点，记住上下文。'
+    userMessage: '我最近好多项目、考试、assignment，还要找实习，压力真的很大。我希望你温柔一点，记住上下文。',
+    candidate: {
+      userName: '叶健钦',
+      lifeStageSummary: '用户处于学业与项目并行的繁忙阶段，需兼顾考试、assignment 与实习求职',
+      currentFocus: '项目推进；考试与学业；实习与求职',
+      stressors: '项目推进压力；考试与学业压力；实习与求职压力',
+      communicationPreference: '偏好温柔表达；希望被稳定记住上下文'
+    }
   })
 
   assert(['updated', 'noop'].includes(stageWrite.action), '阶段画像类信息应能保守写入主身份页')
@@ -76,7 +91,10 @@ async function run() {
     baseDir,
     date: '2026-07-01',
     messageId: 'msg-3',
-    userMessage: '我叫张三。'
+    userMessage: '我叫张三。',
+    candidate: {
+      userName: '张三'
+    }
   })
 
   assert(conflict.action === 'conflict', '冲突名字不应直接覆盖')

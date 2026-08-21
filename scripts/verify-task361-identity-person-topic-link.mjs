@@ -21,7 +21,12 @@ async function main() {
       baseDir,
       date: '2026-06-30',
       messageId: 'msg-001',
-      userMessage: '我的初恋名字叫钟奕菲，我们在2021年冬天相恋。'
+      userMessage: '我的初恋名字叫钟奕菲，我们在2021年冬天相恋。',
+      candidate: {
+        personName: '钟奕菲',
+        relationshipToUser: '初恋',
+        timelineSummary: '2021年冬天相恋'
+      }
     })
 
     assert(first.action === 'created', '首次高确定性人物提及应创建 identity_person 页面')
@@ -39,7 +44,11 @@ async function main() {
       baseDir,
       date: '2026-07-02',
       messageId: 'msg-002',
-      userMessage: '钟奕菲是我的初恋，她对我很重要。'
+      userMessage: '钟奕菲是我的初恋，她对我很重要。',
+      candidate: {
+        personName: '钟奕菲',
+        relationshipToUser: '初恋'
+      }
     })
 
     assert(['updated', 'noop', 'conflict'].includes(second.action), '再次提及时应增量更新或保守冲突处理')
@@ -53,7 +62,11 @@ async function main() {
       baseDir,
       date: '2026-07-02',
       messageId: 'msg-002',
-      userMessage: '钟奕菲是我的初恋，她对我很重要。'
+      userMessage: '钟奕菲是我的初恋，她对我很重要。',
+      candidate: {
+        personName: '钟奕菲',
+        relationshipToUser: '初恋'
+      }
     })
 
     assert(['noop', 'conflict', 'updated'].includes(third.action), '重复同源写入不应破坏幂等性')

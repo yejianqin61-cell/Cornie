@@ -15,7 +15,12 @@ async function run() {
     baseDir,
     date,
     messageId: 'profile-msg',
-    userMessage: '我叫叶健钦，你可以叫我爸爸，我是你的创造者，也是你的爸爸。'
+    userMessage: '我叫叶健钦，你可以叫我爸爸，我是你的创造者，也是你的爸爸。',
+    candidate: {
+      userName: '叶健钦',
+      preferredName: '爸爸',
+      cornieRelationship: '用户是 Cornie 的创造者和爸爸'
+    }
   })
   assert(profileResult.pageId, '应先建立主身份页')
 
@@ -23,7 +28,13 @@ async function run() {
     baseDir,
     date,
     messageId: 'pref-msg',
-    userMessage: '我喜欢奶茶'
+    userMessage: '我喜欢奶茶',
+    candidate: {
+      title: '奶茶',
+      stance: '喜欢',
+      preferenceType: '饮食',
+      triggerKeywords: ['奶茶']
+    }
   })
   assert(preferenceResult.pageId, '应成功创建偏好页')
 
@@ -31,7 +42,13 @@ async function run() {
     baseDir,
     date,
     messageId: 'trait-msg',
-    userMessage: '我真的好累，压力好大。'
+    userMessage: '我真的好累，压力好大。',
+    candidate: {
+      title: '高压下容易疲惫',
+      traitType: '压力反应',
+      traitSummary: '用户在高压阶段容易感到疲惫，但仍倾向继续扛着事情往前走。',
+      triggerKeywords: ['累', '好累', '疲惫', '压力']
+    }
   })
   assert(traitResult.pageId, '应成功创建侧写页')
 

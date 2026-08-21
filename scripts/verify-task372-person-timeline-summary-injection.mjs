@@ -15,14 +15,26 @@ async function run() {
       baseDir,
       date: '2026-06-30',
       messageId: 'profile-1',
-      userMessage: '我叫叶健钦，我是你的爸爸，也是你的创造者。'
+      userMessage: '我叫叶健钦，我是你的爸爸，也是你的创造者。',
+      candidate: {
+        userName: '叶健钦',
+        cornieRelationship: '用户是 Cornie 的爸爸和创造者'
+      }
     })
 
     const created = await upsertIdentityPersonFromConversation(store, {
       baseDir,
       date: '2026-06-30',
       messageId: 'person-timeline-1',
-      userMessage: '我的初恋名字叫钟奕菲，我们在2021年冬天相恋，2022年春天疏远，2022年夏天决裂。她对我很重要，是我前进的动力。'
+      userMessage: '我的初恋名字叫钟奕菲，我们在2021年冬天相恋，2022年春天疏远，2022年夏天决裂。她对我很重要，是我前进的动力。',
+      candidate: {
+        personName: '钟奕菲',
+        relationshipToUser: '初恋',
+        firstKnownPeriod: '2021年冬天',
+        timelineSummary: '2021年冬天相恋；2022年春天疏远；2022年夏天决裂',
+        meaningToUser: '她对我很重要，是我前进的动力',
+        emotionalWeight: 'high'
+      }
     })
 
     assert(created.action === 'created', '应成功创建带时间脉络的人物页')
@@ -36,6 +48,10 @@ async function run() {
     const page = await memoryWiki.get(people[0].pageId)
     assert(page.firstKnownPeriod.length > 0, '人物页应存在 firstKnownPeriod')
     assert(page.timelineSummary.length > 0, '人物页应存在 timelineSummary')
+
+    // task 377 起 personNeedsRiskyDetails 仅对 ownerConfirmed 或风险词查询放开"意义"注入；
+    // 本脚本验证"已确认人物页"的宽松注入路径，故先把页面置为已确认（与 task 377 文档一致，不改断言）。
+    await memoryWiki.setOwnerConfirmed(people[0].pageId, true)
 
     const wikiContext = await buildWikiContext(store, {
       date: '2026-06-30',

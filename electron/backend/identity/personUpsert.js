@@ -86,7 +86,8 @@ const IDENTITY_PERSON_CANDIDATE_FIELDS = [
 ]
 
 // LLM 提炼轮次提议的人物候选（443/445）：仅接受白名单字段，personName 必填。
-// 正则 buildCandidate 仅作为过渡期默认值，随 444 正则全面弃用后删除。
+// LLM 提炼轮次提议的人物候选（443/445）：仅接受白名单字段，personName 必填。
+// 正则提取已随 444 全面弃用，候选只来自 LLM。
 function normalizePersonCandidate(candidate) {
   if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) {
     return null
@@ -106,189 +107,6 @@ function normalizePersonCandidate(candidate) {
   }
 
   return normalized
-}
-
-function cleanupPersonName(value) {
-  const cleaned = stripTrailingParticles(value)
-  if (!cleaned || cleaned.length > 24) return ''
-
-  const blocked = new Set([
-    '我',
-    '你',
-    '他',
-    '她',
-    '它',
-    '我们',
-    '你们',
-    '他们',
-    '她们',
-    '一个人',
-    '路人',
-    '别人',
-    '同学',
-    '朋友',
-    '家人',
-    '老师',
-    '导师',
-    '爸爸',
-    '妈妈'
-  ])
-
-  return blocked.has(cleaned) ? '' : cleaned
-}
-
-function normalizeRelationship(rawRelationship) {
-  const value = normalizeString(rawRelationship)
-  const map = new Map([
-    ['初恋', '初恋'],
-    ['前任', '前任'],
-    ['朋友', '朋友'],
-    ['家人', '家人'],
-    ['同学', '同学'],
-    ['导师', '导师'],
-    ['老师', '老师'],
-    ['同事', '同事'],
-    ['女朋友', '恋人'],
-    ['男朋友', '恋人'],
-    ['恋人', '恋人']
-  ])
-  return map.get(value) || value
-}
-
-function buildRoleSummary(relationshipToUser) {
-  const relationship = normalizeRelationship(relationshipToUser)
-  const map = new Map([
-    ['初恋', '在用户人生中具有高情感权重的重要人物。'],
-    ['前任', '在用户人生叙事中占据重要位置的过往关系人物。'],
-    ['恋人', '与用户有亲密关系的重要人物。'],
-    ['家人', '与用户有长期稳定亲缘关系的重要人物。'],
-    ['朋友', '与用户有持续互动和情感联系的重要朋友。'],
-    ['同学', '与用户学习阶段经历紧密相关的人物。'],
-    ['导师', '在用户成长或学习路径中有指导意义的人物。'],
-    ['老师', '在用户成长或学习路径中有指导意义的人物。'],
-    ['同事', '在用户工作或项目阶段中有持续关联的人物。']
-  ])
-  return map.get(relationship) || ''
-}
-
-function extractPersonalitySummary(text) {
-  const normalized = normalizeString(text)
-  if (!normalized) return ''
-
-  const explicitPersonalityMatch = normalized.match(
-    /(?:她|他|对方|这个人)[^。！？!?]{0,12}(?:很|比较|挺)?(温柔|害羞|内向|外向|冷静|可靠|开朗|细腻|敏感)/
-  )
-  if (explicitPersonalityMatch?.[1]) {
-    return explicitPersonalityMatch[1]
-  }
-
-  const directStatementMatch = normalized.match(
-    /([^\s，。！？!?]{2,24})[^。！？!?]{0,12}(?:很|比较|挺)?(温柔|害羞|内向|外向|冷静|可靠|开朗|细腻|敏感)/
-  )
-  if (directStatementMatch?.[2]) {
-    return directStatementMatch[2]
-  }
-
-  return ''
-}
-
-function extractMeaningToUser(text) {
-  const normalized = normalizeString(text)
-  if (!normalized) return ''
-
-  const patterns = [
-    /(?:她|他|对方|这个人)[^。！？!?]{0,18}(?:对我很重要|很重要)/,
-    /(?:她|他|对方|这个人)[^。！？!?]{0,24}(?:是我前进的动力|给过我很多力量|给过我安慰|是重要回忆)/,
-    /(?:我觉得|我认为)?[^\n。！？!?]{0,32}(?:她|他|对方|这个人)[^\n。！？!?]{0,24}(?:很重要|是我前进的动力|给过我很多力量|给过我安慰|是重要回忆)/
-  ]
-
-  for (const pattern of patterns) {
-    const match = normalized.match(pattern)
-    if (match?.[0]) {
-      return stripTrailingParticles(match[0])
-    }
-  }
-
-  return ''
-}
-
-function buildEmotionalWeight(relationshipToUser) {
-  const relationship = normalizeRelationship(relationshipToUser)
-  if (relationship === '初恋' || relationship === '前任' || relationship === '恋人') {
-    return 'high'
-  }
-  if (relationship === '家人' || relationship === '导师') {
-    return 'medium'
-  }
-  return ''
-}
-
-function extractExperienceSummary(text) {
-  const normalized = normalizeString(text)
-  if (!normalized) return ''
-
-  if (/\d{4}年/.test(normalized)) {
-    return stripTrailingParticles(normalized.slice(0, 80))
-  }
-
-  return ''
-}
-
-function extractTimelineSummary(text) {
-  const normalized = normalizeString(text)
-  if (!normalized) return ''
-
-  const segments = normalized.match(/\d{4}年[^，。！？；,!?]{0,16}/g)
-  if (!segments || segments.length === 0) {
-    return ''
-  }
-
-  return stripTrailingParticles(segments.slice(0, 3).join('；'))
-}
-
-function buildCandidate(userMessage) {
-  const text = normalizeString(userMessage)
-  if (!text) return null
-
-  const patterns = [
-    /我的(初恋|前任|朋友|家人|同学|导师|老师|同事|女朋友|男朋友)名字叫([^\s，。！？；,!?]{2,24})/,
-    /我的(初恋|前任|朋友|家人|同学|导师|老师|同事|女朋友|男朋友)叫([^\s，。！？；,!?]{2,24})/,
-    /([^\s，。！？；,!?]{2,24})是我的(初恋|前任|朋友|家人|同学|导师|老师|同事|女朋友|男朋友)/,
-    /([^\s，。！？；,!?]{2,24})是我(初恋|前任|朋友|家人|同学|导师|老师|同事|女朋友|男朋友)/
-  ]
-
-  for (const pattern of patterns) {
-    const match = text.match(pattern)
-    if (!match) continue
-
-    const relationshipToUser =
-      pattern === patterns[0] || pattern === patterns[1]
-        ? normalizeRelationship(match[1])
-        : normalizeRelationship(match[2])
-    const personName =
-      pattern === patterns[0] || pattern === patterns[1]
-        ? cleanupPersonName(match[2])
-        : cleanupPersonName(match[1])
-
-    if (!personName || !relationshipToUser) {
-      continue
-    }
-
-    return {
-      rawText: text,
-      personName,
-      relationshipToUser,
-      roleSummary: buildRoleSummary(relationshipToUser),
-      personalitySummary: extractPersonalitySummary(text),
-      meaningToUser: extractMeaningToUser(text),
-      sharedExperienceSummary: extractExperienceSummary(text),
-      timelineSummary: extractTimelineSummary(text),
-      emotionalWeight: buildEmotionalWeight(relationshipToUser),
-      firstKnownPeriod: extractTimelineSummary(text).split('；')[0] || ''
-    }
-  }
-
-  return null
 }
 
 function samePerson(page, candidate) {
@@ -598,10 +416,6 @@ async function ensurePersonRelationshipConflictGovernanceCandidate(memoryWiki, p
   })
 }
 
-export function extractIdentityPersonCandidate(userMessage) {
-  return buildCandidate(userMessage)
-}
-
 export async function upsertIdentityPersonFromConversation(
   store,
   {
@@ -613,7 +427,7 @@ export async function upsertIdentityPersonFromConversation(
     candidate
   } = {}
 ) {
-  candidate = normalizePersonCandidate(candidate) ?? buildCandidate(userMessage)
+  candidate = normalizePersonCandidate(candidate)
   if (!candidate) {
     return { action: 'skipped', reason: 'no_candidate' }
   }

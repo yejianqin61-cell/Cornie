@@ -22,11 +22,14 @@ async function run() {
       content: '钟奕菲对我来说真的很重要。'
     })
 
-    const observation = observationService.recordConversationTurn({
+    const observation = observationService.addNoteSmart({
       date: '2026-06-30',
-      userMessage: '钟奕菲对我来说真的很重要。',
-      cornieMessage: '小铃湾会认真记住这份重要。'
-    })
+      type: 'event',
+      title: '钟奕菲对我的重要性',
+      content: '用户提到钟奕菲对自己来说真的很重要。',
+      relatedRef: '2026-06-30',
+      sourceText: '钟奕菲对我来说真的很重要。'
+    }).note
 
     const personPage = await memoryWiki.create({
       pageType: 'identity_person',

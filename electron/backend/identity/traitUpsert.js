@@ -27,7 +27,8 @@ function buildChatRef({ date, messageId }) {
 }
 
 // LLM 提炼轮次提议的侧写候选（443/445）：title 必填。
-// 正则 buildCandidate 仅作为过渡期默认值，随 444 正则全面弃用后删除。
+// LLM 提炼轮次提议的侧写候选（443/445）：title 必填。
+// 正则提取已随 444 全面弃用，候选只来自 LLM。
 function normalizeTraitCandidate(candidate) {
   if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) {
     return null
@@ -68,71 +69,6 @@ function getConfidenceLevel(evidenceCount) {
   if (evidenceCount >= 4) return 'high'
   if (evidenceCount >= 2) return 'medium'
   return 'low'
-}
-
-function buildTraitPatterns() {
-  return [
-    {
-      traitType: '压力反应',
-      title: '高压下容易疲惫',
-      traitSummary: '用户在高压阶段容易感到疲惫，但仍倾向继续扛着事情往前走。',
-      triggerKeywords: ['累', '好累', '疲惫', '压力'],
-      match(text) {
-        return (
-          text.includes('好累') ||
-          text.includes('很累') ||
-          text.includes('太累') ||
-          text.includes('压力好大') ||
-          text.includes('压力很大') ||
-          text.includes('最近特别累') ||
-          text.includes('真的好累')
-        )
-      }
-    },
-    {
-      traitType: '回忆处理',
-      title: '会把回忆转化为前进动力',
-      traitSummary: '用户倾向把重要回忆和关系经历转化为继续前进的动力。',
-      triggerKeywords: ['回忆', '前进的动力', '忘不了', '动力'],
-      match(text) {
-        return (
-          (text.includes('前进的动力') && (text.includes('把') || text.includes('作为'))) ||
-          (text.includes('忘不了') && text.includes('动力'))
-        )
-      }
-    },
-    {
-      traitType: '沟通风格',
-      title: '需要温柔克制的陪伴',
-      traitSummary: '用户更偏好温柔、克制、能记住上下文的陪伴式交流。',
-      triggerKeywords: ['温柔', '克制', '陪伴', '记住上下文'],
-      match(text) {
-        return (
-          (text.includes('温柔') && text.includes('克制')) ||
-          text.includes('记住上下文') ||
-          text.includes('陪伴感') ||
-          (text.includes('希望你') && text.includes('温柔'))
-        )
-      }
-    }
-  ]
-}
-
-function buildCandidate(userMessage) {
-  const text = normalizeString(userMessage)
-  if (!text) return null
-
-  for (const pattern of buildTraitPatterns()) {
-    if (!pattern.match(text)) continue
-    return {
-      title: pattern.title,
-      traitType: pattern.traitType,
-      traitSummary: pattern.traitSummary,
-      triggerKeywords: dedupeStrings(pattern.triggerKeywords)
-    }
-  }
-
-  return null
 }
 
 function sameTrait(page, candidate) {
@@ -251,10 +187,6 @@ function buildAliases(existingPage, candidate) {
   ])
 }
 
-export function extractIdentityTraitCandidate(userMessage) {
-  return buildCandidate(userMessage)
-}
-
 export async function upsertIdentityTraitFromConversation(
   store,
   {
@@ -265,7 +197,7 @@ export async function upsertIdentityTraitFromConversation(
     candidate
   } = {}
 ) {
-  candidate = normalizeTraitCandidate(candidate) ?? buildCandidate(userMessage)
+  candidate = normalizeTraitCandidate(candidate)
   if (!candidate) {
     return { action: 'skipped', reason: 'no_candidate' }
   }

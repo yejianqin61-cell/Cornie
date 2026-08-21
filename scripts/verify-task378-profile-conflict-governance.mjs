@@ -12,7 +12,11 @@ async function run() {
     baseDir,
     date: '2026-06-30',
     messageId: 'profile-1',
-    userMessage: '我叫叶健钦，我是你的爸爸。'
+    userMessage: '我叫叶健钦，我是你的爸爸。',
+    candidate: {
+      userName: '叶健钦',
+      cornieRelationship: '用户是 Cornie 的爸爸'
+    }
   })
   assert(created.pageId, '应先建立主身份页')
 
@@ -20,7 +24,11 @@ async function run() {
     baseDir,
     date: '2026-07-01',
     messageId: 'profile-2',
-    userMessage: '我叫林知远，我是你的主人。'
+    userMessage: '我叫林知远，我是你的主人。',
+    candidate: {
+      userName: '林知远',
+      cornieRelationship: '用户是 Cornie 的主人'
+    }
   })
   assert(conflict.action === 'conflict', '主身份高风险字段冲突时应返回 conflict')
 

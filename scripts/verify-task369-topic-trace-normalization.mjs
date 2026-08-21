@@ -20,14 +20,21 @@ async function run() {
       baseDir,
       date: '2026-06-30',
       messageId: 'profile-1',
-      userMessage: '我叫叶健钦，我的初恋名字叫钟奕菲。'
+      userMessage: '我叫叶健钦，我的初恋名字叫钟奕菲。',
+      candidate: {
+        userName: '叶健钦',
+        cornieRelationship: '用户是 Cornie 的爸爸和创造者'
+      }
     })
 
-    const observation1 = observationService.recordConversationTurn({
+    const observation1 = observationService.addNoteSmart({
       date: '2026-06-30',
-      userMessage: '我的初恋名字叫钟奕菲，我们在2021年冬天相恋。',
-      cornieMessage: '小铃湾记住啦。'
-    })
+      type: 'event',
+      title: '用户提到初恋钟奕菲',
+      content: '用户提到初恋钟奕菲，2021年冬天相恋。',
+      relatedRef: '2026-06-30',
+      sourceText: '我的初恋名字叫钟奕菲，我们在2021年冬天相恋。'
+    }).note
     saveMessage(store, {
       id: 'person-1',
       date: '2026-06-30',
@@ -40,14 +47,22 @@ async function run() {
       date: '2026-06-30',
       messageId: 'person-1',
       userMessage: '我的初恋名字叫钟奕菲，我们在2021年冬天相恋。',
-      observation: observation1
+      observation: observation1,
+      candidate: {
+        personName: '钟奕菲',
+        relationshipToUser: '初恋',
+        timelineSummary: '2021年冬天相恋'
+      }
     })
 
-    const observation2 = observationService.recordConversationTurn({
+    const observation2 = observationService.addNoteSmart({
       date: '2026-07-02',
-      userMessage: '钟奕菲是我的初恋，她对我很重要。',
-      cornieMessage: '小铃湾会认真记着这份重要。'
-    })
+      type: 'event',
+      title: '用户重申钟奕菲的重要性',
+      content: '用户重申钟奕菲是初恋，对其很重要。',
+      relatedRef: '2026-07-02',
+      sourceText: '钟奕菲是我的初恋，她对我很重要。'
+    }).note
     saveMessage(store, {
       id: 'person-2',
       date: '2026-07-02',
@@ -60,7 +75,11 @@ async function run() {
       date: '2026-07-02',
       messageId: 'person-2',
       userMessage: '钟奕菲是我的初恋，她对我很重要。',
-      observation: observation2
+      observation: observation2,
+      candidate: {
+        personName: '钟奕菲',
+        relationshipToUser: '初恋'
+      }
     })
 
     const topic = await topicIndex.get('钟奕菲')

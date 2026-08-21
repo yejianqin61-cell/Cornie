@@ -15,7 +15,13 @@ async function run() {
       baseDir,
       date: '2026-06-30',
       messageId: 'pref-1',
-      userMessage: '我喜欢奶茶。'
+      userMessage: '我喜欢奶茶。',
+      candidate: {
+        title: '奶茶',
+        stance: '喜欢',
+        preferenceType: '饮食',
+        triggerKeywords: ['奶茶']
+      }
     })
     assert(first.pageId, '应先创建偏好页')
 
@@ -34,7 +40,13 @@ async function run() {
       baseDir,
       date: '2026-07-01',
       messageId: 'pref-2',
-      userMessage: '我更喜欢奶茶。'
+      userMessage: '我更喜欢奶茶。',
+      candidate: {
+        title: '奶茶',
+        stance: '喜欢',
+        preferenceType: '饮食',
+        triggerKeywords: ['奶茶']
+      }
     })
     assert(['updated', 'noop'].includes(second.action), '重复偏好主题的后续表达应增量合并')
 
@@ -46,7 +58,13 @@ async function run() {
       baseDir,
       date: '2026-07-01',
       messageId: 'pref-2',
-      userMessage: '我更喜欢奶茶。'
+      userMessage: '我更喜欢奶茶。',
+      candidate: {
+        title: '奶茶',
+        stance: '喜欢',
+        preferenceType: '饮食',
+        triggerKeywords: ['奶茶']
+      }
     })
 
     const dedupedTopic = await topicIndex.get('奶茶')

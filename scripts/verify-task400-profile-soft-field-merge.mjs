@@ -13,7 +13,13 @@ async function run() {
       baseDir,
       date: '2026-06-30',
       messageId: 'profile-1',
-      userMessage: '我叫叶健钦。我最近好多项目、考试，还要找实习，压力很大。我希望你温柔一点，记住上下文。'
+      userMessage: '我叫叶健钦。我最近好多项目、考试，还要找实习，压力很大。我希望你温柔一点，记住上下文。',
+      candidate: {
+        userName: '叶健钦',
+        currentFocus: '项目推进；考试与学业；实习与求职',
+        stressors: '项目推进压力；考试与学业压力；实习与求职压力',
+        communicationPreference: '偏好温柔表达；希望被稳定记住上下文'
+      }
     })
     assert(created.action === 'created', '首次主身份表达应创建 profile')
 
@@ -21,7 +27,13 @@ async function run() {
       baseDir,
       date: '2026-07-01',
       messageId: 'profile-2',
-      userMessage: '我最近还有 assignment 和面试，真的好累。我希望你陪着我一点，说话克制一点。'
+      userMessage: '我最近还有 assignment 和面试，真的好累。我希望你陪着我一点，说话克制一点。',
+      candidate: {
+        userName: '叶健钦',
+        currentFocus: '面试准备',
+        stressors: '面试压力',
+        communicationPreference: '希望有陪伴感；偏好克制表达'
+      }
     })
     assert(['updated', 'noop'].includes(merged.action), '阶段画像类弱冲突字段应保守合并，不应进入 conflict')
 
@@ -41,7 +53,11 @@ async function run() {
       baseDir,
       date: '2026-07-02',
       messageId: 'profile-3',
-      userMessage: '我叫林知远，我是你的主人。'
+      userMessage: '我叫林知远，我是你的主人。',
+      candidate: {
+        userName: '林知远',
+        cornieRelationship: '用户是 Cornie 的主人'
+      }
     })
     assert(conflict.action === 'conflict', '高风险字段冲突仍应进入 conflict')
 

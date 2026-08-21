@@ -14,14 +14,24 @@ async function run() {
       baseDir,
       date: '2026-06-30',
       messageId: 'profile-1',
-      userMessage: '我叫叶健钦，我是你的爸爸，也是你的创造者。'
+      userMessage: '我叫叶健钦，我是你的爸爸，也是你的创造者。',
+      candidate: {
+        userName: '叶健钦',
+        cornieRelationship: '用户是 Cornie 的爸爸和创造者'
+      }
     })
 
     const created = await upsertIdentityPersonFromConversation(harness.store, {
       baseDir,
       date: '2026-06-30',
       messageId: 'person-meaning-1',
-      userMessage: '我的初恋名字叫钟奕菲，她很温柔，很害羞，很内向。我觉得她对我很重要，是我前进的动力。'
+      userMessage: '我的初恋名字叫钟奕菲，她很温柔，很害羞，很内向。我觉得她对我很重要，是我前进的动力。',
+      candidate: {
+        personName: '钟奕菲',
+        relationshipToUser: '初恋',
+        personalitySummary: '温柔，害羞，内向',
+        meaningToUser: '她对我很重要，是我前进的动力'
+      }
     })
 
     assert(created.action === 'created', '高确定性重要人物表达应成功创建人物页')

@@ -14,7 +14,11 @@ async function run() {
     baseDir,
     date: '2026-06-30',
     messageId: 'profile-1',
-    userMessage: '我叫叶健钦，我是你的创造者，也是你爸爸。'
+    userMessage: '我叫叶健钦，我是你的创造者，也是你爸爸。',
+    candidate: {
+      userName: '叶健钦',
+      cornieRelationship: '用户是 Cornie 的创造者和爸爸'
+    }
   })
   assert(created.pageId, '应先创建主身份页')
 
@@ -29,7 +33,11 @@ async function run() {
     baseDir,
     date: '2026-07-01',
     messageId: 'profile-2',
-    userMessage: '以后你叫我爸爸。'
+    userMessage: '以后你叫我爸爸。',
+    candidate: {
+      userName: '叶健钦',
+      preferredName: '爸爸'
+    }
   })
   assert(['updated', 'noop'].includes(updated.action), '补充偏好称呼应保守写入主身份页')
 
@@ -45,7 +53,11 @@ async function run() {
     baseDir,
     date: '2026-07-01',
     messageId: 'profile-2',
-    userMessage: '以后你叫我爸爸。'
+    userMessage: '以后你叫我爸爸。',
+    candidate: {
+      userName: '叶健钦',
+      preferredName: '爸爸'
+    }
   })
   assert(['noop', 'updated'].includes(duplicated.action), '重复消息写入应保持幂等')
 

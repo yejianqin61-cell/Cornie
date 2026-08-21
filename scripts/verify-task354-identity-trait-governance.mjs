@@ -12,7 +12,13 @@ async function run() {
     baseDir,
     date: '2026-06-30',
     messageId: 'trait-1',
-    userMessage: '我最近真的好累，压力很大，但还是会继续把项目往前推。'
+    userMessage: '我最近真的好累，压力很大，但还是会继续把项目往前推。',
+    candidate: {
+      title: '高压下容易疲惫',
+      traitType: '压力反应',
+      traitSummary: '用户在高压阶段容易感到疲惫，但仍倾向继续扛着事情往前走。',
+      triggerKeywords: ['累', '好累', '疲惫', '压力']
+    }
   })
 
   assert(created.action === 'created', '高价值长期侧写表达应创建 trait 页面')
@@ -38,7 +44,13 @@ async function run() {
     baseDir,
     date: '2026-07-01',
     messageId: 'trait-2',
-    userMessage: '我最近还是好累，压力真的很大。'
+    userMessage: '我最近还是好累，压力真的很大。',
+    candidate: {
+      title: '高压下容易疲惫',
+      traitType: '压力反应',
+      traitSummary: '用户在高压阶段容易感到疲惫，但仍倾向继续扛着事情往前走。',
+      triggerKeywords: ['累', '好累', '疲惫', '压力']
+    }
   })
   assert(updated.action === 'updated', '重复侧写证据应累加到同一 trait 页面')
 

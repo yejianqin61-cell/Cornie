@@ -13,14 +13,22 @@ async function run() {
     baseDir,
     date: '2026-06-30',
     messageId: 'profile-1',
-    userMessage: '我叫叶健钦，我是你的爸爸，也是你的创造者。'
+    userMessage: '我叫叶健钦，我是你的爸爸，也是你的创造者。',
+    candidate: {
+      userName: '叶健钦',
+      cornieRelationship: '用户是 Cornie 的爸爸和创造者'
+    }
   })
 
   const created = await upsertIdentityPersonFromConversation(store, {
     baseDir,
     date: '2026-06-30',
     messageId: 'person-1',
-    userMessage: '我的初恋名字叫钟奕菲。'
+    userMessage: '我的初恋名字叫钟奕菲。',
+    candidate: {
+      personName: '钟奕菲',
+      relationshipToUser: '初恋'
+    }
   })
   assert(created.pageId, '应先建立重要人物页')
 
@@ -28,7 +36,11 @@ async function run() {
     baseDir,
     date: '2026-07-01',
     messageId: 'person-2',
-    userMessage: '钟奕菲是我的朋友。'
+    userMessage: '钟奕菲是我的朋友。',
+    candidate: {
+      personName: '钟奕菲',
+      relationshipToUser: '朋友'
+    }
   })
   assert(conflict.action === 'conflict', '关系冲突时应返回 conflict')
 

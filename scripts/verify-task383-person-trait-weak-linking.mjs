@@ -15,7 +15,13 @@ async function run() {
       baseDir,
       date: '2026-06-30',
       messageId: 'trait-1',
-      userMessage: '我最近真的好累，压力很大，但还是会继续把项目往前推。'
+      userMessage: '我最近真的好累，压力很大，但还是会继续把项目往前推。',
+      candidate: {
+        title: '高压下容易疲惫',
+        traitType: '压力反应',
+        traitSummary: '用户在高压阶段容易感到疲惫，但仍倾向继续扛着事情往前走。',
+        triggerKeywords: ['累', '好累', '疲惫', '压力']
+      }
     })
     assert(trait.pageId, '应先创建可关联的 trait 页')
 
@@ -23,7 +29,13 @@ async function run() {
       baseDir,
       date: '2026-06-30',
       messageId: 'person-1',
-      userMessage: '钟奕菲是我的初恋，她很温柔。我最近真的好累，压力很大，但还是会继续把项目往前推。'
+      userMessage: '钟奕菲是我的初恋，她很温柔。我最近真的好累，压力很大，但还是会继续把项目往前推。',
+      candidate: {
+        personName: '钟奕菲',
+        relationshipToUser: '初恋',
+        personalitySummary: '温柔',
+        sharedExperienceSummary: '两人一起经历高压力、疲惫但仍坚持推进项目的时期'
+      }
     })
     assert(person.pageId, '应创建重要人物页')
 
@@ -37,7 +49,13 @@ async function run() {
       baseDir,
       date: '2026-06-30',
       messageId: 'person-1',
-      userMessage: '钟奕菲是我的初恋，她很温柔。我最近真的好累，压力很大，但还是会继续把项目往前推。'
+      userMessage: '钟奕菲是我的初恋，她很温柔。我最近真的好累，压力很大，但还是会继续把项目往前推。',
+      candidate: {
+        personName: '钟奕菲',
+        relationshipToUser: '初恋',
+        personalitySummary: '温柔',
+        sharedExperienceSummary: '两人一起经历高压力、疲惫但仍坚持推进项目的时期'
+      }
     })
     assert(['noop', 'updated'].includes(repeated.action), '重复写入应保持幂等')
 

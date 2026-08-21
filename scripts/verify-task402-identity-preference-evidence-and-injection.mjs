@@ -17,14 +17,24 @@ async function run() {
       baseDir,
       date: '2026-06-30',
       messageId: 'profile-1',
-      userMessage: '我叫叶健钦，我是你的爸爸，也是你的创造者。'
+      userMessage: '我叫叶健钦，我是你的爸爸，也是你的创造者。',
+      candidate: {
+        userName: '叶健钦',
+        cornieRelationship: '用户是 Cornie 的爸爸和创造者'
+      }
     })
 
     const created = await upsertIdentityPreferenceFromConversation(store, {
       baseDir,
       date: '2026-06-30',
       messageId: 'pref-1',
-      userMessage: '我不喜欢太甜的咖啡。'
+      userMessage: '我不喜欢太甜的咖啡。',
+      candidate: {
+        title: '咖啡',
+        stance: '不喜欢',
+        preferenceType: '饮食',
+        triggerKeywords: ['咖啡']
+      }
     })
     assert(created.action === 'created', '首次偏好表达应创建 preference 页')
 
@@ -54,7 +64,13 @@ async function run() {
       baseDir,
       date: '2026-07-01',
       messageId: 'pref-2',
-      userMessage: '我还是不喜欢太甜的咖啡。'
+      userMessage: '我还是不喜欢太甜的咖啡。',
+      candidate: {
+        title: '咖啡',
+        stance: '不喜欢',
+        preferenceType: '饮食',
+        triggerKeywords: ['咖啡']
+      }
     })
     assert(updated.action === 'updated', '重复偏好表达应累计证据而不是新建')
 
@@ -67,7 +83,13 @@ async function run() {
       baseDir,
       date: '2026-07-01',
       messageId: 'pref-2',
-      userMessage: '我还是不喜欢太甜的咖啡。'
+      userMessage: '我还是不喜欢太甜的咖啡。',
+      candidate: {
+        title: '咖啡',
+        stance: '不喜欢',
+        preferenceType: '饮食',
+        triggerKeywords: ['咖啡']
+      }
     })
     assert(repeatedSameSource.action === 'noop', '同源重复写入应保持幂等')
 

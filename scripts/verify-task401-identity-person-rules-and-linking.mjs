@@ -18,7 +18,11 @@ async function run() {
       baseDir,
       date: '2026-06-30',
       messageId: 'profile-1',
-      userMessage: '我叫叶健钦，我是你的爸爸，也是你的创造者。'
+      userMessage: '我叫叶健钦，我是你的爸爸，也是你的创造者。',
+      candidate: {
+        userName: '叶健钦',
+        cornieRelationship: '用户是 Cornie 的爸爸和创造者'
+      }
     })
 
     const lowValue = await upsertIdentityPersonFromConversation(store, {
@@ -29,11 +33,14 @@ async function run() {
     })
     assert(lowValue.action === 'skipped', '普通路人提及不应误建人物页')
 
-    const observation = observationService.recordConversationTurn({
+    const observation = observationService.addNoteSmart({
       date: '2026-06-30',
-      userMessage: '我的初恋名字叫钟奕菲，她很温柔，我们在2021年冬天相恋。',
-      cornieMessage: '小铃湾记住啦。'
-    })
+      type: 'event',
+      title: '用户提到初恋钟奕菲',
+      content: '用户提到初恋钟奕菲，她很温柔，2021年冬天相恋。',
+      relatedRef: '2026-06-30',
+      sourceText: '我的初恋名字叫钟奕菲，她很温柔，我们在2021年冬天相恋。'
+    }).note
     assert(Boolean(observation?.id), '应先形成 observation 来源')
 
     const created = await upsertIdentityPersonFromConversation(store, {
@@ -41,7 +48,13 @@ async function run() {
       date: '2026-06-30',
       messageId: 'person-1',
       userMessage: '我的初恋名字叫钟奕菲，她很温柔，我们在2021年冬天相恋。',
-      observation
+      observation,
+      candidate: {
+        personName: '钟奕菲',
+        relationshipToUser: '初恋',
+        personalitySummary: '温柔',
+        firstKnownPeriod: '2021年冬天'
+      }
     })
     assert(created.action === 'created', '高确定性人物信息应创建人物页')
 
@@ -77,7 +90,11 @@ async function run() {
       baseDir,
       date: '2026-07-01',
       messageId: 'person-2',
-      userMessage: '钟奕菲是我的初恋。'
+      userMessage: '钟奕菲是我的初恋。',
+      candidate: {
+        personName: '钟奕菲',
+        relationshipToUser: '初恋'
+      }
     })
     assert(['updated', 'noop'].includes(repeated.action), '重复提及同一人物应更新而不是新建')
 
@@ -91,7 +108,11 @@ async function run() {
       baseDir,
       date: '2026-07-02',
       messageId: 'person-3',
-      userMessage: '钟奕菲是我的朋友。'
+      userMessage: '钟奕菲是我的朋友。',
+      candidate: {
+        personName: '钟奕菲',
+        relationshipToUser: '朋友'
+      }
     })
     assert(conflict.action === 'conflict', '关系冲突时应返回 conflict')
 

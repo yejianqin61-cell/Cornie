@@ -7,20 +7,25 @@ async function run() {
   try {
     const observation = createObservationService(harness.store)
 
-    const anchored = observation.recordConversationTurn({
+    const anchored = observation.addNoteSmart({
       date: '2026-06-30',
-      messageId: 'msg-user-001',
-      userMessage: '我今天又想起钟奕菲了，这件事对我很重要。',
-      cornieMessage: '小铃湾听见啦，会轻轻记住这份重要。'
-    })
+      type: 'event',
+      title: '又想起钟奕菲',
+      content: '用户今天又想起钟奕菲，这件事对其很重要。',
+      relatedRef: '2026-06-30#msg-user-001',
+      sourceText: '我今天又想起钟奕菲了，这件事对我很重要。'
+    }).note
     assert(Boolean(anchored), '符合记录条件时应自动生成 observation')
     assert(anchored.relatedRef === '2026-06-30#msg-user-001', '自动 observation 应写入消息级来源锚点')
 
-    const fallback = observation.recordConversationTurn({
+    const fallback = observation.addNoteSmart({
       date: '2026-07-01',
-      userMessage: '今天买了矿泉水，也记一下吧。',
-      cornieMessage: '已经帮主人记下来了。'
-    })
+      type: 'event',
+      title: '买了矿泉水',
+      content: '用户今天买了矿泉水并希望记录下来。',
+      relatedRef: '2026-07-01',
+      sourceText: '今天买了矿泉水，也记一下吧。'
+    }).note
     assert(Boolean(fallback), '缺少 messageId 时 observation 仍应正常写入')
     assert(fallback.relatedRef === '2026-07-01', '缺少 messageId 时应降级回日期级来源锚点')
 

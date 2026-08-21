@@ -17,14 +17,21 @@ async function run() {
       baseDir,
       date: '2026-06-30',
       messageId: 'profile-1',
-      userMessage: '我叫叶健钦，我是你的爸爸，也是你的创造者。'
+      userMessage: '我叫叶健钦，我是你的爸爸，也是你的创造者。',
+      candidate: {
+        userName: '叶健钦',
+        cornieRelationship: '用户是 Cornie 的爸爸和创造者'
+      }
     })
 
-    const observation = observationService.recordConversationTurn({
+    const observation = observationService.addNoteSmart({
       date: '2026-06-30',
-      userMessage: '我的初恋名字叫钟奕菲，我们在2021年冬天相恋。',
-      cornieMessage: '小铃湾记住啦。'
-    })
+      type: 'event',
+      title: '用户提到初恋钟奕菲',
+      content: '用户提到初恋钟奕菲，于2021年冬天相恋。',
+      relatedRef: '2026-06-30',
+      sourceText: '我的初恋名字叫钟奕菲，我们在2021年冬天相恋。'
+    }).note
     assert(Boolean(observation?.id), '本轮应先形成 observation 记录')
 
     const created = await upsertIdentityPersonFromConversation(store, {
@@ -32,7 +39,12 @@ async function run() {
       date: '2026-06-30',
       messageId: 'person-obs-1',
       userMessage: '我的初恋名字叫钟奕菲，我们在2021年冬天相恋。',
-      observation
+      observation,
+      candidate: {
+        personName: '钟奕菲',
+        relationshipToUser: '初恋',
+        timelineSummary: '2021年冬天相恋'
+      }
     })
 
     assert(created.action === 'created', '首次重要人物提及应创建人物页')
@@ -55,7 +67,12 @@ async function run() {
       date: '2026-06-30',
       messageId: 'person-obs-1',
       userMessage: '我的初恋名字叫钟奕菲，我们在2021年冬天相恋。',
-      observation
+      observation,
+      candidate: {
+        personName: '钟奕菲',
+        relationshipToUser: '初恋',
+        timelineSummary: '2021年冬天相恋'
+      }
     })
     assert(['noop', 'updated', 'conflict'].includes(second.action), '重复同源写入应保持幂等')
 

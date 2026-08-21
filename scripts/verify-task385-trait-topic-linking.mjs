@@ -14,7 +14,13 @@ async function run() {
       baseDir,
       date: '2026-06-30',
       messageId: 'trait-1',
-      userMessage: '我最近真的好累，压力很大，但还是会继续把项目往前推。'
+      userMessage: '我最近真的好累，压力很大，但还是会继续把项目往前推。',
+      candidate: {
+        title: '高压下容易疲惫',
+        traitType: '压力反应',
+        traitSummary: '用户在高压阶段容易感到疲惫，但仍倾向继续扛着事情往前走。',
+        triggerKeywords: ['累', '好累', '疲惫', '压力']
+      }
     })
     assert(first.pageId, '应先创建 trait 页')
 
@@ -30,7 +36,13 @@ async function run() {
       baseDir,
       date: '2026-07-01',
       messageId: 'trait-2',
-      userMessage: '我最近特别累，压力很大，但还是想把事情往前推进。'
+      userMessage: '我最近特别累，压力很大，但还是想把事情往前推进。',
+      candidate: {
+        title: '高压下容易疲惫',
+        traitType: '压力反应',
+        traitSummary: '用户在高压阶段容易感到疲惫，但仍倾向继续扛着事情往前走。',
+        triggerKeywords: ['累', '好累', '疲惫', '压力']
+      }
     })
     assert(['updated', 'noop'].includes(second.action), '同一 trait 的后续表达应增量合并')
 
@@ -42,7 +54,13 @@ async function run() {
       baseDir,
       date: '2026-07-01',
       messageId: 'trait-2',
-      userMessage: '我最近特别累，压力很大，但还是想把事情往前推进。'
+      userMessage: '我最近特别累，压力很大，但还是想把事情往前推进。',
+      candidate: {
+        title: '高压下容易疲惫',
+        traitType: '压力反应',
+        traitSummary: '用户在高压阶段容易感到疲惫，但仍倾向继续扛着事情往前走。',
+        triggerKeywords: ['累', '好累', '疲惫', '压力']
+      }
     })
 
     const dedupedTopic = await topicIndex.get('高压下容易疲惫')

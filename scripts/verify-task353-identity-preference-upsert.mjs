@@ -12,7 +12,13 @@ async function run() {
     baseDir,
     date: '2026-06-30',
     messageId: 'pref-1',
-    userMessage: '我不喜欢太甜的咖啡。'
+    userMessage: '我不喜欢太甜的咖啡。',
+    candidate: {
+      title: '咖啡',
+      stance: '不喜欢',
+      preferenceType: '饮食',
+      triggerKeywords: ['咖啡']
+    }
   })
 
   assert(first.action === 'created', '首次偏好表达应创建 identity_preference 页面')
@@ -32,7 +38,13 @@ async function run() {
     baseDir,
     date: '2026-07-01',
     messageId: 'pref-2',
-    userMessage: '我还是不喜欢太甜的咖啡。'
+    userMessage: '我还是不喜欢太甜的咖啡。',
+    candidate: {
+      title: '咖啡',
+      stance: '不喜欢',
+      preferenceType: '饮食',
+      triggerKeywords: ['咖啡']
+    }
   })
 
   assert(second.action === 'updated', '重复偏好表达应累计证据而不是新建页面')

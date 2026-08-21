@@ -75,55 +75,6 @@ function mergeObservation(existing, incoming) {
   }
 }
 
-function shouldRecordObservation({ userMessage, cornieMessage }) {
-  const text = `${userMessage ?? ''}\n${cornieMessage ?? ''}`.trim()
-  if (!text) return false
-
-  const keywords = [
-    '买',
-    '花',
-    '工资',
-    '待办',
-    '日程',
-    '会议',
-    '提醒',
-    '喜欢',
-    '讨厌',
-    '开心',
-    '难过',
-    '想要',
-    '不要',
-    '今天',
-    '明天',
-    '下周',
-    '记一下'
-  ]
-
-  if (text.length >= 24) return true
-  return keywords.some((keyword) => text.includes(keyword))
-}
-
-function buildConversationRelatedRef({ date, messageId }) {
-  const normalizedDate = String(date ?? '').trim()
-  const normalizedMessageId = String(messageId ?? '').trim()
-  if (normalizedDate && normalizedMessageId) {
-    return `${normalizedDate}#${normalizedMessageId}`
-  }
-  return normalizedDate
-}
-
-function deriveConversationObservation({ date, userMessage, cornieMessage, messageId }) {
-  const title = userMessage.slice(0, 16) || '对话记录'
-  return {
-    date,
-    type: 'event',
-    title,
-    content: `主人：${userMessage}\n铃湾：${cornieMessage}`,
-    relatedRef: buildConversationRelatedRef({ date, messageId }),
-    sourceText: `${userMessage}\n${cornieMessage}`
-  }
-}
-
 export function createObservationService(store) {
   function listByRecall({ date, from, to, type, q, topic, person, limit } = {}) {
     const explicitQuery = String(q ?? '').trim()
@@ -270,12 +221,6 @@ export function createObservationService(store) {
     getPromptPolicy: () => getObservationPromptPolicy(),
     getPromptPolicySummary: () => buildObservationPromptPolicySummary(),
     prepareNote,
-    addNoteSmart,
-    recordConversationTurn: ({ date, userMessage, cornieMessage, messageId }) => {
-      if (!shouldRecordObservation({ userMessage, cornieMessage })) return null
-
-      const note = deriveConversationObservation({ date, userMessage, cornieMessage, messageId })
-      return addNoteSmart(note).note
-    }
+    addNoteSmart
   }
 }

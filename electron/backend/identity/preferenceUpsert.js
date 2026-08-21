@@ -43,7 +43,7 @@ function buildChatRef({ date, messageId }) {
 }
 
 // LLM 提炼轮次提议的偏好候选（443/445）：title 必填。
-// 正则 buildCandidate 仅作为过渡期默认值，随 444 正则全面弃用后删除。
+// 正则提取已随 444 全面弃用，候选只来自 LLM。
 function normalizePreferenceCandidate(candidate) {
   if (!candidate || typeof candidate !== 'object' || Array.isArray(candidate)) {
     return null
@@ -62,101 +62,6 @@ function normalizePreferenceCandidate(candidate) {
       ? candidate.triggerKeywords.map((item) => normalizeString(item)).filter(Boolean)
       : []
   }
-}
-
-function guessPreferenceType(target, rawMessage) {
-  const text = `${normalizeString(target)} ${normalizeString(rawMessage)}`
-
-  if (/[吃喝奶茶咖啡饭菜火锅烧烤甜辣咸口味饮料水果零食]/.test(text)) {
-    return '饮食'
-  }
-  if (/[作息睡觉早起熬夜午睡]/.test(text)) {
-    return '作息'
-  }
-  if (/[聊天语气说话温柔直接陪伴安慰称呼]/.test(text)) {
-    return '交流'
-  }
-  if (/[风格颜色界面简洁可爱文学]/.test(text)) {
-    return '风格'
-  }
-  return '其他'
-}
-
-function cleanupPreferenceTarget(target) {
-  const cleaned = stripTrailingParticles(target)
-    .replace(/^(太|很|更|比较|特别)/, '')
-    .replace(/^(还是|也|都|又|真|挺|可)/, '')
-    .replace(/^(喝|吃|用|看|听|聊|这种|这个|那种|那个)/, '')
-    .trim()
-
-  if (!cleaned || cleaned.length > 24) return ''
-
-  const blocked = new Set([
-    '这样',
-    '这个',
-    '那个',
-    '东西',
-    '一些',
-    '一点',
-    '你',
-    '我'
-  ])
-
-  return blocked.has(cleaned) ? '' : cleaned
-}
-
-function buildPreferenceKeywords(target, preferenceType, stance) {
-  const normalizedTarget = normalizeString(target)
-  const phraseKeywords = [normalizedTarget, preferenceType, stance]
-
-  const tokenKeywords = normalizedTarget
-    .split(/[的\s/]+/g)
-    .map((item) => normalizeString(item))
-    .filter((item) => item.length >= 2)
-
-  return dedupeStrings([...phraseKeywords, ...tokenKeywords])
-}
-
-function takePreferenceTarget(text, marker) {
-  const startIndex = text.indexOf(marker)
-  if (startIndex === -1) return ''
-
-  const raw = text.slice(startIndex + marker.length)
-  const stopMatch = raw.match(/[，。！？；,!?\n]/)
-  const cropped = stopMatch ? raw.slice(0, stopMatch.index) : raw
-  return cleanupPreferenceTarget(cropped)
-}
-
-function buildCandidate(userMessage) {
-  const text = normalizeString(userMessage)
-  if (!text) return null
-
-  const markers = [
-    { marker: '我不喜欢', stance: '不喜欢' },
-    { marker: '我还是不喜欢', stance: '不喜欢' },
-    { marker: '我讨厌', stance: '不喜欢' },
-    { marker: '我更喜欢', stance: '喜欢' },
-    { marker: '我喜欢', stance: '喜欢' },
-    { marker: '我爱', stance: '喜欢' }
-  ]
-
-  for (const { marker, stance } of markers) {
-    const target = takePreferenceTarget(text, marker)
-    if (!target) continue
-
-    const preferenceType = guessPreferenceType(target, text)
-    const title = target
-    const triggerKeywords = buildPreferenceKeywords(target, preferenceType, stance)
-
-    return {
-      title,
-      stance,
-      preferenceType,
-      triggerKeywords
-    }
-  }
-
-  return null
 }
 
 function samePreference(page, candidate) {
@@ -265,10 +170,6 @@ async function ensurePreferenceTopicLink({ baseDir, page, date, messageId, candi
   return topicIndex.get(normalizedKey)
 }
 
-export function extractIdentityPreferenceCandidate(userMessage) {
-  return buildCandidate(userMessage)
-}
-
 export async function upsertIdentityPreferenceFromConversation(
   store,
   {
@@ -279,7 +180,7 @@ export async function upsertIdentityPreferenceFromConversation(
     candidate
   } = {}
 ) {
-  candidate = normalizePreferenceCandidate(candidate) ?? buildCandidate(userMessage)
+  candidate = normalizePreferenceCandidate(candidate)
   if (!candidate) {
     return { action: 'skipped', reason: 'no_candidate' }
   }

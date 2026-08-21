@@ -12,14 +12,24 @@ async function run() {
     baseDir,
     date: '2026-06-30',
     messageId: 'profile-1',
-    userMessage: '我叫叶健钦，我是你的爸爸，也是你的创造者'
+    userMessage: '我叫叶健钦，我是你的爸爸，也是你的创造者',
+    candidate: {
+      userName: '叶健钦',
+      cornieRelationship: '用户是 Cornie 的爸爸和创造者'
+    }
   })
 
   const created = await upsertIdentityPersonFromConversation(harness.store, {
     baseDir,
     date: '2026-06-30',
     messageId: 'person-1',
-    userMessage: '唉，我的初恋名字叫钟奕菲，我们在2021年冬天相恋，2022年的春天疏远，2022年的夏天决裂。'
+    userMessage: '唉，我的初恋名字叫钟奕菲，我们在2021年冬天相恋，2022年的春天疏远，2022年的夏天决裂。',
+    candidate: {
+      personName: '钟奕菲',
+      relationshipToUser: '初恋',
+      timelineSummary: '2021年冬天相恋；2022年春天疏远；2022年夏天决裂',
+      emotionalWeight: 'high'
+    }
   })
 
   assert(created.action === 'created', '高确定性重要人物表达应创建 identity_person 页面')
@@ -52,7 +62,11 @@ async function run() {
     baseDir,
     date: '2026-07-01',
     messageId: 'person-2',
-    userMessage: '钟奕菲是我的初恋。'
+    userMessage: '钟奕菲是我的初恋。',
+    candidate: {
+      personName: '钟奕菲',
+      relationshipToUser: '初恋'
+    }
   })
   assert(updated.action === 'updated', '重复提及同一重要人物时应更新而不是新建')
 
