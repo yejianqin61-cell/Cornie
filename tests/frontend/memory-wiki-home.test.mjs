@@ -103,6 +103,44 @@ describe('T-02 双栏容器', () => {
     wrapper.unmount()
   })
 
+  // T-05：选中与展开状态持久化
+  describe('T-05 状态持久化', () => {
+    it('选中与展开状态写入 localStorage，重新挂载恢复', async () => {
+      localStorage.clear()
+      api.listMemoryWikiPages.mockImplementation(async ({ status } = {}) => ({
+        pages: status === 'archived' ? [] : [makePage('p1', 'identity_profile', '我的身份页'), makePage('p2', 'topic', '主题页')]
+      }))
+      const wrapper = mount(MemoryWikiHome, {
+        global: { stubs: { MemoryPageDetail: true } }
+      })
+      await flushPromises()
+
+      // 展开主题目录 + 选中一页
+      const topicDir = wrapper.findAll('.treeDir').find((n) => n.text().includes('主题'))
+      await topicDir.trigger('click')
+      const file = wrapper.findAll('.treeFile').find((n) => n.text().includes('主题页'))
+      await file.trigger('click')
+      expect(wrapper.findComponent(MemoryPageDetail).props('id')).toBe('p2')
+      wrapper.unmount()
+
+      // 存储已写入
+      const stored = JSON.parse(localStorage.getItem('cornie.memory-wiki.tree'))
+      expect(stored.selectedId).toBe('p2')
+      expect(stored.expanded).toContain('topic')
+
+      // 重新挂载：恢复选中（右侧加载）与展开状态
+      const wrapper2 = mount(MemoryWikiHome, {
+        global: { stubs: { MemoryPageDetail: true } }
+      })
+      await flushPromises()
+      expect(wrapper2.findComponent(MemoryPageDetail).props('id')).toBe('p2')
+      // 主题目录处于展开态 → 文件可见
+      expect(wrapper2.text()).toContain('主题页')
+      wrapper2.unmount()
+      localStorage.clear()
+    })
+  })
+
   // T-03：树顶搜索
   describe('T-03 树顶搜索', () => {
     async function mountWithPages(wrapperPages) {

@@ -13,9 +13,40 @@ const emit = defineEmits(['open-observation', 'open-chat-source'])
 
 const pages = ref([])
 const loading = ref(false)
-const selectedId = ref('')
-const creating = ref(false)
 const searchQuery = ref('')
+
+// T-05：选中与展开状态持久化（localStorage）
+const STORAGE_KEY = 'cornie.memory-wiki.tree'
+
+function readStoredState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch {
+    // localStorage 不可用时静默
+  }
+  return null
+}
+
+const storedState = readStoredState() || {}
+const selectedId = ref(typeof storedState.selectedId === 'string' ? storedState.selectedId : '')
+const creating = ref(false)
+const expandedKeys = ref(
+  Array.isArray(storedState.expanded) && storedState.expanded.length > 0
+    ? storedState.expanded
+    : ['identity_profile', 'identity_person', 'identity_preference', 'identity_trait']
+)
+
+function persistState() {
+  try {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ selectedId: selectedId.value, expanded: expandedKeys.value })
+    )
+  } catch {
+    // 忽略写入失败
+  }
+}
 
 // T-03：树顶搜索——标题/别名/摘要模糊匹配（防抖 220ms）
 const filteredPages = ref([])
@@ -80,34 +111,48 @@ onBeforeUnmount(() => {
 function selectPage(page) {
   selectedId.value = page?.id || ''
   creating.value = false
+  persistState()
+}
+
+function onToggle(key) {
+  const next = new Set(expandedKeys.value)
+  if (next.has(key)) next.delete(key)
+  else next.add(key)
+  expandedKeys.value = [...next]
+  persistState()
 }
 
 function startCreate() {
   creating.value = true
   selectedId.value = ''
+  persistState()
 }
 
 function onCreated(id) {
   creating.value = false
   refresh().then(() => {
     selectedId.value = id
+    persistState()
   })
 }
 
 function onDeleted() {
   creating.value = false
   selectedId.value = ''
+  persistState()
   refresh()
 }
 
 function onBack() {
   selectedId.value = ''
   creating.value = false
+  persistState()
 }
 
 function onOpenMemory(id) {
   creating.value = false
   selectedId.value = id
+  persistState()
 }
 </script>
 
@@ -136,7 +181,9 @@ function onOpenMemory(id) {
             v-else
             :pages="filteredPages"
             :selected-id="selectedId"
+            :expanded-keys="expandedKeys"
             @select="selectPage"
+            @toggle="onToggle"
           />
         </template>
       </aside>
