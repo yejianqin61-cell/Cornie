@@ -132,7 +132,6 @@
     "repair:category-data": "node scripts/repair-category-data.mjs"
   },
   "dependencies": {
-    "better-sqlite3": "^11.10.0",
     "express": "^4.19.2",
     "sql.js": "^1.13.0",
     "vue": "^3.5.17"

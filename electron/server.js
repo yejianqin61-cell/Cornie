@@ -60,7 +60,7 @@ export function createServer({ store, baseDir = process.cwd() }) {
   app.use('/api', diaryRoutes({ diary }))
 
   const chatlog = createChatlogService(store, {
-    driver: CHATLOG_REPOSITORY_DRIVERS.betterSqlite3
+    driver: CHATLOG_REPOSITORY_DRIVERS.sqljs
   })
   app.use('/api', chatlogRoutes({ chatlog }))
 
