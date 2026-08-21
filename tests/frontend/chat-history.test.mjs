@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 
 import ChatHistory from '../../src/renderer/ChatHistory.vue'
@@ -7,8 +7,10 @@ function createChatlogFetchMock({ shouldFailMessages = false, stringErrorOnMessa
   return vi.fn(async (input) => {
     const url = String(input)
 
-    if (url.includes('/api/chatlogs?month=')) {
-      if (url.includes('month=2026-07')) {
+    // 日期列表：ChatHistory 会带 scope/limit/cursor（以及可选的 month）请求。
+    if (url.includes('/api/chatlogs?') && !url.includes('/api/chatlogs/search')) {
+      const month = new URL(url, 'http://localhost').searchParams.get('month')
+      if (month === '2026-07') {
         return {
           ok: true,
           status: 200,
@@ -70,17 +72,23 @@ function createChatlogFetchMock({ shouldFailMessages = false, stringErrorOnMessa
 
 describe('ChatHistory', () => {
   beforeEach(() => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-06-27T12:00:00.000+08:00'))
     globalThis.fetch = createChatlogFetchMock()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('renders date list and chat messages', async () => {
     const wrapper = mount(ChatHistory)
     await flushPromises()
 
-    expect(wrapper.text()).toContain('聊天历史')
+    expect(wrapper.text()).toContain('聊天记录')
     expect(wrapper.text()).toContain('2026-06-27')
     expect(wrapper.text()).toContain('今天买了龙虾。')
-    expect(wrapper.text()).toContain('铃湾')
+    expect(wrapper.text()).toContain('铃湾帮你记下来了。')
 
     const rows = wrapper.findAll('.historyRow')
     await rows[1].trigger('click')
@@ -102,8 +110,9 @@ describe('ChatHistory', () => {
     const wrapper = mount(ChatHistory)
     await flushPromises()
 
-    const monthInput = wrapper.get('.monthInput')
-    await monthInput.setValue('2026-07')
+    // 月份下拉的 v-model 绑定的是只读 computed（activeMonthValue），直接对 select setValue 不会生效；
+    // 这里通过组件内部的 selectedMonth ref 触发同一套 watch → 刷新逻辑。
+    wrapper.vm.selectedMonth = '2026-07'
     await flushPromises()
     await flushPromises()
 

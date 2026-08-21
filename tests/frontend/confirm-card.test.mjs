@@ -22,11 +22,11 @@ describe('ConfirmCard', () => {
       }
     })
 
-    expect(wrapper.text()).toContain('需要确认：新增类目')
-    expect(wrapper.text()).toContain('等待你的决定')
-    expect(wrapper.text()).toContain('所属域：ledger')
+    expect(wrapper.text()).toContain('铃湾想先和你确认一下这个新类目')
+    expect(wrapper.text()).toContain('等你来决定')
+    expect(wrapper.text()).toContain('所属领域：ledger')
     expect(wrapper.text()).toContain('建议类目：龙虾聚餐')
-    expect(wrapper.text()).toContain('触发工具：ledger.createExpenseEntry')
+    expect(wrapper.text()).toContain('触发动作：ledger.createExpenseEntry')
 
     await wrapper.get('.confirmBtnPrimary').trigger('click')
     await wrapper.get('.confirmBtn:not(.confirmBtnPrimary)').trigger('click')
@@ -54,12 +54,12 @@ describe('ConfirmCard', () => {
       }
     })
 
-    expect(wrapper.text()).toContain('需要确认：改用已有类目')
-    expect(wrapper.text()).toContain('等待你的决定')
-    expect(wrapper.text()).toContain('所属域：schedule')
+    expect(wrapper.text()).toContain('铃湾想先确认要不要改用这个类目')
+    expect(wrapper.text()).toContain('等你来决定')
+    expect(wrapper.text()).toContain('所属领域：schedule')
     expect(wrapper.text()).toContain('推荐类目：海鲜聚餐')
     expect(wrapper.text()).toContain('可选候选：龙虾大餐、朋友聚会')
-    expect(wrapper.text()).toContain('触发工具：schedule.createEvent')
+    expect(wrapper.text()).toContain('触发动作：schedule.createEvent')
   })
 
   it('prefers explicit title and falls back to payload details', () => {
@@ -78,10 +78,10 @@ describe('ConfirmCard', () => {
     })
 
     expect(wrapper.text()).toContain('请确认写入长期记忆')
-    expect(wrapper.text()).toContain('已同意')
+    expect(wrapper.text()).toContain('你已经同意啦')
     expect(wrapper.text()).toContain('topic：龙虾')
     expect(wrapper.text()).toContain('importance：high')
-    expect(wrapper.text()).toContain('已同意，正在继续处理。')
+    expect(wrapper.text()).toContain('铃湾已经收到你的同意，正在继续做下去。')
     expect(wrapper.get('.confirmBtnPrimary').attributes('disabled')).toBeDefined()
     expect(wrapper.get('.confirmBtn:not(.confirmBtnPrimary)').attributes('disabled')).toBeDefined()
   })
@@ -97,9 +97,9 @@ describe('ConfirmCard', () => {
       }
     })
 
-    expect(toolNameWrapper.text()).toContain('需要确认：memoryWiki.mergePages')
-    expect(toolNameWrapper.text()).toContain('处理失败')
-    expect(toolNameWrapper.text()).toContain('处理失败，可以稍后重试。')
+    expect(toolNameWrapper.text()).toContain('这一步要不要继续处理 memoryWiki.mergePages？')
+    expect(toolNameWrapper.text()).toContain('这次没继续成功')
+    expect(toolNameWrapper.text()).toContain('继续处理的时候出了点小岔子，可以稍后再试。')
     expect(toolNameWrapper.text()).toContain('合并前校验没有通过。')
 
     const camelCaseWrapper = mount(ConfirmCard, {
@@ -115,11 +115,11 @@ describe('ConfirmCard', () => {
       }
     })
 
-    expect(camelCaseWrapper.text()).toContain('需要确认：ledger.importMonthlyStatement')
-    expect(camelCaseWrapper.text()).toContain('处理中')
+    expect(camelCaseWrapper.text()).toContain('这一步要不要继续处理 ledger.importMonthlyStatement？')
+    expect(camelCaseWrapper.text()).toContain('铃湾正在继续处理')
     expect(camelCaseWrapper.text()).toContain('month：2026-06')
     expect(camelCaseWrapper.text()).toContain('source：bank')
-    expect(camelCaseWrapper.text()).toContain('小铃湾正在继续处理...')
+    expect(camelCaseWrapper.text()).toContain('铃湾正在顺着你的选择继续处理...')
     expect(camelCaseWrapper.get('.confirmBtnPrimary').text()).toBe('处理中')
     expect(camelCaseWrapper.get('.confirmBtnPrimary').attributes('disabled')).toBeDefined()
 
@@ -130,10 +130,10 @@ describe('ConfirmCard', () => {
       }
     })
 
-    expect(fallbackWrapper.text()).toContain('需要你确认一下')
-    expect(fallbackWrapper.text()).toContain('已拒绝')
-    expect(fallbackWrapper.text()).toContain('这个动作需要先征求你的同意。')
-    expect(fallbackWrapper.text()).toContain('已拒绝，本次不会执行。')
+    expect(fallbackWrapper.text()).toContain('需要你点头')
+    expect(fallbackWrapper.text()).toContain('这次先不做')
+    expect(fallbackWrapper.text()).toContain('这件事继续做下去之前，铃湾想先征求你的同意。')
+    expect(fallbackWrapper.text()).toContain('这次就先停在这里，不会继续执行。')
     expect(fallbackWrapper.find('.confirmDetails').exists()).toBe(false)
   })
 })

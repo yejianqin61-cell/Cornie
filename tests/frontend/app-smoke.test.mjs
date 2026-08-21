@@ -128,10 +128,10 @@ describe('App smoke', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('先把 DeepSeek 的钥匙交给铃湾吧')
-    expect(wrapper.text()).toContain('联网和隐私要知道什么？')
-    expect(wrapper.text()).toContain('保存并重新检测')
+    expect(wrapper.text()).toContain('还没检测到可用钥匙，铃湾需要连上 DeepSeek 才能继续陪你聊天、记日记。')
+    expect(wrapper.text()).toContain('保存并检测')
     expect(globalThis.fetch).toHaveBeenCalledWith(
-      expect.stringContaining('/api/entries/'),
+      expect.stringContaining('/api/settings/model'),
       expect.anything()
     )
   })

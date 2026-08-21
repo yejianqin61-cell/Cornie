@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, shallowMount } from '@vue/test-utils'
 
 import App from '../../src/renderer/App.vue'
+import ChatHome from '../../src/renderer/components/ChatHome.vue'
 
 function createConfiguredFetchMock() {
   return vi.fn(async (input) => {
@@ -114,42 +115,52 @@ describe('App navigation', () => {
     globalThis.fetch = createConfiguredFetchMock()
   })
 
-  it('renders diary workspace and switches to other workspaces', async () => {
+  it('renders chat workspace and switches to other workspaces', async () => {
     const wrapper = shallowMount(App)
     await flushPromises()
 
-    expect(wrapper.text()).toContain('铃湾已经拿到钥匙啦')
-    expect(wrapper.text()).toContain('本月条目')
-    expect(wrapper.find('ledger-workspace-stub').exists()).toBe(false)
+    expect(wrapper.text()).toContain('铃湾在线')
+    expect(wrapper.find('chat-home-stub').exists()).toBe(true)
+    expect(wrapper.find('ledger-home-stub').exists()).toBe(false)
 
     const navButtons = wrapper.findAll('.navItem')
 
-    await navButtons[1].trigger('click')
-    await flushPromises()
-    expect(wrapper.find('ledger-workspace-stub').exists()).toBe(true)
-    expect(wrapper.text()).toContain('记录收入支出与类目')
-
-    await navButtons[4].trigger('click')
-    await flushPromises()
-    expect(wrapper.find('memory-wiki-workspace-stub').exists()).toBe(true)
-
-    await navButtons[5].trigger('click')
-    await flushPromises()
-    expect(wrapper.find('chat-history-stub').exists()).toBe(true)
-
     await navButtons[2].trigger('click')
     await flushPromises()
-    expect(wrapper.find('todo-workspace-stub').exists()).toBe(true)
-    expect(wrapper.text()).toContain('整理待办与类目')
+    expect(wrapper.find('ledger-home-stub').exists()).toBe(true)
+    expect(wrapper.text()).toContain('轻松记一笔')
 
     await navButtons[3].trigger('click')
     await flushPromises()
-    expect(wrapper.find('schedule-workspace-stub').exists()).toBe(true)
-    expect(wrapper.text()).toContain('管理未来安排与类目')
+    expect(wrapper.find('todo-home-stub').exists()).toBe(true)
+    expect(wrapper.text()).toContain('今天要做什么')
+
+    await navButtons[4].trigger('click')
+    await flushPromises()
+    expect(wrapper.find('schedule-home-stub').exists()).toBe(true)
+    expect(wrapper.text()).toContain('接下来的安排')
+
+    await navButtons[5].trigger('click')
+    await flushPromises()
+    expect(wrapper.find('observe-memory-home-stub').exists()).toBe(true)
+    expect(wrapper.text()).toContain('想记住的小事')
 
     await navButtons[6].trigger('click')
     await flushPromises()
-    expect(wrapper.find('cornie-composer-stub').exists()).toBe(true)
-    expect(wrapper.text()).toContain('编辑 Cornie 外观贴图')
+    expect(wrapper.find('settings-home-stub').exists()).toBe(true)
+    expect(wrapper.text()).toContain('铃湾的连接和偏好')
+
+    await navButtons[1].trigger('click')
+    await flushPromises()
+    expect(wrapper.find('diary-home-stub').exists()).toBe(true)
+    expect(wrapper.text()).toContain('写下今天的心情')
+
+    // 聊天 → 聊天历史
+    await navButtons[0].trigger('click')
+    await flushPromises()
+    expect(wrapper.find('chat-home-stub').exists()).toBe(true)
+    wrapper.findComponent(ChatHome).vm.$emit('go-history')
+    await flushPromises()
+    expect(wrapper.find('chat-history-stub').exists()).toBe(true)
   })
 })

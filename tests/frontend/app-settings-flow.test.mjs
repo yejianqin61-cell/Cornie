@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 
 import App from '../../src/renderer/App.vue'
+import DeepseekConfig from '../../src/renderer/components/DeepseekConfig.vue'
 
 function createSettingsFlowFetchMock(initialState = {}) {
   const state = {
@@ -215,20 +216,27 @@ describe('App settings async flow', () => {
 
     expect(wrapper.text()).toContain('先把 DeepSeek 的钥匙交给铃湾吧')
 
-    const inputs = wrapper.findAll('.guideForm input')
+    const inputs = wrapper.findAll('.guideBannerForm input')
     await inputs[0].setValue('sk-real-key')
     await inputs[2].setValue('deepseek-chat')
     await inputs[3].setValue('45000')
-    await wrapper.get('.guideForm').trigger('submit.prevent')
+    await wrapper.get('.guideBannerForm').trigger('submit.prevent')
     await flushPromises()
     await flushPromises()
 
-    expect(wrapper.text()).toContain('铃湾已经拿到钥匙啦')
-    expect(wrapper.text()).toContain('当前模型是 deepseek-chat')
-    expect(wrapper.text()).toContain('已保存：sk-t***-key')
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/settings/model'),
+      expect.objectContaining({
+        method: 'PUT',
+        body: JSON.stringify({ apiKey: 'sk-real-key', baseUrl: '', model: 'deepseek-chat', timeoutMs: '45000' })
+      })
+    )
+    // 保存成功后重新检测，配网引导关闭，进入聊天工作区
+    expect(wrapper.find('.guideBanner').exists()).toBe(false)
+    expect(wrapper.text()).toContain('翻看以前聊天')
   })
 
-  it('clears persisted settings and returns to onboarding state', async () => {
+  it('clears persisted settings and returns to unconfigured state', async () => {
     const fetchMock = createSettingsFlowFetchMock({
       configured: true,
       maskedApiKey: 'sk-t***-key',
@@ -239,26 +247,29 @@ describe('App settings async flow', () => {
     })
     globalThis.fetch = fetchMock
 
-    const wrapper = mount(App)
+    const wrapper = mount(DeepseekConfig)
     await flushPromises()
 
-    expect(wrapper.text()).toContain('清空已保存钥匙')
-    await wrapper.get('.dangerBtn').trigger('click')
+    expect(wrapper.text()).toContain('当前已保存：sk-t***-key')
+    const clearButton = wrapper.findAll('button').find((button) => button.text() === '清空钥匙')
+    await clearButton.trigger('click')
     await flushPromises()
     await flushPromises()
 
-    expect(wrapper.text()).toContain('先把 DeepSeek 的钥匙交给铃湾吧')
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining('/api/settings/model'),
       expect.objectContaining({ method: 'DELETE' })
     )
+    expect(wrapper.text()).toContain('已清空本地保存的钥匙。')
+    // 清空后回到未配置状态，清空钥匙按钮随之隐藏
+    expect(wrapper.findAll('button').find((button) => button.text() === '清空钥匙')).toBeUndefined()
   })
 
   it('shows friendly validation copy when api key is missing', async () => {
     const wrapper = mount(App)
     await flushPromises()
 
-    await wrapper.get('.guideForm').trigger('submit.prevent')
+    await wrapper.get('.guideBannerForm').trigger('submit.prevent')
     await flushPromises()
 
     expect(wrapper.text()).toContain('API Key 这一栏还是空的，铃湾还没拿到钥匙呢。')
@@ -271,9 +282,9 @@ describe('App settings async flow', () => {
 
     const timeoutWrapper = mount(App)
     await flushPromises()
-    const timeoutInputs = timeoutWrapper.findAll('.guideForm input')
+    const timeoutInputs = timeoutWrapper.findAll('.guideBannerForm input')
     await timeoutInputs[0].setValue('sk-real-key')
-    await timeoutWrapper.get('.guideForm').trigger('submit.prevent')
+    await timeoutWrapper.get('.guideBannerForm').trigger('submit.prevent')
     await flushPromises()
     expect(timeoutWrapper.text()).toContain('超时毫秒要填成正整数呀，比如 30000。')
 
@@ -283,9 +294,9 @@ describe('App settings async flow', () => {
 
     const unknownWrapper = mount(App)
     await flushPromises()
-    const unknownInputs = unknownWrapper.findAll('.guideForm input')
+    const unknownInputs = unknownWrapper.findAll('.guideBannerForm input')
     await unknownInputs[0].setValue('sk-real-key')
-    await unknownWrapper.get('.guideForm').trigger('submit.prevent')
+    await unknownWrapper.get('.guideBannerForm').trigger('submit.prevent')
     await flushPromises()
     expect(unknownWrapper.text()).toContain('这次保存没成功，不过别担心，我们检查一下输入内容再试一次就好。')
   })
@@ -300,19 +311,23 @@ describe('App settings async flow', () => {
     const wrapper = mount(App)
     await flushPromises()
 
-    expect(wrapper.text()).toContain('铃湾刚刚去敲门时没收到顺利回应，可能是网络、地址或者钥匙状态出了点小岔子。')
-    expect(wrapper.text()).toContain('先确认 API Key 已经完整贴进来，不要漏掉开头或结尾。')
+    expect(wrapper.text()).toContain('铃湾没能连上，我们可以稍后再试。')
 
-    const recheckButton = wrapper.findAll('.guideActions button').find((button) => button.text() === '只重新检测')
+    const statusCallsBefore = fetchMock.mock.calls.filter(([url]) =>
+      String(url).includes('/api/model/status')
+    ).length
+
+    const recheckButton = wrapper.findAll('.guideBannerActions button').find((button) => button.text() === '只检测')
     await recheckButton.trigger('click')
     await flushPromises()
-    expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining('/api/model/status'),
-      expect.anything()
-    )
+
+    const statusCallsAfter = fetchMock.mock.calls.filter(([url]) =>
+      String(url).includes('/api/model/status')
+    ).length
+    expect(statusCallsAfter).toBeGreaterThan(statusCallsBefore)
   })
 
-  it('refreshes configured model summary state', async () => {
+  it('rechecks and refreshes configured model state', async () => {
     const fetchMock = createSettingsFlowFetchMock({
       configured: true,
       maskedApiKey: 'sk-t***-key',
@@ -322,24 +337,31 @@ describe('App settings async flow', () => {
     })
     globalThis.fetch = fetchMock
 
-    const wrapper = mount(App)
+    const wrapper = mount(DeepseekConfig)
+    await flushPromises()
+    expect(wrapper.text()).toContain('当前已保存：sk-t***-key')
+
+    const statusCallsBefore = fetchMock.mock.calls.filter(([url]) =>
+      String(url).includes('/api/model/status')
+    ).length
+
+    const recheckButton = wrapper.findAll('button').find((button) => button.text() === '只检测')
+    await recheckButton.trigger('click')
     await flushPromises()
 
-    const refreshButton = wrapper.find('.modelRetry')
-    await refreshButton.trigger('click')
-    await flushPromises()
-    expect(fetchMock).toHaveBeenCalledWith(
-      expect.stringContaining('/api/settings/model'),
-      expect.anything()
-    )
+    const statusCallsAfter = fetchMock.mock.calls.filter(([url]) =>
+      String(url).includes('/api/model/status')
+    ).length
+    expect(statusCallsAfter).toBeGreaterThan(statusCallsBefore)
+    expect(wrapper.text()).toContain('铃湾已经连上啦！')
   })
 
   it('falls back to saved model name when status model is empty and applies default form values', async () => {
     globalThis.fetch = createSettingsFlowFetchMock({
       configured: true,
       maskedApiKey: 'sk-t***-key',
-      statusConfigured: true,
-      statusOk: true,
+      statusConfigured: false,
+      statusOk: false,
       settingsConfigured: true,
       settingsModel: '',
       settingsTimeoutMs: null
@@ -348,8 +370,9 @@ describe('App settings async flow', () => {
     const wrapper = mount(App)
     await flushPromises()
 
-    expect(wrapper.text()).toContain('当前模型是 deepseek-chat')
-    expect(wrapper.text()).toContain('已保存：sk-t***-key')
+    const inputs = wrapper.findAll('.guideBannerForm input')
+    expect(inputs[2].element.value).toBe('deepseek-chat')
+    expect(inputs[3].element.value).toBe('30000')
   })
 
   it('shows friendly copy when clearing persisted settings fails', async () => {
@@ -363,12 +386,13 @@ describe('App settings async flow', () => {
       deleteErrorText: ''
     })
 
-    const wrapper = mount(App)
+    const wrapper = mount(DeepseekConfig)
     await flushPromises()
 
-    await wrapper.get('.dangerBtn').trigger('click')
+    const clearButton = wrapper.findAll('button').find((button) => button.text() === '清空钥匙')
+    await clearButton.trigger('click')
     await flushPromises()
 
-    expect(wrapper.text()).toContain('这次保存没成功，不过别担心，我们检查一下输入内容再试一次就好。')
+    expect(wrapper.text()).toContain('保存没成功，检查一下输入再试一次。')
   })
 })

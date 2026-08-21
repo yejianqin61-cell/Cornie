@@ -197,39 +197,49 @@ describe('App diary flow', () => {
     vi.useRealTimers()
   })
 
+  async function openDiaryEditor(wrapper) {
+    await wrapper.findAll('.navItem')[1].trigger('click')
+    await flushPromises()
+    const writeButton = wrapper.findAll('button').find((button) => button.text() === '写日记')
+    await writeButton.trigger('click')
+    await flushPromises()
+  }
+
   it('loads diary entries, switches dates, saves edits, and regenerates cornie text', async () => {
     const wrapper = mount(App)
     await flushPromises()
+    await openDiaryEditor(wrapper)
 
     const textareas = wrapper.findAll('textarea')
     expect(textareas[0].element.value).toBe('今天和铃湾聊了龙虾。')
     expect(wrapper.text()).toContain('去年也提到过龙虾。')
 
-    const rows = wrapper.findAll('.row')
+    const rows = wrapper.findAll('.dateRow')
     await rows[1].trigger('click')
     await flushPromises()
 
     const switchedTextareas = wrapper.findAll('textarea')
     expect(switchedTextareas[0].element.value).toBe('昨天去买菜。')
 
-    await rows[0].trigger('click')
+    await wrapper.findAll('.dateRow')[0].trigger('click')
     await flushPromises()
 
     const activeTextareas = wrapper.findAll('textarea')
     await activeTextareas[0].setValue('今天和铃湾认真记账。')
     expect(wrapper.text()).toContain('未保存更改')
 
-    const actionButtons = wrapper.findAll('.contentActions button')
-    await actionButtons[0].trigger('click')
+    const saveButton = wrapper.findAll('.topActions button').find((button) => button.text() === '保存')
+    await saveButton.trigger('click')
     await flushPromises()
     await flushPromises()
-    expect(wrapper.text()).toContain('已同步到本地')
+    expect(wrapper.text()).toContain('已同步')
     expect(globalThis.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/api/entries/2026-06-27'),
       expect.objectContaining({ method: 'PUT' })
     )
 
-    await actionButtons[1].trigger('click')
+    const regenButton = wrapper.findAll('button').find((button) => button.text() === '让铃湾写一篇')
+    await regenButton.trigger('click')
     await flushPromises()
     await flushPromises()
 
@@ -241,6 +251,7 @@ describe('App diary flow', () => {
     globalThis.fetch = createDiaryFlowFetchMock({ failOnThisDay: true })
     const wrapper = mount(App)
     await flushPromises()
+    await openDiaryEditor(wrapper)
 
     expect(wrapper.text()).toContain('加载失败：往年今日加载失败')
   })
@@ -249,11 +260,12 @@ describe('App diary flow', () => {
     globalThis.fetch = createDiaryFlowFetchMock({ failSave: true })
     const wrapper = mount(App)
     await flushPromises()
+    await openDiaryEditor(wrapper)
 
     const textareas = wrapper.findAll('textarea')
     await textareas[0].setValue('今天补一条失败测试。')
 
-    const saveButton = wrapper.findAll('.contentActions button')[0]
+    const saveButton = wrapper.findAll('.topActions button').find((button) => button.text() === '保存')
     await saveButton.trigger('click')
     await flushPromises()
 
@@ -265,6 +277,7 @@ describe('App diary flow', () => {
     globalThis.fetch = createDiaryFlowFetchMock({ emptyOnThisDay: true })
     const wrapper = mount(App)
     await flushPromises()
+    await openDiaryEditor(wrapper)
 
     expect(wrapper.text()).toContain('那时候我还没出生呢，不过现在我在了。')
 
@@ -281,8 +294,9 @@ describe('App diary flow', () => {
     globalThis.fetch = createDiaryFlowFetchMock({ failEntriesString: true })
     const wrapper = mount(App)
     await flushPromises()
+    await openDiaryEditor(wrapper)
 
-    expect(wrapper.findAll('.row')).toHaveLength(0)
+    expect(wrapper.findAll('.dateRow')).toHaveLength(0)
     expect(wrapper.text()).toContain('2026-06-27')
   })
 })

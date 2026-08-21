@@ -509,8 +509,8 @@ describe('MemoryWikiWorkspace async flow', () => {
     await confirmApproveButton.trigger('click')
     await flushPromises()
     await flushPromises()
-    expect(wrapper.text()).toContain('已同意，正在继续处理。')
-    expect(wrapper.text()).toContain('已同意')
+    expect(wrapper.text()).toContain('铃湾已经收到你的同意，正在继续做下去。')
+    expect(wrapper.text()).toContain('你已经同意啦')
   })
 
   it('supports governance defer and reject actions plus confirmation reject flow', async () => {
@@ -549,7 +549,7 @@ describe('MemoryWikiWorkspace async flow', () => {
     await rejectConfirmButton.trigger('click')
     await flushPromises()
     await flushPromises()
-    expect(wrapper.text()).toContain('已拒绝，本次不会执行。')
+    expect(wrapper.text()).toContain('这次就先停在这里，不会继续执行。')
   })
 
   it('shows readable errors when page detail loading or confirmation rejection fails', async () => {
@@ -570,7 +570,7 @@ describe('MemoryWikiWorkspace async flow', () => {
     await rejectConfirmButton.trigger('click')
     await flushPromises()
     await flushPromises()
-    expect(wrapper.text()).toContain('处理失败，可以稍后重试。')
+    expect(wrapper.text()).toContain('继续处理的时候出了点小岔子，可以稍后再试。')
     expect(wrapper.text()).toContain('拒绝确认时出错了。')
   })
 
@@ -692,13 +692,12 @@ describe('MemoryWikiWorkspace async flow', () => {
       expect.stringContaining('/api/memory-wiki/pages/wiki-lobster'),
       expect.objectContaining({
         method: 'PUT',
-        body: JSON.stringify({
-          pageType: 'event',
-          title: '龙虾观察',
-          summary: '新的摘要',
-          body: '新的正文'
-        })
+        body: expect.stringMatching(/"pageType":"event".*"title":"龙虾观察".*"summary":"新的摘要".*"body":"新的正文"/s)
       })
+    )
+    expect(globalThis.fetch).toHaveBeenCalledWith(
+      expect.stringContaining('/api/memory-wiki/pages/wiki-lobster/aliases'),
+      expect.objectContaining({ method: 'PUT', body: JSON.stringify({ aliases: ['海鲜', '龙虾'] }) })
     )
     expect(globalThis.fetch).toHaveBeenCalledWith(
       expect.stringContaining('/api/memory-wiki/pages/wiki-lobster/status'),
@@ -851,14 +850,14 @@ describe('MemoryWikiWorkspace async flow', () => {
     const wrapper = mount(MemoryWikiWorkspace)
     await flushPromises()
 
-    expect(wrapper.text()).toContain('需要你确认一下')
-    expect(wrapper.text()).toContain('这个动作需要先征求你的同意。')
+    expect(wrapper.text()).toContain('需要你点头')
+    expect(wrapper.text()).toContain('这件事继续做下去之前，铃湾想先征求你的同意。')
 
     const confirmApproveButton = wrapper.findAll('.confirmBtnPrimary')[0]
     expect(confirmApproveButton.attributes('disabled')).toBeUndefined()
     await confirmApproveButton.trigger('click')
     await flushPromises()
     await flushPromises()
-    expect(wrapper.text()).toContain('已同意，正在继续处理。')
+    expect(wrapper.text()).toContain('铃湾已经收到你的同意，正在继续做下去。')
   })
 })
