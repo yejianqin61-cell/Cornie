@@ -152,7 +152,6 @@ onBeforeUnmount(() => {
           <div class="tlistTitle">待办整理</div>
           <div class="tlistHint">{{ tabSummary }}</div>
         </div>
-        <button class="ghost" @click="$emit('go', 'category')">管理类目</button>
       </div>
 
       <div class="ttabs">

@@ -220,7 +220,6 @@ onBeforeUnmount(() => {
           <div class="stoolbarActions">
             <button class="ghost" type="button" @click="jumpToToday">回到今天</button>
             <button class="ghost" type="button" :disabled="!selectedDate" @click="clearDateFilter">清除筛选</button>
-            <button class="ghost" type="button" @click="$emit('go', 'category')">管理类目</button>
             <button class="primary" type="button" @click="showForm = !showForm">{{ showForm ? '收起新增' : '新增安排' }}</button>
           </div>
         </div>

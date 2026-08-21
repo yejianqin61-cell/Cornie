@@ -17,6 +17,7 @@ const categories = ref([])
 const loading = ref(false)
 const showForm = ref(false)
 const showQuickCategoryCreate = ref(false)
+const showAllEntries = ref(false)
 const form = ref({
   amount: '',
   type: 'expense',
@@ -689,11 +690,11 @@ onBeforeUnmount(() => {
           <div class="lrecentTitle">{{ selectedDate ? '这一天的记录' : '这个月的记录' }}</div>
           <div class="lrecentHint">收支分开看得更清楚，类目和日期也会一起带上。</div>
         </div>
-        <button class="ghost" @click="$emit('go', 'detail')">查看全部</button>
+        <button class="ghost" @click="showAllEntries = !showAllEntries">{{ showAllEntries ? '收起' : '查看全部' }}</button>
       </div>
       <div v-if="visibleEntries.length === 0" class="lrecentEmpty">当前筛选下还没有记录。</div>
       <div v-else class="lrecentList">
-        <div v-for="e in visibleEntries.slice(0, 8)" :key="e.id" class="lrecentRow" :class="e.type === 'income' ? 'income' : 'expense'">
+        <div v-for="e in visibleEntries.slice(0, showAllEntries ? undefined : 8)" :key="e.id" class="lrecentRow" :class="e.type === 'income' ? 'income' : 'expense'">
           <span class="lrecentType">{{ e.type === 'income' ? '收入' : '支出' }}</span>
           <div class="lrecentMain">
             <span class="lrecentItem">{{ e.item || e.categoryName || '未分类' }}</span>
@@ -707,7 +708,7 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="lcat card">
-      <button @click="$emit('go', 'category')">管理收支类目 →</button>
+      <button @click="showForm = true">管理收支类目 →</button>
     </div>
   </div>
 </template>
