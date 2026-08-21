@@ -1,6 +1,10 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { getEntry, listEntries, listOnThisDay, regenerateCornie, upsertEntry } from '../api'
+import { useRequestGuard } from '../composables/useRequestGuard'
+
+// FE-05：切换日期时旧响应不得覆盖新日期内容。
+const editorGuard = useRequestGuard()
 
 function pad2(n) { return String(n).padStart(2, '0') }
 function toISODate(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}` }
@@ -37,16 +41,22 @@ async function refreshList() {
 }
 
 async function loadEntry(date) {
+  const { token, signal } = editorGuard.begin('entry')
   loadingEntry.value = true
   errorMsg.value = ''
   try {
-    const data = await getEntry(date)
+    const data = await getEntry(date, { signal })
+    if (!editorGuard.isCurrent('entry', token)) return
     entry.value = data.entry
     dirty.value = false
   } catch (e) {
+    if (!editorGuard.isCurrent('entry', token)) return
     errorMsg.value = e?.message || String(e)
   } finally {
-    loadingEntry.value = false
+    if (editorGuard.isCurrent('entry', token)) {
+      loadingEntry.value = false
+      editorGuard.end('entry', token)
+    }
   }
 }
 

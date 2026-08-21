@@ -3,6 +3,10 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { createObservation, deleteObservation, listObservations } from '../api'
 import { today } from '../utils/date'
 import { useDebouncedValue } from '../composables/useTimers'
+import { useRequestGuard } from '../composables/useRequestGuard'
+
+// FE-05：筛选/日期快速变化时旧响应不得覆盖新列表。
+const obsGuard = useRequestGuard()
 
 const OBSERVATION_TYPES = [
   { value: '', label: '全部小事' },
@@ -72,11 +76,13 @@ const todaySummary = computed(() => {
 })
 
 async function refresh() {
+  const { token, signal } = obsGuard.begin('list')
   loading.value = true
   errorMsg.value = ''
   try {
     if (activeTab.value === 'today') {
-      const data = await listObservations({ date: getTodayDate(), limit: 100 })
+      const data = await listObservations({ date: getTodayDate(), limit: 100, signal })
+      if (!obsGuard.isCurrent('list', token)) return
       observations.value = data?.observations || []
       selectedDate.value = getTodayDate()
       return
@@ -90,13 +96,19 @@ async function refresh() {
       to: hasQuery ? undefined : selectedDate.value || undefined,
       type: selectedType.value || undefined,
       q: keyword.value.trim() || undefined,
-      limit: 200
+      limit: 200,
+      signal
     })
+    if (!obsGuard.isCurrent('list', token)) return
     observations.value = data?.observations || []
   } catch (e) {
+    if (!obsGuard.isCurrent('list', token)) return
     errorMsg.value = e?.message || '这页小事暂时没打开成功，稍后再试一次吧。'
   } finally {
-    loading.value = false
+    if (obsGuard.isCurrent('list', token)) {
+      loading.value = false
+      obsGuard.end('list', token)
+    }
   }
 }
 

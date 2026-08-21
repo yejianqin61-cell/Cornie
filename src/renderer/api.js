@@ -27,8 +27,8 @@ export async function listEntries({ month } = {}) {
   return apiFetch(`/entries${qs}`)
 }
 
-export async function getEntry(date) {
-  return apiFetch(`/entries/${encodeURIComponent(date)}`)
+export async function getEntry(date, { signal } = {}) {
+  return apiFetch(`/entries/${encodeURIComponent(date)}`, { signal })
 }
 
 export async function upsertEntry(date, payload) {
@@ -205,7 +205,7 @@ export async function searchChatlogMessageSnippets({ keyword, month, scope, limi
   }
 }
 
-export async function getChatlog(date, { limit, cursor, query, beforeId, mode } = {}) {
+export async function getChatlog(date, { limit, cursor, query, beforeId, mode, signal } = {}) {
   const params = new URLSearchParams()
   if (limit !== undefined) params.set('limit', String(limit))
   if (cursor !== undefined && cursor !== null) params.set('cursor', String(cursor))
@@ -213,7 +213,7 @@ export async function getChatlog(date, { limit, cursor, query, beforeId, mode } 
   if (beforeId) params.set('beforeId', beforeId)
   if (mode) params.set('mode', mode)
   const qs = params.toString()
-  const data = await apiFetch(`/chatlogs/${encodeURIComponent(date)}${qs ? `?${qs}` : ''}`)
+  const data = await apiFetch(`/chatlogs/${encodeURIComponent(date)}${qs ? `?${qs}` : ''}`, { signal })
   const normalizedItems = Array.isArray(data?.items) ? data.items : []
   const normalizedMessages = Array.isArray(data?.messages)
     ? data.messages
@@ -752,7 +752,7 @@ export async function enqueueMemoryWikiInspectionScan() {
 
 // ─── observations ─────────────────────────────────────────────
 
-export async function listObservations({ date, from, to, type, q, limit } = {}) {
+export async function listObservations({ date, from, to, type, q, limit, signal } = {}) {
   const params = new URLSearchParams()
   if (date) params.set('date', date)
   if (from) params.set('from', from)
@@ -761,7 +761,7 @@ export async function listObservations({ date, from, to, type, q, limit } = {}) 
   if (q) params.set('q', q)
   if (limit) params.set('limit', String(limit))
   const qs = params.toString()
-  return apiFetch(`/observations${qs ? `?${qs}` : ''}`)
+  return apiFetch(`/observations${qs ? `?${qs}` : ''}`, { signal })
 }
 
 export async function recallObservations({ date, from, to, type, q, topic, person, limit } = {}) {

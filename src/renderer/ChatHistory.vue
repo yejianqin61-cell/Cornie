@@ -1,8 +1,12 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { exportChatlogByDate, exportChatlogByMonth, getChatlog, listChatlogDates } from './api'
+import { useRequestGuard } from './composables/useRequestGuard'
 
 const emit = defineEmits(['back', 'open-date'])
+
+// FE-05：快速切换日期时旧响应不得覆盖新视图。
+const historyGuard = useRequestGuard()
 
 function pad2(n) { return String(n).padStart(2, '0') }
 function toISODate(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}` }
@@ -80,22 +84,29 @@ async function refreshMessages(date) {
     return
   }
 
+  const { token, signal } = historyGuard.begin('messages')
   loadingMessages.value = true
   errorMsg.value = ''
   try {
     const data = await getChatlog(date, {
       limit: 80,
       cursor: 0,
-      query: searchQuery.value.trim() || undefined
+      query: searchQuery.value.trim() || undefined,
+      signal
     })
+    if (!historyGuard.isCurrent('messages', token)) return
     messages.value = data.messages || []
     messagePagination.value = data.pagination || { cursor: '0', nextCursor: null, hasMore: false, pageSize: 100, total: 0 }
     messageSearchMeta.value = data.searchMeta || { query: '', mode: 'browse' }
   } catch (error) {
+    if (!historyGuard.isCurrent('messages', token)) return
     errorMsg.value = error?.message || String(error)
     messages.value = []
   } finally {
-    loadingMessages.value = false
+    if (historyGuard.isCurrent('messages', token)) {
+      loadingMessages.value = false
+      historyGuard.end('messages', token)
+    }
   }
 }
 
