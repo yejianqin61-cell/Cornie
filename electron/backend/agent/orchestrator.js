@@ -247,6 +247,8 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd() 
       let requestedToolCalls = []
       let initialAssistantReply = ''
       const toolRoundState = createToolRoundState()
+      // 453：钻取轮的联想话语（assistant_reply），供前端作为层间话语上屏。
+      const interimReplies = []
 
       try {
         let firstEnvelope = await requestProtocolEnvelope(baseMessages, telemetry, 'conversation_initial')
@@ -296,6 +298,9 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd() 
                   break
                 }
                 drillRoundCount += 1
+                if (normalizeString(currentEnvelope.assistant_reply)) {
+                  interimReplies.push(currentEnvelope.assistant_reply)
+                }
               } else if (round >= MAX_TOOL_ROUNDS) {
                 finalReply = currentEnvelope.assistant_reply
                 break
@@ -471,6 +476,7 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd() 
         toolExecution,
         policyDecision,
         pendingConfirmation,
+        interimReplies,
         memoryDistillation,
         telemetry: finalizeTurnTelemetry(telemetry, {
           policyDecision: policyDecision.decision,

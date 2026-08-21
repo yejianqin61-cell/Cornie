@@ -62,6 +62,20 @@ export function useChat() {
   }
 
   function appendResponse(data) {
+    // 453：钻取轮的联想话语（层间短话）先上屏，最终回复随后接续。
+    if (Array.isArray(data?.interimReplies)) {
+      for (const line of data.interimReplies) {
+        if (typeof line === 'string' && line.trim()) {
+          pushChatItem({
+            kind: 'message',
+            role: 'cornie',
+            content: line,
+            interim: true
+          })
+        }
+      }
+    }
+
     if (data?.cornieMessage?.content) {
       pushChatItem({
         kind: 'message',

@@ -103,7 +103,26 @@ function summarizeLookupToolResult(toolResult) {
 }
 
 export function buildConversationPrompt({ context }) {
-  return [CORNIE_PERSONA, JSON_PROTOCOL, TOOL_SCHEMA_RULES, CATEGORY_MAPPING_PROTOCOL, buildContextSection(context)].join('\n\n')
+  return [
+    CORNIE_PERSONA,
+    JSON_PROTOCOL,
+    TOOL_SCHEMA_RULES,
+    CATEGORY_MAPPING_PROTOCOL,
+    buildContextSection(context),
+    buildMemoryRecallRules()
+  ].join('\n\n')
+}
+
+// 453：联想式层间话语规则——钻取/读取记忆时，assistant_reply 用基于所见内容的联想表达，
+// 禁止流程播报（"让我找找""正在查询记忆"）；没有联想就不说。
+function buildMemoryRecallRules() {
+  return [
+    '关于记忆的联想话语：',
+    '- 当你决定读取一页记忆（memory_wiki.get_page 等）时，assistant_reply 应基于你本轮已经看到的目录或页面内容，说一句自然的联想，例如"哦对……她是你高中同桌""提到这个，我想起……"。',
+    '- 联想必须能溯源到你本轮已经看到的内容；拿不准就沉默，不要编造"我记得你……"。',
+    '- 绝对不要用"让我找找""正在查询记忆""已检索到"这类流程播报当层间话语。',
+    '- 没有值得说的联想时，assistant_reply 可以是一句很短的过渡（如"嗯……"），也可以直接进入 tool_call。'
+  ].join('\n')
 }
 
 export function buildToolFollowupPrompt({ assistantReply, toolResult }) {
@@ -201,6 +220,7 @@ export function buildMemoryDistillationPrompt({
     '3. memory_wiki_requests：仅在信息足以支撑创建/更新长期记忆页面时提议；合并/回滚/归档/删除等破坏性动作仍可提出，但会交由人类审核。',
     '4. 不要过度记录：绝大多数闲聊轮次应该输出空数组。',
     '5. reasoning 不超过一句话。',
+    '6. 用户对铃湾联想话语的确认/纠正是最高置信度的记忆信号：如果铃湾在本轮或近期联想过某段记忆，主人回复"对！""是啊""没错"等确认，应提议 create/update 对应记忆；回复"不是啦""记错了"等纠正，应提议修正（update 已有页或新建正确记录），并在 reasoning 中注明。',
     '',
     '【输出格式】只输出一个 JSON 对象，不要输出解释、前后缀文字或 Markdown 代码块：',
     JSON.stringify(MEMORY_DISTILLATION_OUTPUT_SCHEMA_EXAMPLE, null, 2)
