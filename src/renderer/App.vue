@@ -12,6 +12,7 @@ import ObservationList from './components/ObservationList.vue'
 import ObservationDetail from './components/ObservationDetail.vue'
 import MemoryPageList from './components/MemoryPageList.vue'
 import MemoryPageDetail from './components/MemoryPageDetail.vue'
+import MemoryWikiHome from './components/MemoryWikiHome.vue'
 import LedgerHome from './components/LedgerHome.vue'
 import TodoHome from './components/TodoHome.vue'
 import ScheduleHome from './components/ScheduleHome.vue'
@@ -227,28 +228,11 @@ onMounted(async () => {
         />
       </section>
 
-      <!-- 记忆 Wiki（R-04：三栏之一） -->
+      <!-- 记忆 Wiki（T-02：文件树双栏） -->
       <section v-else-if="mode === 'memory'" class="contentFrame">
-        <MemoryPageList
-          v-if="memoryView === 'home'"
-          :show-back="false"
-          @go="(v, id) => { memoryView = v; memoryDetailId = id || '' }"
-        />
-        <MemoryPageDetail
-          v-else-if="memoryView === 'memory-detail'"
-          :key="memoryDetailId || 'memory-detail'"
-          :id="memoryDetailId"
-          @back="memoryView = 'home'"
-          @deleted="memoryView = 'home'"
-          @open-chat-source="({ date, messageId }) => { mode = 'chat'; chatHistoryDate = date || ''; chatFocusMessageId = messageId || ''; chatView = 'day' }"
+        <MemoryWikiHome
           @open-observation="(id) => { mode = 'observe'; observeDetailId = id; observeView = 'observation-detail' }"
-          @open-memory="(id) => { memoryDetailId = id; memoryView = 'memory-detail' }"
-        />
-        <MemoryPageDetail
-          v-else-if="memoryView === 'memory-create'"
-          key="memory-create"
-          @back="memoryView = 'home'"
-          @created="(id) => { memoryDetailId = id; memoryView = 'memory-detail' }"
+          @open-chat-source="({ date, messageId }) => { mode = 'chat'; chatHistoryDate = date || ''; chatFocusMessageId = messageId || ''; chatView = 'day' }"
         />
       </section>
 

@@ -148,8 +148,8 @@ describe('App navigation', () => {
 
     await navButtons[6].trigger('click')
     await flushPromises()
-    // R-04：记忆 Wiki（三栏之一）
-    expect(wrapper.find('memory-page-list-stub').exists()).toBe(true)
+    // T-02：记忆 Wiki（双栏容器）
+    expect(wrapper.find('memory-wiki-home-stub').exists()).toBe(true)
     expect(wrapper.text()).toContain('记忆 Wiki')
 
     await navButtons[7].trigger('click')
