@@ -228,6 +228,7 @@ async function loadPage() {
     confirmDelete.value = false
     dirty.value = false
     sourceTrace.value = null
+    mode.value = 'edit' // R-06：新建直接进入编辑态
     return
   }
 
@@ -247,6 +248,7 @@ async function loadPage() {
     const traceData = await getMemoryWikiPageSourceTrace(props.id)
     sourceTrace.value = traceData?.trace || null
     dirty.value = false
+    mode.value = 'read' // R-06：查看已有记忆默认阅读态
   } catch (e) {
     // 加载失败：绝不拿空表单覆盖真实页面，只展示纯错误态
     page.value = null
@@ -255,6 +257,20 @@ async function loadPage() {
   } finally {
     loading.value = false
   }
+}
+
+// R-06：阅读 / 编辑两态
+const mode = ref('read') // 'read' | 'edit'
+
+function enterEdit() {
+  if (isCreateMode.value || loadFailed.value) return
+  mode.value = 'edit'
+}
+
+function cancelEdit() {
+  if (isCreateMode.value) return
+  mode.value = 'read'
+  loadPage()
 }
 
 function markDirty() {
@@ -297,6 +313,9 @@ async function save() {
 
     await updateMemoryWikiPage(props.id, payload)
     dirty.value = false
+    // R-06：保存成功回到阅读态（重新加载最新数据）
+    mode.value = 'read'
+    await loadPage()
   } catch (e) {
     errorMsg.value = isCreateMode.value
       ? '这页记忆还没能存好，我们换个标题或者稍后再试一次吧。'
@@ -337,9 +356,14 @@ onMounted(loadPage)
         >
           {{ deleting ? '整理中…' : '删除这页' }}
         </button>
-        <button class="primary" :disabled="saving || loadFailed || (!dirty && !isCreateMode)" @click="save">
-          {{ submitLabel }}
-        </button>
+        <!-- R-06：阅读态显示"编辑"，编辑态显示"取消/保存" -->
+        <template v-if="mode === 'edit'">
+          <button v-if="!isCreateMode" class="ghost" :disabled="saving" @click="cancelEdit">取消</button>
+          <button class="primary" :disabled="saving || loadFailed || (!dirty && !isCreateMode)" @click="save">
+            {{ submitLabel }}
+          </button>
+        </template>
+        <button v-else class="primary" :disabled="loadFailed" @click="enterEdit">编辑</button>
       </div>
     </header>
 
@@ -354,7 +378,7 @@ onMounted(loadPage)
     </div>
     <div v-else-if="page" class="mdetailCard card">
       <div class="mdetailIntro">
-        <div class="mdetailMode">{{ isCreateMode ? '新建长期记忆' : '编辑长期记忆' }}</div>
+        <div class="mdetailMode">{{ isCreateMode ? '新建长期记忆' : (mode === 'edit' ? '编辑长期记忆' : '长期记忆') }}</div>
         <div class="mdetailHint">{{ pageTypeHint }}</div>
         <div class="mdetailTypePill" :class="{ mdetailTypePillOrdinary: !isIdentityType }">
           {{ pageTypeIcon }} {{ pageTypeLabel }}
@@ -375,7 +399,9 @@ onMounted(loadPage)
         </div>
       </section>
 
-      <section class="mdetailGuide" :class="{ mdetailGuidePrimary: page.pageType === 'identity_profile', mdetailGuideOrdinary: !isIdentityType }">
+      <!-- R-06：编辑态（引导 + 来源 + 表单） -->
+      <template v-if="mode === 'edit'">
+        <section class="mdetailGuide" :class="{ mdetailGuidePrimary: page.pageType === 'identity_profile', mdetailGuideOrdinary: !isIdentityType }">
         <div class="mdetailGuideEyebrow">{{ pageGuide.eyebrow }}</div>
         <div class="mdetailGuideTitle">{{ pageGuide.title }}</div>
         <div class="mdetailGuideBody">{{ pageGuide.body }}</div>
@@ -515,6 +541,61 @@ onMounted(loadPage)
       </label>
 
       <div v-if="errorMsg" class="mdetailError">{{ errorMsg }}</div>
+      </template>
+
+      <!-- R-06：阅读态（干净排版 + 来源/相关页弱化展示） -->
+      <div v-else class="mdetailRead">
+        <div class="mdetailReadTitle">{{ page.title || '未命名记忆' }}</div>
+        <div v-if="page.summary" class="mdetailReadSummary">{{ page.summary }}</div>
+        <div v-if="page.content" class="mdetailReadContent">{{ page.content }}</div>
+
+        <section v-if="!isCreateMode" class="mdetailSource cardShell">
+          <div class="sectionTitle">这页记忆是怎么来的</div>
+          <div v-if="chatSources.length > 0" class="sourceBlock">
+            <div class="sourceBlockTitle">铃湾是从这些聊天里慢慢记住它的</div>
+            <div class="sourceList">
+              <div
+                v-for="item in chatSources.slice(0, 3)"
+                :key="`${item.date}-${item.messageId}`"
+                class="sourceItem"
+                :class="{ sourceItemLink: item.date }"
+                @click="item.date && emit('open-chat-source', { date: item.date, messageId: item.messageId || '' })"
+              >
+                <div class="sourceItemTitle">{{ item.date || '聊天记录' }}</div>
+                <div class="sourceItemBody"><span>{{ shortPreview(item.preview || item.title) }}</span></div>
+              </div>
+            </div>
+          </div>
+          <div v-if="observationSources.length > 0" class="sourceBlock">
+            <div class="sourceBlockTitle">这些观察记录也在帮铃湾确认它</div>
+            <div class="sourceList">
+              <div
+                v-for="item in observationSources.slice(0, 3)"
+                :key="item.observationId || item.title"
+                class="sourceItem"
+                :class="{ sourceItemLink: item.observationId }"
+                @click="item.observationId && emit('open-observation', item.observationId)"
+              >
+                <div class="sourceItemTitle">{{ item.title || '观察记录' }}</div>
+              </div>
+            </div>
+          </div>
+          <div v-if="relatedPages.length > 0" class="sourceBlock">
+            <div class="sourceBlockTitle">和它有关的记忆</div>
+            <div class="relatedPageList">
+              <div
+                v-for="item in relatedPages"
+                :key="item.pageId || item.id"
+                class="relatedPageItem"
+                :class="{ sourceItemLink: item.pageId || item.id }"
+                @click="(item.pageId || item.id) && emit('open-memory', item.pageId || item.id)"
+              >
+                <div class="relatedPageTitle">{{ item.title || '未命名记忆' }}</div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
   </div>
 </template>
@@ -600,6 +681,30 @@ onMounted(loadPage)
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+/* R-06：阅读态 */
+.mdetailRead{
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.mdetailReadTitle{
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+.mdetailReadSummary{
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.mdetailReadContent{
+  font-size: 14px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: #3A3A3A;
 }
 
 .mdetailMode{

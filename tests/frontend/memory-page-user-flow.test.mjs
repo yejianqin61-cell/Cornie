@@ -149,6 +149,14 @@ function createMemoryUserFetchMock(options = {}) {
 }
 
 describe('MemoryPageDetail 普通用户记忆收口', () => {
+  // R-06：已有记忆默认阅读态——需要表单/引导的用例先进入编辑态
+  async function enterEdit(wrapper) {
+    const editButton = wrapper.findAll('button').find((b) => b.text() === '编辑')
+    expect(editButton).toBeTruthy()
+    await editButton.trigger('click')
+    await flushPromises()
+  }
+
   beforeEach(() => {
     globalThis.fetch = createMemoryUserFetchMock()
   })
@@ -216,6 +224,7 @@ describe('MemoryPageDetail 普通用户记忆收口', () => {
   it('编辑流程：加载真实页面填充表单，修改后 PUT 保存', async () => {
     const wrapper = mount(MemoryPageDetail, { props: { id: 'wiki-profile' } })
     await flushPromises()
+    await enterEdit(wrapper)
 
     expect(wrapper.find('.mdetailTitle').element.value).toBe('叶健钦')
     expect(wrapper.find('.mdetailSummary').element.value).toBe('一个想被好好记住的人。')
@@ -301,9 +310,9 @@ describe('MemoryPageDetail 普通用户记忆收口', () => {
     // 没有可编辑表单覆盖真实页面
     expect(wrapper.findAll('textarea').length).toBe(0)
     expect(wrapper.findAll('input').length).toBe(0)
-    // 保存与删除都被禁用/隐藏
-    const saveButton = wrapper.findAll('button').find((button) => button.text() === '保存修改')
-    expect(saveButton.attributes('disabled')).toBeDefined()
+    // R-06：加载失败时编辑与删除都被禁用/隐藏
+    const editButton = wrapper.findAll('button').find((button) => button.text() === '编辑')
+    expect(editButton.attributes('disabled')).toBeDefined()
     expect(wrapper.text()).not.toContain('删除这页')
 
     // 提供重试入口
@@ -339,6 +348,7 @@ describe('MemoryPageDetail 普通用户记忆收口', () => {
     globalThis.fetch = createMemoryUserFetchMock({ failUpdate: true })
     const wrapper = mount(MemoryPageDetail, { props: { id: 'wiki-profile' } })
     await flushPromises()
+    await enterEdit(wrapper)
 
     await wrapper.find('.mdetailTitle').setValue('叶健钦（新版）')
     const saveButton = wrapper.findAll('button').find((button) => button.text() === '保存修改')
@@ -353,6 +363,7 @@ describe('MemoryPageDetail 普通用户记忆收口', () => {
   it('普通类型详情有差异表达：类型胶囊与引导文案不同', async () => {
     const ordinaryWrapper = mount(MemoryPageDetail, { props: { id: 'wiki-event' } })
     await flushPromises()
+    await enterEdit(ordinaryWrapper)
 
     expect(ordinaryWrapper.find('.mdetailTypePill').text()).toContain('生活事件')
     expect(ordinaryWrapper.find('.mdetailTypePill').text()).toContain('📖')
@@ -362,6 +373,7 @@ describe('MemoryPageDetail 普通用户记忆收口', () => {
 
     const identityWrapper = mount(MemoryPageDetail, { props: { id: 'wiki-profile' } })
     await flushPromises()
+    await enterEdit(identityWrapper)
     expect(identityWrapper.find('.mdetailTypePill').text()).toContain('关于你')
     expect(identityWrapper.find('.mdetailTypePill').text()).toContain('✨')
     expect(identityWrapper.find('.mdetailTypePill').classes()).not.toContain('mdetailTypePillOrdinary')
@@ -370,6 +382,8 @@ describe('MemoryPageDetail 普通用户记忆收口', () => {
   it('来源摘要分组展示，聊天来源可跳转、观察/相关页可打开', async () => {
     const wrapper = mount(MemoryPageDetail, { props: { id: 'wiki-profile' } })
     await flushPromises()
+    // R-06：来源概览（聊天来源/观察记录/相关记忆）在编辑态；阅读态也有来源区块（跳转可用）
+    await enterEdit(wrapper)
 
     expect(wrapper.text()).toContain('这页记忆是怎么来的')
     expect(wrapper.text()).toContain('聊天来源')
