@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { resolveMemoryWikiIndexRoot } from './constants.js'
+import { createSingleWriterQueue } from './writeQueue.js'
 
 const KEYWORD_INDEX_FILENAME = 'keyword-index.json'
 
@@ -127,6 +128,9 @@ export async function createTopicIndexStore(baseDir) {
   const filePath = path.join(indexRoot, KEYWORD_INDEX_FILENAME)
   await ensureIndexFile(filePath)
 
+  // 462：keyword-index 写路径单写者串行化。
+  const enqueue = createSingleWriterQueue()
+
   async function readIndexMap() {
     const text = await fs.readFile(filePath, 'utf8')
     const parsed = JSON.parse(text)
@@ -135,6 +139,24 @@ export async function createTopicIndexStore(baseDir) {
 
   async function writeIndexMap(indexMap) {
     await fs.writeFile(filePath, JSON.stringify(indexMap, null, 2), 'utf8')
+  }
+
+  // 462：读改写整体入队的变更助手（linkPage/unlinkPage/addDateRef 等共用）。
+  async function mutateEntry(normalizedKey, mutate) {
+    return enqueue(async () => {
+      const indexMap = await readIndexMap()
+      const key = normalizeKey(normalizedKey)
+      if (!key) {
+        throw new Error('topic index normalizedKey is required')
+      }
+      const existing = indexMap[key]
+        ? createTopicIndexEntry(indexMap[key])
+        : createTopicIndexEntry({ keyword: key })
+      const next = { ...existing, normalizedKey: key, ...mutate(existing) }
+      indexMap[key] = next
+      await writeIndexMap(indexMap)
+      return next
+    })
   }
 
   return {
@@ -151,20 +173,23 @@ export async function createTopicIndexStore(baseDir) {
         throw new Error('topic index keyword is required')
       }
 
-      const indexMap = await readIndexMap()
-      indexMap[entry.normalizedKey] = entry
-      await writeIndexMap(indexMap)
-      return entry
+      return enqueue(async () => {
+        const indexMap = await readIndexMap()
+        indexMap[entry.normalizedKey] = entry
+        await writeIndexMap(indexMap)
+        return entry
+      })
     },
 
     async updateAliases(normalizedKey, aliases) {
-      const existing = await this.get(normalizedKey)
-      if (!existing) {
-        throw new Error(`topic index entry not found: ${normalizedKey}`)
-      }
-      return this.upsert({
-        ...existing,
-        aliases: dedupe([...(existing.aliases ?? []), ...normalizeStringArray(aliases)])
+      return mutateEntry(normalizedKey, (existing) => {
+        if (!existing?.keyword) {
+          throw new Error(`topic index entry not found: ${normalizedKey}`)
+        }
+        return {
+          ...existing,
+          aliases: dedupe([...(existing.aliases ?? []), ...normalizeStringArray(aliases)])
+        }
       })
     },
 
@@ -181,50 +206,47 @@ export async function createTopicIndexStore(baseDir) {
     },
 
     async addDateRef(normalizedKey, date) {
-      const existing = (await this.get(normalizedKey)) ?? createTopicIndexEntry({ keyword: normalizedKey })
-      return this.upsert({
+      return mutateEntry(normalizedKey, (existing) => ({
         ...existing,
         keyword: existing.keyword || normalizedKey,
         dates: dedupe([...existing.dates, normalizeString(date)])
-      })
+      }))
     },
 
     async linkPage(normalizedKey, pageId) {
-      const existing = (await this.get(normalizedKey)) ?? createTopicIndexEntry({ keyword: normalizedKey })
-      return this.upsert({
+      return mutateEntry(normalizedKey, (existing) => ({
         ...existing,
         keyword: existing.keyword || normalizedKey,
         memoryPageIds: dedupe([...existing.memoryPageIds, normalizeString(pageId)])
-      })
+      }))
     },
 
     async unlinkPage(normalizedKey, pageId) {
-      const existing = await this.get(normalizedKey)
-      if (!existing) {
-        throw new Error(`topic index entry not found: ${normalizedKey}`)
-      }
-      return this.upsert({
-        ...existing,
-        memoryPageIds: existing.memoryPageIds.filter((item) => item !== normalizeString(pageId))
+      return mutateEntry(normalizedKey, (existing) => {
+        if (!existing?.keyword) {
+          throw new Error(`topic index entry not found: ${normalizedKey}`)
+        }
+        return {
+          ...existing,
+          memoryPageIds: existing.memoryPageIds.filter((item) => item !== normalizeString(pageId))
+        }
       })
     },
 
     async addChatRef(normalizedKey, chatRef) {
-      const existing = (await this.get(normalizedKey)) ?? createTopicIndexEntry({ keyword: normalizedKey })
-      return this.upsert({
+      return mutateEntry(normalizedKey, (existing) => ({
         ...existing,
         keyword: existing.keyword || normalizedKey,
         chatRefs: dedupe([...existing.chatRefs, normalizeString(chatRef)])
-      })
+      }))
     },
 
     async addObservationRef(normalizedKey, observationRef) {
-      const existing = (await this.get(normalizedKey)) ?? createTopicIndexEntry({ keyword: normalizedKey })
-      return this.upsert({
+      return mutateEntry(normalizedKey, (existing) => ({
         ...existing,
         keyword: existing.keyword || normalizedKey,
         observationRefs: dedupe([...existing.observationRefs, normalizeString(observationRef)])
-      })
+      }))
     },
 
     async list() {
@@ -261,15 +283,16 @@ export async function createTopicIndexStore(baseDir) {
         note: [target.note, source.note].filter(Boolean).join('\n').trim() || target.note || source.note
       })
 
-      const indexMap = await readIndexMap()
-      delete indexMap[normalizeKey(sourceNormalizedKey)]
-      indexMap[merged.normalizedKey] = merged
-      await writeIndexMap(indexMap)
-
-      return {
-        target: merged,
-        removedSourceNormalizedKey: normalizeKey(sourceNormalizedKey)
-      }
+      return enqueue(async () => {
+        const indexMap = await readIndexMap()
+        delete indexMap[normalizeKey(sourceNormalizedKey)]
+        indexMap[merged.normalizedKey] = merged
+        await writeIndexMap(indexMap)
+        return {
+          target: merged,
+          removedSourceNormalizedKey: normalizeKey(sourceNormalizedKey)
+        }
+      })
     },
 
     getFilePath() {

@@ -7,6 +7,7 @@ import {
   resolveMemoryWikiRoot
 } from './constants.js'
 import { createPageModel } from './pageModel.js'
+import { createSingleWriterQueue } from './writeQueue.js'
 
 const FRONTMATTER_BOUNDARY = '---'
 const PAGE_INDEX_FILENAME = 'page-index.json'
@@ -303,6 +304,9 @@ export async function createMemoryWikiStorage(baseDir) {
   const pageIndexPath = path.join(indexRoot, PAGE_INDEX_FILENAME)
   await ensureJsonFile(pageIndexPath, {})
 
+  // 462：page-index 写路径单写者串行化，避免并发 read-modify-write 丢更新。
+  const enqueue = createSingleWriterQueue()
+
   async function readPageIndex() {
     const text = await fs.readFile(pageIndexPath, 'utf8')
     const parsed = JSON.parse(text)
@@ -314,24 +318,28 @@ export async function createMemoryWikiStorage(baseDir) {
   }
 
   async function upsertPageIndexEntry(page) {
-    const indexMap = await readPageIndex()
-    indexMap[page.pageId] = {
-      pageId: page.pageId,
-      pageType: page.pageType,
-      title: page.title,
-      slug: page.slug,
-      status: page.status,
-      importance: page.importance,
-      filePath: page.filePath,
-      updatedAt: page.lastUpdatedAt
-    }
-    await writePageIndex(indexMap)
+    return enqueue(async () => {
+      const indexMap = await readPageIndex()
+      indexMap[page.pageId] = {
+        pageId: page.pageId,
+        pageType: page.pageType,
+        title: page.title,
+        slug: page.slug,
+        status: page.status,
+        importance: page.importance,
+        filePath: page.filePath,
+        updatedAt: page.lastUpdatedAt
+      }
+      await writePageIndex(indexMap)
+    })
   }
 
   async function deletePageIndexEntry(pageId) {
-    const indexMap = await readPageIndex()
-    delete indexMap[pageId]
-    await writePageIndex(indexMap)
+    return enqueue(async () => {
+      const indexMap = await readPageIndex()
+      delete indexMap[pageId]
+      await writePageIndex(indexMap)
+    })
   }
 
   async function getIndexedFilePath(pageId) {

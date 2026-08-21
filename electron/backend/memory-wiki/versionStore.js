@@ -2,6 +2,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { resolveMemoryWikiRoot } from './constants.js'
+import { createSingleWriterQueue } from './writeQueue.js'
 
 const VERSIONS_SEGMENTS = ['versions']
 const VERSION_INDEX_FILENAME = 'version-index.json'
@@ -59,6 +60,9 @@ export async function createMemoryWikiVersionStore(baseDir) {
   const versionIndexPath = path.join(versionsRoot, VERSION_INDEX_FILENAME)
   await ensureJsonFile(versionIndexPath, {})
 
+  // 462：version-index 写路径单写者串行化。
+  const enqueue = createSingleWriterQueue()
+
   async function readVersionIndex() {
     const text = await fs.readFile(versionIndexPath, 'utf8')
     const parsed = JSON.parse(text)
@@ -93,20 +97,22 @@ export async function createMemoryWikiVersionStore(baseDir) {
       const snapshotPath = path.join(pageVersionDir, `${record.versionId}.json`)
       await fs.writeFile(snapshotPath, JSON.stringify(record, null, 2), 'utf8')
 
-      const indexMap = await readVersionIndex()
-      if (!Array.isArray(indexMap[page.pageId])) {
-        indexMap[page.pageId] = []
-      }
-      indexMap[page.pageId].push({
-        versionId: record.versionId,
-        pageId: record.pageId,
-        title: record.title,
-        reason: record.reason,
-        createdAt: record.createdAt,
-        snapshotPath
+      await enqueue(async () => {
+        const indexMap = await readVersionIndex()
+        if (!Array.isArray(indexMap[page.pageId])) {
+          indexMap[page.pageId] = []
+        }
+        indexMap[page.pageId].push({
+          versionId: record.versionId,
+          pageId: record.pageId,
+          title: record.title,
+          reason: record.reason,
+          createdAt: record.createdAt,
+          snapshotPath
+        })
+        await enforceVersionCap(page.pageId, indexMap)
+        await writeVersionIndex(indexMap)
       })
-      await enforceVersionCap(page.pageId, indexMap)
-      await writeVersionIndex(indexMap)
       return { ...record, snapshotPath }
     },
 

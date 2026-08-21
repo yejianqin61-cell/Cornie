@@ -2,6 +2,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { resolveMemoryWikiRoot } from './constants.js'
+import { createSingleWriterQueue } from './writeQueue.js'
 
 const GOVERNANCE_SEGMENTS = ['governance']
 const GOVERNANCE_FILENAME = 'review-queue.json'
@@ -81,6 +82,9 @@ export async function createMemoryWikiGovernanceStore(baseDir) {
   const filePath = path.join(governanceDir, GOVERNANCE_FILENAME)
   await ensureJsonFile(filePath, [])
 
+  // 462：review-queue 写路径单写者串行化。
+  const enqueue = createSingleWriterQueue()
+
   async function readAll() {
     const text = await fs.readFile(filePath, 'utf8')
     const parsed = JSON.parse(text)
@@ -94,10 +98,12 @@ export async function createMemoryWikiGovernanceStore(baseDir) {
   return {
     async create(input) {
       const request = createGovernanceRequest(input)
-      const items = await readAll()
-      items.push(request)
-      await writeAll(items)
-      return request
+      return enqueue(async () => {
+        const items = await readAll()
+        items.push(request)
+        await writeAll(items)
+        return request
+      })
     },
 
     async get(requestId) {
@@ -128,22 +134,24 @@ export async function createMemoryWikiGovernanceStore(baseDir) {
     async updateStatus(requestId, status) {
       const normalizedId = normalizeString(requestId)
       const normalizedStatus = normalizeRequestStatus(status)
-      const items = await readAll()
-      const index = items.findIndex((item) => item.requestId === normalizedId)
-      if (index === -1) {
-        throw new Error(`governance request not found: ${normalizedId}`)
-      }
+      return enqueue(async () => {
+        const items = await readAll()
+        const index = items.findIndex((item) => item.requestId === normalizedId)
+        if (index === -1) {
+          throw new Error(`governance request not found: ${normalizedId}`)
+        }
 
-      assertStatusTransition(items[index].status, normalizedStatus)
+        assertStatusTransition(items[index].status, normalizedStatus)
 
-      const next = createGovernanceRequest({
-        ...items[index],
-        status: normalizedStatus,
-        updatedAt: new Date().toISOString()
+        const next = createGovernanceRequest({
+          ...items[index],
+          status: normalizedStatus,
+          updatedAt: new Date().toISOString()
+        })
+        items[index] = next
+        await writeAll(items)
+        return next
       })
-      items[index] = next
-      await writeAll(items)
-      return next
     },
 
     // 459：deferred 复活为 pending（唯一合法的复活路径）。
