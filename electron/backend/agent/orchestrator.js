@@ -38,6 +38,20 @@ const MAX_HISTORY_MESSAGES = PROMPT_LOADING_POLICY.liveConversationHistoryLimit
 const MAX_PROTOCOL_REPAIR_RETRIES = 1
 const MAX_TOOL_ROUNDS = 2
 
+// 452：记忆钻取轮次预算（memory_wiki.* / memory_index.* 只读钻取，可多于普通工具轮）。
+const MAX_DRILL_ROUNDS = 4
+
+function isMemoryDrillRound(toolCalls = []) {
+  return (
+    Array.isArray(toolCalls) &&
+    toolCalls.length > 0 &&
+    toolCalls.every((item) => {
+      const name = String(item?.tool_name || '')
+      return name.startsWith('memory_wiki.') || name.startsWith('memory_index.')
+    })
+  )
+}
+
 function trimMessages(messages) {
   if (messages.length <= MAX_HISTORY_MESSAGES + 1) {
     return messages
@@ -265,12 +279,27 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd() 
           } else {
             let currentEnvelope = firstEnvelope
             let currentMessages = baseMessages
+            let drillRoundCount = 0
 
-            for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
+            for (let round = 0; round < Math.max(MAX_TOOL_ROUNDS, MAX_DRILL_ROUNDS + 1); round += 1) {
               policyDecision = evaluateToolCalls(currentEnvelope.tool_calls, {
                 sourceText: currentEnvelope.assistant_reply,
                 store
               })
+
+              // 452：记忆钻取预算——只读钻取最多 MAX_DRILL_ROUNDS 次，
+              // 超预算的钻取尝试直接停止；非钻取工具轮保持 MAX_TOOL_ROUNDS 上限。
+              const isDrillRound = isMemoryDrillRound(policyDecision.toolCalls)
+              if (isDrillRound) {
+                if (drillRoundCount >= MAX_DRILL_ROUNDS) {
+                  finalReply = `${currentEnvelope.assistant_reply}\n\n关于这部分记忆，铃湾已经翻到这儿啦，先说到这儿。`
+                  break
+                }
+                drillRoundCount += 1
+              } else if (round >= MAX_TOOL_ROUNDS) {
+                finalReply = currentEnvelope.assistant_reply
+                break
+              }
 
               if (policyDecision.decision === 'confirm') {
                 requestedToolCalls = currentEnvelope.tool_calls
@@ -375,7 +404,7 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd() 
               currentEnvelope = nextEnvelope
               requestedToolCalls = nextEnvelope.tool_calls
 
-              if (round === MAX_TOOL_ROUNDS - 1) {
+              if (round >= Math.max(MAX_TOOL_ROUNDS, MAX_DRILL_ROUNDS + 1) - 1) {
                 finalReply = currentEnvelope.assistant_reply
               }
             }

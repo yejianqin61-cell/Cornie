@@ -4,6 +4,7 @@ import { createMemoryWikiAuditStore } from './audit.js'
 import { createMemoryWikiInspector } from './inspector.js'
 import { createTopicIndexStore } from './topicIndex.js'
 import { createMemoryWikiGovernanceStore } from './governanceStore.js'
+import { createPageCache } from './pageCache.js'
 import { applyObservationWikiUpgradeRequest } from '../observation/wikiUpgradeApply.js'
 import { applyObservationCompressionRequest } from '../observation/compressionApply.js'
 import { normalizePageStatus } from './pageModel.js'
@@ -611,6 +612,9 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
   const topicIndex = await createTopicIndexStore(baseDir)
   const governanceStore = await createMemoryWikiGovernanceStore(baseDir)
 
+  // 452：跨轮页面缓存（读侧短 TTL，写侧必失效）。
+  const pageCache = createPageCache()
+
   async function writeAudit(event) {
     return auditStore.append(event)
   }
@@ -634,7 +638,15 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
 
     async get(pageId) {
       if (!pageId) throw new Error('memory wiki pageId is required')
-      return storage.readPageById(pageId)
+      const cached = pageCache.get(pageId)
+      if (cached) {
+        return cached
+      }
+      const page = await storage.readPageById(pageId)
+      if (page) {
+        pageCache.set(pageId, page)
+      }
+      return page
     },
 
     async update(input) {
@@ -658,6 +670,7 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
         pageId: existing.pageId
       })
       await ensureIdentityTraitGovernanceCandidate(governanceStore, updated)
+      pageCache.invalidate(existing.pageId)
       await writeAudit({
         eventType: 'page_updated',
         pageId: existing.pageId,
@@ -863,6 +876,8 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
       })
 
       await this.archive(sourcePageId)
+      pageCache.invalidate(targetPageId)
+      pageCache.invalidate(sourcePageId)
 
       // 465：源页在 topicIndex 中的引用迁移到目标页，避免孤儿引用。
       const topics = await topicIndex.list()
@@ -895,6 +910,7 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
       if (!existing) return false
       await versionStore.snapshotPage(existing, { reason: 'before_delete' })
       const deleted = await storage.deletePage({ pageId, filePath: existing.filePath })
+      pageCache.invalidate(pageId)
       if (deleted) {
         // 465：删除时回写 topicIndex 与对端页面 relatedPageIds，避免孤儿引用。
         const topics = await topicIndex.list()
@@ -944,6 +960,7 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
         summary: summary ?? existing.summary,
         body: body ?? existing.body
       })
+      pageCache.invalidate(pageId)
 
       await versionStore.snapshotPage(compressed, { reason: 'after_compression' })
       await writeAudit({
@@ -1188,6 +1205,7 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
         pageId,
         filePath: existing.filePath
       })
+      pageCache.invalidate(pageId)
 
       // 458：回滚只保留 before 快照，after 快照默认不拍，避免版本膨胀。
       await writeAudit({

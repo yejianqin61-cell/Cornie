@@ -1,6 +1,9 @@
 import { createMemoryWikiService } from './service.js'
 import { createTopicIndexStore } from './topicIndex.js'
 
+// 452：单页读取正文截断上限（钻取预算之一）。
+const PAGE_BODY_READ_LIMIT = 2000
+
 export async function registerMemoryWikiTools({ baseDir, store }, { registerTool }) {
   const memoryWiki = await createMemoryWikiService({ baseDir, store })
   const topicIndex = await createTopicIndexStore(baseDir)
@@ -9,7 +12,13 @@ export async function registerMemoryWikiTools({ baseDir, store }, { registerTool
     name: 'memory_wiki.get_page',
     description: '根据 pageId 查询长期记忆 wiki 页面',
     riskLevel: 'low',
-    handler: async ({ pageId }) => ({ ok: true, result: await memoryWiki.get(pageId) })
+    handler: async ({ pageId }) => {
+      const page = await memoryWiki.get(pageId)
+      if (page && typeof page.body === 'string' && page.body.length > PAGE_BODY_READ_LIMIT) {
+        return { ok: true, result: { ...page, body: `${page.body.slice(0, PAGE_BODY_READ_LIMIT)}…` } }
+      }
+      return { ok: true, result: page }
+    }
   })
 
   registerTool({
