@@ -173,12 +173,49 @@ async function testConfirmHighRiskLedgerDelete() {
   }
 }
 
+// BE-02：ledger.update_entry 补注册后走类目域处理（缺类目 → 追问/建类目语义），而非仅泛化高风险确认
+async function testUpdateEntryCategoryDomainBehavior() {
+  const harness = await createStore('be02-update-entry-domain')
+  try {
+    const decision = evaluateToolCalls(
+      [
+        {
+          tool_name: 'ledger.update_entry',
+          arguments: {
+            id: 'ledger-entry-1',
+            amount: 88
+          }
+        }
+      ],
+      {
+        sourceText: '把昨天那笔改成88块',
+        store: harness.store
+      }
+    )
+
+    // 类目域规则应给出类目相关的 ask_back/confirm（missingReason 类目缺失），而非 allow 或泛化确认
+    assert(
+      decision.decision === 'ask_back' || decision.decision === 'confirm',
+      'expected category-domain decision for update_entry',
+      decision
+    )
+    assert(
+      /类目|分类/.test(String(decision.question || decision.reason || decision.confirmRequest?.reason || '')),
+      'expected category-related message for update_entry',
+      decision
+    )
+  } finally {
+    harness.close()
+  }
+}
+
 const tests = [
   ['allow system read', testAllowSystemRead],
   ['ask_back missing ledger amount', testAskBackMissingLedgerAmount],
   ['deny unknown tool', testDenyUnknownTool],
   ['confirm memory wiki governance', testConfirmMemoryWikiGovernance],
-  ['confirm high risk ledger delete', testConfirmHighRiskLedgerDelete]
+  ['confirm high risk ledger delete', testConfirmHighRiskLedgerDelete],
+  ['update_entry category domain behavior', testUpdateEntryCategoryDomainBehavior]
 ]
 
 let passed = 0

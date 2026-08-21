@@ -1,3 +1,5 @@
+import { categoryDomainRegistry } from '../category/domainRegistry.js'
+
 function protocolError(message, details) {
   const error = new Error(message)
   error.code = 'invalid_model_protocol'
@@ -78,16 +80,9 @@ function normalizeToolCall(item, index) {
   }
 }
 
+// BE-02：类目域写工具名单从 domainRegistry 单一事实源派生
 function isCategoryDomainTool(toolName) {
-  return [
-    'ledger.add_expense',
-    'ledger.add_income',
-    'ledger.update_entry',
-    'todo.create',
-    'todo.update',
-    'schedule.create',
-    'schedule.update'
-  ].includes(toolName)
+  return categoryDomainRegistry.getAllActionToolNames().includes(toolName)
 }
 
 function normalizeCategoryString(value) {

@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { getMessagesByDate, saveMessage } from '../../db.js'
+import { categoryDomainRegistry } from '../category/domainRegistry.js'
 import { buildJsonRepairPrompt, parseModelJson } from './jsonProtocol.js'
 import { buildConversationContext } from './contextBuilder.js'
 import {
@@ -135,19 +136,13 @@ function looksLikeWriteIntent(text) {
   return /(记账|记一笔|记录日程|记日程|新增日程|创建日程|安排一下|记录待办|记待办|新增待办|创建待办|帮我记下|帮我记录)/.test(normalized)
 }
 
+// BE-02：写工具成功判定名单从 domainRegistry 单一事实源派生
 function hasSuccessfulWriteToolResult(results = []) {
+  const actionTools = new Set(categoryDomainRegistry.getAllActionToolNames())
   return (Array.isArray(results) ? results : []).some((item) => {
     if (item?.ok === false) return false
     const name = String(item?.tool_name || '')
-    return [
-      'ledger.add_expense',
-      'ledger.add_income',
-      'ledger.update_entry',
-      'todo.create',
-      'todo.update',
-      'schedule.create',
-      'schedule.update'
-    ].includes(name)
+    return actionTools.has(name)
   })
 }
 

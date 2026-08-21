@@ -39,7 +39,7 @@ const CATEGORY_FALLBACK_RULES = `当信息不足时的处理顺序：
 4. 如果补查过一次仍不确定，不要继续补查第二次，直接 reply 追问。`
 
 const CATEGORY_DOMAIN_HINTS = `涉及类目映射的常见工具：
-- ledger.add_expense / ledger.add_income
+- ledger.add_expense / ledger.add_income / ledger.update_entry
 - todo.create / todo.update
 - schedule.create / schedule.update
 

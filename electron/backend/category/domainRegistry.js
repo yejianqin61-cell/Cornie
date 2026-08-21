@@ -128,6 +128,11 @@ export function createCategoryDomainRegistry(registrations = []) {
 
     getReadOnlyLookupDomain(toolName) {
       return lookupToolMap.get(toolName)?.domain ?? null
+    },
+
+    // BE-02：单一事实源——全部"类目域写工具"名单（jsonProtocol / orchestrator / prompt 均由此派生）
+    getAllActionToolNames() {
+      return [...actionToolMap.keys()]
     }
   }
 }
@@ -135,7 +140,8 @@ export function createCategoryDomainRegistry(registrations = []) {
 const ledgerRegistration = {
   domain: 'ledger',
   label: '收支',
-  actionToolNames: ['ledger.add_expense', 'ledger.add_income'],
+  // BE-02：补注册 update_entry，使协议校验/策略类目处理/提示词三层行为一致
+  actionToolNames: ['ledger.add_expense', 'ledger.add_income', 'ledger.update_entry'],
   readOnlyLookups: [
     {
       toolName: 'ledger_category.list_expense',
@@ -173,9 +179,14 @@ const ledgerRegistration = {
       return []
     }
     const ledger = createLedgerService(store)
-    return toolName === 'ledger.add_income'
-      ? ledger.listIncomeCategories()
-      : ledger.listExpenseCategories()
+    if (toolName === 'ledger.add_income') {
+      return ledger.listIncomeCategories()
+    }
+    // update_entry 类型不固定：返回合并列表，策略层从中匹配/追问
+    if (toolName === 'ledger.update_entry') {
+      return [...ledger.listIncomeCategories(), ...ledger.listExpenseCategories()]
+    }
+    return ledger.listExpenseCategories()
   },
   buildCategoryCreateToolCall({ pendingActionToolName, proposedCategoryName }) {
     return {
