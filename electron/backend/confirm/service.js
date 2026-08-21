@@ -41,15 +41,15 @@ export function createConfirmService(store) {
 
   return {
     createPending(input) {
-      if (!input?.date) throw new Error('pending confirmation date is required')
+      if (!input?.date) throw badRequest('pending confirmation date is required', undefined, 'date_required')
       if (!input?.conversationMessageId) {
-        throw new Error('pending confirmation conversationMessageId is required')
+        throw badRequest('pending confirmation conversationMessageId is required', undefined, 'conversation_message_id_required')
       }
       if (!Array.isArray(input?.toolCalls) || input.toolCalls.length === 0) {
-        throw new Error('pending confirmation toolCalls are required')
+        throw badRequest('pending confirmation toolCalls are required', undefined, 'tool_calls_required')
       }
       if (!input?.confirmRequest || typeof input.confirmRequest !== 'object') {
-        throw new Error('pending confirmation confirmRequest is required')
+        throw badRequest('pending confirmation confirmRequest is required', undefined, 'confirm_request_required')
       }
 
       return createPendingConfirmation(store, {
@@ -73,8 +73,8 @@ export function createConfirmService(store) {
     },
 
     markStatus({ id, status, resolvedAt }) {
-      if (!id) throw new Error('pending confirmation id is required')
-      if (!status) throw new Error('pending confirmation status is required')
+      if (!id) throw badRequest('pending confirmation id is required', undefined, 'id_required')
+      if (!status) throw badRequest('pending confirmation status is required', undefined, 'status_required')
       return updatePendingConfirmationStatus(store, { id, status, resolvedAt })
     },
 

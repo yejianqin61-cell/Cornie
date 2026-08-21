@@ -9,6 +9,7 @@ import {
 } from '../../db.js'
 import { normalizeCategoryMapping } from '../category/mapping.js'
 import { validateCategoryName } from '../category/validation.js'
+import { badRequest, HttpError } from '../http/errors.js'
 
 function hasOwn(input, key) {
   return Object.prototype.hasOwnProperty.call(input, key)
@@ -61,18 +62,18 @@ export function createTodoService(store) {
   return {
     create: (input) => {
       const todo = normalizeTodoInput(input)
-      if (!todo.title) throw new Error('todo title is required')
+      if (!todo.title) throw badRequest('todo title is required', undefined, 'title_required')
       return saveTodoEntry(store, {
         ...todo,
         status: 'pending'
       })
     },
     update: (input) => {
-      if (!input.id) throw new Error('todo id is required')
+      if (!input.id) throw badRequest('todo id is required', undefined, 'entry_id_required')
       const existing = getTodoEntry(store, input.id)
-      if (!existing) throw new Error('todo entry not found')
+      if (!existing) throw new HttpError(404, 'todo entry not found')
       const todo = normalizeTodoInput(input, { existing })
-      if (!todo.title) throw new Error('todo title is required')
+      if (!todo.title) throw badRequest('todo title is required', undefined, 'title_required')
       return saveTodoEntry(store, {
         id: input.id,
         ...todo,
@@ -89,7 +90,7 @@ export function createTodoService(store) {
     listByRange: ({ from, to }) => listTodoEntries(store, { from, to }),
     listCategories: () => listTodoCategories(store),
     getCategory: (id) => {
-      if (!id) throw new Error('todo category id is required')
+      if (!id) throw badRequest('todo category id is required', undefined, 'category_id_required')
       return getTodoCategory(store, id)
     },
     createCategory: ({ name, id, sortOrder = 0 }) => {
@@ -112,9 +113,9 @@ export function createTodoService(store) {
       return upsertTodoCategory(store, { name: validation.normalizedName, id, sortOrder })
     },
     deleteCategory: ({ id, name, sortOrder }) => {
-      if (!id) throw new Error('todo category id is required')
+      if (!id) throw badRequest('todo category id is required', undefined, 'category_id_required')
       const existing = getTodoCategory(store, id)
-      if (!existing) throw new Error('todo category not found')
+      if (!existing) throw new HttpError(404, 'todo category not found')
       return upsertTodoCategory(store, {
         id,
         name: name ?? existing.name,
@@ -123,9 +124,9 @@ export function createTodoService(store) {
       })
     },
     restoreCategory: ({ id }) => {
-      if (!id) throw new Error('todo category id is required')
+      if (!id) throw badRequest('todo category id is required', undefined, 'category_id_required')
       const existing = getTodoCategory(store, id)
-      if (!existing) throw new Error('todo category not found')
+      if (!existing) throw new HttpError(404, 'todo category not found')
       return upsertTodoCategory(store, {
         id,
         name: existing.name,
@@ -134,10 +135,10 @@ export function createTodoService(store) {
       })
     },
     reorderCategory: ({ id, sortOrder }) => {
-      if (!id) throw new Error('todo category id is required')
-      if (!Number.isFinite(sortOrder)) throw new Error('todo category sortOrder is required')
+      if (!id) throw badRequest('todo category id is required', undefined, 'category_id_required')
+      if (!Number.isFinite(sortOrder)) throw badRequest('todo category sortOrder is required', undefined, 'invalid_sort_order')
       const existing = getTodoCategory(store, id)
-      if (!existing) throw new Error('todo category not found')
+      if (!existing) throw new HttpError(404, 'todo category not found')
       return upsertTodoCategory(store, {
         id,
         name: existing.name,

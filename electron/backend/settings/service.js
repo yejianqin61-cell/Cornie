@@ -1,4 +1,5 @@
 import { deleteAppSetting, getAppSetting, setAppSetting } from '../../db.js'
+import { badRequest, HttpError } from '../http/errors.js'
 
 const MODEL_SETTING_KEYS = {
   apiKey: 'settings.model.deepseek.apiKey',
@@ -27,7 +28,7 @@ function normalizeTimeout(value) {
   if (!normalized) return ''
   const parsed = Number.parseInt(normalized, 10)
   if (!Number.isFinite(parsed) || parsed <= 0) {
-    throw new Error('invalid timeoutMs')
+    throw badRequest('invalid timeoutMs', undefined, 'invalid_timeout')
   }
   return String(parsed)
 }
@@ -113,7 +114,7 @@ export function createSettingsService(store) {
     saveModelSettings(input = {}) {
       const apiKey = normalizeString(input.apiKey)
       if (!apiKey) {
-        throw new Error('apiKey is required')
+        throw badRequest('apiKey is required', undefined, 'api_key_required')
       }
 
       const baseUrl = normalizeBaseUrl(input.baseUrl)

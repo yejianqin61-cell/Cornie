@@ -10,6 +10,7 @@ import {
 } from '../../db.js'
 import { normalizeCategoryMapping } from '../category/mapping.js'
 import { validateCategoryName } from '../category/validation.js'
+import { badRequest, HttpError } from '../http/errors.js'
 
 function hasOwn(input, key) {
   return Object.prototype.hasOwnProperty.call(input, key)
@@ -33,7 +34,7 @@ function normalizeLedgerInput(type, input, { existing = null } = {}) {
   const amount = hasOwn(input, 'amount') ? input.amount : existing?.amount
 
   if (typeof amount !== 'number' || !Number.isFinite(amount) || amount <= 0) {
-    throw new Error('amount is required')
+    throw badRequest('amount is required', undefined, 'amount_required')
   }
 
   const useExistingCategory = !hasCategoryFields(input) && existing
@@ -80,9 +81,12 @@ function createCategory(store, { type, name, id, sortOrder }) {
   }
 
   if (!validation.ok) {
-    const error = new Error(validation.reason || 'invalid category name')
-    error.code = validation.similarCandidates?.length > 0 ? 'category_name_similar' : 'invalid_category_name'
-    error.details = validation
+    const error = new HttpError(
+      400,
+      validation.reason || 'invalid category name',
+      validation,
+      validation.similarCandidates?.length > 0 ? 'category_name_similar' : 'invalid_category_name'
+    )
     throw error
   }
 
@@ -113,27 +117,27 @@ export function createLedgerService(store) {
     addExpense: (input) => addEntry(store, 'expense', input),
     addIncome: (input) => addEntry(store, 'income', input),
     updateEntry: (input) => {
-      if (!input?.id) throw new Error('ledger entry id is required')
+      if (!input?.id) throw badRequest('ledger entry id is required', undefined, 'entry_id_required')
       const existing = getLedgerEntry(store, input.id)
-      if (!existing) throw new Error('ledger entry not found')
+      if (!existing) throw new HttpError(404, 'ledger entry not found')
 
       const nextType = hasOwn(input, 'type') ? String(input.type ?? '').trim() : existing.type
       if (!['expense', 'income'].includes(nextType)) {
-        throw new Error('ledger entry type must be expense or income')
+        throw badRequest('ledger entry type must be expense or income', undefined, 'invalid_entry_type')
       }
 
       const ledger = normalizeLedgerInput(nextType, input, { existing })
       return saveLedgerEntry(store, { id: input.id, ...ledger })
     },
     deleteEntry: ({ id }) => {
-      if (!id) throw new Error('ledger entry id is required')
+      if (!id) throw badRequest('ledger entry id is required', undefined, 'entry_id_required')
       const existing = getLedgerEntry(store, id)
-      if (!existing) throw new Error('ledger entry not found')
+      if (!existing) throw new HttpError(404, 'ledger entry not found')
       deleteLedgerEntry(store, id)
       return existing
     },
     getEntry: (id) => {
-      if (!id) throw new Error('ledger entry id is required')
+      if (!id) throw badRequest('ledger entry id is required', undefined, 'entry_id_required')
       return getLedgerEntry(store, id)
     },
     listByCategory: ({ categoryId, categoryName, type, from, to } = {}) => {
@@ -162,9 +166,9 @@ export function createLedgerService(store) {
     createIncomeCategory: ({ name, id, sortOrder = 0 }) =>
       createCategory(store, { type: 'income', name, id, sortOrder }),
     restoreCategory: ({ id }) => {
-      if (!id) throw new Error('ledger category id is required')
+      if (!id) throw badRequest('ledger category id is required', undefined, 'category_id_required')
       const existing = getLedgerCategory(store, id)
-      if (!existing) throw new Error('ledger category not found')
+      if (!existing) throw new HttpError(404, 'ledger category not found')
       return upsertLedgerCategory(store, {
         id,
         type: existing.type,
@@ -176,7 +180,7 @@ export function createLedgerService(store) {
     updateCategory: ({ id, type, name, isActive, sortOrder }) =>
       upsertLedgerCategory(store, { id, type, name, isActive, sortOrder }),
     getCategory: (id) => {
-      if (!id) throw new Error('ledger category id is required')
+      if (!id) throw badRequest('ledger category id is required', undefined, 'category_id_required')
       return getLedgerCategory(store, id)
     }
   }

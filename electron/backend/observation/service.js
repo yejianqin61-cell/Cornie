@@ -1,6 +1,7 @@
 import { deleteObservationLog, getObservationLog, listObservationLogs, saveObservationLog, updateObservationLog } from '../../db.js'
 import { buildObservationPromptPolicySummary, getObservationPromptPolicy, OBSERVATION_PROMPT_POLICY } from './policy.js'
 import { enqueueObservationCompressionCandidates } from './governance.js'
+import { badRequest, HttpError } from '../http/errors.js'
 
 function normalizeObservationInput(input = {}) {
   return {
@@ -117,8 +118,8 @@ export function createObservationService(store) {
 
   function prepareNote(input) {
     const note = normalizeObservationInput(input)
-    if (!note.title) throw new Error('observation title is required')
-    if (!note.content) throw new Error('observation content is required')
+    if (!note.title) throw badRequest('observation title is required', undefined, 'title_required')
+    if (!note.content) throw badRequest('observation content is required', undefined, 'content_required')
 
     const todayItems = listByDate(note.date)
     const exactMatch = findDuplicateNote(note, todayItems)
@@ -180,12 +181,12 @@ export function createObservationService(store) {
   return {
     addNote: (input) => {
       const note = normalizeObservationInput(input)
-      if (!note.title) throw new Error('observation title is required')
-      if (!note.content) throw new Error('observation content is required')
+      if (!note.title) throw badRequest('observation title is required', undefined, 'title_required')
+      if (!note.content) throw badRequest('observation content is required', undefined, 'content_required')
       return saveObservationLog(store, note)
     },
     updateNote: (input) => {
-      if (!input.id) throw new Error('observation id is required')
+      if (!input.id) throw badRequest('observation id is required', undefined, 'entry_id_required')
       return updateObservationLog(store, {
         id: input.id,
         date: input.date,

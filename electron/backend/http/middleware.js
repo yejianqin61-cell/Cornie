@@ -5,6 +5,10 @@ export function jsonErrorHandler(err, _req, res, _next) {
   const payload = {
     error: err?.message || 'internal error'
   }
+  // BE-03：透出稳定业务错误码（如 amount_required / invalid_timeout），前端可据此分类提示。
+  if (err?.code !== undefined) {
+    payload.code = err.code
+  }
   if (err instanceof HttpError && err.details !== undefined) {
     payload.details = err.details
   }

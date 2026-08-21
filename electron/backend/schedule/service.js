@@ -10,6 +10,7 @@ import {
 } from '../../db.js'
 import { normalizeCategoryMapping } from '../category/mapping.js'
 import { validateCategoryName } from '../category/validation.js'
+import { badRequest, HttpError } from '../http/errors.js'
 
 function hasOwn(input, key) {
   return Object.prototype.hasOwnProperty.call(input, key)
@@ -69,20 +70,20 @@ export function createScheduleService(store) {
   return {
     create: (input) => {
       const schedule = normalizeScheduleInput(input)
-      if (!schedule.title) throw new Error('schedule title is required')
-      if (!schedule.startAt) throw new Error('schedule start_at is required')
+      if (!schedule.title) throw badRequest('schedule title is required', undefined, 'title_required')
+      if (!schedule.startAt) throw badRequest('schedule start_at is required', undefined, 'start_at_required')
       return saveScheduleEntry(store, {
         ...schedule,
         status: 'scheduled'
       })
     },
     update: (input) => {
-      if (!input.id) throw new Error('schedule id is required')
+      if (!input.id) throw badRequest('schedule id is required', undefined, 'entry_id_required')
       const existing = getScheduleEntry(store, input.id)
-      if (!existing) throw new Error('schedule entry not found')
+      if (!existing) throw new HttpError(404, 'schedule entry not found')
       const schedule = normalizeScheduleInput(input, { existing })
-      if (!schedule.title) throw new Error('schedule title is required')
-      if (!schedule.startAt) throw new Error('schedule start_at is required')
+      if (!schedule.title) throw badRequest('schedule title is required', undefined, 'title_required')
+      if (!schedule.startAt) throw badRequest('schedule start_at is required', undefined, 'start_at_required')
       return saveScheduleEntry(store, {
         id: input.id,
         ...schedule,
@@ -92,9 +93,9 @@ export function createScheduleService(store) {
     cancel: ({ id }) => updateScheduleEntryStatus(store, { id, status: 'cancelled' }),
     restore: ({ id }) => updateScheduleEntryStatus(store, { id, status: 'scheduled' }),
     delete: ({ id }) => {
-      if (!id) throw new Error('schedule id is required')
+      if (!id) throw badRequest('schedule id is required', undefined, 'entry_id_required')
       const existing = getScheduleEntry(store, id)
-      if (!existing) throw new Error('schedule entry not found')
+      if (!existing) throw new HttpError(404, 'schedule entry not found')
       deleteScheduleEntry(store, id)
       return existing
     },
@@ -105,7 +106,7 @@ export function createScheduleService(store) {
     listByRange: ({ from, to }) => listScheduleEntries(store, { from, to }),
     listCategories: () => listScheduleCategories(store),
     getCategory: (id) => {
-      if (!id) throw new Error('schedule category id is required')
+      if (!id) throw badRequest('schedule category id is required', undefined, 'category_id_required')
       return getScheduleCategory(store, id)
     },
     createCategory: ({ name, id, sortOrder = 0 }) => {
@@ -128,9 +129,9 @@ export function createScheduleService(store) {
       return upsertScheduleCategory(store, { name: validation.normalizedName, id, sortOrder })
     },
     deleteCategory: ({ id, name, sortOrder }) => {
-      if (!id) throw new Error('schedule category id is required')
+      if (!id) throw badRequest('schedule category id is required', undefined, 'category_id_required')
       const existing = getScheduleCategory(store, id)
-      if (!existing) throw new Error('schedule category not found')
+      if (!existing) throw new HttpError(404, 'schedule category not found')
       return upsertScheduleCategory(store, {
         id,
         name: name ?? existing.name,
@@ -139,9 +140,9 @@ export function createScheduleService(store) {
       })
     },
     restoreCategory: ({ id }) => {
-      if (!id) throw new Error('schedule category id is required')
+      if (!id) throw badRequest('schedule category id is required', undefined, 'category_id_required')
       const existing = getScheduleCategory(store, id)
-      if (!existing) throw new Error('schedule category not found')
+      if (!existing) throw new HttpError(404, 'schedule category not found')
       return upsertScheduleCategory(store, {
         id,
         name: existing.name,
@@ -150,10 +151,10 @@ export function createScheduleService(store) {
       })
     },
     reorderCategory: ({ id, sortOrder }) => {
-      if (!id) throw new Error('schedule category id is required')
-      if (!Number.isFinite(sortOrder)) throw new Error('schedule category sortOrder is required')
+      if (!id) throw badRequest('schedule category id is required', undefined, 'category_id_required')
+      if (!Number.isFinite(sortOrder)) throw badRequest('schedule category sortOrder is required', undefined, 'invalid_sort_order')
       const existing = getScheduleCategory(store, id)
-      if (!existing) throw new Error('schedule category not found')
+      if (!existing) throw new HttpError(404, 'schedule category not found')
       return upsertScheduleCategory(store, {
         id,
         name: existing.name,
