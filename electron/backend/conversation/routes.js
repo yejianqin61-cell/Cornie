@@ -19,6 +19,7 @@ export function conversationRoutes({ conversation }) {
   )
 
   // 454：流式说话段（SSE）。最终回复逐块下发，tool_call 信封不流式。
+  // BE-04：监听 req close → AbortController 下传，客户端断开即中止模型流；心跳保活；res.write 容错。
   r.post(
     '/conversations/stream',
     asyncHandler(async (req, res) => {
@@ -32,14 +33,44 @@ export function conversationRoutes({ conversation }) {
       res.setHeader('Connection', 'keep-alive')
       res.flushHeaders?.()
 
+      const controller = new AbortController()
+      let finished = false
+      req.on('close', () => {
+        if (!finished) controller.abort()
+      })
+      const heartbeat = setInterval(() => {
+        if (!res.writableEnded) {
+          try {
+            res.write(': keep-alive\n\n')
+          } catch {
+            // 连接已关闭，忽略
+          }
+        }
+      }, 15000)
+
+      const safeWrite = (chunk) => {
+        if (res.writableEnded) return
+        try {
+          res.write(chunk)
+        } catch {
+          // 客户端已断开，写入失败静默
+        }
+      }
+
       try {
-        const result = await conversation.sendMessageStreamed({ date, message }, (delta) => {
-          res.write(`data: ${JSON.stringify({ kind: 'delta', text: delta })}\n\n`)
-        })
-        res.write(`data: ${JSON.stringify({ kind: 'done', result })}\n\n`)
+        const result = await conversation.sendMessageStreamed(
+          { date, message },
+          (delta) => {
+            safeWrite(`data: ${JSON.stringify({ kind: 'delta', text: delta })}\n\n`)
+          },
+          { signal: controller.signal }
+        )
+        safeWrite(`data: ${JSON.stringify({ kind: 'done', result })}\n\n`)
       } catch (error) {
-        res.write(`data: ${JSON.stringify({ kind: 'error', error: String(error?.message || error) })}\n\n`)
+        safeWrite(`data: ${JSON.stringify({ kind: 'error', error: String(error?.message || error) })}\n\n`)
       } finally {
+        finished = true
+        clearInterval(heartbeat)
         res.end()
       }
     })

@@ -63,14 +63,16 @@ function buildSpeakPrompt(assistantReply) {
   ].join('\n')
 }
 
-async function streamFinalSpeak(assistantReply, onDelta) {
+// BE-04：streamFinalSpeak 支持外部取消 signal（透传至 chatStream）。
+async function streamFinalSpeak(assistantReply, onDelta, signal = null) {
   const { content } = await chatStream(
     {
       messages: [{ role: 'system', content: buildSpeakPrompt(assistantReply) }],
       temperature: 0.7,
       maxTokens: 300
     },
-    onDelta
+    onDelta,
+    { signal }
   )
   return normalizeString(content) || null
 }
@@ -143,7 +145,7 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd() 
   const confirm = createConfirmService(store)
 
   return {
-    async runTurn({ date, message, streamFinalReply = false, onFinalDelta = null }) {
+    async runTurn({ date, message, streamFinalReply = false, onFinalDelta = null, signal = null }) {
       const telemetry = createTurnTelemetry({
         source: 'conversation',
         date,
@@ -342,7 +344,7 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd() 
           // 454：说话段——直接回复时可选流式重说（tool_call 信封不流式）。
           if (streamFinalReply && typeof onFinalDelta === 'function') {
             try {
-              const streamed = await streamFinalSpeak(firstEnvelope.assistant_reply, onFinalDelta)
+              const streamed = await streamFinalSpeak(firstEnvelope.assistant_reply, onFinalDelta, signal)
               finalReply = streamed ?? firstEnvelope.assistant_reply
             } catch (error) {
               console.error('Stream final speak failed, falling back to envelope reply:', error)
