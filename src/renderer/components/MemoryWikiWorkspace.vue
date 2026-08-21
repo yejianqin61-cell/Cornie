@@ -29,6 +29,8 @@ import {
 } from '../api'
 import ConfirmCard from './ConfirmCard.vue'
 // FE-09：工作台按职责拆分——各区块独立组件，本文件只做组合与状态协调。
+import MemoryWikiConfirmationPanel from './MemoryWikiConfirmationPanel.vue'
+import MemoryWikiGovernanceDetailPanel from './MemoryWikiGovernanceDetailPanel.vue'
 import MemoryWikiGovernanceQueuePanel from './MemoryWikiGovernanceQueuePanel.vue'
 import MemoryWikiPageEditorPanel from './MemoryWikiPageEditorPanel.vue'
 import MemoryWikiPageListPanel from './MemoryWikiPageListPanel.vue'
@@ -855,121 +857,28 @@ onMounted(refreshAll)
       @change="refreshGovernanceItems"
     />
 
-      <section class="workspaceCard">
-        <div class="cardHead">
-          <div>
-            <div class="cardTitle">治理详情</div>
-            <div class="cardSubhint">先看清楚为什么建议这样处理，再决定是接受、稍后再看，还是直接驳回。</div>
-          </div>
-          <div class="cardHint">巡检入池的修复建议、归档候选，都会在这里等你慢慢看。</div>
-        </div>
+    <MemoryWikiGovernanceDetailPanel
+      :detail="governanceDetail"
+      :evidence-items="governanceEvidenceItems"
+      :suggested-actions="governanceSuggestedActions"
+      :filter-summary="governanceFilterSummary"
+      :saving="saving"
+      @approve="changeGovernanceStatus(governanceDetail?.requestId, 'approved')"
+      @defer="changeGovernanceStatus(governanceDetail?.requestId, 'deferred')"
+      @reject="changeGovernanceStatus(governanceDetail?.requestId, 'rejected')"
+    />
 
-        <div v-if="governanceDetail" class="governanceDetail">
-          <div class="detailTitle">{{ governanceDetail.title || governanceDetail.requestType }}</div>
-          <div class="detailBadgeRow">
-            <span class="detailBadge">建议</span>
-            <span class="detailBadge">{{ governanceDetail.status }}</span>
-            <span class="detailBadge">{{ governanceDetail.riskLevel || 'unknown risk' }}</span>
-          </div>
-          <div class="detailMetaGrid">
-            <div class="detailMetaCard">
-              <div class="detailMetaLabel">状态</div>
-              <div class="detailMetaValue">{{ governanceDetail.status }}</div>
-            </div>
-            <div class="detailMetaCard">
-              <div class="detailMetaLabel">来源</div>
-              <div class="detailMetaValue">{{ governanceDetail.triggerSource || 'unknown' }}</div>
-            </div>
-            <div class="detailMetaCard">
-              <div class="detailMetaLabel">分区</div>
-              <div class="detailMetaValue">{{ governanceDetail.queueSection || 'unknown' }}</div>
-            </div>
-            <div class="detailMetaCard">
-              <div class="detailMetaLabel">页面</div>
-              <div class="detailMetaValue">{{ (governanceDetail.pageIds || []).join(', ') || '无' }}</div>
-            </div>
-            <div class="detailMetaCard">
-              <div class="detailMetaLabel">主题</div>
-              <div class="detailMetaValue">{{ (governanceDetail.topicKeys || []).join(', ') || '无' }}</div>
-            </div>
-            <div class="detailMetaCard">
-              <div class="detailMetaLabel">筛选视角</div>
-              <div class="detailMetaValue">{{ governanceFilterSummary }}</div>
-            </div>
-          </div>
-
-          <div class="detailSection">
-            <div class="evidenceTitle">为什么建议这样处理</div>
-            <div class="detailText">{{ governanceDetail.reason || '暂无原因说明' }}</div>
-          </div>
-
-          <div class="detailSection">
-            <div class="evidenceTitle">建议动作</div>
-            <div v-if="governanceSuggestedActions.length > 0" class="suggestionList">
-              <div v-for="item in governanceSuggestedActions" :key="item" class="suggestionItem">{{ item }}</div>
-            </div>
-            <div v-else class="emptyInline">当前没有额外的建议动作参数。</div>
-          </div>
-
-          <div class="evidenceBlock">
-            <div class="evidenceTitle">证据与依据</div>
-            <div v-if="governanceEvidenceItems.length > 0" class="evidenceCards">
-              <div v-for="item in governanceEvidenceItems" :key="item.id" class="evidenceCard">
-                <div class="evidenceSummary">{{ item.summary }}</div>
-                <pre class="evidenceItem">{{ item.body }}</pre>
-              </div>
-            </div>
-            <div v-else class="emptyInline">这条治理建议当前没有附带更多证据。</div>
-          </div>
-
-          <div class="actionRow">
-            <button :disabled="saving || governanceDetail.status === 'approved'" @click="changeGovernanceStatus(governanceDetail.requestId, 'approved')">
-              标记已处理
-            </button>
-            <button :disabled="saving || governanceDetail.status === 'deferred'" @click="changeGovernanceStatus(governanceDetail.requestId, 'deferred')">
-              稍后再看
-            </button>
-            <button :disabled="saving || governanceDetail.status === 'rejected'" @click="changeGovernanceStatus(governanceDetail.requestId, 'rejected')">
-              驳回建议
-            </button>
-          </div>
-        </div>
-        <div v-else class="emptyDetail">点左边一条治理请求，我就把它的原因、证据和处理入口摊给你看。</div>
-      </section>
-
-      <section class="workspaceCard span2">
-        <div class="cardHead">
-          <div>
-            <div class="cardTitle">高风险确认中心</div>
-            <div class="cardSubhint">这里放的是会真正触发动作的高风险请求，所以铃湾一定会先停下来问你。</div>
-          </div>
-          <div class="cardFilters">
-            <select v-model="confirmationFilterStatus" @change="refreshConfirmations">
-              <option value="">全部状态</option>
-              <option value="pending">pending</option>
-              <option value="approved">approved</option>
-              <option value="rejected">rejected</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="queueSummary">
-          当前待确认 <strong>{{ pendingConfirmationCount }}</strong> 项
-        </div>
-
-        <div v-if="confirmations.length > 0" class="confirmGrid">
-          <ConfirmCard
-            v-for="confirmation in confirmations"
-            :key="confirmation.id"
-            :request="confirmation.confirmRequest || {}"
-            :status="resolveConfirmationState(confirmation)"
-            :error-message="confirmErrorMap[confirmation.id] || ''"
-            @confirm="handleConfirmationAction('approve', confirmation)"
-            @reject="handleConfirmationAction('reject', confirmation)"
-          />
-        </div>
-        <div v-else class="emptyDetail">现在没有排队等你点头的高风险动作，小铃湾先乖乖看着。</div>
-      </section>
+    <MemoryWikiConfirmationPanel
+      :confirmations="confirmations"
+      :filter-status="confirmationFilterStatus"
+      :pending-count="pendingConfirmationCount"
+      :status-map="confirmStatusMap"
+      :error-map="confirmErrorMap"
+      @confirm="handleConfirmationAction('approve', $event)"
+      @reject="handleConfirmationAction('reject', $event)"
+      @update:filter-status="confirmationFilterStatus = $event"
+      @change="refreshConfirmations"
+    />
     </div>
   </section>
 </template>
