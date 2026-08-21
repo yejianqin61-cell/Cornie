@@ -370,6 +370,25 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd() 
         }
       }
 
+      // 记忆提炼轮次（443）：是否计入记忆、记什么内容由 LLM 决定。
+      // LLM 不可用时本轮零写入记忆（V1.1 决策，正则已弃用）。
+      // R-01：记忆提炼先于 cornie 消息落库——提炼只依赖 finalReply 文本与 userMessage.id（内存值），
+      // 不依赖本轮 cornie 的 DB 行；先提炼后落库使 DB 可见与 SSE done 几乎同刻，消灭前端轮询窗口。
+      let memoryDistillation = null
+      try {
+        memoryDistillation = await runMemoryDistillation({
+          store,
+          baseDir,
+          date,
+          userMessage: message,
+          cornieMessage: finalReply,
+          messageId: userMessage.id,
+          history
+        })
+      } catch (error) {
+        console.error('Memory distillation error:', error)
+      }
+
       const cornieMessage = saveMessage(store, {
         id: randomUUID(),
         date,
@@ -390,23 +409,6 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd() 
         } catch (error) {
           console.error('Pending confirmation create error:', error)
         }
-      }
-
-      // 记忆提炼轮次（443）：是否计入记忆、记什么内容由 LLM 决定。
-      // LLM 不可用时本轮零写入记忆（V1.1 决策，正则已弃用）。
-      let memoryDistillation = null
-      try {
-        memoryDistillation = await runMemoryDistillation({
-          store,
-          baseDir,
-          date,
-          userMessage: message,
-          cornieMessage: finalReply,
-          messageId: userMessage.id,
-          history
-        })
-      } catch (error) {
-        console.error('Memory distillation error:', error)
       }
 
       // BE-05：终态 telemetry 落盘（JSONL，按日期分片），供查询
