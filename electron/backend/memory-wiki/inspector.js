@@ -46,6 +46,17 @@ export async function createMemoryWikiInspector({ store, memoryWikiService, topi
   if (!memoryWikiService) throw new Error('memoryWikiService is required')
   if (!topicIndex) throw new Error('topicIndex is required')
 
+  // 464：巡检过程中按日期缓存 getMessagesByDate，同一天多个 chatRef 只查一次。
+  const chatMessagesCache = new Map()
+  function messagesForDate(date) {
+    const key = String(date ?? '').trim()
+    if (!key) return []
+    if (!chatMessagesCache.has(key)) {
+      chatMessagesCache.set(key, getMessagesByDate(store, key))
+    }
+    return chatMessagesCache.get(key)
+  }
+
   // 460：单次遍历——list() 只读 page-index 轻索引，再统一 hydrate 一次，
   // 避免"listSummaries（内部已逐页读取）+ 再逐个 get"的双重全量扫描。
   async function listPages() {
@@ -75,8 +86,7 @@ export async function createMemoryWikiInspector({ store, memoryWikiService, topi
 
         for (const chatRef of topic.chatRefs ?? []) {
           const parsed = parseChatRef(chatRef)
-          const messages = parsed.date ? getMessagesByDate(store, parsed.date) : []
-          const matchedMessage = messages.find((item) => item.id === parsed.messageId)
+          const matchedMessage = messagesForDate(parsed.date).find((item) => item.id === parsed.messageId)
           if (!matchedMessage) {
             issues.push({
               issueType: 'missing_topic_chat_ref',
@@ -147,8 +157,7 @@ export async function createMemoryWikiInspector({ store, memoryWikiService, topi
 
         for (const sourceRef of page.sourceRefs ?? []) {
           if (sourceRef?.kind === 'chat') {
-            const messages = sourceRef.date ? getMessagesByDate(store, sourceRef.date) : []
-            if (!messages.find((item) => item.id === sourceRef.messageId)) {
+            if (!messagesForDate(sourceRef.date).find((item) => item.id === sourceRef.messageId)) {
               issues.push({
                 issueType: 'missing_page_chat_source',
                 pageId: page.pageId,

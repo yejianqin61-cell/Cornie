@@ -615,6 +615,15 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
   // 452：跨轮页面缓存（读侧短 TTL，写侧必失效）。
   const pageCache = createPageCache()
 
+  // 464：来源追溯缓存（短 TTL，页面/来源变更时与 pageCache 同步失效）。
+  const traceCache = createPageCache({ ttlMs: 60_000 })
+
+  // 452/464：页面与追溯缓存写侧统一失效。
+  function invalidatePageCaches(pageId) {
+    pageCache.invalidate(pageId)
+    traceCache.invalidate(pageId)
+  }
+
   async function writeAudit(event) {
     return auditStore.append(event)
   }
@@ -670,7 +679,7 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
         pageId: existing.pageId
       })
       await ensureIdentityTraitGovernanceCandidate(governanceStore, updated)
-      pageCache.invalidate(existing.pageId)
+      invalidatePageCaches(existing.pageId)
       await writeAudit({
         eventType: 'page_updated',
         pageId: existing.pageId,
@@ -876,8 +885,8 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
       })
 
       await this.archive(sourcePageId)
-      pageCache.invalidate(targetPageId)
-      pageCache.invalidate(sourcePageId)
+      invalidatePageCaches(targetPageId)
+      invalidatePageCaches(sourcePageId)
 
       // 465：源页在 topicIndex 中的引用迁移到目标页，避免孤儿引用。
       const topics = await topicIndex.list()
@@ -910,7 +919,7 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
       if (!existing) return false
       await versionStore.snapshotPage(existing, { reason: 'before_delete' })
       const deleted = await storage.deletePage({ pageId, filePath: existing.filePath })
-      pageCache.invalidate(pageId)
+      invalidatePageCaches(pageId)
       if (deleted) {
         // 465：删除时回写 topicIndex 与对端页面 relatedPageIds，避免孤儿引用。
         const topics = await topicIndex.list()
@@ -960,7 +969,7 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
         summary: summary ?? existing.summary,
         body: body ?? existing.body
       })
-      pageCache.invalidate(pageId)
+      invalidatePageCaches(pageId)
 
       await versionStore.snapshotPage(compressed, { reason: 'after_compression' })
       await writeAudit({
@@ -1032,6 +1041,12 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
 
     async getPageSourceTrace(pageId) {
       if (!pageId) throw new Error('memory wiki pageId is required')
+
+      const cached = traceCache.get(pageId)
+      if (cached) {
+        return cached
+      }
+
       const page = await this.get(pageId)
       if (!page) {
         throw new Error(`memory wiki page not found: ${pageId}`)
@@ -1041,17 +1056,27 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
       const chatSources = []
       const observationSources = []
 
+      // 464：同一天多个 chatRef 只查一次 getMessagesByDate。
+      const chatRefsByDate = new Map()
       for (const sourceRef of sourceRefs) {
         if (sourceRef?.kind === 'chat') {
-          const messages = sourceRef.date ? getMessagesByDate(store, sourceRef.date) : []
-          const message = messages.find((item) => item.id === sourceRef.messageId) ?? null
-          chatSources.push(normalizeChatTraceItem(sourceRef, message))
+          const date = String(sourceRef?.date ?? '').trim()
+          if (!chatRefsByDate.has(date)) {
+            chatRefsByDate.set(date, [])
+          }
+          chatRefsByDate.get(date).push(sourceRef)
           continue
         }
-
         if (sourceRef?.kind === 'observation') {
           const observation = sourceRef.observationId ? getObservationLog(store, sourceRef.observationId) : null
           observationSources.push(normalizeObservationTraceItem(sourceRef, observation))
+        }
+      }
+      for (const [date, refs] of chatRefsByDate.entries()) {
+        const messages = date ? getMessagesByDate(store, date) : []
+        for (const sourceRef of refs) {
+          const message = messages.find((item) => item.id === sourceRef.messageId) ?? null
+          chatSources.push(normalizeChatTraceItem(sourceRef, message))
         }
       }
 
@@ -1082,7 +1107,7 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
         }
       }
 
-      return {
+      const trace = {
         page: summarizePage(page),
         relatedPages,
         relatedIssues,
@@ -1096,6 +1121,8 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
           relatedPages
         })
       }
+      traceCache.set(pageId, trace)
+      return trace
     },
 
     async getTopicSourceTrace(normalizedKey) {
@@ -1205,7 +1232,7 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
         pageId,
         filePath: existing.filePath
       })
-      pageCache.invalidate(pageId)
+      invalidatePageCaches(pageId)
 
       // 458：回滚只保留 before 快照，after 快照默认不拍，避免版本膨胀。
       await writeAudit({
