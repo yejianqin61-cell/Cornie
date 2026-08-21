@@ -863,6 +863,16 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
       })
 
       await this.archive(sourcePageId)
+
+      // 465：源页在 topicIndex 中的引用迁移到目标页，避免孤儿引用。
+      const topics = await topicIndex.list()
+      for (const topic of topics) {
+        if ((topic.memoryPageIds ?? []).includes(sourcePageId)) {
+          await topicIndex.unlinkPage(topic.normalizedKey, sourcePageId)
+          await topicIndex.linkPage(topic.normalizedKey, targetPageId)
+        }
+      }
+
       await writeAudit({
         eventType: 'pages_merged',
         pageId: targetPageId,
@@ -886,6 +896,26 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
       await versionStore.snapshotPage(existing, { reason: 'before_delete' })
       const deleted = await storage.deletePage({ pageId, filePath: existing.filePath })
       if (deleted) {
+        // 465：删除时回写 topicIndex 与对端页面 relatedPageIds，避免孤儿引用。
+        const topics = await topicIndex.list()
+        for (const topic of topics) {
+          if ((topic.memoryPageIds ?? []).includes(pageId)) {
+            await topicIndex.unlinkPage(topic.normalizedKey, pageId)
+          }
+        }
+        const allPages = await this.listSummaries({})
+        for (const item of allPages) {
+          const related = Array.isArray(item.relatedPageIds) ? item.relatedPageIds : []
+          if (!related.includes(pageId)) continue
+          const fullPage = await this.get(item.pageId)
+          if (!fullPage) continue
+          await storage.updatePage({
+            ...fullPage,
+            pageId: item.pageId,
+            filePath: fullPage.filePath,
+            relatedPageIds: related.filter((id) => id !== pageId)
+          })
+        }
         await writeAudit({
           eventType: 'page_deleted',
           pageId,
