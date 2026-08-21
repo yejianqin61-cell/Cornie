@@ -255,29 +255,6 @@ export function createSqlJsChatlogRepository(store, { requestedDriver, fallbackR
   }
 }
 
-export function createBetterSqlite3ChatlogRepositorySkeleton() {
-  const descriptor = createRepositoryDescriptor({
-    driver: CHATLOG_REPOSITORY_DRIVERS.betterSqlite3,
-    capabilities: buildRepositoryCapabilities({
-      supportsNativePaging: true,
-      supportsNativeKeywordSearch: true,
-      migrationReady: false,
-      status: 'planned'
-    })
-  })
-
-  const notImplemented = () => {
-    throw new Error('better-sqlite3 chatlog repository is not implemented yet')
-  }
-
-  return {
-    ...descriptor,
-    getMessagesByDate: notImplemented,
-    searchMessagesByDate: notImplemented,
-    listDateEntries: notImplemented
-  }
-}
-
 function mapConversationRow(row) {
   return {
     id: String(row.id),
