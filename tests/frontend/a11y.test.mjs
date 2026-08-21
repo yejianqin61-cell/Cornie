@@ -60,7 +60,7 @@ describe('FE-10 可访问性', () => {
     const wrapper = mount(ObserveMemoryHome)
     await flushPromises()
     expect(wrapper.findAll('a[href="#"]').length).toBe(0)
-    const chatLink = wrapper.findAll('button').find((b) => b.text() === '聊天')
+    const chatLink = wrapper.findAll('button').find((b) => b.text() === '去聊天')
     expect(chatLink).toBeDefined()
     wrapper.unmount()
   })

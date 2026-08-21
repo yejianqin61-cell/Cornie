@@ -26,7 +26,9 @@ const sections = [
   { id: 'ledger',          label: '收支',       hint: '轻松记一笔',           icon: '💰' },
   { id: 'todo',            label: '待办',       hint: '今天要做什么',         icon: '✅' },
   { id: 'schedule',        label: '日程',       hint: '接下来的安排',         icon: '📅' },
-  { id: 'observe-memory',  label: '观察与记忆',  hint: '想记住的小事',         icon: '🌟' },
+  // R-04：记忆三栏——观察日志 / 当天日记 / 记忆 Wiki 平级入口
+  { id: 'observe',         label: '观察日志',   hint: '今天留下的生活片段',     icon: '📝' },
+  { id: 'memory',          label: '记忆 Wiki',  hint: '想留住的长期记忆',       icon: '📖' },
   { id: 'settings',        label: '设置',       hint: '铃湾的连接和偏好',     icon: '⚙️' },
 ]
 
@@ -40,9 +42,11 @@ const chatFocusMessageId = ref('')
 // Diary sub-view
 const diaryView = ref('home') // 'home' | 'editor' | 'cornie-review' | 'on-this-day'
 
-// Observe-Memory sub-view
-const omView = ref('home')
-const omDetailId = ref('')
+// R-04：观察日志与记忆 Wiki 独立子视图栈
+const observeView = ref('home') // 'home' | 'observation-list' | 'observation-detail'
+const observeDetailId = ref('')
+const memoryView = ref('home') // 'home' | 'memory-detail' | 'memory-create'
+const memoryDetailId = ref('')
 
 // Settings sub-view
 const settingsView = ref('home') // 'home' | 'deepseek-config' | 'advanced'
@@ -71,7 +75,8 @@ watch(mode, async () => {
   chatHistoryDate.value = ''
   chatFocusMessageId.value = ''
   diaryView.value = 'home'
-  omView.value = 'home'
+  observeView.value = 'home'
+  memoryView.value = 'home'
   settingsView.value = 'home'
   await nextTick()
   mainPanelRef.value?.focus()
@@ -201,44 +206,48 @@ onMounted(async () => {
         <ScheduleHome />
       </section>
 
-      <!-- 观察与记忆 -->
-      <section v-else-if="mode === 'observe-memory'" class="contentFrame">
+      <!-- 观察日志（R-04：三栏之一） -->
+      <section v-else-if="mode === 'observe'" class="contentFrame">
         <ObserveMemoryHome
-          v-if="omView === 'home'"
-          @go="(v, id) => { omView = v; omDetailId = id || '' }"
+          v-if="observeView === 'home'"
+          @go="(v, id) => { observeView = v; observeDetailId = id || '' }"
           @goChat="mode = 'chat'"
         />
         <ObservationList
-          v-else-if="omView === 'observation-list'"
-          @back="omView = 'home'"
-          @go="(v, id) => { omView = v; omDetailId = id || '' }"
+          v-else-if="observeView === 'observation-list'"
+          @back="observeView = 'home'"
+          @go="(v, id) => { observeView = v; observeDetailId = id || '' }"
         />
         <ObservationDetail
-          v-else-if="omView === 'observation-detail'"
-          :id="omDetailId"
-          @back="omView = 'observation-list'"
-          @deleted="omView = 'observation-list'"
+          v-else-if="observeView === 'observation-detail'"
+          :id="observeDetailId"
+          @back="observeView = 'observation-list'"
+          @deleted="observeView = 'observation-list'"
         />
+      </section>
+
+      <!-- 记忆 Wiki（R-04：三栏之一） -->
+      <section v-else-if="mode === 'memory'" class="contentFrame">
         <MemoryPageList
-          v-else-if="omView === 'memory-list'"
-          @back="omView = 'home'"
-          @go="(v, id) => { omView = v; omDetailId = id || '' }"
+          v-if="memoryView === 'home'"
+          :show-back="false"
+          @go="(v, id) => { memoryView = v; memoryDetailId = id || '' }"
         />
         <MemoryPageDetail
-          v-else-if="omView === 'memory-detail'"
-          :key="omDetailId || 'memory-detail'"
-          :id="omDetailId"
-          @back="omView = 'memory-list'"
-          @deleted="omView = 'memory-list'"
+          v-else-if="memoryView === 'memory-detail'"
+          :key="memoryDetailId || 'memory-detail'"
+          :id="memoryDetailId"
+          @back="memoryView = 'home'"
+          @deleted="memoryView = 'home'"
           @open-chat-source="({ date, messageId }) => { mode = 'chat'; chatHistoryDate = date || ''; chatFocusMessageId = messageId || ''; chatView = 'day' }"
-          @open-observation="(id) => { omDetailId = id; omView = 'observation-detail' }"
-          @open-memory="(id) => { omDetailId = id; omView = 'memory-detail' }"
+          @open-observation="(id) => { mode = 'observe'; observeDetailId = id; observeView = 'observation-detail' }"
+          @open-memory="(id) => { memoryDetailId = id; memoryView = 'memory-detail' }"
         />
         <MemoryPageDetail
-          v-else-if="omView === 'memory-create'"
+          v-else-if="memoryView === 'memory-create'"
           key="memory-create"
-          @back="omView = 'memory-list'"
-          @created="(id) => { omDetailId = id; omView = 'memory-detail' }"
+          @back="memoryView = 'home'"
+          @created="(id) => { memoryDetailId = id; memoryView = 'memory-detail' }"
         />
       </section>
 

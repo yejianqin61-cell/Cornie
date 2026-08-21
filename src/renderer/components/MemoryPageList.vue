@@ -2,6 +2,12 @@
 import { computed, onMounted, ref } from 'vue'
 import { listMemoryWikiPages } from '../api'
 
+// R-04：作为记忆 Wiki home 时隐藏返回按钮（无上级页面）
+const props = defineProps({
+  showBack: { type: Boolean, default: true }
+})
+const emit = defineEmits(['back', 'go'])
+
 const IDENTITY_MEMORY_PAGE_TYPES = new Set([
   'identity_profile',
   'identity_preference',
@@ -136,7 +142,7 @@ onMounted(refresh)
 <template>
   <div class="mlist">
     <header class="mlistHead">
-      <button class="ghost" @click="$emit('back')">← 返回观察与记忆</button>
+      <button v-if="showBack" class="ghost" @click="$emit('back')">← 返回</button>
       <div class="mlistHeadMain">
         <div class="mlistTitle">我的记忆</div>
         <div class="mlistHint">铃湾把关于你的重要事情，慢慢收在了这里。</div>

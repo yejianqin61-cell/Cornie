@@ -142,10 +142,17 @@ describe('App navigation', () => {
 
     await navButtons[5].trigger('click')
     await flushPromises()
+    // R-04：观察日志（三栏之一）
     expect(wrapper.find('observe-memory-home-stub').exists()).toBe(true)
-    expect(wrapper.text()).toContain('想记住的小事')
+    expect(wrapper.text()).toContain('观察日志')
 
     await navButtons[6].trigger('click')
+    await flushPromises()
+    // R-04：记忆 Wiki（三栏之一）
+    expect(wrapper.find('memory-page-list-stub').exists()).toBe(true)
+    expect(wrapper.text()).toContain('记忆 Wiki')
+
+    await navButtons[7].trigger('click')
     await flushPromises()
     expect(wrapper.find('settings-home-stub').exists()).toBe(true)
     expect(wrapper.text()).toContain('铃湾的连接和偏好')
