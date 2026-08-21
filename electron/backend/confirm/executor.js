@@ -1,116 +1,48 @@
 import { randomUUID } from 'node:crypto'
 import { getMessagesByDate, saveMessage } from '../../db.js'
-import { buildJsonRepairPrompt, parseModelJson } from '../agent/jsonProtocol.js'
 import { buildConversationContext } from '../agent/contextBuilder.js'
-import { buildConversationPrompt, buildToolFollowupPrompt } from '../agent/promptBuilder.js'
+import { buildConversationPrompt } from '../agent/promptBuilder.js'
+import {
+  buildToolFollowupMessages,
+  requestProtocolEnvelope,
+  trimMessages
+} from '../agent/protocolEnvelope.js'
 import {
   attachContextTelemetry,
   captureInitialPromptTelemetry,
   createTurnTelemetry,
   finalizeTurnTelemetry,
   recordFollowupPromptTelemetry,
-  recordModelCallTelemetry,
   recordToolRoundTelemetry
 } from '../agent/metrics.js'
 import { logCategoryAudit } from '../category/audit.js'
 import { categoryDomainRegistry } from '../category/domainRegistry.js'
-import { chat } from '../model/deepseek/client.js'
 import { executeToolCalls } from '../tools/gateway.js'
 import { PROMPT_LOADING_POLICY } from '../agent/promptLoadingPolicy.js'
 
 const MAX_HISTORY_MESSAGES = PROMPT_LOADING_POLICY.liveConversationHistoryLimit
-const MAX_PROTOCOL_REPAIR_RETRIES = 1
 
-function trimMessages(messages) {
-  if (messages.length <= MAX_HISTORY_MESSAGES + 1) {
-    return messages
-  }
-  return [messages[0], ...messages.slice(-MAX_HISTORY_MESSAGES)]
-}
-
-function sumPromptChars(messages) {
-  return messages.reduce((total, item) => total + String(item?.content ?? '').length, 0)
-}
-
-async function requestProtocolEnvelope(messages, telemetry, phase = 'confirmation') {
-  let attempts = 0
-  let workingMessages = messages
-
-  while (attempts <= MAX_PROTOCOL_REPAIR_RETRIES) {
-    const promptChars = sumPromptChars(workingMessages)
-    const startedAt = Date.now()
-    const response = await chat({ messages: workingMessages, maxTokens: 256 })
-    recordModelCallTelemetry(telemetry, {
-      phase,
-      attempt: attempts + 1,
-      promptChars,
-      responseChars: String(response?.content ?? '').length,
-      durationMs: Date.now() - startedAt
-    })
-
-    try {
-      return parseModelJson(response.content)
-    } catch (error) {
-      if (attempts >= MAX_PROTOCOL_REPAIR_RETRIES) {
-        error.rawResponse = response.content
-        throw error
-      }
-
-      workingMessages = [
-        ...workingMessages,
-        { role: 'assistant', content: response.content },
-        { role: 'user', content: buildJsonRepairPrompt(response.content) }
-      ]
-      attempts += 1
-    }
-  }
-
-  throw new Error('confirmation executor protocol request failed unexpectedly')
-}
+// BE-01：协议信封轮/trim/sum/followup 拼接已收敛到 agent/protocolEnvelope.js 共享模块。
 
 async function buildBaseMessages(store, date) {
   const history = getMessagesByDate(store, date)
   const context = await buildConversationContext(store, { date })
   return {
     context,
-    messages: trimMessages([
-      { role: 'system', content: buildConversationPrompt({ context }) },
-      ...history.map((item) => ({
-        role: item.role === 'cornie' ? 'assistant' : 'user',
-        content: item.content
-      }))
-    ])
+    messages: trimMessages(
+      [
+        { role: 'system', content: buildConversationPrompt({ context }) },
+        ...history.map((item) => ({
+          role: item.role === 'cornie' ? 'assistant' : 'user',
+          content: item.content
+        }))
+      ],
+      MAX_HISTORY_MESSAGES
+    )
   }
 }
 
-function buildToolFollowupMessages(baseMessages, assistantReply, toolResult) {
-  const prompt = buildToolFollowupPrompt({ assistantReply, toolResult })
-  return {
-    messages: trimMessages([
-      ...baseMessages,
-      {
-        role: 'assistant',
-        content: JSON.stringify({
-          type: 'tool_call',
-          assistant_reply: assistantReply,
-          tool_calls: toolResult.results.map((item) => ({
-            tool_name: item.tool_name,
-            arguments: item.result ?? {}
-          }))
-        })
-      },
-      {
-        role: 'user',
-        content: prompt
-      }
-    ]),
-    promptMetrics: {
-      phase: 'confirmation_tool_followup',
-      promptChars: prompt.length,
-      legacyPromptCharsEstimate: prompt.length
-    }
-  }
-}
+// BE-01：tool followup 拼接已收敛到 protocolEnvelope.buildToolFollowupMessages。
 
 function isCategoryCreationConfirmation(confirmation) {
   return confirmation?.confirmRequest?.kind === 'category_creation_confirmation'
@@ -389,16 +321,18 @@ export function createConfirmExecutor(store) {
       captureInitialPromptTelemetry(telemetry, baseMessages.messages)
       const followupMessages = buildToolFollowupMessages(
         baseMessages.messages,
-        assistantReply,
-        toolResult
+        {
+          assistantReply,
+          toolResult,
+          lookupContexts: []
+        },
+        { maxHistory: MAX_HISTORY_MESSAGES, phase: 'confirmation_tool_followup' }
       )
       recordFollowupPromptTelemetry(telemetry, followupMessages.promptMetrics)
 
-      const envelope = await requestProtocolEnvelope(
-        followupMessages.messages,
-        telemetry,
-        'confirmation_followup'
-      )
+      const envelope = await requestProtocolEnvelope(followupMessages.messages, telemetry, {
+        phase: 'confirmation_followup'
+      })
       const finalReply =
         envelope.type === 'reply'
           ? envelope.assistant_reply

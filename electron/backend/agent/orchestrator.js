@@ -1,17 +1,11 @@
 import { randomUUID } from 'node:crypto'
 import { getMessagesByDate, saveMessage } from '../../db.js'
 import { categoryDomainRegistry } from '../category/domainRegistry.js'
-import { buildJsonRepairPrompt, parseModelJson } from './jsonProtocol.js'
 import { buildConversationContext } from './contextBuilder.js'
-import {
-  buildConversationPrompt,
-  buildLookupFollowupPrompt,
-  buildToolFollowupPrompt,
-  buildWriteIntentRecoveryPrompt
-} from './promptBuilder.js'
-import { estimateLegacyLookupFollowupPromptLength } from './promptBuilder.js'
+import { buildConversationPrompt, buildWriteIntentRecoveryPrompt } from './promptBuilder.js'
+import { buildToolFollowupMessages, requestProtocolEnvelope, trimMessages } from './protocolEnvelope.js'
 import { evaluateToolCalls } from '../policy/toolPolicy.js'
-import { chat, chatStream } from '../model/deepseek/client.js'
+import { chatStream } from '../model/deepseek/client.js'
 import { executeToolCalls } from '../tools/gateway.js'
 import { createConfirmService } from '../confirm/service.js'
 import { runMemoryDistillation } from './memoryDistillation.js'
@@ -21,7 +15,6 @@ import {
   createTurnTelemetry,
   finalizeTurnTelemetry,
   recordFollowupPromptTelemetry,
-  recordModelCallTelemetry,
   recordToolRoundTelemetry
 } from './metrics.js'
 import {
@@ -36,7 +29,6 @@ import { logCategoryAudit } from '../category/audit.js'
 import { PROMPT_LOADING_POLICY } from './promptLoadingPolicy.js'
 
 const MAX_HISTORY_MESSAGES = PROMPT_LOADING_POLICY.liveConversationHistoryLimit
-const MAX_PROTOCOL_REPAIR_RETRIES = 1
 const MAX_TOOL_ROUNDS = 2
 
 // 452：记忆钻取轮次预算（memory_wiki.* / memory_index.* 只读钻取，可多于普通工具轮）。
@@ -53,52 +45,7 @@ function isMemoryDrillRound(toolCalls = []) {
   )
 }
 
-function trimMessages(messages) {
-  if (messages.length <= MAX_HISTORY_MESSAGES + 1) {
-    return messages
-  }
-  return [messages[0], ...messages.slice(-MAX_HISTORY_MESSAGES)]
-}
-
-function sumPromptChars(messages) {
-  return messages.reduce((total, item) => total + String(item?.content ?? '').length, 0)
-}
-
-async function requestProtocolEnvelope(messages, telemetry, phase = 'conversation') {
-  let attempts = 0
-  let workingMessages = messages
-
-  while (attempts <= MAX_PROTOCOL_REPAIR_RETRIES) {
-    const promptChars = sumPromptChars(workingMessages)
-    const startedAt = Date.now()
-    const response = await chat({ messages: workingMessages, maxTokens: 256 })
-    recordModelCallTelemetry(telemetry, {
-      phase,
-      attempt: attempts + 1,
-      promptChars,
-      responseChars: String(response?.content ?? '').length,
-      durationMs: Date.now() - startedAt
-    })
-
-    try {
-      return parseModelJson(response.content)
-    } catch (error) {
-      if (attempts >= MAX_PROTOCOL_REPAIR_RETRIES) {
-        error.rawResponse = response.content
-        throw error
-      }
-
-      workingMessages = [
-        ...workingMessages,
-        { role: 'assistant', content: response.content },
-        { role: 'user', content: buildJsonRepairPrompt(response.content) }
-      ]
-      attempts += 1
-    }
-  }
-
-  throw new Error('protocol envelope request failed unexpectedly')
-}
+// BE-01：协议信封轮/trim/sum 已收敛到 protocolEnvelope.js 共享模块。
 
 function buildProtocolFallbackReply() {
   return '唔……小铃湾这次没有把话说明白，主人可以再说一遍吗？'
@@ -147,63 +94,19 @@ function hasSuccessfulWriteToolResult(results = []) {
 }
 
 function buildBaseMessages(history, context) {
-  return trimMessages([
-    { role: 'system', content: buildConversationPrompt({ context }) },
-    ...history.map((item) => ({
-      role: item.role === 'cornie' ? 'assistant' : 'user',
-      content: item.content
-    }))
-  ])
+  return trimMessages(
+    [
+      { role: 'system', content: buildConversationPrompt({ context }) },
+      ...history.map((item) => ({
+        role: item.role === 'cornie' ? 'assistant' : 'user',
+        content: item.content
+      }))
+    ],
+    MAX_HISTORY_MESSAGES
+  )
 }
 
-function appendToolRoundMessages(messages, assistantReply, toolResult, options = {}) {
-  const followupPrompt =
-    Array.isArray(options.lookupContexts) && options.lookupContexts.length > 0
-      ? buildLookupFollowupPrompt({
-          assistantReply,
-          toolResult,
-          lookupContexts: options.lookupContexts
-        })
-      : buildToolFollowupPrompt({ assistantReply, toolResult })
-
-  const nextMessages = trimMessages([
-    ...messages,
-    {
-      role: 'assistant',
-      content: JSON.stringify({
-        type: 'tool_call',
-        assistant_reply: assistantReply,
-        tool_calls: toolResult.results.map((item) => ({
-          tool_name: item.tool_name,
-          arguments: item.result ?? {}
-        }))
-      })
-    },
-    {
-      role: 'user',
-      content: followupPrompt
-    }
-  ])
-
-  return {
-    messages: nextMessages,
-    promptMetrics: {
-      phase:
-        Array.isArray(options.lookupContexts) && options.lookupContexts.length > 0
-          ? 'lookup_followup'
-          : 'tool_followup',
-      promptChars: followupPrompt.length,
-      legacyPromptCharsEstimate:
-        Array.isArray(options.lookupContexts) && options.lookupContexts.length > 0
-          ? estimateLegacyLookupFollowupPromptLength({
-              assistantReply,
-              toolResult,
-              lookupContexts: options.lookupContexts
-            })
-          : followupPrompt.length
-    }
-  }
-}
+// BE-01：tool followup 拼接已收敛到 protocolEnvelope.buildToolFollowupMessages。
 
 function logLookupAudit(message, lookupContexts) {
   for (const lookup of lookupContexts) {
@@ -268,25 +171,28 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd() 
       const interimReplies = []
 
       try {
-        let firstEnvelope = await requestProtocolEnvelope(baseMessages, telemetry, 'conversation_initial')
+        let firstEnvelope = await requestProtocolEnvelope(baseMessages, telemetry, {
+          phase: 'conversation_initial'
+        })
 
         if (firstEnvelope.type === 'reply' && looksLikeWriteIntent(message)) {
           const recoveryPrompt = buildWriteIntentRecoveryPrompt(message)
-          const recoveryMessages = trimMessages([
-            ...baseMessages,
-            { role: 'assistant', content: firstEnvelope.assistant_reply },
-            { role: 'user', content: recoveryPrompt }
-          ])
+          const recoveryMessages = trimMessages(
+            [
+              ...baseMessages,
+              { role: 'assistant', content: firstEnvelope.assistant_reply },
+              { role: 'user', content: recoveryPrompt }
+            ],
+            MAX_HISTORY_MESSAGES
+          )
           recordFollowupPromptTelemetry(telemetry, {
             phase: 'write_intent_recovery',
             promptChars: recoveryPrompt.length,
             legacyPromptCharsEstimate: recoveryPrompt.length
           })
-          firstEnvelope = await requestProtocolEnvelope(
-            recoveryMessages,
-            telemetry,
-            'conversation_write_intent_recovery'
-          )
+          firstEnvelope = await requestProtocolEnvelope(recoveryMessages, telemetry, {
+            phase: 'conversation_write_intent_recovery'
+          })
         }
 
         if (firstEnvelope.type === 'tool_call') {
@@ -402,22 +308,21 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd() 
                 logLookupAudit(message, toolRoundState.lastReadOnlyLookups)
               }
 
-              const nextMessages = appendToolRoundMessages(
+              const nextMessages = buildToolFollowupMessages(
                 currentMessages,
-                currentEnvelope.assistant_reply,
-                toolResult,
                 {
+                  assistantReply: currentEnvelope.assistant_reply,
+                  toolResult,
                   lookupContexts: toolRoundState.lastReadOnlyLookups
-                }
+                },
+                { maxHistory: MAX_HISTORY_MESSAGES }
               )
               currentMessages = nextMessages.messages
               recordFollowupPromptTelemetry(telemetry, nextMessages.promptMetrics)
 
-              const nextEnvelope = await requestProtocolEnvelope(
-                currentMessages,
-                telemetry,
-                isLookupOnlyRound ? 'conversation_lookup_followup' : 'conversation_tool_followup'
-              )
+              const nextEnvelope = await requestProtocolEnvelope(currentMessages, telemetry, {
+                phase: isLookupOnlyRound ? 'conversation_lookup_followup' : 'conversation_tool_followup'
+              })
               if (nextEnvelope.type === 'reply') {
                 finalReply = nextEnvelope.assistant_reply
                 break
