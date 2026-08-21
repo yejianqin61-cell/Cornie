@@ -59,7 +59,7 @@ export function useChat() {
     emitDataChanged({ source, ...changed })
   }
 
-  function appendResponse(data) {
+  function appendResponse(data, { replaceId = null } = {}) {
     // 453：钻取轮的联想话语（层间短话）先上屏，最终回复随后接续。
     if (Array.isArray(data?.interimReplies)) {
       for (const line of data.interimReplies) {
@@ -74,7 +74,19 @@ export function useChat() {
       }
     }
 
-    if (data?.cornieMessage?.content) {
+    // FE-03：流式路径（replaceId）将最终回复替换进 streaming 占位消息，不重复上屏。
+    if (replaceId) {
+      if (data?.cornieMessage?.content) {
+        replaceMessageById(replaceId, {
+          id: data.cornieMessage.id,
+          content: data.cornieMessage.content,
+          streaming: false,
+          pendingSync: false
+        })
+      } else {
+        replaceMessageById(replaceId, { streaming: false, error: true })
+      }
+    } else if (data?.cornieMessage?.content) {
       pushChatItem({
         kind: 'message',
         role: 'cornie',
@@ -115,11 +127,15 @@ export function useChat() {
     notifyDataChanged(data?.toolExecution?.results, 'chat')
   }
 
-  async function send(text) {
-    if (!text || sending.value) return
+  // FE-03：统一发送骨架——stream=false 走 sendMessage，stream=true 走 streamConversation + 逐字增量。
+  // 占位消息、发送中禁发、用户消息 id 回填、层间话语/工具结果/确认卡、错误回退全部共用；
+  // 差异仅在于"最终回复是否以 streaming 占位逐字渲染（stream=true）"。
+  async function sendCore(text, { stream = false } = {}) {
+    if (!text || sending.value) return null
     sending.value = true
 
     const tempId = `temp-user-${Date.now()}`
+    const liveId = stream ? `live-cornie-${Date.now()}` : null
 
     pushChatItem({
       kind: 'message',
@@ -129,90 +145,69 @@ export function useChat() {
       pendingSync: true
     })
 
+    if (liveId) {
+      pushChatItem({
+        kind: 'message',
+        role: 'cornie',
+        content: '',
+        id: liveId,
+        streaming: true
+      })
+    }
+
     try {
-      const data = await sendMessage(text, today())
+      let data
+      if (stream) {
+        const appendDelta = (delta) => {
+          const target = messages.value.find((item) => item.id === liveId)
+          if (target) {
+            target.content += delta
+          }
+        }
+        data = await streamConversation({ message: text, date: today() }, appendDelta)
+      } else {
+        data = await sendMessage(text, today())
+      }
+
       if (data?.userMessage?.id) {
         replaceMessageById(tempId, {
           id: data.userMessage.id,
           pendingSync: false
         })
       }
-      appendResponse(data)
+
+      appendResponse(data, liveId ? { replaceId: liveId } : {})
       return data
     } catch {
       replaceMessageById(tempId, { pendingSync: false, error: true })
-      pushChatItem({
-        kind: 'message',
-        role: 'cornie',
-        content: '唔...我好像走神了，能再说一遍吗？',
-        id: 'err-' + Date.now(),
-        error: true
-      })
+      if (liveId) {
+        replaceMessageById(liveId, {
+          content: '唔...我好像走神了，能再说一遍吗？',
+          streaming: false,
+          error: true
+        })
+      } else {
+        pushChatItem({
+          kind: 'message',
+          role: 'cornie',
+          content: '唔...我好像走神了，能再说一遍吗？',
+          id: 'err-' + Date.now(),
+          error: true
+        })
+      }
       return null
     } finally {
       sending.value = false
     }
   }
 
+  function send(text) {
+    return sendCore(text)
+  }
+
   // 454：流式发送——最终回复逐字渲染；tool_call 信封不流式（由服务端保证）。
-  async function streamSend(text) {
-    if (!text || sending.value) return null
-    sending.value = true
-
-    const tempId = `temp-user-${Date.now()}`
-    const liveId = `live-cornie-${Date.now()}`
-
-    pushChatItem({
-      kind: 'message',
-      role: 'user',
-      content: text,
-      id: tempId,
-      pendingSync: true
-    })
-
-    pushChatItem({
-      kind: 'message',
-      role: 'cornie',
-      content: '',
-      id: liveId,
-      streaming: true
-    })
-
-    const appendDelta = (delta) => {
-      const target = messages.value.find((item) => item.id === liveId)
-      if (target) {
-        target.content += delta
-      }
-    }
-
-    try {
-      const data = await streamConversation({ message: text, date: today() }, appendDelta)
-      if (data?.userMessage?.id) {
-        replaceMessageById(tempId, { id: data.userMessage.id, pendingSync: false })
-      }
-
-      if (data?.cornieMessage?.content) {
-        replaceMessageById(liveId, {
-          id: data.cornieMessage.id,
-          content: data.cornieMessage.content,
-          streaming: false,
-          pendingSync: false
-        })
-      } else {
-        replaceMessageById(liveId, { streaming: false, error: true })
-      }
-      return data
-    } catch {
-      replaceMessageById(tempId, { pendingSync: false, error: true })
-      replaceMessageById(liveId, {
-        content: '唔...我好像走神了，能再说一遍吗？',
-        streaming: false,
-        error: true
-      })
-      return null
-    } finally {
-      sending.value = false
-    }
+  function streamSend(text) {
+    return sendCore(text, { stream: true })
   }
 
   async function handleConfirmAction(action, item) {

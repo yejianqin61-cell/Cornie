@@ -9,7 +9,8 @@ import ToolResultPanel from './ToolResultPanel.vue'
 const {
   messages,
   sending,
-  send,
+  send: sendFallback,
+  streamSend,
   handleConfirmAction,
   restorePendingConfirmations,
   loadConversation,
@@ -84,7 +85,8 @@ async function onSend() {
   const text = message.value.trim()
   if (!text || sending.value) return
   message.value = ''
-  await send(text)
+  // FE-03：主聊天入口默认流式；非流式 send 保留为回退（sendFallback，当前未被 UI 使用）。
+  await streamSend(text)
   await scrollToBottom()
 }
 
