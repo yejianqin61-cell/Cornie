@@ -15,6 +15,7 @@ import {
   recordFollowupPromptTelemetry,
   recordToolRoundTelemetry
 } from '../agent/metrics.js'
+import { appendTelemetryRecord } from '../agent/telemetryStore.js'
 import { logCategoryAudit } from '../category/audit.js'
 import { categoryDomainRegistry } from '../category/domainRegistry.js'
 import { executeToolCalls } from '../tools/gateway.js'
@@ -298,18 +299,22 @@ export function createConfirmExecutor(store) {
             content: buildCategoryValidationReply(error)
           })
 
+          // BE-05：终态 telemetry 落盘
+          const finalTelemetry = finalizeTurnTelemetry(telemetry, {
+            policyDecision: 'ask_back',
+            pendingConfirmation: false,
+            toolExecutionUsed: false,
+            finalReply: cornieMessage.content
+          })
+          appendTelemetryRecord(finalTelemetry, { date: confirmation.date })
+
           return {
             toolExecution: {
               used: false,
               results: []
             },
             cornieMessage,
-            telemetry: finalizeTurnTelemetry(telemetry, {
-              policyDecision: 'ask_back',
-              pendingConfirmation: false,
-              toolExecutionUsed: false,
-              finalReply: cornieMessage.content
-            })
+            telemetry: finalTelemetry
           }
         }
 
@@ -345,18 +350,22 @@ export function createConfirmExecutor(store) {
         content: finalReply
       })
 
+      // BE-05：终态 telemetry 落盘
+      const finalTelemetry = finalizeTurnTelemetry(telemetry, {
+        policyDecision: 'allow',
+        pendingConfirmation: false,
+        toolExecutionUsed: true,
+        finalReply
+      })
+      appendTelemetryRecord(finalTelemetry, { date: confirmation.date })
+
       return {
         toolExecution: {
           used: true,
           results: toolResult.results
         },
         cornieMessage,
-        telemetry: finalizeTurnTelemetry(telemetry, {
-          policyDecision: 'allow',
-          pendingConfirmation: false,
-          toolExecutionUsed: true,
-          finalReply
-        })
+        telemetry: finalTelemetry
       }
     },
 

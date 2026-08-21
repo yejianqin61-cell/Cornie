@@ -144,6 +144,46 @@ export function recordToolRoundTelemetry(telemetry, entry) {
   })
 }
 
+// BE-05：模型调用失败分类（供 telemetry outcome.status 与错误码使用）。
+export function classifyModelError(error) {
+  const name = error?.name
+  const kind = error?.kind
+  const message = String(error?.message || error || '')
+  if (name === 'AbortError' || kind === 'aborted') {
+    return { status: 'aborted', errorCode: 'aborted' }
+  }
+  if (kind === 'timeout' || /timeout/i.test(message)) {
+    return { status: 'timeout', errorCode: 'timeout' }
+  }
+  if (kind === 'protocol' || error?.code === 'invalid_model_protocol') {
+    return { status: 'protocol_failed', errorCode: 'protocol_failed' }
+  }
+  if (kind === 'network' || error instanceof TypeError) {
+    return { status: 'network_error', errorCode: 'network_error' }
+  }
+  return { status: 'network_error', errorCode: 'unknown_error' }
+}
+
+// BE-05：失败路径埋点——chat 抛错（超时/断网/缺 key/协议失败）时调用，不再零记录。
+export function recordModelFailureTelemetry(
+  telemetry,
+  { phase = 'model_call', attempt = 1, error } = {}
+) {
+  if (!telemetry) {
+    return
+  }
+  const classification = classifyModelError(error)
+  telemetry.model.callCount += 1
+  telemetry.model.calls.push({
+    phase,
+    attempt: Number(attempt ?? 1),
+    error: classification.status,
+    errorCode: classification.errorCode,
+    errorMessage: String(error?.message || error || '')
+  })
+  telemetry.failure = classification
+}
+
 export function finalizeTurnTelemetry(telemetry, outcome = {}) {
   if (!telemetry) {
     return null
@@ -155,7 +195,9 @@ export function finalizeTurnTelemetry(telemetry, outcome = {}) {
     policyDecision: outcome.policyDecision ?? telemetry.outcome.policyDecision,
     pendingConfirmation: outcome.pendingConfirmation === true,
     toolExecutionUsed: outcome.toolExecutionUsed === true,
-    finalReplyChars: String(outcome.finalReply ?? '').length
+    finalReplyChars: String(outcome.finalReply ?? '').length,
+    status: telemetry.failure?.status ?? 'ok',
+    errorCode: telemetry.failure?.errorCode ?? null
   }
 
   return {

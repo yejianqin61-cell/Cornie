@@ -28,6 +28,7 @@ import { registerMemoryWikiTools } from './backend/memory-wiki/tools.js'
 import { memoryWikiRoutes } from './backend/memory-wiki/routes.js'
 import { applyPersistedModelSettingsToEnv, createSettingsService } from './backend/settings/service.js'
 import { settingsRoutes } from './backend/settings/routes.js'
+import { listTelemetryRecords } from './backend/agent/telemetryStore.js'
 
 export function createServer({ store, baseDir = process.cwd() }) {
   const app = express()
@@ -55,6 +56,13 @@ export function createServer({ store, baseDir = process.cwd() }) {
       version: 1
     })
   )
+
+  // BE-05：telemetry 只读查询（按日期返回当日 JSONL 记录）
+  app.get('/api/telemetry', (req, res) => {
+    const { date } = req.query
+    const records = listTelemetryRecords({ date: typeof date === 'string' && date ? date : undefined })
+    res.json({ records, date: typeof date === 'string' && date ? date : null })
+  })
 
   const diary = diaryService(store)
   app.use('/api', diaryRoutes({ diary }))

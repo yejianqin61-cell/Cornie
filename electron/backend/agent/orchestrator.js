@@ -15,8 +15,10 @@ import {
   createTurnTelemetry,
   finalizeTurnTelemetry,
   recordFollowupPromptTelemetry,
+  recordModelFailureTelemetry,
   recordToolRoundTelemetry
 } from './metrics.js'
+import { appendTelemetryRecord } from './telemetryStore.js'
 import {
   canExecuteReadOnlyLookupRound,
   cacheReadOnlyLookupResult,
@@ -352,6 +354,8 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd() 
         }
       } catch (error) {
         console.error('Conversation orchestrator error:', error)
+        // BE-05：失败路径留痕（超时/断网/协议失败分类），不再零记录
+        recordModelFailureTelemetry(telemetry, { phase: 'conversation', error })
       }
 
       if (looksLikeWriteIntent(message) && !hasSuccessfulWriteToolResult(toolExecution.results)) {
@@ -403,6 +407,15 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd() 
         console.error('Memory distillation error:', error)
       }
 
+      // BE-05：终态 telemetry 落盘（JSONL，按日期分片），供查询
+      const finalTelemetry = finalizeTurnTelemetry(telemetry, {
+        policyDecision: policyDecision.decision,
+        pendingConfirmation: Boolean(pendingConfirmation),
+        toolExecutionUsed: toolExecution.used,
+        finalReply
+      })
+      appendTelemetryRecord(finalTelemetry, { date })
+
       return {
         userMessage,
         cornieMessage,
@@ -411,12 +424,7 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd() 
         pendingConfirmation,
         interimReplies,
         memoryDistillation,
-        telemetry: finalizeTurnTelemetry(telemetry, {
-          policyDecision: policyDecision.decision,
-          pendingConfirmation: Boolean(pendingConfirmation),
-          toolExecutionUsed: toolExecution.used,
-          finalReply
-        })
+        telemetry: finalTelemetry
       }
     }
   }
