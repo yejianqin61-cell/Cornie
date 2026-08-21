@@ -207,6 +207,11 @@ export async function applyObservationWikiUpgradeRequest(
   const memoryWiki = await createMemoryWikiService({ baseDir, store })
   const confirmedPage = await applyOwnerConfirmed(memoryWiki, applyResult.pageId, applyResult.action)
   await appendObservationSource(memoryWiki, confirmedPage.pageId, observation)
+
+  // 459：状态机仅允许 pending → approved；deferred 请求先复活为 pending 再置 approved。
+  if (normalizeString(request.status) === 'deferred') {
+    await governanceStore.updateStatus(requestId, 'pending')
+  }
   const approvedRequest = await governanceStore.updateStatus(requestId, 'approved')
   const finalPage = await memoryWiki.get(confirmedPage.pageId)
 

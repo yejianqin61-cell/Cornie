@@ -8,8 +8,21 @@ const GOVERNANCE_FILENAME = 'review-queue.json'
 
 const REQUEST_STATUSES = ['pending', 'approved', 'rejected', 'deferred']
 
+// 459：治理状态机显式转移图。其余转移一律拒绝并报错。
+const REQUEST_STATUS_TRANSITIONS = Object.freeze({
+  pending: ['approved', 'rejected', 'deferred'],
+  deferred: ['pending', 'rejected']
+})
+
 function normalizeString(value) {
   return String(value ?? '').trim()
+}
+
+function assertStatusTransition(currentStatus, nextStatus) {
+  const allowed = REQUEST_STATUS_TRANSITIONS[currentStatus]
+  if (!allowed || !allowed.includes(nextStatus)) {
+    throw new Error(`illegal governance status transition: ${currentStatus} -> ${nextStatus}`)
+  }
 }
 
 function normalizeStringArray(value) {
@@ -121,6 +134,8 @@ export async function createMemoryWikiGovernanceStore(baseDir) {
         throw new Error(`governance request not found: ${normalizedId}`)
       }
 
+      assertStatusTransition(items[index].status, normalizedStatus)
+
       const next = createGovernanceRequest({
         ...items[index],
         status: normalizedStatus,
@@ -129,6 +144,11 @@ export async function createMemoryWikiGovernanceStore(baseDir) {
       items[index] = next
       await writeAll(items)
       return next
+    },
+
+    // 459：deferred 复活为 pending（唯一合法的复活路径）。
+    async reactivateDeferred(requestId) {
+      return this.updateStatus(requestId, 'pending')
     },
 
     getFilePath() {
