@@ -54,3 +54,10 @@ Cornie-025 审计（F-02，P0）：样式只有约 40 个颜色 token，**无字
 ## 依赖
 
 - T-01（Stylelint 已接入）；被 T-03（shadcn-vue 初始化）依赖。
+
+> **实施记录（2026-08-25）**：
+> - Tailwind CSS v4.3.3 + `@tailwindcss/vite` 接入；token 集中于 `src/renderer/styles/tokens.css`，`@theme static` 强制发射全部变量（4.3 默认摇树未使用变量，会导致直接 `var(--radius-*)` 引用失效）。
+> - **跳过 preflight**（`tailwindcss/theme` + `tailwindcss/utilities` 分引入）：应用为手写元素样式，preflight 重置会破坏 button/input/select 观感。
+> - 旧名兼容层：`--bg/--surface/--accent/--pet-*` 等在 `@theme` 内引用 `--color-*`，存量组件零改动；style.css 的 `:root` 块已删除。
+> - 示范迁移：LedgerHome/MemoryPageDetail 共 42 处字号→`--text-*`、9 处 `#ffffff`→`--color-surface`、2 处 danger 边框→`color-mix()`；stylelint 裸 hex 警告 85→49。
+> - 验收：`npm run build`、`npm run verify:task025`、`npm run lint`、`npm run test:frontend`（128 用例）、`npm run test:fast`、vite dev 冒烟全部通过。
