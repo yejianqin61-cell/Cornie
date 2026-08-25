@@ -18,7 +18,7 @@ beforeEach(() => {
 describe('FE-03 流式发送与发送收敛', () => {
   it('streamSend 逐字增量渲染并最终替换为正式消息', async () => {
     let resolveStream
-    api.streamConversation.mockImplementation(async ({ message, date }, onDelta) => {
+    api.streamConversation.mockImplementation(async ({ message: _message, date: _date }, onDelta) => {
       onDelta('第')
       await new Promise((r) => {
         resolveStream = r

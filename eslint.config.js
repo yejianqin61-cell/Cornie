@@ -19,6 +19,7 @@ export default [
       'electron/**',
       'scripts/**',
       'tests/**',
+      '!tests',
       '!tests/frontend/**',
       '*.log',
       '*.html',
@@ -54,6 +55,7 @@ export default [
       globals: {
         ...globals.vitest,
         ...globals.node,
+        ...globals.browser,
       },
     },
     rules: {

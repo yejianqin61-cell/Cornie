@@ -20,7 +20,7 @@ describe('R-02 聊天去重加固', () => {
   it('轮询拉到与流式占位同内容的正式消息时不重复上屏', async () => {
     // 流式占位（liveId）已累积内容（与 DB 正式消息相同）
     let resolveStream
-    api.streamConversation.mockImplementation(async ({ message, date }, onDelta) => {
+    api.streamConversation.mockImplementation(async ({ message: _message, date: _date }, onDelta) => {
       onDelta('铃湾在呢')
       await new Promise((r) => { resolveStream = r })
       return {
