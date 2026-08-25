@@ -1,53 +1,26 @@
 <script setup>
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { RouterView, useRoute, useRouter } from 'vue-router'
 import { useModelSettings } from './composables/useModelSettings'
-import ChatHome from './components/ChatHome.vue'
-import ChatDayView from './components/ChatDayView.vue'
-import DiaryHome from './components/DiaryHome.vue'
-import DiaryEditor from './components/DiaryEditor.vue'
-import CornieDiaryReview from './components/CornieDiaryReview.vue'
-import OnThisDayPage from './components/OnThisDayPage.vue'
-import ObserveMemoryHome from './components/ObserveMemoryHome.vue'
-import ObservationList from './components/ObservationList.vue'
-import ObservationDetail from './components/ObservationDetail.vue'
-import MemoryWikiHome from './components/MemoryWikiHome.vue'
-import LedgerHome from './components/LedgerHome.vue'
-import TodoHome from './components/TodoHome.vue'
-import ScheduleHome from './components/ScheduleHome.vue'
-import SettingsHome from './components/SettingsHome.vue'
-import DeepseekConfig from './components/DeepseekConfig.vue'
-import AdvancedSettings from './components/AdvancedSettings.vue'
-import ChatHistory from './ChatHistory.vue'
+
+// F-05：导航由路由驱动（router.js 是唯一事实源）；本文件只保留壳层
+// （左侧导航 + 顶部栏 + RouterView + 配网引导）与跨模块跳转接线。
+const router = useRouter()
+const route = useRoute()
 
 const sections = [
-  { id: 'chat', label: '聊天', hint: '和铃湾说说话', icon: '💬' },
-  { id: 'diary', label: '日记', hint: '写下今天的心情', icon: '📔' },
-  { id: 'ledger', label: '收支', hint: '轻松记一笔', icon: '💰' },
-  { id: 'todo', label: '待办', hint: '今天要做什么', icon: '✅' },
-  { id: 'schedule', label: '日程', hint: '接下来的安排', icon: '📅' },
+  { path: '/chat', label: '聊天', hint: '和铃湾说说话', icon: '💬' },
+  { path: '/diary', label: '日记', hint: '写下今天的心情', icon: '📔' },
+  { path: '/ledger', label: '收支', hint: '轻松记一笔', icon: '💰' },
+  { path: '/todo', label: '待办', hint: '今天要做什么', icon: '✅' },
+  { path: '/schedule', label: '日程', hint: '接下来的安排', icon: '📅' },
   // R-04：记忆三栏——观察日志 / 当天日记 / 记忆 Wiki 平级入口
-  { id: 'observe', label: '观察日志', hint: '今天留下的生活片段', icon: '📝' },
-  { id: 'memory', label: '记忆 Wiki', hint: '想留住的长期记忆', icon: '📖' },
-  { id: 'settings', label: '设置', hint: '铃湾的连接和偏好', icon: '⚙️' },
+  { path: '/observe', label: '观察日志', hint: '今天留下的生活片段', icon: '📝' },
+  { path: '/memory', label: '记忆 Wiki', hint: '想留住的长期记忆', icon: '📖' },
+  { path: '/settings', label: '设置', hint: '铃湾的连接和偏好', icon: '⚙️' },
 ]
 
-const mode = ref('chat')
-const modeMeta = computed(() => sections.find((item) => item.id === mode.value) || sections[0])
-
-const chatView = ref('home')
-const chatHistoryDate = ref('')
-const chatFocusMessageId = ref('')
-
-// Diary sub-view
-const diaryView = ref('home') // 'home' | 'editor' | 'cornie-review' | 'on-this-day'
-
-// R-04：观察日志与记忆 Wiki 独立子视图栈
-const observeView = ref('home') // 'home' | 'observation-list' | 'observation-detail'
-const observeDetailId = ref('')
-const memoryView = ref('home') // 'home' | 'memory-detail' | 'memory-create'
-
-// Settings sub-view
-const settingsView = ref('home') // 'home' | 'deepseek-config' | 'advanced'
+const modeMeta = computed(() => sections.find((item) => route.path.startsWith(item.path)) || sections[0])
 
 const {
   modelStatus,
@@ -67,21 +40,56 @@ const isGuideVisible = computed(() => !modelStatus.value.configured)
 // FE-10：视图切换后焦点落位主内容区（键盘操作连续）。
 const mainPanelRef = ref(null)
 
-watch(mode, async () => {
-  chatView.value = 'home'
-  chatHistoryDate.value = ''
-  chatFocusMessageId.value = ''
-  diaryView.value = 'home'
-  observeView.value = 'home'
-  memoryView.value = 'home'
-  settingsView.value = 'home'
-  await nextTick()
-  mainPanelRef.value?.focus()
-})
+watch(
+  () => route.path,
+  async () => {
+    await nextTick()
+    mainPanelRef.value?.focus()
+  }
+)
 
 onMounted(async () => {
   await refreshModelState()
 })
+
+// ─── 子视图事件 → 路由（保持组件 emit 契约不变，接线集中在本文件） ───
+function handleBack() {
+  const path = route.path
+  if (path.startsWith('/chat/day')) router.push('/chat/history')
+  else if (path.startsWith('/chat/history')) router.push('/chat')
+  else if (path.startsWith('/diary/')) router.push('/diary')
+  else if (path.startsWith('/observe/detail')) router.push('/observe/list')
+  else if (path.startsWith('/observe/')) router.push('/observe')
+  else if (path.startsWith('/settings/')) router.push('/settings')
+  else router.push('/chat')
+}
+
+function handleGo(view, id) {
+  if (view === 'observation-list') router.push('/observe/list')
+  else if (view === 'observation-detail') router.push({ path: `/observe/detail/${id}` })
+  else if (view === 'editor') router.push('/diary/editor')
+  else if (view === 'cornie-review') router.push('/diary/cornie-review')
+  else if (view === 'on-this-day') router.push('/diary/on-this-day')
+}
+
+const navHandlers = {
+  'go-history': () => router.push('/chat/history'),
+  back: handleBack,
+  'open-date': (date) => router.push({ path: `/chat/day/${date || ''}` }),
+  go: handleGo,
+  'go-observe': () => router.push('/observe'),
+  'go-chat': () => router.push('/chat'),
+  'open-observation': (id) => router.push({ path: `/observe/detail/${id}` }),
+  'open-chat-source': ({ date, messageId }) =>
+    date ? router.push({ path: `/chat/day/${date}`, query: { focus: messageId || '' } }) : router.push('/chat/history'),
+  deleted: () => router.push('/observe/list'),
+  updated: () => refreshModelState(),
+}
+
+// 路由组件额外 props（仅设置首页需要 App 持有的模型状态）
+const routeExtraProps = computed(() =>
+  route.path === '/settings' ? { modelStatus: modelStatus.value, modelSettings: modelSettings.value } : {}
+)
 </script>
 
 <template>
@@ -96,10 +104,10 @@ onMounted(async () => {
       <div class="navList">
         <button
           v-for="section in sections"
-          :key="section.id"
+          :key="section.path"
           class="navItem"
-          :class="{ active: mode === section.id }"
-          @click="mode = section.id"
+          :class="{ active: route.path.startsWith(section.path) }"
+          @click="router.push(section.path)"
         >
           <span class="navIcon">{{ section.icon }}</span>
           <div class="navText">
@@ -149,116 +157,11 @@ onMounted(async () => {
         </div>
       </section>
 
-      <!-- 聊天模式 -->
-      <section v-else-if="mode === 'chat'" class="contentFrame">
-        <ChatHome v-if="chatView === 'home'" @go-history="chatView = 'history'" />
-        <ChatHistory
-          v-else-if="chatView === 'history'"
-          @back="chatView = 'home'"
-          @open-date="
-            (date) => {
-              chatHistoryDate = date
-              chatFocusMessageId = ''
-              chatView = 'day'
-            }
-          "
-        />
-        <ChatDayView
-          v-else-if="chatView === 'day'"
-          :date="chatHistoryDate"
-          :focus-message-id="chatFocusMessageId"
-          @back="chatView = 'history'"
-        />
-      </section>
-
-      <!-- 日记模式 -->
-      <section v-else-if="mode === 'diary'" class="contentFrame">
-        <DiaryHome v-if="diaryView === 'home'" @go="(v) => (diaryView = v)" @go-observe="mode = 'observe'" />
-        <DiaryEditor v-else-if="diaryView === 'editor'" @back="diaryView = 'home'" />
-        <CornieDiaryReview v-else-if="diaryView === 'cornie-review'" @back="diaryView = 'home'" />
-        <OnThisDayPage v-else-if="diaryView === 'on-this-day'" @back="diaryView = 'home'" />
-      </section>
-
-      <!-- 收支模式 -->
-      <section v-else-if="mode === 'ledger'" class="contentFrame">
-        <LedgerHome />
-      </section>
-
-      <!-- 待办模式 -->
-      <section v-else-if="mode === 'todo'" class="contentFrame">
-        <TodoHome />
-      </section>
-
-      <!-- 日程模式 -->
-      <section v-else-if="mode === 'schedule'" class="contentFrame">
-        <ScheduleHome />
-      </section>
-
-      <!-- 观察日志（R-04：三栏之一） -->
-      <section v-else-if="mode === 'observe'" class="contentFrame">
-        <ObserveMemoryHome
-          v-if="observeView === 'home'"
-          @go="
-            (v, id) => {
-              observeView = v
-              observeDetailId = id || ''
-            }
-          "
-          @goChat="mode = 'chat'"
-        />
-        <ObservationList
-          v-else-if="observeView === 'observation-list'"
-          @back="observeView = 'home'"
-          @go="
-            (v, id) => {
-              observeView = v
-              observeDetailId = id || ''
-            }
-          "
-        />
-        <ObservationDetail
-          v-else-if="observeView === 'observation-detail'"
-          :id="observeDetailId"
-          @back="observeView = 'observation-list'"
-          @deleted="observeView = 'observation-list'"
-        />
-      </section>
-
-      <!-- 记忆 Wiki（T-02：文件树双栏） -->
-      <section v-else-if="mode === 'memory'" class="contentFrame">
-        <MemoryWikiHome
-          @open-observation="
-            (id) => {
-              mode = 'observe'
-              observeDetailId = id
-              observeView = 'observation-detail'
-            }
-          "
-          @open-chat-source="
-            ({ date, messageId }) => {
-              mode = 'chat'
-              chatHistoryDate = date || ''
-              chatFocusMessageId = messageId || ''
-              chatView = 'day'
-            }
-          "
-        />
-      </section>
-
-      <!-- 设置 -->
-      <section v-else-if="mode === 'settings'" class="contentFrame">
-        <SettingsHome
-          v-if="settingsView === 'home'"
-          :modelStatus="modelStatus"
-          :modelSettings="modelSettings"
-          @go="(v) => (settingsView = v)"
-        />
-        <DeepseekConfig
-          v-else-if="settingsView === 'deepseek-config'"
-          @back="settingsView = 'home'"
-          @updated="refreshModelState()"
-        />
-        <AdvancedSettings v-else-if="settingsView === 'advanced'" @back="settingsView = 'home'" />
+      <!-- 路由视图：子视图事件经 navHandlers 接线到 router.push -->
+      <section v-else class="contentFrame">
+        <RouterView v-slot="{ Component }">
+          <component :is="Component" v-bind="routeExtraProps" v-on="navHandlers" />
+        </RouterView>
       </section>
     </main>
   </div>

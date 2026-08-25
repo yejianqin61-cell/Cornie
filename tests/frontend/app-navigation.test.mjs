@@ -1,8 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { flushPromises, shallowMount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 
 import App from '../../src/renderer/App.vue'
 import ChatHome from '../../src/renderer/components/ChatHome.vue'
+import { createAppRouter } from '../../src/renderer/router'
 
 function createConfiguredFetchMock() {
   return vi.fn(async (input) => {
@@ -110,64 +111,105 @@ function createConfiguredFetchMock() {
   })
 }
 
+// F-05：导航由路由驱动——点击导航按钮断言 router 状态与顶部栏文案；
+// 子视图事件（go-history）经 App 的 navHandlers 接线到 router.push。
 describe('App navigation', () => {
   beforeEach(() => {
     globalThis.fetch = createConfiguredFetchMock()
   })
 
-  it('renders chat workspace and switches to other workspaces', async () => {
-    const wrapper = shallowMount(App)
+  it('renders chat workspace and switches to other workspaces via router', async () => {
+    const router = createAppRouter()
+    const wrapper = mount(App, {
+      global: {
+        plugins: [router],
+        stubs: {
+          ChatHome: true,
+          ChatHistory: true,
+          ChatDayView: true,
+          DiaryHome: true,
+          DiaryEditor: true,
+          CornieDiaryReview: true,
+          OnThisDayPage: true,
+          LedgerHome: true,
+          TodoHome: true,
+          ScheduleHome: true,
+          ObserveMemoryHome: true,
+          ObservationList: true,
+          ObservationDetail: true,
+          MemoryWikiHome: true,
+          SettingsHome: true,
+          DeepseekConfig: true,
+          AdvancedSettings: true
+        }
+      }
+    })
+    await router.isReady()
     await flushPromises()
 
+    expect(router.currentRoute.value.path).toBe('/chat')
     expect(wrapper.text()).toContain('铃湾在线')
-    expect(wrapper.find('chat-home-stub').exists()).toBe(true)
-    expect(wrapper.find('ledger-home-stub').exists()).toBe(false)
 
     const navButtons = wrapper.findAll('.navItem')
 
     await navButtons[2].trigger('click')
     await flushPromises()
-    expect(wrapper.find('ledger-home-stub').exists()).toBe(true)
+    expect(router.currentRoute.value.path).toBe('/ledger')
     expect(wrapper.text()).toContain('轻松记一笔')
 
     await navButtons[3].trigger('click')
     await flushPromises()
-    expect(wrapper.find('todo-home-stub').exists()).toBe(true)
+    expect(router.currentRoute.value.path).toBe('/todo')
     expect(wrapper.text()).toContain('今天要做什么')
 
     await navButtons[4].trigger('click')
     await flushPromises()
-    expect(wrapper.find('schedule-home-stub').exists()).toBe(true)
+    expect(router.currentRoute.value.path).toBe('/schedule')
     expect(wrapper.text()).toContain('接下来的安排')
 
     await navButtons[5].trigger('click')
     await flushPromises()
-    // R-04：观察日志（三栏之一）
-    expect(wrapper.find('observe-memory-home-stub').exists()).toBe(true)
+    expect(router.currentRoute.value.path).toBe('/observe')
     expect(wrapper.text()).toContain('观察日志')
 
     await navButtons[6].trigger('click')
     await flushPromises()
-    // T-02：记忆 Wiki（双栏容器）
-    expect(wrapper.find('memory-wiki-home-stub').exists()).toBe(true)
+    expect(router.currentRoute.value.path).toBe('/memory')
     expect(wrapper.text()).toContain('记忆 Wiki')
 
     await navButtons[7].trigger('click')
     await flushPromises()
-    expect(wrapper.find('settings-home-stub').exists()).toBe(true)
+    expect(router.currentRoute.value.path).toBe('/settings')
     expect(wrapper.text()).toContain('铃湾的连接和偏好')
 
     await navButtons[1].trigger('click')
     await flushPromises()
-    expect(wrapper.find('diary-home-stub').exists()).toBe(true)
+    expect(router.currentRoute.value.path).toBe('/diary')
     expect(wrapper.text()).toContain('写下今天的心情')
 
-    // 聊天 → 聊天历史
+    // 聊天 → 聊天历史（子视图事件接线）
     await navButtons[0].trigger('click')
     await flushPromises()
-    expect(wrapper.find('chat-home-stub').exists()).toBe(true)
+    expect(router.currentRoute.value.path).toBe('/chat')
     wrapper.findComponent(ChatHome).vm.$emit('go-history')
     await flushPromises()
-    expect(wrapper.find('chat-history-stub').exists()).toBe(true)
+    expect(router.currentRoute.value.path).toBe('/chat/history')
+  })
+
+  it('resolves all registered routes', () => {
+    const router = createAppRouter()
+    const checks = [
+      ['/chat', 'chat'],
+      ['/chat/history', 'chat-history'],
+      ['/chat/day/2026-06-27', 'chat-day'],
+      ['/diary/editor', 'diary-editor'],
+      ['/observe/detail/obs-1', 'observe-detail'],
+      ['/memory', 'memory'],
+      ['/settings/deepseek', 'settings-deepseek']
+    ]
+    for (const [path, name] of checks) {
+      expect(router.resolve(path).name).toBe(name)
+    }
+    expect(router.resolve('/unknown-path').name).toBeUndefined()
   })
 })

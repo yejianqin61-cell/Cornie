@@ -2,6 +2,7 @@ import { describe, expect, it, beforeEach, vi } from 'vitest'
 import { mount, flushPromises } from '@vue/test-utils'
 
 import App from '../../src/renderer/App.vue'
+import { createAppRouter } from '../../src/renderer/router'
 
 describe('App smoke', () => {
   beforeEach(() => {
@@ -124,7 +125,9 @@ describe('App smoke', () => {
   })
 
   it('renders onboarding gate when deepseek api key is not configured', async () => {
-    const wrapper = mount(App)
+    const router = createAppRouter()
+const wrapper = mount(App, { global: { plugins: [router] } })
+await router.isReady()
     await flushPromises()
 
     expect(wrapper.text()).toContain('先把 DeepSeek 的钥匙交给铃湾吧')

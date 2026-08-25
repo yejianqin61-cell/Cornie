@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 
 import App from '../../src/renderer/App.vue'
+import { createAppRouter } from '../../src/renderer/router'
 
 function createDiaryFlowFetchMock({ failSave = false, failOnThisDay = false, failEntriesString = false, emptyOnThisDay = false } = {}) {
   const entriesByDate = {
@@ -206,7 +207,9 @@ describe('App diary flow', () => {
   }
 
   it('loads diary entries, switches dates, saves edits, and regenerates cornie text', async () => {
-    const wrapper = mount(App)
+    const router = createAppRouter()
+const wrapper = mount(App, { global: { plugins: [router] } })
+await router.isReady()
     await flushPromises()
     await openDiaryEditor(wrapper)
 
@@ -249,7 +252,9 @@ describe('App diary flow', () => {
 
   it('shows readable on-this-day error cards when historical load fails', async () => {
     globalThis.fetch = createDiaryFlowFetchMock({ failOnThisDay: true })
-    const wrapper = mount(App)
+    const router = createAppRouter()
+const wrapper = mount(App, { global: { plugins: [router] } })
+await router.isReady()
     await flushPromises()
     await openDiaryEditor(wrapper)
 
@@ -258,7 +263,9 @@ describe('App diary flow', () => {
 
   it('shows save error when diary persistence fails', async () => {
     globalThis.fetch = createDiaryFlowFetchMock({ failSave: true })
-    const wrapper = mount(App)
+    const router = createAppRouter()
+const wrapper = mount(App, { global: { plugins: [router] } })
+await router.isReady()
     await flushPromises()
     await openDiaryEditor(wrapper)
 
@@ -275,7 +282,9 @@ describe('App diary flow', () => {
 
   it('shows empty on-this-day copy and refreshes month list changes', async () => {
     globalThis.fetch = createDiaryFlowFetchMock({ emptyOnThisDay: true })
-    const wrapper = mount(App)
+    const router = createAppRouter()
+const wrapper = mount(App, { global: { plugins: [router] } })
+await router.isReady()
     await flushPromises()
     await openDiaryEditor(wrapper)
 
@@ -292,7 +301,9 @@ describe('App diary flow', () => {
 
   it('shows stringified list errors when monthly entries request throws a raw string', async () => {
     globalThis.fetch = createDiaryFlowFetchMock({ failEntriesString: true })
-    const wrapper = mount(App)
+    const router = createAppRouter()
+const wrapper = mount(App, { global: { plugins: [router] } })
+await router.isReady()
     await flushPromises()
     await openDiaryEditor(wrapper)
 

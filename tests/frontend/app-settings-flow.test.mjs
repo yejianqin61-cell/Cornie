@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 
 import App from '../../src/renderer/App.vue'
+import { createAppRouter } from '../../src/renderer/router'
 import DeepseekConfig from '../../src/renderer/components/DeepseekConfig.vue'
 
 function createSettingsFlowFetchMock(initialState = {}) {
@@ -211,7 +212,9 @@ describe('App settings async flow', () => {
   })
 
   it('saves deepseek settings and closes onboarding gate after recheck', async () => {
-    const wrapper = mount(App)
+    const router = createAppRouter()
+const wrapper = mount(App, { global: { plugins: [router] } })
+await router.isReady()
     await flushPromises()
 
     expect(wrapper.text()).toContain('先把 DeepSeek 的钥匙交给铃湾吧')
@@ -266,7 +269,9 @@ describe('App settings async flow', () => {
   })
 
   it('shows friendly validation copy when api key is missing', async () => {
-    const wrapper = mount(App)
+    const router = createAppRouter()
+const wrapper = mount(App, { global: { plugins: [router] } })
+await router.isReady()
     await flushPromises()
 
     await wrapper.get('.guideBannerForm').trigger('submit.prevent')
@@ -280,7 +285,9 @@ describe('App settings async flow', () => {
       putErrorText: 'invalid timeout'
     })
 
-    const timeoutWrapper = mount(App)
+    const router = createAppRouter()
+const timeoutWrapper = mount(App, { global: { plugins: [router] } })
+await router.isReady()
     await flushPromises()
     const timeoutInputs = timeoutWrapper.findAll('.guideBannerForm input')
     await timeoutInputs[0].setValue('sk-real-key')
@@ -292,7 +299,8 @@ describe('App settings async flow', () => {
       putErrorText: 'strange backend copy'
     })
 
-    const unknownWrapper = mount(App)
+const unknownWrapper = mount(App, { global: { plugins: [router] } })
+await router.isReady()
     await flushPromises()
     const unknownInputs = unknownWrapper.findAll('.guideBannerForm input')
     await unknownInputs[0].setValue('sk-real-key')
@@ -308,7 +316,9 @@ describe('App settings async flow', () => {
     })
     globalThis.fetch = fetchMock
 
-    const wrapper = mount(App)
+    const router = createAppRouter()
+const wrapper = mount(App, { global: { plugins: [router] } })
+await router.isReady()
     await flushPromises()
 
     expect(wrapper.text()).toContain('铃湾没能连上，我们可以稍后再试。')
@@ -367,7 +377,9 @@ describe('App settings async flow', () => {
       settingsTimeoutMs: null
     })
 
-    const wrapper = mount(App)
+    const router = createAppRouter()
+const wrapper = mount(App, { global: { plugins: [router] } })
+await router.isReady()
     await flushPromises()
 
     const inputs = wrapper.findAll('.guideBannerForm input')
