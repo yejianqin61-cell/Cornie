@@ -1,4 +1,7 @@
 <script setup>
+import UiCard from './ui/UiCard.vue'
+import UiEmpty from './ui/UiEmpty.vue'
+
 defineProps({
   detail: { type: Object, default: null },
   evidenceItems: { type: Array, default: () => [] },
@@ -11,13 +14,7 @@ const emit = defineEmits(['approve', 'defer', 'reject'])
 </script>
 
 <template>
-  <section class="workspaceCard">
-    <div class="cardHead">
-      <div>
-        <div class="cardTitle">治理详情</div>
-      </div>
-    </div>
-
+  <UiCard title="治理详情">
     <div v-if="detail" class="governanceDetail">
       <div class="detailTitle">{{ detail.title || detail.requestType }}</div>
       <div class="detailBadgeRow">
@@ -84,45 +81,12 @@ const emit = defineEmits(['approve', 'defer', 'reject'])
         <button :disabled="saving || detail.status === 'rejected'" @click="emit('reject')">驳回建议</button>
       </div>
     </div>
-    <div v-else class="emptyDetail">点左边一条治理请求，我就把它的原因、证据和处理入口摊给你看。</div>
-  </section>
+    <UiEmpty v-else icon="📋" text="点左边一条治理请求，我就把它的原因、证据和处理入口摊给你看。" />
+  </UiCard>
 </template>
 
 <style scoped>
-.workspaceCard {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  min-height: 0;
-}
-.cardHead {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-}
-.cardTitle {
-  font-weight: 800;
-  font-size: 16px;
-}
-.cardHint {
-  color: var(--muted);
-  font-size: 12px;
-  max-width: 360px;
-  text-align: right;
-  line-height: 1.5;
-}
-.cardSubhint {
-  margin-top: 4px;
-  color: var(--muted);
-  font-size: 12px;
-}
-.governanceDetail,
-.emptyDetail {
+.governanceDetail {
   border: 1px solid var(--border);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.03);
@@ -245,21 +209,7 @@ const emit = defineEmits(['approve', 'defer', 'reject'])
   gap: 10px;
   flex-wrap: wrap;
 }
-.emptyDetail {
-  color: var(--muted);
-  display: grid;
-  place-items: center;
-  min-height: 180px;
-  text-align: center;
-  line-height: 1.6;
-}
 @media (max-width: 720px) {
-  .cardHead {
-    flex-direction: column;
-  }
-  .cardHint {
-    text-align: left;
-  }
   .detailMetaGrid {
     grid-template-columns: 1fr;
   }

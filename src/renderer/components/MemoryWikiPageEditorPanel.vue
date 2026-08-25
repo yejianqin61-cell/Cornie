@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue'
+import UiCard from './ui/UiCard.vue'
 
 const props = defineProps({
   selectedPage: { type: Object, default: null },
@@ -54,13 +55,10 @@ const relatedPageSelectionModel = computed({
 </script>
 
 <template>
-  <section class="workspaceCard">
-    <div class="cardHead">
-      <div>
-        <div class="cardTitle">{{ selectedPage ? '编辑页面' : '新建页面' }}</div>
-      </div>
+  <UiCard :title="selectedPage ? '编辑页面' : '新建页面'">
+    <template #actions>
       <button v-if="selectedPage" @click="emit('reset')">新建页面</button>
-    </div>
+    </template>
 
     <div class="formGrid">
       <label>
@@ -423,35 +421,10 @@ const relatedPageSelectionModel = computed({
         </button>
       </div>
     </div>
-  </section>
+  </UiCard>
 </template>
 
 <style scoped>
-.workspaceCard {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  min-height: 0;
-}
-.cardHead {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-}
-.cardTitle {
-  font-weight: 800;
-  font-size: 16px;
-}
-.cardSubhint {
-  margin-top: 4px;
-  color: var(--muted);
-  font-size: 12px;
-}
 .formGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -531,9 +504,6 @@ const relatedPageSelectionModel = computed({
   min-height: 160px;
 }
 @media (max-width: 720px) {
-  .cardHead {
-    flex-direction: column;
-  }
   .formGrid {
     grid-template-columns: 1fr;
   }

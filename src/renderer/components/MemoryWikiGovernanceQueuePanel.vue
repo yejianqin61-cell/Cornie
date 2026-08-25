@@ -1,4 +1,7 @@
 <script setup>
+import UiCard from './ui/UiCard.vue'
+import UiEmpty from './ui/UiEmpty.vue'
+
 defineProps({
   governanceItems: { type: Array, default: () => [] },
   selectedGovernanceId: { type: String, default: '' },
@@ -23,11 +26,8 @@ function handleSectionChange(event) {
 </script>
 
 <template>
-  <section class="workspaceCard">
-    <div class="cardHead">
-      <div>
-        <div class="cardTitle">治理待审核区</div>
-      </div>
+  <UiCard title="治理待审核区">
+    <template #actions>
       <div class="cardFilters">
         <select :value="filterStatus" @change="handleStatusChange">
           <option value="">全部状态</option>
@@ -41,7 +41,7 @@ function handleSectionChange(event) {
           <option v-for="section in sections" :key="section" :value="section">{{ section }}</option>
         </select>
       </div>
-    </div>
+    </template>
 
     <div class="queueSummary">
       当前待处理 <strong>{{ pendingCount }}</strong> 项
@@ -49,9 +49,11 @@ function handleSectionChange(event) {
 
     <div class="filterSummary">当前筛选：{{ filterSummary }}</div>
 
-    <div v-if="governanceItems.length === 0" class="emptyDetail compactEmpty">
-      现在没有新的治理建议。等巡检或整理过程发现问题，这里会再提醒你。
-    </div>
+    <UiEmpty
+      v-if="governanceItems.length === 0"
+      icon="🧭"
+      text="现在没有新的治理建议。等巡检或整理过程发现问题，这里会再提醒你。"
+    />
 
     <div v-else class="entryList">
       <button
@@ -67,35 +69,10 @@ function handleSectionChange(event) {
         </div>
       </button>
     </div>
-  </section>
+  </UiCard>
 </template>
 
 <style scoped>
-.workspaceCard {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  min-height: 0;
-}
-.cardHead {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-}
-.cardTitle {
-  font-weight: 800;
-  font-size: 16px;
-}
-.cardSubhint {
-  margin-top: 4px;
-  color: var(--muted);
-  font-size: 12px;
-}
 .cardFilters {
   display: flex;
   gap: 8px;
@@ -143,25 +120,5 @@ function handleSectionChange(event) {
   margin-top: 4px;
   font-size: 12px;
   color: var(--muted);
-}
-.emptyDetail {
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.03);
-  padding: 16px;
-  color: var(--muted);
-  display: grid;
-  place-items: center;
-  min-height: 180px;
-  text-align: center;
-  line-height: 1.6;
-}
-.compactEmpty {
-  min-height: 120px;
-}
-@media (max-width: 720px) {
-  .cardHead {
-    flex-direction: column;
-  }
 }
 </style>

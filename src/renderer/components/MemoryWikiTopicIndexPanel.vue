@@ -1,4 +1,7 @@
 <script setup>
+import UiCard from './ui/UiCard.vue'
+import UiEmpty from './ui/UiEmpty.vue'
+
 defineProps({
   topicItems: { type: Array, default: () => [] },
   selectedTopicKey: { type: String, default: '' },
@@ -13,17 +16,13 @@ const topicDetail = defineModel('topicDetail', { type: Object, default: null })
 </script>
 
 <template>
-  <section class="workspaceCard span2">
-    <div class="cardHead">
-      <div>
-        <div class="cardTitle">Topic Index</div>
-      </div>
-    </div>
-
+  <UiCard class="span2" title="Topic Index">
     <div class="topicGrid">
-      <div v-if="topicItems.length === 0" class="emptyDetail">
-        现在还没有可用的主题索引。等记忆页面和聊天慢慢积累起来，这里就会帮你把关键词串起来。
-      </div>
+      <UiEmpty
+        v-if="topicItems.length === 0"
+        icon="🔗"
+        text="现在还没有可用的主题索引。等记忆页面和聊天慢慢积累起来，这里就会帮你把关键词串起来。"
+      />
 
       <div v-else class="topicList">
         <button
@@ -60,46 +59,14 @@ const topicDetail = defineModel('topicDetail', { type: Object, default: null })
         </label>
         <button class="primary" :disabled="saving" @click="emit('save-topic-aliases')">保存主题别名</button>
       </div>
-      <div v-else class="emptyDetail">点一个主题，我就把它的索引详情展开给主人看。</div>
+      <UiEmpty v-else icon="🔍" text="点一个主题，我就把它的索引详情展开给主人看。" />
     </div>
-  </section>
+  </UiCard>
 </template>
 
 <style scoped>
-.workspaceCard {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  min-height: 0;
-}
 .span2 {
   grid-column: 1 / -1;
-}
-.cardHead {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-}
-.cardTitle {
-  font-weight: 800;
-  font-size: 16px;
-}
-.cardHint {
-  color: var(--muted);
-  font-size: 12px;
-  max-width: 360px;
-  text-align: right;
-  line-height: 1.5;
-}
-.cardSubhint {
-  margin-top: 4px;
-  color: var(--muted);
-  font-size: 12px;
 }
 .topicGrid {
   display: grid;
@@ -113,8 +80,7 @@ const topicDetail = defineModel('topicDetail', { type: Object, default: null })
   gap: 8px;
   overflow: auto;
 }
-.topicDetail,
-.emptyDetail {
+.topicDetail {
   border: 1px solid var(--border);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.03);
@@ -157,22 +123,6 @@ const topicDetail = defineModel('topicDetail', { type: Object, default: null })
   gap: 6px;
   margin-top: 12px;
   font-size: 13px;
-}
-.emptyDetail {
-  color: var(--muted);
-  display: grid;
-  place-items: center;
-  min-height: 180px;
-  text-align: center;
-  line-height: 1.6;
-}
-@media (max-width: 720px) {
-  .cardHead {
-    flex-direction: column;
-  }
-  .cardHint {
-    text-align: left;
-  }
 }
 @media (max-width: 1120px) {
   .topicGrid {

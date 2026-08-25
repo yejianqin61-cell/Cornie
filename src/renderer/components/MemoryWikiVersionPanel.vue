@@ -1,4 +1,7 @@
 <script setup>
+import UiCard from './ui/UiCard.vue'
+import UiEmpty from './ui/UiEmpty.vue'
+
 defineProps({
   pageId: { type: String, default: '' },
   pageVersions: { type: Array, default: () => [] },
@@ -11,19 +14,11 @@ const emit = defineEmits(['select-version'])
 </script>
 
 <template>
-  <section class="workspaceCard span2">
-    <div class="cardHead">
-      <div>
-        <div class="cardTitle">版本历史与回滚</div>
-      </div>
-    </div>
-
-    <div v-if="!pageId" class="emptyDetail compactEmpty">
-      先从左边选中一个记忆页面，我就把这页的版本历史整理给你看。
-    </div>
+  <UiCard class="span2" title="版本历史与回滚">
+    <UiEmpty v-if="!pageId" icon="📚" text="先从左边选中一个记忆页面，我就把这页的版本历史整理给你看。" />
 
     <div v-else class="versionGrid">
-      <div v-if="pageVersions.length === 0" class="emptyDetail compactEmpty">这页目前还没有可用的历史版本记录。</div>
+      <UiEmpty v-if="pageVersions.length === 0" icon="🕐" text="这页目前还没有可用的历史版本记录。" />
 
       <div v-else class="versionList">
         <button
@@ -57,47 +52,15 @@ const emit = defineEmits(['select-version'])
             <pre class="evidenceItem">回滚后将把当前页面恢复到这个历史快照。</pre>
           </div>
         </div>
-        <div v-else class="emptyDetail compactEmpty">点左边某个版本，我就把这个版本的关键信息展开给你看。</div>
+        <UiEmpty v-else icon="🕘" text="点左边某个版本，我就把这个版本的关键信息展开给你看。" />
       </div>
     </div>
-  </section>
+  </UiCard>
 </template>
 
 <style scoped>
-.workspaceCard {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  min-height: 0;
-}
 .span2 {
   grid-column: 1 / -1;
-}
-.cardHead {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-}
-.cardTitle {
-  font-weight: 800;
-  font-size: 16px;
-}
-.cardHint {
-  color: var(--muted);
-  font-size: 12px;
-  max-width: 360px;
-  text-align: right;
-  line-height: 1.5;
-}
-.cardSubhint {
-  margin-top: 4px;
-  color: var(--muted);
-  font-size: 12px;
 }
 .versionGrid {
   display: grid;
@@ -171,29 +134,6 @@ const emit = defineEmits(['select-version'])
   font-size: 12px;
   white-space: pre-wrap;
   overflow: auto;
-}
-.emptyDetail {
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.03);
-  padding: 16px;
-  color: var(--muted);
-  display: grid;
-  place-items: center;
-  min-height: 180px;
-  text-align: center;
-  line-height: 1.6;
-}
-.compactEmpty {
-  min-height: 120px;
-}
-@media (max-width: 720px) {
-  .cardHead {
-    flex-direction: column;
-  }
-  .cardHint {
-    text-align: left;
-  }
 }
 @media (max-width: 1120px) {
   .versionGrid {

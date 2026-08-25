@@ -1,122 +1,127 @@
 @import './styles/tokens.css';
 
-* {
-  box-sizing: border-box;
-}
-html,
-body {
-  height: 100%;
-}
-body {
-  margin: 0;
-  font-family:
-    'Microsoft YaHei',
-    'PingFang SC',
-    'Segoe UI',
-    ui-sans-serif,
-    system-ui,
-    -apple-system,
-    Roboto,
-    Arial;
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--text);
-  background: var(--bg);
-}
+/* T-03：全局元素样式移入 @layer base——
+   Tailwind 工具类位于 utilities 层，未分层样式会压过层内样式，
+   基座组件（ui/*）用工具类覆盖全局 button/input 时依赖本分层。 */
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+  html,
+  body {
+    height: 100%;
+  }
+  body {
+    margin: 0;
+    font-family:
+      'Microsoft YaHei',
+      'PingFang SC',
+      'Segoe UI',
+      ui-sans-serif,
+      system-ui,
+      -apple-system,
+      Roboto,
+      Arial;
+    font-size: 14px;
+    line-height: 1.6;
+    color: var(--text);
+    background: var(--bg);
+  }
 
-body.transparent {
-  background: transparent !important;
-}
+  body.transparent {
+    background: transparent !important;
+  }
 
-a {
-  color: inherit;
-}
+  a {
+    color: inherit;
+  }
 
-/* ─── 按钮 ─── */
-button {
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  border-radius: 10px;
-  padding: 10px 14px;
-  cursor: pointer;
-  font-size: 14px;
-  line-height: 1.4;
-}
-button:hover {
-  background: var(--surface-2);
-}
-button:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
+  /* ─── 按钮 ─── */
+  button {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    border-radius: 10px;
+    padding: 10px 14px;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  button:hover {
+    background: var(--surface-2);
+  }
+  button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
 
-/* 主按钮 */
-button.primary,
-.btn-primary {
-  border: none;
-  background: var(--accent);
-  color: #ffffff;
-}
-button.primary:hover,
-.btn-primary:hover {
-  background: var(--accent-hover);
-}
+  /* 主按钮 */
+  button.primary,
+  .btn-primary {
+    border: none;
+    background: var(--accent);
+    color: #ffffff;
+  }
+  button.primary:hover,
+  .btn-primary:hover {
+    background: var(--accent-hover);
+  }
 
-/* 危险按钮 */
-button.danger,
-.btn-danger {
-  border-color: rgba(217, 106, 92, 0.25);
-  color: var(--danger);
-}
-button.danger:hover,
-.btn-danger:hover {
-  background: rgba(217, 106, 92, 0.06);
-}
+  /* 危险按钮 */
+  button.danger,
+  .btn-danger {
+    border-color: rgba(217, 106, 92, 0.25);
+    color: var(--danger);
+  }
+  button.danger:hover,
+  .btn-danger:hover {
+    background: rgba(217, 106, 92, 0.06);
+  }
 
-/* 幽灵按钮 */
-button.ghost,
-.btn-ghost {
-  border: none;
-  background: transparent;
-  color: var(--muted);
-}
-button.ghost:hover,
-.btn-ghost:hover {
-  background: var(--surface-2);
-  color: var(--text);
-}
+  /* 幽灵按钮 */
+  button.ghost,
+  .btn-ghost {
+    border: none;
+    background: transparent;
+    color: var(--muted);
+  }
+  button.ghost:hover,
+  .btn-ghost:hover {
+    background: var(--surface-2);
+    color: var(--text);
+  }
 
-/* ─── 输入框 ─── */
-input,
-textarea {
-  width: 100%;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text);
-  border-radius: 12px;
-  padding: 10px 12px;
-  outline: none;
-  font-size: 14px;
-  line-height: 1.5;
-}
-input:focus,
-textarea:focus {
-  border-color: var(--accent);
-}
-input::placeholder,
-textarea::placeholder {
-  color: var(--muted);
-}
-textarea {
-  min-height: 280px;
-  resize: vertical;
-  line-height: 1.6;
-}
+  /* ─── 输入框 ─── */
+  input,
+  textarea {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 12px;
+    padding: 10px 12px;
+    outline: none;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  input:focus,
+  textarea:focus {
+    border-color: var(--accent);
+  }
+  input::placeholder,
+  textarea::placeholder {
+    color: var(--muted);
+  }
+  textarea {
+    min-height: 280px;
+    resize: vertical;
+    line-height: 1.6;
+  }
 
-/* ─── 卡片 ─── */
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
+  /* ─── 卡片 ─── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+  }
 }

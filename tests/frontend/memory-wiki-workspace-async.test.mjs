@@ -379,7 +379,7 @@ describe('MemoryWikiWorkspace async flow', () => {
     expect(wrapper.text()).toContain('建议合并龙虾相关页面')
     expect(wrapper.text()).toContain('确认是否新建龙虾类目')
 
-    const pageRows = wrapper.findAll('.workspaceCard .entryRow')
+    const pageRows = wrapper.findAll('.uiCard .entryRow')
     await pageRows[0].trigger('click')
     await flushPromises()
     const textareas = wrapper.findAll('textarea')
@@ -440,7 +440,7 @@ describe('MemoryWikiWorkspace async flow', () => {
     await flushPromises()
     expect(wrapper.text()).toContain('巡检发现新的合并候选')
 
-    const pageRow = wrapper.findAll('.workspaceCard .entryRow').find((row) => row.text().includes('龙虾'))
+    const pageRow = wrapper.findAll('.uiCard .entryRow').find((row) => row.text().includes('龙虾'))
     await pageRow.trigger('click')
     await flushPromises()
 
@@ -483,7 +483,7 @@ describe('MemoryWikiWorkspace async flow', () => {
       expect.objectContaining({ method: 'POST', body: JSON.stringify({ versionId: 'ver-1' }) })
     )
 
-    const governanceRow = wrapper.findAll('.workspaceCard .entryRow').find((row) => row.text().includes('建议合并龙虾相关页面'))
+    const governanceRow = wrapper.findAll('.uiCard .entryRow').find((row) => row.text().includes('建议合并龙虾相关页面'))
     await governanceRow.trigger('click')
     await flushPromises()
     // R-09：治理面板卡头说明已精简删除，断言结构标题与内容
@@ -523,7 +523,7 @@ describe('MemoryWikiWorkspace async flow', () => {
     await governanceStatusSelect.setValue('')
     await flushPromises()
 
-    const governanceRow = wrapper.findAll('.workspaceCard .entryRow').find((row) => row.text().includes('建议合并龙虾相关页面'))
+    const governanceRow = wrapper.findAll('.uiCard .entryRow').find((row) => row.text().includes('建议合并龙虾相关页面'))
     await governanceRow.trigger('click')
     await flushPromises()
 
@@ -563,7 +563,7 @@ describe('MemoryWikiWorkspace async flow', () => {
     const wrapper = mount(MemoryWikiWorkspace)
     await flushPromises()
 
-    const pageRow = wrapper.findAll('.workspaceCard .entryRow').find((row) => row.text().includes('龙虾'))
+    const pageRow = wrapper.findAll('.uiCard .entryRow').find((row) => row.text().includes('龙虾'))
     await pageRow.trigger('click')
     await flushPromises()
     expect(wrapper.text()).toContain('读取记忆页面详情失败。')
@@ -580,7 +580,7 @@ describe('MemoryWikiWorkspace async flow', () => {
     const wrapper = mount(MemoryWikiWorkspace)
     await flushPromises()
 
-    const governanceRow = wrapper.findAll('.workspaceCard .entryRow').find((row) => row.text().includes('建议合并龙虾相关页面'))
+    const governanceRow = wrapper.findAll('.uiCard .entryRow').find((row) => row.text().includes('建议合并龙虾相关页面'))
     await governanceRow.trigger('click')
     await flushPromises()
     expect(wrapper.text()).toContain('内容高度重复，建议合并。')
@@ -623,12 +623,12 @@ describe('MemoryWikiWorkspace async flow', () => {
     expect(wrapper.text()).toContain('关联页面：无')
     expect(wrapper.text()).toContain('索引键：lobster')
 
-    const pageRow = wrapper.findAll('.workspaceCard .entryRow').find((row) => row.text().includes('龙虾'))
+    const pageRow = wrapper.findAll('.uiCard .entryRow').find((row) => row.text().includes('龙虾'))
     await pageRow.trigger('click')
     await flushPromises()
     expect(wrapper.text()).toContain('这页目前还没有可用的历史版本记录。')
 
-    const governanceRow = wrapper.findAll('.workspaceCard .entryRow').find((row) => row.text().includes('建议合并龙虾相关页面'))
+    const governanceRow = wrapper.findAll('.uiCard .entryRow').find((row) => row.text().includes('建议合并龙虾相关页面'))
     await governanceRow.trigger('click')
     await flushPromises()
     expect(wrapper.text()).toContain('暂无原因说明')
@@ -640,7 +640,7 @@ describe('MemoryWikiWorkspace async flow', () => {
     const wrapper = mount(MemoryWikiWorkspace)
     await flushPromises()
 
-    const pageRow = wrapper.findAll('.workspaceCard .entryRow').find((row) => row.text().includes('龙虾'))
+    const pageRow = wrapper.findAll('.uiCard .entryRow').find((row) => row.text().includes('龙虾'))
     await pageRow.trigger('click')
     await flushPromises()
 
@@ -660,7 +660,7 @@ describe('MemoryWikiWorkspace async flow', () => {
     const wrapper = mount(MemoryWikiWorkspace)
     await flushPromises()
 
-    const pageRow = wrapper.findAll('.workspaceCard .entryRow').find((row) => row.text().includes('龙虾'))
+    const pageRow = wrapper.findAll('.uiCard .entryRow').find((row) => row.text().includes('龙虾'))
     await pageRow.trigger('click')
     await flushPromises()
 
@@ -735,7 +735,7 @@ describe('MemoryWikiWorkspace async flow', () => {
     })
     const emptyWrapper = mount(MemoryWikiWorkspace)
     await flushPromises()
-    expect(emptyWrapper.findAll('.workspaceCard .entryRow').length).toBe(0)
+    expect(emptyWrapper.findAll('.uiCard .entryRow').length).toBe(0)
     expect(emptyWrapper.text()).toContain('这里暂时还没有记忆页面。')
     expect(emptyWrapper.text()).toContain('现在还没有可用的主题索引。')
     expect(emptyWrapper.text()).toContain('现在没有新的治理建议。')
@@ -765,7 +765,7 @@ describe('MemoryWikiWorkspace async flow', () => {
     await flushPromises()
     expect(wrapper.text()).toContain('读取主题索引详情失败。')
 
-    const governanceRow = wrapper.findAll('.workspaceCard .entryRow').find((row) => row.text().includes('建议合并龙虾相关页面'))
+    const governanceRow = wrapper.findAll('.uiCard .entryRow').find((row) => row.text().includes('建议合并龙虾相关页面'))
     await governanceRow.trigger('click')
     await flushPromises()
     expect(wrapper.text()).toContain('读取治理详情失败。')
@@ -785,7 +785,7 @@ describe('MemoryWikiWorkspace async flow', () => {
     const wrapper = mount(MemoryWikiWorkspace)
     await flushPromises()
 
-    const governanceRow = wrapper.findAll('.workspaceCard .entryRow').find((row) => row.text().includes('建议合并龙虾相关页面'))
+    const governanceRow = wrapper.findAll('.uiCard .entryRow').find((row) => row.text().includes('建议合并龙虾相关页面'))
     await governanceRow.trigger('click')
     await flushPromises()
 
@@ -818,7 +818,7 @@ describe('MemoryWikiWorkspace async flow', () => {
     const wrapper = mount(MemoryWikiWorkspace)
     await flushPromises()
 
-    const governanceRow = wrapper.findAll('.workspaceCard .entryRow').find((row) => row.text().includes('建议合并龙虾相关页面'))
+    const governanceRow = wrapper.findAll('.uiCard .entryRow').find((row) => row.text().includes('建议合并龙虾相关页面'))
     await governanceRow.trigger('click')
     await flushPromises()
 

@@ -1,5 +1,7 @@
 <script setup>
 import ConfirmCard from './ConfirmCard.vue'
+import UiCard from './ui/UiCard.vue'
+import UiEmpty from './ui/UiEmpty.vue'
 
 const props = defineProps({
   confirmations: { type: Array, default: () => [] },
@@ -22,11 +24,8 @@ function handleStatusChange(event) {
 </script>
 
 <template>
-  <section class="workspaceCard span2">
-    <div class="cardHead">
-      <div>
-        <div class="cardTitle">高风险确认中心</div>
-      </div>
+  <UiCard class="span2" title="高风险确认中心">
+    <template #actions>
       <div class="cardFilters">
         <select :value="filterStatus" @change="handleStatusChange">
           <option value="">全部状态</option>
@@ -35,7 +34,7 @@ function handleStatusChange(event) {
           <option value="rejected">rejected</option>
         </select>
       </div>
-    </div>
+    </template>
 
     <div class="queueSummary">
       当前待确认 <strong>{{ pendingCount }}</strong> 项
@@ -52,38 +51,13 @@ function handleStatusChange(event) {
         @reject="emit('reject', confirmation)"
       />
     </div>
-    <div v-else class="emptyDetail">现在没有排队等你点头的高风险动作，小铃湾先乖乖看着。</div>
-  </section>
+    <UiEmpty v-else icon="🛡️" text="现在没有排队等你点头的高风险动作，小铃湾先乖乖看着。" />
+  </UiCard>
 </template>
 
 <style scoped>
-.workspaceCard {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  min-height: 0;
-}
 .span2 {
   grid-column: 1 / -1;
-}
-.cardHead {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-}
-.cardTitle {
-  font-weight: 800;
-  font-size: 16px;
-}
-.cardSubhint {
-  margin-top: 4px;
-  color: var(--muted);
-  font-size: 12px;
 }
 .cardFilters {
   display: flex;
@@ -102,22 +76,5 @@ function handleStatusChange(event) {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 12px;
-}
-.emptyDetail {
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.03);
-  padding: 16px;
-  color: var(--muted);
-  display: grid;
-  place-items: center;
-  min-height: 180px;
-  text-align: center;
-  line-height: 1.6;
-}
-@media (max-width: 720px) {
-  .cardHead {
-    flex-direction: column;
-  }
 }
 </style>

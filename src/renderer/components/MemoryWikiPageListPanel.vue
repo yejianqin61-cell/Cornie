@@ -1,4 +1,7 @@
 <script setup>
+import UiCard from './ui/UiCard.vue'
+import UiEmpty from './ui/UiEmpty.vue'
+
 defineProps({
   pages: { type: Array, default: () => [] },
   selectedPageId: { type: String, default: '' },
@@ -20,11 +23,8 @@ function handleStatusChange(event) {
 </script>
 
 <template>
-  <section class="workspaceCard">
-    <div class="cardHead">
-      <div>
-        <div class="cardTitle">记忆页面</div>
-      </div>
+  <UiCard title="记忆页面">
+    <template #actions>
       <div class="cardFilters">
         <select :value="filterType" @change="handleTypeChange">
           <option value="">全部类型</option>
@@ -44,11 +44,13 @@ function handleStatusChange(event) {
           <option value="archived">archived</option>
         </select>
       </div>
-    </div>
+    </template>
 
-    <div v-if="pages.length === 0" class="emptyState">
-      这里暂时还没有记忆页面。等铃湾和主人慢慢把重要的人、事、偏好记下来，这里就会热闹起来。
-    </div>
+    <UiEmpty
+      v-if="pages.length === 0"
+      icon="📄"
+      text="这里暂时还没有记忆页面。等铃湾和主人慢慢把重要的人、事、偏好记下来，这里就会热闹起来。"
+    />
 
     <div v-else class="entryList">
       <button
@@ -64,47 +66,14 @@ function handleStatusChange(event) {
         </div>
       </button>
     </div>
-  </section>
+  </UiCard>
 </template>
 
 <style scoped>
-.workspaceCard {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-  min-height: 0;
-}
-.cardHead {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 12px;
-}
-.cardTitle {
-  font-weight: 800;
-  font-size: 16px;
-}
-.cardSubhint {
-  margin-top: 4px;
-  color: var(--muted);
-  font-size: 12px;
-}
 .cardFilters {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
-}
-.emptyState {
-  padding: 14px 16px;
-  border-radius: 16px;
-  border: 1px dashed var(--border);
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--muted);
-  line-height: 1.6;
 }
 .entryList {
   display: flex;
@@ -132,10 +101,5 @@ function handleStatusChange(event) {
   margin-top: 4px;
   font-size: 12px;
   color: var(--muted);
-}
-@media (max-width: 720px) {
-  .cardHead {
-    flex-direction: column;
-  }
 }
 </style>
