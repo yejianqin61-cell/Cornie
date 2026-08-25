@@ -75,7 +75,7 @@ import {
   updateTodoCategory,
   updateTopicIndexAliases,
   upsertEntry
-} from '../../src/renderer/api.js'
+} from '../../src/renderer/api'
 
 function successResponse(status = 200, json = {}) {
   return {
