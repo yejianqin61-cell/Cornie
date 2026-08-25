@@ -51,3 +51,10 @@ Cornie-026 已确认采用 shadcn-vue（复制进仓库模式）。Cornie-025 �
 ## 依赖
 
 - T-02（`@theme` token 就绪）；被 F-04 之后的前端编码规范任务引用。
+
+> **实施记录（2026-08-25）**：
+> - **采用手工入库路线**（未用 shadcn CLI）：运行时依赖 reka-ui + cva + clsx + tailwind-merge + lucide-vue-next 已装；基座组件为自研的 shadcn 风格组件，位于 `src/renderer/components/ui/`：UiButton（6 变体×4 尺寸，token 工具类）、UiCard（title/subhint + head/actions 插槽）、UiDialog（reka-ui 焦点圈定/Esc/aria）、UiBadge、UiScrollArea、UiSkeleton、UiEmpty；`lib/utils.js` 提供 cn()。
+> - **关键决策**：全局元素样式（style.css）移入 `@layer base`——否则未分层样式压过 Tailwind utilities 层，UiButton 工具类不生效（T-03 引入的分层修复）。
+> - 收敛：8 个 MemoryWiki 面板的 `.workspaceCard/.cardHead/.cardTitle` 三件套与 `.emptyDetail` 空态副本全部清零（grep 复核通过）；Workspace 样式块删除 332 行死副本（1246→914 行）；测试选择器 `.workspaceCard .entryRow` → `.uiCard .entryRow`（DOM 结构变化的连带更新）。
+> - 测试：`tests/frontend/ui-base.test.mjs` 新增 7 用例（Button 变体/点击、Card 插槽、Empty、Badge、Dialog 打开/关闭 emit）。
+> - 验收：`npm run build`、`npm run lint`（0 错误）、`npm run test:frontend`（22 文件 / 135 用例）、`npm run test:fast` 全部通过。
