@@ -6,9 +6,15 @@ import { useRequestGuard } from '../composables/useRequestGuard'
 // FE-05：切换日期时旧响应不得覆盖新日期内容。
 const editorGuard = useRequestGuard()
 
-function pad2(n) { return String(n).padStart(2, '0') }
-function toISODate(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}` }
-function toISOMonth(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}` }
+function pad2(n) {
+  return String(n).padStart(2, '0')
+}
+function toISODate(d) {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
+}
+function toISOMonth(d) {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`
+}
 
 const today = new Date()
 const selectedDate = ref(toISODate(today))
@@ -78,7 +84,7 @@ async function save() {
   try {
     const data = await upsertEntry(selectedDate.value, {
       userText: entry.value.userText,
-      cornieText: entry.value.cornieText
+      cornieText: entry.value.cornieText,
     })
     entry.value = data.entry
     dirty.value = false
@@ -104,9 +110,14 @@ async function regenCornie() {
   }
 }
 
-function pickDate(date) { selectedDate.value = date }
+function pickDate(date) {
+  selectedDate.value = date
+}
 
-watch(selectedDate, (d) => { loadEntry(d); loadOnThisDay(d) })
+watch(selectedDate, (d) => {
+  loadEntry(d)
+  loadOnThisDay(d)
+})
 watch(selectedMonth, () => refreshList(), { immediate: false })
 
 onMounted(async () => {
@@ -170,20 +181,12 @@ onMounted(async () => {
       <div class="editorContent">
         <div class="editPanel card">
           <div class="editPanelTitle">我的日记</div>
-          <textarea
-            v-model="entry.userText"
-            placeholder="今天发生了什么？写一点也行。"
-            @input="dirty = true"
-          />
+          <textarea v-model="entry.userText" placeholder="今天发生了什么？写一点也行。" @input="dirty = true" />
         </div>
 
         <div class="editPanel card">
           <div class="editPanelTitle">Cornie 的日记</div>
-          <textarea
-            v-model="entry.cornieText"
-            placeholder="点击「让铃湾写一篇」让铃湾帮你写。"
-            @input="dirty = true"
-          />
+          <textarea v-model="entry.cornieText" placeholder="点击「让铃湾写一篇」让铃湾帮你写。" @input="dirty = true" />
         </div>
 
         <!-- 往年今日 -->
@@ -214,16 +217,18 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.editor{
+.editor {
   height: 100%;
   display: flex;
   flex-direction: column;
   gap: 12px;
   min-height: 0;
 }
-.backBtn{ align-self: flex-start; }
+.backBtn {
+  align-self: flex-start;
+}
 
-.topBar{
+.topBar {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -231,21 +236,35 @@ onMounted(async () => {
   padding: 14px 18px;
   flex-wrap: wrap;
 }
-.topTitle{ font-size: 20px; font-weight: 800; }
-.topHint{ margin-top: 4px; font-size: 12px; color: var(--muted); }
-.topActions{ display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.monthInput{ width: 140px; }
+.topTitle {
+  font-size: 20px;
+  font-weight: 800;
+}
+.topHint {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.topActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.monthInput {
+  width: 140px;
+}
 
-.errorMsg{
+.errorMsg {
   padding: 10px 14px;
   border-radius: 12px;
-  border: 1px solid rgba(217,106,92,.25);
-  background: rgba(217,106,92,.06);
+  border: 1px solid rgba(217, 106, 92, 0.25);
+  background: rgba(217, 106, 92, 0.06);
   color: var(--danger);
   font-size: 13px;
 }
 
-.editorMain{
+.editorMain {
   flex: 1;
   display: grid;
   grid-template-columns: 230px 1fr;
@@ -253,18 +272,41 @@ onMounted(async () => {
   min-height: 0;
 }
 
-.dateSidebar{ display: flex; flex-direction: column; overflow: hidden; }
-.sidebarHead{ padding: 12px 14px 8px; border-bottom: 1px solid var(--border); }
-.sidebarTitle{ font-weight: 700; font-size: 14px; }
-.sidebarHint{ font-size: 11px; color: var(--muted); margin-top: 3px; }
-.sidebarList{
-  flex: 1; overflow-y: auto; padding: 8px;
-  display: flex; flex-direction: column; gap: 4px;
+.dateSidebar {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
-.sidebarList::-webkit-scrollbar{ width: 3px; }
-.sidebarList::-webkit-scrollbar-thumb{ background: rgba(0,0,0,.08); border-radius: 999px; }
+.sidebarHead {
+  padding: 12px 14px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.sidebarTitle {
+  font-weight: 700;
+  font-size: 14px;
+}
+.sidebarHint {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 3px;
+}
+.sidebarList {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.sidebarList::-webkit-scrollbar {
+  width: 3px;
+}
+.sidebarList::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 999px;
+}
 
-.dateRow{
+.dateRow {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -278,40 +320,108 @@ onMounted(async () => {
   cursor: pointer;
   font-size: 13px;
 }
-.dateRow:hover{ background: var(--surface-2); }
-.dateRow.active{
-  border-color: rgba(232,133,106,.25);
-  background: rgba(232,133,106,.08);
+.dateRow:hover {
+  background: var(--surface-2);
 }
-.datePills{ display: flex; gap: 4px; }
-.dp{ font-size: 10px; padding: 1px 6px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
-.dp2{ border-color: rgba(232,133,106,.30); color: var(--accent); }
+.dateRow.active {
+  border-color: rgba(232, 133, 106, 0.25);
+  background: rgba(232, 133, 106, 0.08);
+}
+.datePills {
+  display: flex;
+  gap: 4px;
+}
+.dp {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+.dp2 {
+  border-color: rgba(232, 133, 106, 0.3);
+  color: var(--accent);
+}
 
-.editorContent{
+.editorContent {
   display: flex;
   flex-direction: column;
   gap: 12px;
   overflow-y: auto;
   padding-right: 2px;
 }
-.editorContent::-webkit-scrollbar{ width: 4px; }
-.editorContent::-webkit-scrollbar-thumb{ background: rgba(0,0,0,.08); border-radius: 999px; }
+.editorContent::-webkit-scrollbar {
+  width: 4px;
+}
+.editorContent::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 999px;
+}
 
-.editPanel{ padding: 16px; display: flex; flex-direction: column; gap: 10px; }
-.editPanelTitle{ font-weight: 700; font-size: 15px; }
-.editPanelHint{ font-weight: 400; font-size: 12px; color: var(--muted); margin-left: 6px; }
+.editPanel {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.editPanelTitle {
+  font-weight: 700;
+  font-size: 15px;
+}
+.editPanelHint {
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--muted);
+  margin-left: 6px;
+}
 
-.otdPanel{ padding: 16px; }
-.otdEmpty{ color: var(--muted); font-size: 13px; padding: 8px 0; }
-.otdList{ display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
-.otdItem{ padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; }
-.otdDate{ font-weight: 700; font-size: 13px; margin-bottom: 6px; }
-.otdGrid{ display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13px; }
-.otdL{ font-size: 11px; color: var(--muted); display: block; margin-bottom: 2px; }
-.otdErr{ color: var(--danger); font-size: 12px; }
+.otdPanel {
+  padding: 16px;
+}
+.otdEmpty {
+  color: var(--muted);
+  font-size: 13px;
+  padding: 8px 0;
+}
+.otdList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+.otdItem {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.otdDate {
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+.otdGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  font-size: 13px;
+}
+.otdL {
+  font-size: 11px;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 2px;
+}
+.otdErr {
+  color: var(--danger);
+  font-size: 12px;
+}
 
-@media (max-width: 900px){
-  .editorMain{ grid-template-columns: 1fr; }
-  .otdGrid{ grid-template-columns: 1fr; }
+@media (max-width: 900px) {
+  .editorMain {
+    grid-template-columns: 1fr;
+  }
+  .otdGrid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

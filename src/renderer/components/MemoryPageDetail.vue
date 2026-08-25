@@ -5,11 +5,11 @@ import {
   createMemoryWikiPage,
   getMemoryWikiPage,
   getMemoryWikiPageSourceTrace,
-  updateMemoryWikiPage
+  updateMemoryWikiPage,
 } from '../api'
 
 const props = defineProps({
-  id: { type: String, default: '' }
+  id: { type: String, default: '' },
 })
 
 const emit = defineEmits(['back', 'created', 'deleted', 'open-observation', 'open-memory', 'open-chat-source'])
@@ -19,26 +19,26 @@ const PAGE_TYPES = [
     value: 'identity_profile',
     label: '关于你',
     icon: '✨',
-    hint: '记下你的名字、身份、你和铃湾的关系，或者你最近的人生状态。'
+    hint: '记下你的名字、身份、你和铃湾的关系，或者你最近的人生状态。',
   },
   {
     value: 'identity_person',
     label: '重要的人',
     icon: '👤',
-    hint: '记下你在意的人、你们的关系，还有你想保留的共同经历。'
+    hint: '记下你在意的人、你们的关系，还有你想保留的共同经历。',
   },
   {
     value: 'identity_preference',
     label: '你的偏好',
     icon: '👍',
-    hint: '记下你喜欢什么、不喜欢什么，或者你更习惯怎样被照顾。'
+    hint: '记下你喜欢什么、不喜欢什么，或者你更习惯怎样被照顾。',
   },
   {
     value: 'identity_trait',
     label: '你的特征',
     icon: '🧩',
-    hint: '记下比较稳定的性格、表达方式，或你面对压力时的样子。'
-  }
+    hint: '记下比较稳定的性格、表达方式，或你面对压力时的样子。',
+  },
 ]
 
 // 普通记忆页类型（非身份类），与 identity 四类在列表与详情中做分组/标签差异表达
@@ -47,38 +47,38 @@ const ORDINARY_PAGE_TYPES = [
     value: 'event',
     label: '生活事件',
     icon: '📖',
-    hint: '记下一件发生过、以后想再翻回来的经历。'
+    hint: '记下一件发生过、以后想再翻回来的经历。',
   },
   {
     value: 'topic',
     label: '主题',
     icon: '🗂️',
-    hint: '把一个反复出现的话题收成一页，方便以后慢慢看。'
+    hint: '把一个反复出现的话题收成一页，方便以后慢慢看。',
   },
   {
     value: 'goal',
     label: '目标',
     icon: '🎯',
-    hint: '记下你想推进的目标，或这段时间最想做成的事。'
+    hint: '记下你想推进的目标，或这段时间最想做成的事。',
   },
   {
     value: 'project',
     label: '项目',
     icon: '📁',
-    hint: '为一件正在进行的事或一段计划单独留一页。'
+    hint: '为一件正在进行的事或一段计划单独留一页。',
   },
   {
     value: 'routine',
     label: '习惯',
     icon: '🔁',
-    hint: '记下你稳定的习惯和日常节奏，铃湾会慢慢学着照顾它。'
+    hint: '记下你稳定的习惯和日常节奏，铃湾会慢慢学着照顾它。',
   },
   {
     value: 'need',
     label: '需要',
     icon: '💡',
-    hint: '记下你需要什么、在意什么，方便铃湾更好地照顾你。'
-  }
+    hint: '记下你需要什么、在意什么，方便铃湾更好地照顾你。',
+  },
 ]
 
 const ALL_PAGE_TYPES = [...PAGE_TYPES, ...ORDINARY_PAGE_TYPES]
@@ -90,7 +90,7 @@ const PAGE_TYPE_COPY = {
     guide: {
       eyebrow: '最核心的一页',
       title: '这里最适合写“你是谁”',
-      body: '名字、你和铃湾的关系、你最近的人生状态，或者你最希望被怎样记住，都可以慢慢放在这里。'
+      body: '名字、你和铃湾的关系、你最近的人生状态，或者你最希望被怎样记住，都可以慢慢放在这里。',
     },
     titleLabel: '这页想记住的名字或主题',
     titlePlaceholder: '比如：叶健钦、现在的我、铃湾记住的我',
@@ -102,14 +102,14 @@ const PAGE_TYPE_COPY = {
       '你叫什么？如果铃湾平时有更亲近的叫法，也可以一起写下来。',
       '你和铃湾是什么关系？你希望她怎样理解你们之间的连接？',
       '你最近正在经历什么阶段？生活、学业、工作、情绪都可以简单提一下。',
-      '你现在最在意什么？最近最想守住、推进，或最想被理解的是什么？'
-    ]
+      '你现在最在意什么？最近最想守住、推进，或最想被理解的是什么？',
+    ],
   },
   identity_person: {
     guide: {
       eyebrow: '重要的人',
       title: '把这个人留得更清楚一点',
-      body: '可以写他是谁、你们是什么关系、哪些共同经历最值得被留下来。'
+      body: '可以写他是谁、你们是什么关系、哪些共同经历最值得被留下来。',
     },
     titleLabel: '这个人的名字',
     titlePlaceholder: '比如：钟奕菲、大学室友、妈妈',
@@ -121,14 +121,14 @@ const PAGE_TYPE_COPY = {
       '你们是什么关系？这个人最常以什么身份出现在你的生活里？',
       '你对他的第一印象或最深印象是什么？',
       '你们之间有什么共同经历，是你很想留下来的？',
-      '这个人为什么重要？这段关系对你意味着什么？'
-    ]
+      '这个人为什么重要？这段关系对你意味着什么？',
+    ],
   },
   identity_preference: {
     guide: {
       eyebrow: '你的偏好',
       title: '把舒服和不舒服都说清楚',
-      body: '喜欢什么、不喜欢什么、怎样的陪伴方式会更让你安心，这里都可以记下来。'
+      body: '喜欢什么、不喜欢什么、怎样的陪伴方式会更让你安心，这里都可以记下来。',
     },
     titleLabel: '这个偏好的名字',
     titlePlaceholder: '比如：喜欢被温柔回应、讨厌临时变动',
@@ -136,13 +136,13 @@ const PAGE_TYPE_COPY = {
     summaryPlaceholder: '先用一两句话写下这个偏好为什么重要。',
     contentLabel: '更完整地写下这个偏好',
     contentPlaceholder: '可以写这个偏好出现在哪些情景、什么会让你更舒服、什么会让你不舒服。',
-    prompts: []
+    prompts: [],
   },
   identity_trait: {
     guide: {
       eyebrow: '你的特征',
       title: '把稳定的小习惯和性格样子留下来',
-      body: '比如你的表达方式、习惯、压力大的时候会有什么反应，这些都能帮铃湾更懂你。'
+      body: '比如你的表达方式、习惯、压力大的时候会有什么反应，这些都能帮铃湾更懂你。',
     },
     titleLabel: '这个特征的名字',
     titlePlaceholder: '比如：容易心软、睡前爱刷手机、压力大时会沉默',
@@ -150,15 +150,15 @@ const PAGE_TYPE_COPY = {
     summaryPlaceholder: '先用一两句话写下这个特征最常出现的样子。',
     contentLabel: '更完整地写下这个特征',
     contentPlaceholder: '可以写这个特征常出现在哪些时候、它怎样影响你的表达、情绪或选择。',
-    prompts: []
-  }
+    prompts: [],
+  },
 }
 
 const DEFAULT_PAGE_COPY = {
   guide: {
     eyebrow: '一页想留住的记忆',
     title: '把这件想记住的事写下来',
-    body: '可以写下发生了什么、为什么想留住它，也可以留一点以后翻到这里时能想起来的线索。'
+    body: '可以写下发生了什么、为什么想留住它，也可以留一点以后翻到这里时能想起来的线索。',
   },
   titleLabel: '这页记忆的名字',
   titlePlaceholder: '比如：一次旅行、最近在追的剧、想学的新东西',
@@ -166,7 +166,7 @@ const DEFAULT_PAGE_COPY = {
   summaryPlaceholder: '先用一两句话写下这件事最值得记住的地方。',
   contentLabel: '更完整地写下这件事',
   contentPlaceholder: '可以写这件事发生在什么时候、当时是怎样的，以及你为什么想把它留在这里。',
-  prompts: []
+  prompts: [],
 }
 
 function createEmptyPage() {
@@ -174,7 +174,7 @@ function createEmptyPage() {
     pageType: 'identity_profile',
     title: '',
     summary: '',
-    content: ''
+    content: '',
   }
 }
 
@@ -190,16 +190,10 @@ const sourceTrace = ref(null)
 
 const isCreateMode = computed(() => !props.id)
 const isIdentityType = computed(() => Boolean(page.value && IDENTITY_PAGE_TYPES.has(page.value.pageType)))
-const pageTypeMeta = computed(() =>
-  ALL_PAGE_TYPES.find((item) => item.value === page.value?.pageType) || null
-)
+const pageTypeMeta = computed(() => ALL_PAGE_TYPES.find((item) => item.value === page.value?.pageType) || null)
 const pageTypeIcon = computed(() => pageTypeMeta.value?.icon || '📌')
-const pageTypeHint = computed(() =>
-  pageTypeMeta.value?.hint || '把这页记忆写成以后想再翻回来的样子。'
-)
-const pageTypeLabel = computed(() =>
-  pageTypeMeta.value?.label || '长期记忆'
-)
+const pageTypeHint = computed(() => pageTypeMeta.value?.hint || '把这页记忆写成以后想再翻回来的样子。')
+const pageTypeLabel = computed(() => pageTypeMeta.value?.label || '长期记忆')
 const pageCopy = computed(() => PAGE_TYPE_COPY[page.value?.pageType] || DEFAULT_PAGE_COPY)
 const pageGuide = computed(() => pageCopy.value.guide)
 const titleLabel = computed(() => pageCopy.value.titleLabel)
@@ -213,11 +207,15 @@ const submitLabel = computed(() => {
   if (saving.value) return isCreateMode.value ? '创建中…' : '保存中…'
   return isCreateMode.value ? '创建这页记忆' : '保存修改'
 })
-const relatedPages = computed(() => Array.isArray(sourceTrace.value?.relatedPages) ? sourceTrace.value.relatedPages : [])
-const chatSources = computed(() => Array.isArray(sourceTrace.value?.chatSources) ? sourceTrace.value.chatSources : [])
-const observationSources = computed(() => Array.isArray(sourceTrace.value?.observationSources) ? sourceTrace.value.observationSources : [])
-const hasSourceSummary = computed(() =>
-  relatedPages.value.length > 0 || chatSources.value.length > 0 || observationSources.value.length > 0
+const relatedPages = computed(() =>
+  Array.isArray(sourceTrace.value?.relatedPages) ? sourceTrace.value.relatedPages : []
+)
+const chatSources = computed(() => (Array.isArray(sourceTrace.value?.chatSources) ? sourceTrace.value.chatSources : []))
+const observationSources = computed(() =>
+  Array.isArray(sourceTrace.value?.observationSources) ? sourceTrace.value.observationSources : []
+)
+const hasSourceSummary = computed(
+  () => relatedPages.value.length > 0 || chatSources.value.length > 0 || observationSources.value.length > 0
 )
 
 async function loadPage() {
@@ -243,13 +241,13 @@ async function loadPage() {
       pageType: loaded?.pageType || 'identity_profile',
       title: loaded?.title || '',
       summary: loaded?.summary || '',
-      content: loaded?.content || loaded?.body || ''
+      content: loaded?.content || loaded?.body || '',
     }
     const traceData = await getMemoryWikiPageSourceTrace(props.id)
     sourceTrace.value = traceData?.trace || null
     dirty.value = false
     mode.value = 'read' // R-06：查看已有记忆默认阅读态
-  } catch (e) {
+  } catch {
     // 加载失败：绝不拿空表单覆盖真实页面，只展示纯错误态
     page.value = null
     loadFailed.value = true
@@ -282,7 +280,9 @@ function summarizePageType(pageType) {
 }
 
 function shortPreview(text, maxLen = 56) {
-  const normalized = String(text || '').replace(/\s+/g, ' ').trim()
+  const normalized = String(text || '')
+    .replace(/\s+/g, ' ')
+    .trim()
   if (!normalized) return '铃湾当时没有留下更多文字。'
   return normalized.length > maxLen ? `${normalized.slice(0, maxLen)}…` : normalized
 }
@@ -300,7 +300,7 @@ async function save() {
       pageType: page.value.pageType,
       title: page.value.title.trim(),
       summary: page.value.summary.trim(),
-      content: page.value.content.trim()
+      content: page.value.content.trim(),
     }
 
     if (isCreateMode.value) {
@@ -316,7 +316,7 @@ async function save() {
     // R-06：保存成功回到阅读态（重新加载最新数据）
     mode.value = 'read'
     await loadPage()
-  } catch (e) {
+  } catch {
     errorMsg.value = isCreateMode.value
       ? '这页记忆还没能存好，我们换个标题或者稍后再试一次吧。'
       : '这次修改还没保存成功，不过内容还在，我们再试一次就好。'
@@ -333,7 +333,7 @@ async function archivePage() {
   try {
     await archiveMemoryWikiPage(props.id)
     emit('deleted')
-  } catch (e) {
+  } catch {
     errorMsg.value = '这页记忆这次还没收起来，我们稍后再试一次吧。'
   } finally {
     deleting.value = false
@@ -378,17 +378,16 @@ onMounted(loadPage)
     </div>
     <div v-else-if="page" class="mdetailCard card">
       <div class="mdetailIntro">
-        <div class="mdetailMode">{{ isCreateMode ? '新建长期记忆' : (mode === 'edit' ? '编辑长期记忆' : '长期记忆') }}</div>
+        <div class="mdetailMode">
+          {{ isCreateMode ? '新建长期记忆' : mode === 'edit' ? '编辑长期记忆' : '长期记忆' }}
+        </div>
         <div class="mdetailHint">{{ pageTypeHint }}</div>
         <div class="mdetailTypePill" :class="{ mdetailTypePillOrdinary: !isIdentityType }">
           {{ pageTypeIcon }} {{ pageTypeLabel }}
         </div>
       </div>
 
-      <section
-        v-if="confirmDelete && !isCreateMode"
-        class="mdetailConfirm cardShell"
-      >
+      <section v-if="confirmDelete && !isCreateMode" class="mdetailConfirm cardShell">
         <div class="mdetailConfirmTitle">要把这页记忆收起来吗？</div>
         <div class="mdetailConfirmHint">收起后它会先从普通列表里消失，你写下的内容本身不会被改动。</div>
         <div class="mdetailConfirmActions">
@@ -401,146 +400,146 @@ onMounted(loadPage)
 
       <!-- R-06：编辑态（引导 + 来源 + 表单） -->
       <template v-if="mode === 'edit'">
-        <section class="mdetailGuide" :class="{ mdetailGuidePrimary: page.pageType === 'identity_profile', mdetailGuideOrdinary: !isIdentityType }">
-        <div class="mdetailGuideEyebrow">{{ pageGuide.eyebrow }}</div>
-        <div class="mdetailGuideTitle">{{ pageGuide.title }}</div>
-        <div class="mdetailGuideBody">{{ pageGuide.body }}</div>
-      </section>
+        <section
+          class="mdetailGuide"
+          :class="{ mdetailGuidePrimary: page.pageType === 'identity_profile', mdetailGuideOrdinary: !isIdentityType }"
+        >
+          <div class="mdetailGuideEyebrow">{{ pageGuide.eyebrow }}</div>
+          <div class="mdetailGuideTitle">{{ pageGuide.title }}</div>
+          <div class="mdetailGuideBody">{{ pageGuide.body }}</div>
+        </section>
 
-      <section v-if="page.pageType === 'identity_profile'" class="mdetailGuide mdetailGuideProfile">
-        <div class="mdetailGuideEyebrow">写“关于你”的时候，可以先留下这些</div>
-        <div class="mdetailPromptList">
-          <div v-for="item in pagePrompts" :key="item" class="mdetailPromptItem">{{ item }}</div>
-        </div>
-      </section>
-
-      <section v-if="page.pageType === 'identity_person'" class="mdetailGuide mdetailGuidePerson">
-        <div class="mdetailGuideEyebrow">写这个人的时候，可以顺着想</div>
-        <div class="mdetailPromptList">
-          <div v-for="item in pagePrompts" :key="item" class="mdetailPromptItem">{{ item }}</div>
-        </div>
-      </section>
-
-      <section v-if="!isCreateMode" class="mdetailSource cardShell">
-        <div class="sectionTitle">这页记忆是怎么来的</div>
-        <div v-if="hasSourceSummary" class="sourceSummaryGrid">
-          <div class="sourceSummaryCard">
-            <div class="sourceSummaryValue">{{ chatSources.length }}</div>
-            <div class="sourceSummaryLabel">聊天来源</div>
+        <section v-if="page.pageType === 'identity_profile'" class="mdetailGuide mdetailGuideProfile">
+          <div class="mdetailGuideEyebrow">写“关于你”的时候，可以先留下这些</div>
+          <div class="mdetailPromptList">
+            <div v-for="item in pagePrompts" :key="item" class="mdetailPromptItem">{{ item }}</div>
           </div>
-          <div class="sourceSummaryCard">
-            <div class="sourceSummaryValue">{{ observationSources.length }}</div>
-            <div class="sourceSummaryLabel">观察记录</div>
-          </div>
-          <div class="sourceSummaryCard">
-            <div class="sourceSummaryValue">{{ relatedPages.length }}</div>
-            <div class="sourceSummaryLabel">相关记忆</div>
-          </div>
-        </div>
-        <div v-else class="mdetailMuted">这页记忆目前更像是你主动写下来的，铃湾还没有翻出更多来源线索。</div>
+        </section>
 
-        <div v-if="chatSources.length > 0" class="sourceBlock">
-          <div class="sourceBlockTitle">铃湾是从这些聊天里慢慢记住它的</div>
-          <div class="sourceList">
-            <div
-              v-for="item in chatSources.slice(0, 3)"
-              :key="`${item.date}-${item.messageId}`"
-              class="sourceItem"
-              :class="{ sourceItemLink: item.date }"
-              @click="item.date && emit('open-chat-source', { date: item.date, messageId: item.messageId || '' })"
-            >
-              <div class="sourceItemTitle">{{ item.date || '聊天记录' }}</div>
-              <div class="sourceItemBody">
-                <span>{{ shortPreview(item.preview || item.title) }}</span>
-                <span v-if="item.date" class="sourceItemHint">点开看看当时怎么说的</span>
+        <section v-if="page.pageType === 'identity_person'" class="mdetailGuide mdetailGuidePerson">
+          <div class="mdetailGuideEyebrow">写这个人的时候，可以顺着想</div>
+          <div class="mdetailPromptList">
+            <div v-for="item in pagePrompts" :key="item" class="mdetailPromptItem">{{ item }}</div>
+          </div>
+        </section>
+
+        <section v-if="!isCreateMode" class="mdetailSource cardShell">
+          <div class="sectionTitle">这页记忆是怎么来的</div>
+          <div v-if="hasSourceSummary" class="sourceSummaryGrid">
+            <div class="sourceSummaryCard">
+              <div class="sourceSummaryValue">{{ chatSources.length }}</div>
+              <div class="sourceSummaryLabel">聊天来源</div>
+            </div>
+            <div class="sourceSummaryCard">
+              <div class="sourceSummaryValue">{{ observationSources.length }}</div>
+              <div class="sourceSummaryLabel">观察记录</div>
+            </div>
+            <div class="sourceSummaryCard">
+              <div class="sourceSummaryValue">{{ relatedPages.length }}</div>
+              <div class="sourceSummaryLabel">相关记忆</div>
+            </div>
+          </div>
+          <div v-else class="mdetailMuted">这页记忆目前更像是你主动写下来的，铃湾还没有翻出更多来源线索。</div>
+
+          <div v-if="chatSources.length > 0" class="sourceBlock">
+            <div class="sourceBlockTitle">铃湾是从这些聊天里慢慢记住它的</div>
+            <div class="sourceList">
+              <div
+                v-for="item in chatSources.slice(0, 3)"
+                :key="`${item.date}-${item.messageId}`"
+                class="sourceItem"
+                :class="{ sourceItemLink: item.date }"
+                @click="item.date && emit('open-chat-source', { date: item.date, messageId: item.messageId || '' })"
+              >
+                <div class="sourceItemTitle">{{ item.date || '聊天记录' }}</div>
+                <div class="sourceItemBody">
+                  <span>{{ shortPreview(item.preview || item.title) }}</span>
+                  <span v-if="item.date" class="sourceItemHint">点开看看当时怎么说的</span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div v-if="observationSources.length > 0" class="sourceBlock">
-          <div class="sourceBlockTitle">这些观察记录也在帮铃湾确认它</div>
-          <div class="sourceList">
-            <div
-              v-for="item in observationSources.slice(0, 3)"
-              :key="item.observationId || item.title"
-              class="sourceItem"
-              :class="{ sourceItemLink: item.observationId }"
-              @click="item.observationId && emit('open-observation', item.observationId)"
-            >
-              <div class="sourceItemTitle">{{ item.title || '观察记录' }}</div>
-              <div class="sourceItemBody">
-                <span>{{ item.date || '没有日期信息' }}</span>
-                <span v-if="item.observationId" class="sourceItemHint">点开看看当时记下了什么</span>
+          <div v-if="observationSources.length > 0" class="sourceBlock">
+            <div class="sourceBlockTitle">这些观察记录也在帮铃湾确认它</div>
+            <div class="sourceList">
+              <div
+                v-for="item in observationSources.slice(0, 3)"
+                :key="item.observationId || item.title"
+                class="sourceItem"
+                :class="{ sourceItemLink: item.observationId }"
+                @click="item.observationId && emit('open-observation', item.observationId)"
+              >
+                <div class="sourceItemTitle">{{ item.title || '观察记录' }}</div>
+                <div class="sourceItemBody">
+                  <span>{{ item.date || '没有日期信息' }}</span>
+                  <span v-if="item.observationId" class="sourceItemHint">点开看看当时记下了什么</span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div v-if="relatedPages.length > 0" class="sourceBlock">
-          <div class="sourceBlockTitle">和它有关的记忆</div>
-          <div class="relatedPageList">
-            <div
-              v-for="item in relatedPages"
-              :key="item.pageId || item.id"
-              class="relatedPageItem"
-              :class="{ sourceItemLink: item.pageId || item.id }"
-              @click="(item.pageId || item.id) && emit('open-memory', item.pageId || item.id)"
-            >
-              <div class="relatedPageTitle">{{ item.title || '未命名记忆' }}</div>
-              <div class="relatedPageMeta">
-                <span>{{ summarizePageType(item.pageType) }}</span>
-                <span v-if="item.pageId || item.id" class="sourceItemHint">点开继续看看这段记忆</span>
+          <div v-if="relatedPages.length > 0" class="sourceBlock">
+            <div class="sourceBlockTitle">和它有关的记忆</div>
+            <div class="relatedPageList">
+              <div
+                v-for="item in relatedPages"
+                :key="item.pageId || item.id"
+                class="relatedPageItem"
+                :class="{ sourceItemLink: item.pageId || item.id }"
+                @click="(item.pageId || item.id) && emit('open-memory', item.pageId || item.id)"
+              >
+                <div class="relatedPageTitle">{{ item.title || '未命名记忆' }}</div>
+                <div class="relatedPageMeta">
+                  <span>{{ summarizePageType(item.pageType) }}</span>
+                  <span v-if="item.pageId || item.id" class="sourceItemHint">点开继续看看这段记忆</span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <label class="mdetailField">
-        <span>记忆类型</span>
-        <select v-model="page.pageType" @change="markDirty">
-          <optgroup label="关于你的记忆">
-            <option v-for="item in PAGE_TYPES" :key="item.value" :value="item.value">{{ item.label }}</option>
-          </optgroup>
-          <optgroup label="其他想记住的">
-            <option v-for="item in ORDINARY_PAGE_TYPES" :key="item.value" :value="item.value">{{ item.label }}</option>
-          </optgroup>
-        </select>
-      </label>
+        <label class="mdetailField">
+          <span>记忆类型</span>
+          <select v-model="page.pageType" @change="markDirty">
+            <optgroup label="关于你的记忆">
+              <option v-for="item in PAGE_TYPES" :key="item.value" :value="item.value">{{ item.label }}</option>
+            </optgroup>
+            <optgroup label="其他想记住的">
+              <option v-for="item in ORDINARY_PAGE_TYPES" :key="item.value" :value="item.value">
+                {{ item.label }}
+              </option>
+            </optgroup>
+          </select>
+        </label>
 
-      <label class="mdetailField">
-        <span>{{ titleLabel }}</span>
-        <input
-          v-model="page.title"
-          class="mdetailTitle"
-          :placeholder="titlePlaceholder"
-          @input="markDirty"
-        />
-      </label>
+        <label class="mdetailField">
+          <span>{{ titleLabel }}</span>
+          <input v-model="page.title" class="mdetailTitle" :placeholder="titlePlaceholder" @input="markDirty" />
+        </label>
 
-      <label class="mdetailField">
-        <span>{{ summaryLabel }}</span>
-        <textarea
-          v-model="page.summary"
-          class="mdetailSummary"
-          rows="3"
-          :placeholder="summaryPlaceholder"
-          @input="markDirty"
-        />
-      </label>
+        <label class="mdetailField">
+          <span>{{ summaryLabel }}</span>
+          <textarea
+            v-model="page.summary"
+            class="mdetailSummary"
+            rows="3"
+            :placeholder="summaryPlaceholder"
+            @input="markDirty"
+          />
+        </label>
 
-      <label class="mdetailField mdetailFieldGrow">
-        <span>{{ contentLabel }}</span>
-        <textarea
-          v-model="page.content"
-          class="mdetailContent"
-          :placeholder="contentPlaceholder"
-          @input="markDirty"
-        />
-      </label>
+        <label class="mdetailField mdetailFieldGrow">
+          <span>{{ contentLabel }}</span>
+          <textarea
+            v-model="page.content"
+            class="mdetailContent"
+            :placeholder="contentPlaceholder"
+            @input="markDirty"
+          />
+        </label>
 
-      <div v-if="errorMsg" class="mdetailError">{{ errorMsg }}</div>
+        <div v-if="errorMsg" class="mdetailError">{{ errorMsg }}</div>
       </template>
 
       <!-- R-06：阅读态（干净排版 + 来源/相关页弱化展示） -->
@@ -562,7 +561,9 @@ onMounted(loadPage)
                 @click="item.date && emit('open-chat-source', { date: item.date, messageId: item.messageId || '' })"
               >
                 <div class="sourceItemTitle">{{ item.date || '聊天记录' }}</div>
-                <div class="sourceItemBody"><span>{{ shortPreview(item.preview || item.title) }}</span></div>
+                <div class="sourceItemBody">
+                  <span>{{ shortPreview(item.preview || item.title) }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -601,7 +602,7 @@ onMounted(loadPage)
 </template>
 
 <style scoped>
-.mdetail{
+.mdetail {
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -609,7 +610,7 @@ onMounted(loadPage)
   overflow: hidden;
 }
 
-.mdetailHead{
+.mdetailHead {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -620,27 +621,31 @@ onMounted(loadPage)
   border-radius: 18px;
 }
 
-.mdetailActions{
+.mdetailActions {
   display: flex;
   gap: 8px;
 }
 
-.mdetailLoading{ text-align: center; color: var(--muted); padding: 40px; }
+.mdetailLoading {
+  text-align: center;
+  color: var(--muted);
+  padding: 40px;
+}
 
-.mdetailError{
+.mdetailError {
   padding: 10px 14px;
   border-radius: 12px;
-  border: 1px solid rgba(217,106,92,.25);
-  background: rgba(217,106,92,.06);
+  border: 1px solid rgba(217, 106, 92, 0.25);
+  background: rgba(217, 106, 92, 0.06);
   color: var(--danger);
   font-size: 13px;
 }
 
-.mdetailLoadError{
+.mdetailLoadError {
   flex: 1;
-  border: 1px dashed rgba(217,106,92,.35);
+  border: 1px dashed rgba(217, 106, 92, 0.35);
   border-radius: 16px;
-  background: rgba(217,106,92,.05);
+  background: rgba(217, 106, 92, 0.05);
   padding: 40px 24px;
   display: flex;
   flex-direction: column;
@@ -650,25 +655,25 @@ onMounted(loadPage)
   text-align: center;
 }
 
-.mdetailLoadErrorTitle{
+.mdetailLoadErrorTitle {
   font-size: 16px;
   font-weight: 800;
   color: var(--text);
 }
 
-.mdetailLoadErrorHint{
+.mdetailLoadErrorHint {
   font-size: 13px;
   color: var(--muted);
   line-height: 1.6;
 }
 
-.mdetailLoadErrorActions{
+.mdetailLoadErrorActions {
   margin-top: 10px;
   display: flex;
   gap: 10px;
 }
 
-.mdetailCard{
+.mdetailCard {
   flex: 1;
   overflow-y: auto;
   padding: 20px;
@@ -677,42 +682,42 @@ onMounted(loadPage)
   gap: 14px;
 }
 
-.mdetailIntro{
+.mdetailIntro {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
 /* R-06：阅读态 */
-.mdetailRead{
+.mdetailRead {
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
-.mdetailReadTitle{
+.mdetailReadTitle {
   font-size: 20px;
   font-weight: 800;
   line-height: 1.4;
 }
-.mdetailReadSummary{
+.mdetailReadSummary {
   font-size: 14px;
   color: var(--muted);
   line-height: 1.6;
 }
-.mdetailReadContent{
+.mdetailReadContent {
   font-size: 14px;
   line-height: 1.8;
   white-space: pre-wrap;
-  word-break: break-word;
-  color: #3A3A3A;
+  overflow-wrap: anywhere;
+  color: #3a3a3a;
 }
 
-.mdetailMode{
+.mdetailMode {
   font-size: 18px;
   font-weight: 800;
 }
 
-.mdetailTypePill{
+.mdetailTypePill {
   align-self: flex-start;
   padding: 5px 10px;
   border-radius: 999px;
@@ -721,215 +726,218 @@ onMounted(loadPage)
   font-size: 12px;
 }
 
-.mdetailTypePillOrdinary{
-  background: rgba(0,0,0,.05);
+.mdetailTypePillOrdinary {
+  background: rgba(0, 0, 0, 0.05);
   color: var(--muted);
 }
 
-.mdetailHint{
+.mdetailHint {
   font-size: 13px;
   color: var(--muted);
   line-height: 1.6;
 }
 
-.mdetailGuide{
+.mdetailGuide {
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 16px;
-  background: linear-gradient(180deg, rgba(255,252,249,.95), #fff);
+  background: linear-gradient(180deg, rgba(255, 252, 249, 0.95), #ffffff);
 }
 
-.mdetailGuidePrimary{
-  border-color: rgba(232,133,106,.18);
-  background: linear-gradient(135deg, rgba(232,133,106,.14), rgba(255,248,244,.96));
+.mdetailGuidePrimary {
+  border-color: rgba(232, 133, 106, 0.18);
+  background: linear-gradient(135deg, rgba(232, 133, 106, 0.14), rgba(255, 248, 244, 0.96));
 }
 
-.mdetailGuidePerson{
-  background: linear-gradient(180deg, rgba(255,250,246,.92), #fff);
+.mdetailGuidePerson {
+  background: linear-gradient(180deg, rgba(255, 250, 246, 0.92), #ffffff);
 }
 
-.mdetailGuideProfile{
-  background: linear-gradient(180deg, rgba(255,248,242,.94), #fff);
+.mdetailGuideProfile {
+  background: linear-gradient(180deg, rgba(255, 248, 242, 0.94), #ffffff);
 }
 
-.mdetailGuideOrdinary{
-  background: linear-gradient(180deg, rgba(244,247,250,.94), #fff);
-  border-color: rgba(120,140,160,.16);
+.mdetailGuideOrdinary {
+  background: linear-gradient(180deg, rgba(244, 247, 250, 0.94), #ffffff);
+  border-color: rgba(120, 140, 160, 0.16);
 }
 
-.mdetailGuideEyebrow{
+.mdetailGuideEyebrow {
   font-size: 11px;
-  letter-spacing: .04em;
+  letter-spacing: 0.04em;
   color: var(--muted);
 }
 
-.mdetailGuideTitle{
+.mdetailGuideTitle {
   margin-top: 4px;
   font-size: 16px;
   font-weight: 800;
 }
 
-.mdetailGuideBody{
+.mdetailGuideBody {
   margin-top: 6px;
   font-size: 13px;
   color: var(--muted);
   line-height: 1.6;
 }
 
-.mdetailPromptList{
+.mdetailPromptList {
   display: flex;
   flex-direction: column;
   gap: 8px;
   margin-top: 8px;
 }
 
-.mdetailPromptItem{
+.mdetailPromptItem {
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: #fff;
+  background: #ffffff;
   padding: 10px 12px;
   font-size: 13px;
   color: var(--muted);
   line-height: 1.6;
 }
 
-.mdetailConfirm{
-  border-color: rgba(217,106,92,.28);
+.mdetailConfirm {
+  border-color: rgba(217, 106, 92, 0.28);
   background: #fffdfb;
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.mdetailConfirmTitle{
+.mdetailConfirmTitle {
   font-size: 14px;
   font-weight: 700;
 }
 
-.mdetailConfirmHint{
+.mdetailConfirmHint {
   font-size: 13px;
   color: var(--muted);
   line-height: 1.6;
 }
 
-.mdetailConfirmActions{
+.mdetailConfirmActions {
   margin-top: 8px;
   display: flex;
   gap: 8px;
 }
 
-.cardShell{
+.cardShell {
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 16px;
   background: #fffdfc;
 }
 
-.sectionTitle{
+.sectionTitle {
   font-size: 14px;
   font-weight: 700;
   margin-bottom: 10px;
 }
 
-.sourceSummaryGrid{
+.sourceSummaryGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 
-.sourceSummaryCard{
+.sourceSummaryCard {
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 12px;
-  background: #fff;
+  background: #ffffff;
 }
 
-.sourceSummaryValue{
+.sourceSummaryValue {
   font-size: 20px;
   font-weight: 800;
 }
 
-.sourceSummaryLabel{
+.sourceSummaryLabel {
   margin-top: 4px;
   font-size: 12px;
   color: var(--muted);
 }
 
-.sourceBlock{
+.sourceBlock {
   margin-top: 14px;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.sourceBlockTitle{
+.sourceBlockTitle {
   font-size: 13px;
   font-weight: 600;
 }
 
 .sourceList,
-.relatedPageList{
+.relatedPageList {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
 .sourceItem,
-.relatedPageItem{
+.relatedPageItem {
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 10px 12px;
-  background: #fff;
+  background: #ffffff;
 }
 
-.sourceItemLink{
+.sourceItemLink {
   cursor: pointer;
-  transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
 }
 
-.sourceItemLink:hover{
+.sourceItemLink:hover {
   transform: translateY(-1px);
-  border-color: rgba(232,133,106,.34);
-  box-shadow: 0 10px 22px rgba(203, 127, 90, .12);
+  border-color: rgba(232, 133, 106, 0.34);
+  box-shadow: 0 10px 22px rgba(203, 127, 90, 0.12);
 }
 
 .sourceItemTitle,
-.relatedPageTitle{
+.relatedPageTitle {
   font-size: 13px;
   font-weight: 600;
 }
 
 .sourceItemBody,
 .relatedPageMeta,
-.mdetailMuted{
+.mdetailMuted {
   margin-top: 4px;
   font-size: 12px;
   color: var(--muted);
   line-height: 1.6;
 }
 
-.sourceItemBody{
+.sourceItemBody {
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.sourceItemHint{
+.sourceItemHint {
   color: var(--accent-strong);
 }
 
-.mdetailField{
+.mdetailField {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.mdetailField > span{
+.mdetailField > span {
   font-size: 12px;
   color: var(--muted);
 }
 
-.mdetailFieldGrow{
+.mdetailFieldGrow {
   flex: 1;
   min-height: 240px;
 }
@@ -937,47 +945,47 @@ onMounted(loadPage)
 .mdetailTitle,
 .mdetailSummary,
 .mdetailContent,
-.mdetailField select{
+.mdetailField select {
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: #fff;
+  background: #ffffff;
   color: var(--text);
   padding: 12px 14px;
   font-size: 14px;
 }
 
-.mdetailTitle{
+.mdetailTitle {
   font-size: 16px;
   font-weight: 600;
 }
 
-.mdetailSummary{
+.mdetailSummary {
   resize: vertical;
   line-height: 1.6;
 }
 
-.mdetailContent{
+.mdetailContent {
   min-height: 240px;
   height: 100%;
   resize: vertical;
   line-height: 1.7;
 }
 
-.dangerGhost{
+.dangerGhost {
   color: var(--danger);
 }
 
-@media (max-width: 760px){
-  .mdetailHead{
+@media (max-width: 760px) {
+  .mdetailHead {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .mdetailActions{
+  .mdetailActions {
     flex-direction: column;
   }
 
-  .sourceSummaryGrid{
+  .sourceSummaryGrid {
     grid-template-columns: 1fr;
   }
 }

@@ -1,0 +1,16 @@
+# T-01 范围：前端（src/renderer + tests/frontend）；其余目录留待后续任务
+node_modules
+dist
+coverage
+data
+tmp
+public
+electron
+scripts
+doc
+tests/
+!tests/frontend
+*.md
+*.log
+*.html
+package-lock.json

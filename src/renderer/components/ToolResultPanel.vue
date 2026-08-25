@@ -2,8 +2,8 @@
 const props = defineProps({
   results: {
     type: Array,
-    default: () => []
-  }
+    default: () => [],
+  },
 })
 
 function getToolLabel(name) {
@@ -85,51 +85,51 @@ function getCardTitle(item) {
 </template>
 
 <style scoped>
-.toolPanel{
+.toolPanel {
   width: 100%;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.toolPanelIntro{
+.toolPanelIntro {
   font-size: 12px;
   color: var(--muted);
   padding-left: 4px;
 }
 
-.toolCard{
+.toolCard {
   border-radius: 16px;
   padding: 12px 14px;
   border: 1px solid var(--border);
   background: var(--surface);
 }
 
-.toolCardSuccess{
-  border-color: rgba(91,154,107,.22);
+.toolCardSuccess {
+  border-color: rgba(91, 154, 107, 0.22);
   background: var(--success-soft);
 }
 
-.toolCardError{
-  border-color: rgba(217,106,92,.22);
+.toolCardError {
+  border-color: rgba(217, 106, 92, 0.22);
   background: var(--danger-soft);
 }
 
-.toolHead{
+.toolHead {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
 }
 
-.toolHeadMain{
+.toolHeadMain {
   min-width: 0;
   display: flex;
   align-items: flex-start;
   gap: 10px;
 }
 
-.toolIcon{
+.toolIcon {
   width: 24px;
   height: 24px;
   border-radius: 999px;
@@ -140,51 +140,51 @@ function getCardTitle(item) {
   font-weight: 700;
   flex: 0 0 auto;
   color: var(--text);
-  background: rgba(255,255,255,.72);
+  background: rgba(255, 255, 255, 0.72);
 }
 
-.toolHeadText{
+.toolHeadText {
   min-width: 0;
 }
 
-.toolLabel{
+.toolLabel {
   font-size: 12px;
   font-weight: 700;
   color: var(--text);
   line-height: 1.5;
 }
 
-.toolName{
+.toolName {
   margin-top: 2px;
   font-size: 11px;
   color: var(--muted);
 }
 
-.toolBadge{
+.toolBadge {
   flex: 0 0 auto;
   padding: 4px 9px;
   border-radius: 999px;
   font-size: 10px;
   color: var(--text);
-  background: rgba(255,255,255,.78);
-  border: 1px solid rgba(0,0,0,.06);
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(0, 0, 0, 0.06);
   white-space: nowrap;
 }
 
-.toolSummary{
+.toolSummary {
   margin-top: 6px;
   font-size: 13px;
   line-height: 1.5;
   color: var(--text);
   white-space: pre-wrap;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
-.toolSource{
+.toolSource {
   margin-top: 6px;
   font-size: 11px;
   color: var(--muted);
   white-space: pre-wrap;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 </style>

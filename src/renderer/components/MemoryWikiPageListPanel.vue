@@ -1,9 +1,9 @@
 <script setup>
-const props = defineProps({
+defineProps({
   pages: { type: Array, default: () => [] },
   selectedPageId: { type: String, default: '' },
   filterType: { type: String, default: '' },
-  filterStatus: { type: String, default: '' }
+  filterStatus: { type: String, default: '' },
 })
 
 const emit = defineEmits(['select-page', 'change', 'update:filterType', 'update:filterStatus'])
@@ -68,60 +68,73 @@ function handleStatusChange(event) {
 </template>
 
 <style scoped>
-.workspaceCard{
-  background: rgba(255,255,255,.05);
+.workspaceCard {
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border);
   border-radius: 20px;
   padding: 16px;
-  display:flex;
-  flex-direction:column;
+  display: flex;
+  flex-direction: column;
   gap: 14px;
   min-height: 0;
 }
-.cardHead{
-  display:flex;
+.cardHead {
+  display: flex;
   justify-content: space-between;
-  align-items:flex-start;
+  align-items: flex-start;
   gap: 12px;
 }
-.cardTitle{ font-weight: 800; font-size: 16px; }
-.cardSubhint{ margin-top: 4px; color: var(--muted); font-size: 12px; }
-.cardFilters{
-  display:flex;
+.cardTitle {
+  font-weight: 800;
+  font-size: 16px;
+}
+.cardSubhint {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.cardFilters {
+  display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
-.emptyState{
+.emptyState {
   padding: 14px 16px;
   border-radius: 16px;
   border: 1px dashed var(--border);
-  background: rgba(255,255,255,.03);
+  background: rgba(255, 255, 255, 0.03);
   color: var(--muted);
   line-height: 1.6;
 }
-.entryList{
-  display:flex;
-  flex-direction:column;
+.entryList {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
-  overflow:auto;
+  overflow: auto;
 }
-.entryRow{
-  text-align:left;
-  display:flex;
-  align-items:center;
+.entryRow {
+  text-align: left;
+  display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
   padding: 12px 14px;
   border-radius: 16px;
 }
-.entryRow.active{
-  background: rgba(125,211,252,.12);
-  border-color: rgba(125,211,252,.35);
+.entryRow.active {
+  background: rgba(125, 211, 252, 0.12);
+  border-color: rgba(125, 211, 252, 0.35);
 }
-.entryMain{ font-weight: 700; }
-.entryMeta{ margin-top: 4px; font-size: 12px; color: var(--muted); }
-@media (max-width: 720px){
-  .cardHead{
+.entryMain {
+  font-weight: 700;
+}
+.entryMeta {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+@media (max-width: 720px) {
+  .cardHead {
     flex-direction: column;
   }
 }

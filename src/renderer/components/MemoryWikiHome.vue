@@ -39,10 +39,7 @@ const expandedKeys = ref(
 
 function persistState() {
   try {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ selectedId: selectedId.value, expanded: expandedKeys.value })
-    )
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ selectedId: selectedId.value, expanded: expandedKeys.value }))
   } catch {
     // 忽略写入失败
   }
@@ -51,7 +48,9 @@ function persistState() {
 // T-03：树顶搜索——标题/别名/摘要模糊匹配（防抖 220ms）
 const filteredPages = ref([])
 useDebouncedValue(searchQuery, 220, (value) => {
-  const keyword = String(value || '').trim().toLowerCase()
+  const keyword = String(value || '')
+    .trim()
+    .toLowerCase()
   if (!keyword) {
     filteredPages.value = pages.value
     return
@@ -70,7 +69,7 @@ async function refresh() {
   try {
     const [activeData, archivedData] = await Promise.all([
       listMemoryWikiPages({ status: 'active', limit: 500, offset: 0 }),
-      listMemoryWikiPages({ status: 'archived', limit: 500, offset: 0 })
+      listMemoryWikiPages({ status: 'archived', limit: 500, offset: 0 }),
     ])
     pages.value = [...(activeData?.pages || []), ...(archivedData?.pages || [])]
     // 选中页被删除/归档移除后清空选中
@@ -160,12 +159,7 @@ function onOpenMemory(id) {
   <div class="wikiHome">
     <div class="wikiHead">
       <div class="wikiTitle">记忆 Wiki</div>
-      <input
-        v-model="searchQuery"
-        class="wikiSearch"
-        type="text"
-        placeholder="搜索记忆…"
-      />
+      <input v-model="searchQuery" class="wikiSearch" type="text" placeholder="搜索记忆…" />
       <button class="primary" type="button" @click="startCreate">新建记忆</button>
     </div>
 
@@ -218,14 +212,14 @@ function onOpenMemory(id) {
 </template>
 
 <style scoped>
-.wikiHome{
+.wikiHome {
   height: 100%;
   display: flex;
   flex-direction: column;
   gap: 12px;
   overflow: hidden;
 }
-.wikiHead{
+.wikiHead {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -234,50 +228,66 @@ function onOpenMemory(id) {
   border: 1px solid var(--border);
   border-radius: 18px;
 }
-.wikiTitle{ font-size: 18px; font-weight: 800; }
+.wikiTitle {
+  font-size: 18px;
+  font-weight: 800;
+}
 
 /* T-03：搜索框 */
-.wikiSearch{
+.wikiSearch {
   width: 220px;
   padding: 6px 12px;
   border-radius: 10px;
   border: 1px solid var(--border);
   font-size: 13px;
-  background: var(--surface-2, #fff);
+  background: var(--surface-2, #ffffff);
 }
-.wikiSearch:focus{ outline: none; border-color: rgba(232,133,106,.4); }
+.wikiSearch:focus {
+  outline: none;
+  border-color: rgba(232, 133, 106, 0.4);
+}
 
-.wikiSearchMeta{
+.wikiSearchMeta {
   padding: 8px 12px;
   font-size: 12px;
   color: var(--muted);
-  border-bottom: 1px solid rgba(0,0,0,.05);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
-.wikiSearchEmpty{ padding: 20px 12px; text-align: center; font-size: 13px; color: var(--muted); }
+.wikiSearchEmpty {
+  padding: 20px 12px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+}
 
-.wikiBody{
+.wikiBody {
   flex: 1;
   min-height: 0;
   display: grid;
   grid-template-columns: 260px minmax(0, 1fr);
   gap: 12px;
 }
-.wikiSidebar{
+.wikiSidebar {
   border: 1px solid var(--border);
   border-radius: 16px;
   background: var(--surface);
   overflow: hidden;
   min-height: 0;
 }
-.wikiSideLoading{ padding: 16px; color: var(--muted); font-size: 13px; text-align: center; }
-.wikiContent{
+.wikiSideLoading {
+  padding: 16px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+.wikiContent {
   border: 1px solid var(--border);
   border-radius: 16px;
   background: var(--surface);
   overflow: hidden;
   min-height: 0;
 }
-.wikiEmpty{
+.wikiEmpty {
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -286,11 +296,19 @@ function onOpenMemory(id) {
   gap: 8px;
   color: var(--muted);
 }
-.wikiEmptyIcon{ font-size: 32px; }
-.wikiEmptyText{ font-size: 13px; }
+.wikiEmptyIcon {
+  font-size: 32px;
+}
+.wikiEmptyText {
+  font-size: 13px;
+}
 
-@media (max-width: 760px){
-  .wikiBody{ grid-template-columns: 1fr; }
-  .wikiSidebar{ max-height: 240px; }
+@media (max-width: 760px) {
+  .wikiBody {
+    grid-template-columns: 1fr;
+  }
+  .wikiSidebar {
+    max-height: 240px;
+  }
 }
 </style>

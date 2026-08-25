@@ -8,7 +8,7 @@ const assetById = {
   head: { label: '头', src: '/pic/head1-removebg-preview.png' },
   body: { label: '身体', src: '/pic/body-removebg-preview.png' },
   ring: { label: '铃铛', src: '/pic/ring-removebg-preview.png' },
-  tail1: { label: '尾巴', src: '/pic/tail1-removebg-preview.png' }
+  tail1: { label: '尾巴', src: '/pic/tail1-removebg-preview.png' },
 }
 
 const eyeHalfSrc = '/pic/halfclosedeye.png'
@@ -20,7 +20,7 @@ const parts = reactive(
   fixedParts.map((p) => ({
     ...p,
     label: assetById[p.id]?.label || p.id,
-    src: assetById[p.id]?.src || ''
+    src: assetById[p.id]?.src || '',
   }))
 )
 // 固定贴图不再支持选择；为了编辑眼睛，默认聚焦 head
@@ -37,7 +37,7 @@ const eyeOverlayStyle = computed(() => ({
   width: `${eyeOverlay.w}px`,
   height: `${eyeOverlay.h}px`,
   transform: `rotate(${eyeOverlay.rot}deg)`,
-  opacity: eyeOverlay.opacity
+  opacity: eyeOverlay.opacity,
 }))
 
 function showLayer(name) {
@@ -53,7 +53,7 @@ function ensureBlinkController() {
   blink = createCornieBlinkController({
     showLayer,
     hideLayers,
-    setHeadDipPx: () => {}
+    setHeadDipPx: () => {},
   })
   return blink
 }
@@ -68,7 +68,7 @@ const exportingJson = computed(() => {
       version: 1,
       stage: { w: 420, h: 420 },
       parts: payload,
-      eyeOverlay: { ...eyeOverlay }
+      eyeOverlay: { ...eyeOverlay },
     },
     null,
     2
@@ -106,7 +106,7 @@ function onEyeDown(e) {
     startX: e.clientX,
     startY: e.clientY,
     baseX: eyeOverlay.x,
-    baseY: eyeOverlay.y
+    baseY: eyeOverlay.y,
   }
   e.currentTarget.setPointerCapture?.(e.pointerId)
 }
@@ -125,7 +125,7 @@ function onEyeHandleDown(e) {
     startX: e.clientX,
     startY: e.clientY,
     baseW: eyeOverlay.w,
-    baseH: eyeOverlay.h
+    baseH: eyeOverlay.h,
   }
   e.currentTarget.setPointerCapture?.(e.pointerId)
 }
@@ -178,7 +178,7 @@ function toggleBlinkPreview() {
           :style="{
             transform: `translate(${p.x}px, ${p.y}px) rotate(${p.rot}deg) scale(${p.scale})`,
             opacity: p.opacity,
-            zIndex: p.z
+            zIndex: p.z,
           }"
         >
           <img :src="p.src" :alt="p.label" draggable="false" />
@@ -211,9 +211,7 @@ function toggleBlinkPreview() {
 
     <aside class="panel card">
       <div class="panelTitle">固定贴图</div>
-      <div class="fixedHint">
-        头/身体/尾巴/铃铛布局已从配置固化，当前页面仅用于对齐眨眼覆盖层（半闭/闭眼）。
-      </div>
+      <div class="fixedHint">头/身体/尾巴/铃铛布局已从配置固化，当前页面仅用于对齐眨眼覆盖层（半闭/闭眼）。</div>
 
       <div class="panelTitle">眨眼覆盖层（挂在头部）</div>
       <div class="controls">
@@ -265,145 +263,189 @@ function toggleBlinkPreview() {
 </template>
 
 <style scoped>
-.wrap{
+.wrap {
   height: 100%;
-  display:grid;
+  display: grid;
   grid-template-columns: 1fr 360px;
   gap: 14px;
   min-height: 0;
 }
-.stage{
-  display:flex;
+.stage {
+  display: flex;
   flex-direction: column;
-  overflow:hidden;
+  overflow: hidden;
 }
-.stageTop{
-  display:flex;
-  align-items:center;
+.stageTop {
+  display: flex;
+  align-items: center;
   justify-content: space-between;
   padding: 14px 16px;
   border-bottom: 1px solid var(--border);
 }
-.stageTitle{ font-weight: 800; }
-.toggle{ display:flex; align-items:center; gap: 8px; font-size: 12px; color: var(--muted); }
-.canvas{
+.stageTitle {
+  font-weight: 800;
+}
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.canvas {
   position: relative;
-  flex:1;
+  flex: 1;
   min-height: 0;
-  overflow:hidden;
+  overflow: hidden;
   background: transparent;
 }
-.canvas.checker{
+.canvas.checker {
   background-image:
-    linear-gradient(45deg, rgba(255,255,255,.06) 25%, transparent 25%),
-    linear-gradient(-45deg, rgba(255,255,255,.06) 25%, transparent 25%),
-    linear-gradient(45deg, transparent 75%, rgba(255,255,255,.06) 75%),
-    linear-gradient(-45deg, transparent 75%, rgba(255,255,255,.06) 75%);
+    linear-gradient(45deg, rgba(255, 255, 255, 0.06) 25%, transparent 25%),
+    linear-gradient(-45deg, rgba(255, 255, 255, 0.06) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.06) 75%),
+    linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.06) 75%);
   background-size: 24px 24px;
-  background-position: 0 0, 0 12px, 12px -12px, -12px 0px;
+  background-position:
+    0 0,
+    0 12px,
+    12px -12px,
+    -12px 0px;
 }
-.part{
-  position:absolute;
-  left:0;
-  top:0;
+.part {
+  position: absolute;
+  left: 0;
+  top: 0;
   transform-origin: 0 0;
   cursor: default;
   user-select: none;
   padding: 2px;
   border-radius: 10px;
 }
-.part.selected{
+.part.selected {
   outline: none;
   background: transparent;
 }
-.part img{
-  display:block;
-  max-width:none;
+.part img {
+  display: block;
+  max-width: none;
   pointer-events: none;
 }
 
-.eyeGroup{
-  position:absolute;
+.eyeGroup {
+  position: absolute;
   pointer-events: auto;
   cursor: grab;
 }
-.eyeGroup:active{ cursor: grabbing; }
-.eyeLayer{
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
+.eyeGroup:active {
+  cursor: grabbing;
+}
+.eyeLayer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
   pointer-events: none;
   user-select: none;
 }
-.eyeOutline{
-  position:absolute;
-  inset:0;
-  border: 1px dashed rgba(125,211,252,.75);
+.eyeOutline {
+  position: absolute;
+  inset: 0;
+  border: 1px dashed rgba(125, 211, 252, 0.75);
   border-radius: 10px;
-  background: rgba(125,211,252,.06);
-  display:none;
+  background: rgba(125, 211, 252, 0.06);
+  display: none;
 }
-.eyeHandle{
-  position:absolute;
+.eyeHandle {
+  position: absolute;
   width: 10px;
   height: 10px;
   right: -6px;
   bottom: -6px;
   border-radius: 999px;
-  background: rgba(125,211,252,.95);
-  border: 1px solid rgba(0,0,0,.35);
+  background: rgba(125, 211, 252, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.35);
   cursor: nwse-resize;
-  display:none;
+  display: none;
 }
-.eyeOutline.show, .eyeHandle.show{ display:block; }
+.eyeOutline.show,
+.eyeHandle.show {
+  display: block;
+}
 
-.panel{
-  overflow:auto;
+.panel {
+  overflow: auto;
   padding: 14px;
-  display:flex;
+  display: flex;
   flex-direction: column;
   gap: 12px;
 }
-.panelTitle{ font-weight: 800; margin-top: 4px; }
-.fixedHint{ font-size: 12px; color: var(--muted); line-height: 1.5; }
-.parts{
-  display:flex;
+.panelTitle {
+  font-weight: 800;
+  margin-top: 4px;
+}
+.fixedHint {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.parts {
+  display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
-.partBtn{
+.partBtn {
   padding: 8px 10px;
   border-radius: 12px;
   font-size: 12px;
 }
-.partBtn.active{
-  border-color: rgba(125,211,252,.35);
-  background: rgba(125,211,252,.10);
+.partBtn.active {
+  border-color: rgba(125, 211, 252, 0.35);
+  background: rgba(125, 211, 252, 0.1);
 }
-.controls{
-  display:flex;
+.controls {
+  display: flex;
   flex-direction: column;
   gap: 10px;
 }
-.row{
-  display:grid;
+.row {
+  display: grid;
   grid-template-columns: 70px 1fr 70px;
-  align-items:center;
+  align-items: center;
   gap: 10px;
 }
-.row input[type=\"number\"]{
+.row input[type=\"number\"] {
   grid-column: 2 / span 2;
 }
-.k{ color: var(--muted); font-size: 12px; }
-.v{ text-align:right; font-variant-numeric: tabular-nums; color: var(--muted); font-size: 12px; }
-.btns{ display:flex; gap: 10px; flex-wrap: wrap; }
-.exportRow{ display:flex; gap: 10px; }
-.mono{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, \"Liberation Mono\", monospace; font-size: 12px; min-height: 220px; }
+.k {
+  color: var(--muted);
+  font-size: 12px;
+}
+.v {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  font-size: 12px;
+}
+.btns {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.exportRow {
+  display: flex;
+  gap: 10px;
+}
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, \"Liberation Mono\", monospace;
+  font-size: 12px;
+  min-height: 220px;
+}
 
-@media (max-width: 980px){
-  .wrap{ grid-template-columns: 1fr; }
+@media (max-width: 980px) {
+  .wrap {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
-

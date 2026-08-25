@@ -16,7 +16,7 @@ export function createCornieBlinkController({
   setHeadDipPx,
   minIntervalMs = 3000,
   maxIntervalMs = 8000,
-  doubleBlinkChance = 0.2
+  doubleBlinkChance = 0.2,
 }) {
   let stopped = false
   let timer = null
@@ -79,7 +79,6 @@ export function createCornieBlinkController({
     },
     async blinkNow() {
       await blinkSequence()
-    }
+    },
   }
 }
-

@@ -14,7 +14,7 @@ const {
   refresh,
   check: checkOnly,
   submit,
-  reset
+  reset,
 } = useModelSettings()
 
 async function save() {
@@ -57,9 +57,7 @@ onMounted(refresh)
         <input v-model="form.timeoutMs" inputmode="numeric" placeholder="30000" />
       </label>
 
-      <div v-if="modelSettings.maskedApiKey" class="configCurrent">
-        当前已保存：{{ modelSettings.maskedApiKey }}
-      </div>
+      <div v-if="modelSettings.maskedApiKey" class="configCurrent">当前已保存：{{ modelSettings.maskedApiKey }}</div>
       <div v-if="errorMsg" class="configError">{{ errorMsg }}</div>
       <div v-if="noticeMsg" class="configNotice">{{ noticeMsg }}</div>
 
@@ -68,13 +66,7 @@ onMounted(refresh)
           {{ saving ? '保存中…' : '保存并检测' }}
         </button>
         <button :disabled="saving" type="button" @click="checkOnly">只检测</button>
-        <button
-          v-if="modelSettings.configured"
-          class="danger"
-          :disabled="saving"
-          type="button"
-          @click="clearAll"
-        >
+        <button v-if="modelSettings.configured" class="danger" :disabled="saving" type="button" @click="clearAll">
           清空钥匙
         </button>
       </div>
@@ -83,14 +75,14 @@ onMounted(refresh)
 </template>
 
 <style scoped>
-.config{
+.config {
   height: 100%;
   display: flex;
   flex-direction: column;
   gap: 14px;
   overflow: hidden;
 }
-.configHead{
+.configHead {
   display: flex;
   align-items: center;
   gap: 14px;
@@ -99,18 +91,25 @@ onMounted(refresh)
   border: 1px solid var(--border);
   border-radius: 18px;
 }
-.configTitle{ font-size: 18px; font-weight: 800; }
+.configTitle {
+  font-size: 18px;
+  font-weight: 800;
+}
 
-.configLoading{ text-align: center; color: var(--muted); padding: 40px; }
+.configLoading {
+  text-align: center;
+  color: var(--muted);
+  padding: 40px;
+}
 
-.configForm{
+.configForm {
   padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 14px;
   max-width: 560px;
 }
-.configForm label{
+.configForm label {
   display: flex;
   flex-direction: column;
   gap: 6px;
@@ -120,24 +119,28 @@ onMounted(refresh)
 
 .configCurrent,
 .configError,
-.configNotice{
+.configNotice {
   padding: 10px 14px;
   border-radius: 12px;
   font-size: 13px;
 }
-.configCurrent{
-  border: 1px solid rgba(232,133,106,.25);
-  background: rgba(232,133,106,.06);
+.configCurrent {
+  border: 1px solid rgba(232, 133, 106, 0.25);
+  background: rgba(232, 133, 106, 0.06);
 }
-.configError{
-  border: 1px solid rgba(217,106,92,.25);
-  background: rgba(217,106,92,.06);
+.configError {
+  border: 1px solid rgba(217, 106, 92, 0.25);
+  background: rgba(217, 106, 92, 0.06);
   color: var(--danger);
 }
-.configNotice{
-  border: 1px solid rgba(91,154,107,.25);
-  background: rgba(91,154,107,.06);
-  color: #5B9A6B;
+.configNotice {
+  border: 1px solid rgba(91, 154, 107, 0.25);
+  background: rgba(91, 154, 107, 0.06);
+  color: #5b9a6b;
 }
-.configActions{ display: flex; gap: 10px; flex-wrap: wrap; }
+.configActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
 </style>

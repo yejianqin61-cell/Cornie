@@ -1,20 +1,23 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import { resolve } from 'node:path'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+
+const __dirname = dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
   plugins: [vue()],
   server: {
     host: '127.0.0.1',
-    port: 5173
+    port: 5173,
   },
   build: {
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
-        cornie: resolve(__dirname, 'cornie.html')
-      }
-    }
+        cornie: resolve(__dirname, 'cornie.html'),
+      },
+    },
   },
   test: {
     environment: 'jsdom',
@@ -27,8 +30,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json-summary', 'html'],
-      reportsDirectory: './coverage/frontend'
-    }
-  }
+      reportsDirectory: './coverage/frontend',
+    },
+  },
 })
-

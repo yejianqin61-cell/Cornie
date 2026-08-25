@@ -11,17 +11,17 @@ const OBSERVATION_TYPE_LABELS = {
   fact: '事实片段',
   emotion: '情绪变化',
   preference: '偏好线索',
-  misc: '小事记录'
+  misc: '小事记录',
 }
 
-const emit = defineEmits(['go', 'goChat'])
+defineEmits(['go', 'goChat'])
 
 const recentObservations = ref([])
 const loadingObservations = ref(false)
 
 const observationOverview = ref({
   total: 0,
-  topType: ''
+  topType: '',
 })
 const latestObservationUpdateLabel = ref('')
 
@@ -57,7 +57,7 @@ function buildObservationOverview(items) {
   const topType = Array.from(counts.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] || ''
   return {
     total: list.length,
-    topType
+    topType,
   }
 }
 
@@ -80,7 +80,7 @@ async function refreshObservations() {
     recentObservations.value = []
     observationOverview.value = {
       total: 0,
-      topType: ''
+      topType: '',
     }
     latestObservationUpdateLabel.value = ''
   } finally {
@@ -158,7 +158,9 @@ onBeforeUnmount(() => {
             <span class="omObserveDate">{{ item.date }}</span>
           </div>
           <div class="omObserveCardTitle">{{ item.title }}</div>
-          <div class="omObserveCardSnippet">{{ truncated(item.content || '铃湾把这件小事轻轻放进了今天的观察里。', 96) }}</div>
+          <div class="omObserveCardSnippet">
+            {{ truncated(item.content || '铃湾把这件小事轻轻放进了今天的观察里。', 96) }}
+          </div>
         </div>
       </div>
     </div>
@@ -166,7 +168,7 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.omPage{
+.omPage {
   height: 100%;
   overflow-y: auto;
   display: flex;
@@ -174,79 +176,151 @@ onBeforeUnmount(() => {
   gap: 12px;
   padding-right: 4px;
 }
-.omPage::-webkit-scrollbar{ width: 4px; }
-.omPage::-webkit-scrollbar-thumb{ background: rgba(0,0,0,.08); border-radius: 999px; }
+.omPage::-webkit-scrollbar {
+  width: 4px;
+}
+.omPage::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 999px;
+}
 
-.omHead{
+.omHead {
   padding: 14px 20px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
 }
-.omTitle{ font-size: 18px; font-weight: 800; }
-.omSubtitle{ font-size: 12px; color: var(--muted); margin-top: 2px; }
-.omHeadActions{ display: flex; gap: 8px; }
+.omTitle {
+  font-size: 18px;
+  font-weight: 800;
+}
+.omSubtitle {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.omHeadActions {
+  display: flex;
+  gap: 8px;
+}
 
-.omSectionTitleWrap{
+.omSectionTitleWrap {
   display: flex;
   align-items: center;
   gap: 8px;
 }
-.omSectionBadge{
+.omSectionBadge {
   font-size: 11px;
   color: var(--muted);
-  background: rgba(0,0,0,.04);
+  background: rgba(0, 0, 0, 0.04);
   padding: 2px 8px;
   border-radius: 999px;
 }
 
-.omLoading{ text-align: center; color: var(--muted); padding: 16px; font-size: 13px; }
+.omLoading {
+  text-align: center;
+  color: var(--muted);
+  padding: 16px;
+  font-size: 13px;
+}
 
-.omObserve{ padding: 12px 20px; }
-.omObserveHead{
+.omObserve {
+  padding: 12px 20px;
+}
+.omObserveHead {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
 }
-.omObserveTitle{ font-weight: 700; font-size: 14px; }
+.omObserveTitle {
+  font-weight: 700;
+  font-size: 14px;
+}
 
-.omObserveEmpty{ text-align: center; padding: 24px; }
-.omObserveEmptyTitle{ font-weight: 600; font-size: 13px; }
-.omObserveEmptyHint{ font-size: 12px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+.omObserveEmpty {
+  text-align: center;
+  padding: 24px;
+}
+.omObserveEmptyTitle {
+  font-weight: 600;
+  font-size: 13px;
+}
+.omObserveEmptyHint {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+  line-height: 1.5;
+}
 
-.omObserveList{ display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
-.omObserveUpdatedHint{ grid-column: 1 / -1; font-size: 11px; color: var(--muted); }
+.omObserveList {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+.omObserveUpdatedHint {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  color: var(--muted);
+}
 
-.omObserveOverview{
+.omObserveOverview {
   grid-column: 1 / -1;
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
 }
-.omObserveOverviewCard{
+.omObserveOverviewCard {
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: 12px;
 }
-.omObserveOverviewValue{ font-size: 18px; font-weight: 800; }
-.omObserveOverviewLabel{ font-size: 11px; color: var(--muted); margin-top: 2px; }
+.omObserveOverviewValue {
+  font-size: 18px;
+  font-weight: 800;
+}
+.omObserveOverviewLabel {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
 
-.omObserveCard{
+.omObserveCard {
   padding: 12px;
   border: 1px solid var(--border);
   border-radius: 12px;
   cursor: pointer;
   background: var(--surface);
 }
-.omObserveCard:hover{ border-color: rgba(232,133,106,.35); }
-.omObserveMetaRow{ display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); }
-.omObserveType{ font-weight: 600; }
-.omObserveCardTitle{ font-weight: 600; font-size: 13px; margin-top: 4px; }
-.omObserveCardSnippet{ font-size: 12px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+.omObserveCard:hover {
+  border-color: rgba(232, 133, 106, 0.35);
+}
+.omObserveMetaRow {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--muted);
+}
+.omObserveType {
+  font-weight: 600;
+}
+.omObserveCardTitle {
+  font-weight: 600;
+  font-size: 13px;
+  margin-top: 4px;
+}
+.omObserveCardSnippet {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+  line-height: 1.5;
+}
 
-@media (max-width: 720px){
-  .omObserveList{ grid-template-columns: 1fr; }
+@media (max-width: 720px) {
+  .omObserveList {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

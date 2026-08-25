@@ -36,10 +36,7 @@ const tabSummary = computed(() =>
 async function refresh() {
   loading.value = true
   try {
-    const [todoData, catData] = await Promise.all([
-      listTodos({}),
-      listTodoCategories()
-    ])
+    const [todoData, catData] = await Promise.all([listTodos({}), listTodoCategories()])
     todos.value = (todoData?.items || []).filter(isVisibleTodo)
     categories.value = catData?.items || []
     activeCount.value = todos.value.filter((todo) => !isDone(todo)).length
@@ -62,7 +59,7 @@ async function addTodo() {
       title,
       categoryId: newCategoryId.value || null,
       categoryName: cat?.name || null,
-      status: 'pending'
+      status: 'pending',
     })
     newTitle.value = ''
     newCategoryId.value = ''
@@ -155,12 +152,7 @@ onBeforeUnmount(() => {
       </div>
 
       <div class="ttabs">
-        <button
-          class="ttab"
-          :class="{ active: currentTab === 'active' }"
-          type="button"
-          @click="currentTab = 'active'"
-        >
+        <button class="ttab" :class="{ active: currentTab === 'active' }" type="button" @click="currentTab = 'active'">
           待办
           <span class="ttabCount">{{ activeCount }}</span>
         </button>
@@ -179,9 +171,7 @@ onBeforeUnmount(() => {
         <div class="temptyTitle">{{ currentTab === 'archived' ? '这里还空着' : '今天先轻松一点' }}</div>
         <div class="temptyHint">
           {{
-            currentTab === 'archived'
-              ? '做完的小事以后会安静地收在这里。'
-              : '还没有待办要处理，想起什么再慢慢记下来。'
+            currentTab === 'archived' ? '做完的小事以后会安静地收在这里。' : '还没有待办要处理，想起什么再慢慢记下来。'
           }}
         </div>
       </div>
@@ -210,7 +200,7 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.thome{
+.thome {
   height: 100%;
   overflow-y: auto;
   display: flex;
@@ -219,113 +209,122 @@ onBeforeUnmount(() => {
   padding-right: 4px;
 }
 
-.thome::-webkit-scrollbar{ width: 4px; }
-.thome::-webkit-scrollbar-thumb{ background: rgba(0,0,0,.08); border-radius: 999px; }
+.thome::-webkit-scrollbar {
+  width: 4px;
+}
+.thome::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 999px;
+}
 
-.tsummary{
+.tsummary {
   background: var(--todo-tint);
   padding: 16px 20px;
 }
 
-.tsummaryRow{
+.tsummaryRow {
   display: grid;
   grid-template-columns: 1fr auto 1fr;
   align-items: center;
 }
 
-.tsummaryBlock{
+.tsummaryBlock {
   text-align: center;
 }
 
-.tsummaryLabel{
+.tsummaryLabel {
   font-size: 12px;
   color: var(--muted);
 }
 
-.tsummaryValue{
+.tsummaryValue {
   margin-top: 4px;
   font-size: 26px;
   font-weight: 700;
   color: var(--text);
 }
 
-.tsummaryValue.subtle{
-  color: #7C6A5E;
+.tsummaryValue.subtle {
+  color: #7c6a5e;
 }
 
-.tsummaryDivider{
+.tsummaryDivider {
   width: 1px;
   height: 38px;
-  background: rgba(0,0,0,.08);
+  background: rgba(0, 0, 0, 0.08);
 }
 
-.tquick{
+.tquick {
   padding: 14px 20px;
 }
 
-.tquickTitle{
+.tquickTitle {
   font-size: 15px;
   font-weight: 700;
 }
 
-.tquickHint{
+.tquickHint {
   margin-top: 4px;
   font-size: 12px;
   color: var(--muted);
 }
 
-.tquickRow{
+.tquickRow {
   margin-top: 10px;
   display: flex;
   gap: 8px;
   align-items: center;
 }
 
-.tquickRow input{ flex: 1; }
-.tquickRow select{ width: 96px; }
+.tquickRow input {
+  flex: 1;
+}
+.tquickRow select {
+  width: 96px;
+}
 
-.terr{
+.terr {
   margin-top: 8px;
   padding: 8px 12px;
   border-radius: 10px;
-  border: 1px solid rgba(217,106,92,.20);
+  border: 1px solid rgba(217, 106, 92, 0.2);
   background: var(--danger-soft);
   color: var(--danger);
   font-size: 12px;
 }
 
-.tlist{
+.tlist {
   padding: 14px 20px;
 }
 
-.tlistHead{
+.tlistHead {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
 }
 
-.tlistTitle{
+.tlistTitle {
   font-weight: 700;
 }
 
-.tlistHint{
+.tlistHint {
   margin-top: 4px;
   font-size: 12px;
   color: var(--muted);
   line-height: 1.5;
 }
 
-.ttabs{
+.ttabs {
   margin-top: 12px;
   display: inline-flex;
   gap: 8px;
   padding: 4px;
   border-radius: 999px;
-  background: #F7F3EE;
+  background: #f7f3ee;
 }
 
-.ttab{
+.ttab {
   border: none;
   background: transparent;
   border-radius: 999px;
@@ -336,13 +335,13 @@ onBeforeUnmount(() => {
   gap: 8px;
 }
 
-.ttab.active{
-  background: #FFFFFF;
+.ttab.active {
+  background: #ffffff;
   color: var(--text);
-  box-shadow: 0 2px 8px rgba(0,0,0,.05);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
-.ttabCount{
+.ttabCount {
   min-width: 20px;
   height: 20px;
   padding: 0 6px;
@@ -351,37 +350,37 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   font-size: 11px;
-  background: rgba(0,0,0,.06);
+  background: rgba(0, 0, 0, 0.06);
 }
 
-.tempty{
+.tempty {
   margin-top: 12px;
   padding: 18px 16px;
   border-radius: 16px;
   border: 1px dashed var(--border);
-  background: rgba(255,255,255,.55);
+  background: rgba(255, 255, 255, 0.55);
 }
 
-.temptyTitle{
+.temptyTitle {
   font-size: 14px;
   font-weight: 700;
   color: var(--text);
 }
 
-.temptyHint{
+.temptyHint {
   margin-top: 4px;
   font-size: 12px;
   color: var(--muted);
 }
 
-.titems{
+.titems {
   margin-top: 12px;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.titem{
+.titem {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
@@ -389,56 +388,56 @@ onBeforeUnmount(() => {
   padding: 12px 14px;
   border-radius: 14px;
   border: 1px solid var(--border);
-  background: #FFFFFF;
+  background: #ffffff;
 }
 
-.titem.archived{
-  background: #FCFAF7;
-  border-color: rgba(0,0,0,.06);
+.titem.archived {
+  background: #fcfaf7;
+  border-color: rgba(0, 0, 0, 0.06);
 }
 
-.titemCheck{
+.titemCheck {
   position: relative;
   width: 18px;
   height: 18px;
 }
 
-.titemCheck input{
+.titemCheck input {
   position: absolute;
   inset: 0;
   opacity: 0;
   cursor: pointer;
 }
 
-.tcheckVisual{
+.tcheckVisual {
   display: block;
   width: 18px;
   height: 18px;
   border-radius: 999px;
-  border: 1px solid rgba(0,0,0,.16);
-  background: #FFFFFF;
+  border: 1px solid rgba(0, 0, 0, 0.16);
+  background: #ffffff;
 }
 
-.titemCheck input:checked + .tcheckVisual{
+.titemCheck input:checked + .tcheckVisual {
   background: var(--success);
   border-color: var(--success);
-  box-shadow: inset 0 0 0 4px rgba(255,255,255,.95);
+  box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.95);
 }
 
-.titemMain{
+.titemMain {
   min-width: 0;
 }
 
-.titemTitle{
+.titemTitle {
   font-size: 14px;
   color: var(--text);
 }
 
-.titem.archived .titemTitle{
-  color: #7C6A5E;
+.titem.archived .titemTitle {
+  color: #7c6a5e;
 }
 
-.titemMeta{
+.titemMeta {
   margin-top: 4px;
   display: flex;
   gap: 8px;
@@ -446,7 +445,7 @@ onBeforeUnmount(() => {
   align-items: center;
 }
 
-.titemCat{
+.titemCat {
   font-size: 11px;
   color: var(--muted);
   padding: 2px 8px;
@@ -454,40 +453,40 @@ onBeforeUnmount(() => {
   border-radius: 999px;
 }
 
-.titemDate{
+.titemDate {
   font-size: 11px;
   color: var(--muted);
 }
 
-.titemActions{
+.titemActions {
   display: flex;
   gap: 6px;
   align-items: center;
 }
 
-.tdel{
+.tdel {
   color: var(--danger);
 }
 
-@media (max-width: 720px){
-  .tquickRow{
+@media (max-width: 720px) {
+  .tquickRow {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .tquickRow select{
+  .tquickRow select {
     width: 100%;
   }
 
-  .tlistHead{
+  .tlistHead {
     flex-direction: column;
   }
 
-  .titem{
+  .titem {
     grid-template-columns: auto 1fr;
   }
 
-  .titemActions{
+  .titemActions {
     grid-column: 2;
     justify-content: flex-start;
   }

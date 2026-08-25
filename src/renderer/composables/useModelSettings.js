@@ -2,12 +2,7 @@
 // 主壳层（App.vue 引导/设置）与 DeepseekConfig 共用本组合式：状态、动作、友好文案唯一实现。
 
 import { ref } from 'vue'
-import {
-  clearModelSettings,
-  getModelSettings,
-  getModelStatus,
-  saveModelSettings
-} from '../api'
+import { clearModelSettings, getModelSettings, getModelStatus, saveModelSettings } from '../api'
 
 export function useModelSettings() {
   const modelStatus = ref({ ok: false, configured: false, provider: 'deepseek', model: '', reason: '' })
@@ -43,7 +38,7 @@ export function useModelSettings() {
         apiKey: '',
         baseUrl: settingsData.settings.baseUrl || '',
         model: settingsData.settings.model || 'deepseek-chat',
-        timeoutMs: settingsData.settings.timeoutMs ? String(settingsData.settings.timeoutMs) : '30000'
+        timeoutMs: settingsData.settings.timeoutMs ? String(settingsData.settings.timeoutMs) : '30000',
       }
     } catch {
       modelStatus.value = fallbackStatus()
@@ -78,7 +73,7 @@ export function useModelSettings() {
         apiKey: form.value.apiKey,
         baseUrl: form.value.baseUrl,
         model: form.value.model,
-        timeoutMs: form.value.timeoutMs
+        timeoutMs: form.value.timeoutMs,
       })
       noticeMsg.value = '铃湾已经把钥匙收好啦，现在去重新确认连接状态。'
       await refresh()
@@ -122,6 +117,6 @@ export function useModelSettings() {
     check,
     submit,
     reset,
-    toFriendlyError
+    toFriendlyError,
   }
 }

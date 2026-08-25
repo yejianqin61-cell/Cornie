@@ -43,10 +43,13 @@ export function useDebouncedValue(valueRef, ms, callback) {
 
   watch(valueRef, () => {
     if (timer !== null) clearTimeout(timer)
-    timer = setTimeout(() => {
-      timer = null
-      if (typeof callback === 'function') callback(valueRef.value)
-    }, Number(ms) > 0 ? Number(ms) : 0)
+    timer = setTimeout(
+      () => {
+        timer = null
+        if (typeof callback === 'function') callback(valueRef.value)
+      },
+      Number(ms) > 0 ? Number(ms) : 0
+    )
   })
 
   onBeforeUnmount(() => {

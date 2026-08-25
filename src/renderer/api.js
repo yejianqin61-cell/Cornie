@@ -4,7 +4,7 @@ import {
   createHttpError,
   normalizeFetchError,
   raceWithAbort,
-  request
+  request,
 } from './request.js'
 
 export { ApiError } from './request.js'
@@ -15,10 +15,14 @@ const API_BASE = 'http://127.0.0.1:5174/api'
 // 返回值结构不变：2xx 返回 res.json()，204 返回 null。
 export async function apiFetch(path, init) {
   const { signal, timeoutMs, ...rest } = init ?? {}
-  const res = await request(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...(rest.headers || {}) },
-    ...rest
-  }, { signal, timeoutMs })
+  const res = await request(
+    `${API_BASE}${path}`,
+    {
+      headers: { 'Content-Type': 'application/json', ...(rest.headers || {}) },
+      ...rest,
+    },
+    { signal, timeoutMs }
+  )
   return res.status === 204 ? null : res.json()
 }
 
@@ -34,13 +38,13 @@ export async function getEntry(date, { signal } = {}) {
 export async function upsertEntry(date, payload) {
   return apiFetch(`/entries/${encodeURIComponent(date)}`, {
     method: 'PUT',
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
   })
 }
 
 export async function regenerateCornie(date) {
   return apiFetch(`/entries/${encodeURIComponent(date)}/regenerate-cornie`, {
-    method: 'POST'
+    method: 'POST',
   })
 }
 
@@ -54,7 +58,7 @@ export async function listOnThisDay(date, { limit } = {}) {
 export async function sendMessage(message, date) {
   return apiFetch('/conversations', {
     method: 'POST',
-    body: JSON.stringify({ message, date })
+    body: JSON.stringify({ message, date }),
   })
 }
 
@@ -82,12 +86,15 @@ export async function streamConversation({ message, date }, onDelta, { signal, t
   }
 
   try {
-    const response = await raceWithAbort(fetch(`${API_BASE}/conversations/stream`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, date }),
-      signal: ctx.signal
-    }), ctx)
+    const response = await raceWithAbort(
+      fetch(`${API_BASE}/conversations/stream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message, date }),
+        signal: ctx.signal,
+      }),
+      ctx
+    )
 
     if (!response.ok) {
       throw await createHttpError(response)
@@ -179,10 +186,15 @@ export async function listChatlogDates({ month, scope, query, limit, cursor } = 
     availableMonths: Array.isArray(data?.availableMonths) ? data.availableMonths : [],
     pagination: data?.pagination || { cursor: '0', nextCursor: null, hasMore: false, pageSize: 100, total: 0 },
     filters: data?.filters || { scope: scope || 'all', month: month || '', query: query || '' },
-    archiveScope: data?.archiveScope || { scope: scope || 'all', month: month || '', recentFromDate: '', recentToDate: '' },
+    archiveScope: data?.archiveScope || {
+      scope: scope || 'all',
+      month: month || '',
+      recentFromDate: '',
+      recentToDate: '',
+    },
     searchMeta: data?.searchMeta || { query: query || '', mode: query ? 'keyword' : 'browse' },
     storage: data?.storage || data?.meta?.storage || { driver: 'unknown', queryContractVersion: 1 },
-    meta: data?.meta || { responseType: 'chatlog_history_list' }
+    meta: data?.meta || { responseType: 'chatlog_history_list' },
   }
 }
 
@@ -201,7 +213,7 @@ export async function searchChatlogMessageSnippets({ keyword, month, scope, limi
     filters: data?.filters || { scope: scope || 'all', month: month || '' },
     pagination: data?.pagination || { cursor: '0', nextCursor: null, hasMore: false, pageSize: 100, total: 0 },
     storage: data?.storage || data?.meta?.storage || { driver: 'unknown', queryContractVersion: 1 },
-    meta: data?.meta || { responseType: 'chatlog_message_snippet_search' }
+    meta: data?.meta || { responseType: 'chatlog_message_snippet_search' },
   }
 }
 
@@ -215,15 +227,13 @@ export async function getChatlog(date, { limit, cursor, query, beforeId, mode, s
   const qs = params.toString()
   const data = await apiFetch(`/chatlogs/${encodeURIComponent(date)}${qs ? `?${qs}` : ''}`, { signal })
   const normalizedItems = Array.isArray(data?.items) ? data.items : []
-  const normalizedMessages = Array.isArray(data?.messages)
-    ? data.messages
-    : normalizedItems
+  const normalizedMessages = Array.isArray(data?.messages) ? data.messages : normalizedItems
   const normalizedPagination = data?.pagination || {
     cursor: data?.context?.currentCursor || '0',
     nextCursor: data?.nextCursor ?? null,
     hasMore: data?.hasMore === true,
     pageSize: data?.context?.pageSize || limit || 100,
-    total: data?.context?.total || normalizedMessages.length
+    total: data?.context?.total || normalizedMessages.length,
   }
   return {
     ...data,
@@ -232,7 +242,7 @@ export async function getChatlog(date, { limit, cursor, query, beforeId, mode, s
     context: data?.context || null,
     pagination: normalizedPagination,
     meta: data?.meta || { responseType: mode === 'page' ? 'chatlog_day_page' : 'chatlog_day_record' },
-    storage: data?.storage || data?.meta?.storage || { driver: 'unknown', queryContractVersion: 1 }
+    storage: data?.storage || data?.meta?.storage || { driver: 'unknown', queryContractVersion: 1 },
   }
 }
 
@@ -243,7 +253,7 @@ export async function exportChatlogByDate(date, { format = 'json' } = {}) {
   const data = await apiFetch(`/chatlogs/${encodeURIComponent(date)}/export${qs ? `?${qs}` : ''}`)
   return {
     ...data,
-    meta: data?.meta || { responseType: 'chatlog_day_export' }
+    meta: data?.meta || { responseType: 'chatlog_day_export' },
   }
 }
 
@@ -254,7 +264,7 @@ export async function exportChatlogByMonth(month, { format = 'json' } = {}) {
   const data = await apiFetch(`/chatlogs/export/month/${encodeURIComponent(month)}${qs ? `?${qs}` : ''}`)
   return {
     ...data,
-    meta: data?.meta || { responseType: 'chatlog_month_export' }
+    meta: data?.meta || { responseType: 'chatlog_month_export' },
   }
 }
 
@@ -271,20 +281,20 @@ export async function getModelSettings() {
 export async function saveModelSettings(payload) {
   return apiFetch('/settings/model', {
     method: 'PUT',
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
   })
 }
 
 export async function clearModelSettings() {
   return apiFetch('/settings/model', {
-    method: 'DELETE'
+    method: 'DELETE',
   })
 }
 
 export async function submitConfirmationDecision(id, decision) {
   return apiFetch(`/confirmations/${encodeURIComponent(id)}/decision`, {
     method: 'POST',
-    body: JSON.stringify({ decision })
+    body: JSON.stringify({ decision }),
   })
 }
 
@@ -322,27 +332,27 @@ export async function getLedgerEntry(id) {
 export async function createExpenseEntry(payload) {
   return apiFetch('/ledger/entries/expense', {
     method: 'POST',
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
   })
 }
 
 export async function createIncomeEntry(payload) {
   return apiFetch('/ledger/entries/income', {
     method: 'POST',
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
   })
 }
 
 export async function updateLedgerEntry(id, payload) {
   return apiFetch(`/ledger/entries/${encodeURIComponent(id)}`, {
     method: 'PUT',
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
   })
 }
 
 export async function deleteLedgerEntry(id) {
   return apiFetch(`/ledger/entries/${encodeURIComponent(id)}`, {
-    method: 'DELETE'
+    method: 'DELETE',
   })
 }
 
@@ -358,27 +368,27 @@ export async function getLedgerCategory(id) {
 export async function createExpenseCategory(payload) {
   return apiFetch('/ledger/categories/expense', {
     method: 'POST',
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
   })
 }
 
 export async function createIncomeCategory(payload) {
   return apiFetch('/ledger/categories/income', {
     method: 'POST',
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
   })
 }
 
 export async function updateLedgerCategory(id, payload) {
   return apiFetch(`/ledger/categories/${encodeURIComponent(id)}`, {
     method: 'PUT',
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
   })
 }
 
 export async function restoreLedgerCategory(id) {
   return apiFetch(`/ledger/categories/${encodeURIComponent(id)}/restore`, {
-    method: 'POST'
+    method: 'POST',
   })
 }
 
@@ -400,32 +410,32 @@ export async function getTodo(id) {
 export async function createTodo(payload) {
   return apiFetch('/todos', {
     method: 'POST',
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
   })
 }
 
 export async function updateTodo(id, payload) {
   return apiFetch(`/todos/${encodeURIComponent(id)}`, {
     method: 'PUT',
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
   })
 }
 
 export async function completeTodo(id) {
   return apiFetch(`/todos/${encodeURIComponent(id)}/complete`, {
-    method: 'POST'
+    method: 'POST',
   })
 }
 
 export async function reopenTodo(id) {
   return apiFetch(`/todos/${encodeURIComponent(id)}/reopen`, {
-    method: 'POST'
+    method: 'POST',
   })
 }
 
 export async function deleteTodo(id) {
   return apiFetch(`/todos/${encodeURIComponent(id)}`, {
-    method: 'DELETE'
+    method: 'DELETE',
   })
 }
 
@@ -440,27 +450,27 @@ export async function getTodoCategory(id) {
 export async function createTodoCategory(payload) {
   return apiFetch('/todo-categories', {
     method: 'POST',
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
   })
 }
 
 export async function updateTodoCategory(id, payload) {
   return apiFetch(`/todo-categories/${encodeURIComponent(id)}`, {
     method: 'PUT',
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
   })
 }
 
 export async function restoreTodoCategory(id) {
   return apiFetch(`/todo-categories/${encodeURIComponent(id)}/restore`, {
-    method: 'POST'
+    method: 'POST',
   })
 }
 
 export async function reorderTodoCategory(id, sortOrder) {
   return apiFetch(`/todo-categories/${encodeURIComponent(id)}/reorder`, {
     method: 'POST',
-    body: JSON.stringify({ sortOrder })
+    body: JSON.stringify({ sortOrder }),
   })
 }
 
@@ -482,32 +492,32 @@ export async function getSchedule(id) {
 export async function createSchedule(payload) {
   return apiFetch('/schedules', {
     method: 'POST',
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
   })
 }
 
 export async function updateSchedule(id, payload) {
   return apiFetch(`/schedules/${encodeURIComponent(id)}`, {
     method: 'PUT',
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
   })
 }
 
 export async function cancelSchedule(id) {
   return apiFetch(`/schedules/${encodeURIComponent(id)}/cancel`, {
-    method: 'POST'
+    method: 'POST',
   })
 }
 
 export async function restoreSchedule(id) {
   return apiFetch(`/schedules/${encodeURIComponent(id)}/restore`, {
-    method: 'POST'
+    method: 'POST',
   })
 }
 
 export async function deleteSchedule(id) {
   return apiFetch(`/schedules/${encodeURIComponent(id)}`, {
-    method: 'DELETE'
+    method: 'DELETE',
   })
 }
 
@@ -522,27 +532,27 @@ export async function getScheduleCategory(id) {
 export async function createScheduleCategory(payload) {
   return apiFetch('/schedule-categories', {
     method: 'POST',
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
   })
 }
 
 export async function updateScheduleCategory(id, payload) {
   return apiFetch(`/schedule-categories/${encodeURIComponent(id)}`, {
     method: 'PUT',
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
   })
 }
 
 export async function restoreScheduleCategory(id) {
   return apiFetch(`/schedule-categories/${encodeURIComponent(id)}/restore`, {
-    method: 'POST'
+    method: 'POST',
   })
 }
 
 export async function reorderScheduleCategory(id, sortOrder) {
   return apiFetch(`/schedule-categories/${encodeURIComponent(id)}/reorder`, {
     method: 'POST',
-    body: JSON.stringify({ sortOrder })
+    body: JSON.stringify({ sortOrder }),
   })
 }
 
@@ -564,14 +574,14 @@ export async function listMemoryWikiPages({ pageType, status, limit, offset } = 
         content: item?.content ?? item?.body ?? '',
         updatedAt: item?.updatedAt ?? item?.lastUpdatedAt ?? '',
         triggerKeywords: Array.isArray(item?.triggerKeywords) ? item.triggerKeywords : [],
-        ownerConfirmed: item?.ownerConfirmed === true
+        ownerConfirmed: item?.ownerConfirmed === true,
       }))
     : []
 
   return {
     ...data,
     items,
-    pages: items
+    pages: items,
   }
 }
 
@@ -579,7 +589,7 @@ export async function getMemoryWikiPage(pageId) {
   const data = await apiFetch(`/memory-wiki/pages/${encodeURIComponent(pageId)}`)
   const rawPage = data?.page ?? data
   const page = rawPage
-      ? {
+    ? {
         ...rawPage,
         id: rawPage?.id ?? rawPage?.pageId ?? '',
         pageId: rawPage?.pageId ?? rawPage?.id ?? '',
@@ -587,7 +597,7 @@ export async function getMemoryWikiPage(pageId) {
         body: rawPage?.body ?? rawPage?.content ?? '',
         updatedAt: rawPage?.updatedAt ?? rawPage?.lastUpdatedAt ?? '',
         triggerKeywords: Array.isArray(rawPage?.triggerKeywords) ? rawPage.triggerKeywords : [],
-        ownerConfirmed: rawPage?.ownerConfirmed === true
+        ownerConfirmed: rawPage?.ownerConfirmed === true,
       }
     : null
 
@@ -610,83 +620,81 @@ export async function getMemoryWikiPageVersionDiff(pageId, { fromVersionId, toVe
 }
 
 export async function createMemoryWikiPage(payload) {
-  const normalizedPayload = payload?.content !== undefined && payload?.body === undefined
-    ? { ...payload, body: payload.content }
-    : payload
+  const normalizedPayload =
+    payload?.content !== undefined && payload?.body === undefined ? { ...payload, body: payload.content } : payload
   return apiFetch('/memory-wiki/pages', {
     method: 'POST',
-    body: JSON.stringify(normalizedPayload)
+    body: JSON.stringify(normalizedPayload),
   })
 }
 
 export async function updateMemoryWikiPage(pageId, payload) {
-  const normalizedPayload = payload?.content !== undefined && payload?.body === undefined
-    ? { ...payload, body: payload.content }
-    : payload
+  const normalizedPayload =
+    payload?.content !== undefined && payload?.body === undefined ? { ...payload, body: payload.content } : payload
   return apiFetch(`/memory-wiki/pages/${encodeURIComponent(pageId)}`, {
     method: 'PUT',
-    body: JSON.stringify(normalizedPayload)
+    body: JSON.stringify(normalizedPayload),
   })
 }
 
 export async function updateMemoryWikiSummary(pageId, summary) {
   return apiFetch(`/memory-wiki/pages/${encodeURIComponent(pageId)}/summary`, {
     method: 'PUT',
-    body: JSON.stringify({ summary })
+    body: JSON.stringify({ summary }),
   })
 }
 
 export async function updateMemoryWikiAliases(pageId, aliases) {
   return apiFetch(`/memory-wiki/pages/${encodeURIComponent(pageId)}/aliases`, {
     method: 'PUT',
-    body: JSON.stringify({ aliases })
+    body: JSON.stringify({ aliases }),
   })
 }
 
 export async function setMemoryWikiStatus(pageId, status) {
   return apiFetch(`/memory-wiki/pages/${encodeURIComponent(pageId)}/status`, {
     method: 'PUT',
-    body: JSON.stringify({ status })
+    body: JSON.stringify({ status }),
   })
 }
 
 export async function setMemoryWikiImportance(pageId, importance) {
   return apiFetch(`/memory-wiki/pages/${encodeURIComponent(pageId)}/importance`, {
     method: 'PUT',
-    body: JSON.stringify({ importance })
+    body: JSON.stringify({ importance }),
   })
 }
 
 export async function archiveMemoryWikiPage(pageId) {
   return apiFetch(`/memory-wiki/pages/${encodeURIComponent(pageId)}/archive`, {
-    method: 'POST'
+    method: 'POST',
   })
 }
 
 export async function restoreMemoryWikiPage(pageId) {
   return apiFetch(`/memory-wiki/pages/${encodeURIComponent(pageId)}/restore`, {
-    method: 'POST'
+    method: 'POST',
   })
 }
 
 export async function rollbackMemoryWikiPage(pageId, versionId) {
   return apiFetch(`/memory-wiki/pages/${encodeURIComponent(pageId)}/rollback`, {
     method: 'POST',
-    body: JSON.stringify({ versionId })
+    body: JSON.stringify({ versionId }),
   })
 }
 
 export async function mergeMemoryWikiPages(payload) {
   return apiFetch('/memory-wiki/pages/merge', {
     method: 'POST',
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
   })
 }
 
 export async function linkMemoryWikiRelatedPages(pageId, relatedPageIds) {
   return apiFetch(`/memory-wiki/pages/${encodeURIComponent(pageId)}/related-pages`, {
     method: 'PUT',
-    body: JSON.stringify({ relatedPageIds })
+    body: JSON.stringify({ relatedPageIds }),
   })
 }
 
@@ -705,21 +713,21 @@ export async function getTopicIndexSourceTrace(normalizedKey) {
 export async function updateTopicIndexAliases(normalizedKey, aliases) {
   return apiFetch(`/memory-wiki/topic-index/${encodeURIComponent(normalizedKey)}/aliases`, {
     method: 'PUT',
-    body: JSON.stringify({ aliases })
+    body: JSON.stringify({ aliases }),
   })
 }
 
 export async function linkTopicIndexPage(normalizedKey, pageId) {
   return apiFetch(`/memory-wiki/topic-index/${encodeURIComponent(normalizedKey)}/link-page`, {
     method: 'POST',
-    body: JSON.stringify({ pageId })
+    body: JSON.stringify({ pageId }),
   })
 }
 
 export async function linkMemoryWikiPageToTopic(pageId, payload) {
   return apiFetch(`/memory-wiki/pages/${encodeURIComponent(pageId)}/link-topic`, {
     method: 'POST',
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
   })
 }
 
@@ -740,13 +748,13 @@ export async function getMemoryWikiGovernanceRequest(requestId) {
 export async function updateMemoryWikiGovernanceRequestStatus(requestId, status) {
   return apiFetch(`/memory-wiki/governance/${encodeURIComponent(requestId)}/status`, {
     method: 'PUT',
-    body: JSON.stringify({ status })
+    body: JSON.stringify({ status }),
   })
 }
 
 export async function enqueueMemoryWikiInspectionScan() {
   return apiFetch('/memory-wiki/governance/inspection-scan', {
-    method: 'POST'
+    method: 'POST',
   })
 }
 
@@ -785,20 +793,19 @@ export async function getObservation(id) {
 export async function createObservation(payload) {
   return apiFetch('/observations', {
     method: 'POST',
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
   })
 }
 
 export async function updateObservation(id, payload) {
   return apiFetch(`/observations/${encodeURIComponent(id)}`, {
     method: 'PUT',
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
   })
 }
 
 export async function deleteObservation(id) {
   return apiFetch(`/observations/${encodeURIComponent(id)}`, {
-    method: 'DELETE'
+    method: 'DELETE',
   })
 }
-

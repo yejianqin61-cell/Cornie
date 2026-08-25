@@ -1,36 +1,36 @@
-:root{
+:root {
   /* 基底 */
-  --bg: #FAF8F5;
-  --surface: #FFFFFF;
-  --surface-2: #F5F2EE;
+  --bg: #faf8f5;
+  --surface: #ffffff;
+  --surface-2: #f5f2ee;
 
   /* 文字 */
-  --text: #2D2A26;
-  --muted: #9A948C;
+  --text: #2d2a26;
+  --muted: #9a948c;
 
   /* 边框 */
-  --border: rgba(0,0,0,.08);
+  --border: rgba(0, 0, 0, 0.08);
 
   /* 强调色 — 柔和珊瑚 */
-  --accent: #E8856A;
-  --accent-hover: #D96F53;
+  --accent: #e8856a;
+  --accent-hover: #d96f53;
 
   /* 危险 — 低饱和暖红 */
-  --danger: #D96A5C;
-  --success: #5B9A6B;
-  --success-soft: #EEF6F0;
-  --warning: #E4A35E;
-  --warning-soft: #FFF7EA;
-  --danger-soft: #FBEDEA;
-  --info-soft: #F5F8FB;
+  --danger: #d96a5c;
+  --success: #5b9a6b;
+  --success-soft: #eef6f0;
+  --warning: #e4a35e;
+  --warning-soft: #fff7ea;
+  --danger-soft: #fbedea;
+  --info-soft: #f5f8fb;
 
   /* 模块专属浅底色 */
-  --chat-tint: #FFF4F0;
-  --diary-tint: #FFF0F3;
-  --ledger-tint: #F0F5F0;
-  --todo-tint: #FFF7EF;
-  --schedule-tint: #FFF7EF;
-  --memory-tint: #EFF4F9;
+  --chat-tint: #fff4f0;
+  --diary-tint: #fff0f3;
+  --ledger-tint: #f0f5f0;
+  --todo-tint: #fff7ef;
+  --schedule-tint: #fff7ef;
+  --memory-tint: #eff4f9;
 
   /* desk pet */
   --pet-bg: rgba(255, 250, 242, 0.92);
@@ -40,15 +40,15 @@
   --pet-shadow-soft: 0 10px 30px rgba(124, 93, 72, 0.14);
   --pet-shadow-hover: 0 14px 34px rgba(124, 93, 72, 0.18);
 
-  --pet-text: #5B4638;
-  --pet-text-soft: #826B5B;
-  --pet-text-faint: #A18D80;
+  --pet-text: #5b4638;
+  --pet-text-soft: #826b5b;
+  --pet-text-faint: #a18d80;
 
-  --pet-accent: #EFB39A;
-  --pet-accent-strong: #DF8D70;
-  --pet-accent-soft: #F7D8CA;
+  --pet-accent: #efb39a;
+  --pet-accent-strong: #df8d70;
+  --pet-accent-soft: #f7d8ca;
 
-  --pet-user-bubble: #F6D3C4;
+  --pet-user-bubble: #f6d3c4;
   --pet-cornie-bubble: rgba(255, 255, 255, 0.78);
   --pet-input-bg: rgba(255, 255, 255, 0.68);
 
@@ -57,25 +57,40 @@
   --pet-transition-slow: 320ms ease;
 }
 
-*{ box-sizing: border-box; }
-html, body { height: 100%; }
-body{
-  margin:0;
-  font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", ui-sans-serif, system-ui, -apple-system, Roboto, Arial;
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  height: 100%;
+}
+body {
+  margin: 0;
+  font-family:
+    'Microsoft YaHei',
+    'PingFang SC',
+    'Segoe UI',
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    Roboto,
+    Arial;
   font-size: 14px;
   line-height: 1.6;
   color: var(--text);
   background: var(--bg);
 }
 
-body.transparent{
+body.transparent {
   background: transparent !important;
 }
 
-a{ color: inherit; }
+a {
+  color: inherit;
+}
 
 /* ─── 按钮 ─── */
-button{
+button {
   border: 1px solid var(--border);
   background: var(--surface);
   color: var(--text);
@@ -85,48 +100,54 @@ button{
   font-size: 14px;
   line-height: 1.4;
 }
-button:hover{ background: var(--surface-2); }
-button:disabled{ opacity:.55; cursor:not-allowed; }
+button:hover {
+  background: var(--surface-2);
+}
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
 
 /* 主按钮 */
 button.primary,
-.btn-primary{
+.btn-primary {
   border: none;
   background: var(--accent);
-  color: #FFFFFF;
+  color: #ffffff;
 }
 button.primary:hover,
-.btn-primary:hover{
+.btn-primary:hover {
   background: var(--accent-hover);
 }
 
 /* 危险按钮 */
 button.danger,
-.btn-danger{
-  border-color: rgba(217,106,92,.25);
+.btn-danger {
+  border-color: rgba(217, 106, 92, 0.25);
   color: var(--danger);
 }
 button.danger:hover,
-.btn-danger:hover{
-  background: rgba(217,106,92,.06);
+.btn-danger:hover {
+  background: rgba(217, 106, 92, 0.06);
 }
 
 /* 幽灵按钮 */
 button.ghost,
-.btn-ghost{
+.btn-ghost {
   border: none;
   background: transparent;
   color: var(--muted);
 }
 button.ghost:hover,
-.btn-ghost:hover{
+.btn-ghost:hover {
   background: var(--surface-2);
   color: var(--text);
 }
 
 /* ─── 输入框 ─── */
-input, textarea{
-  width:100%;
+input,
+textarea {
+  width: 100%;
   background: var(--surface);
   border: 1px solid var(--border);
   color: var(--text);
@@ -136,16 +157,22 @@ input, textarea{
   font-size: 14px;
   line-height: 1.5;
 }
-input:focus, textarea:focus{
+input:focus,
+textarea:focus {
   border-color: var(--accent);
 }
-input::placeholder, textarea::placeholder{
+input::placeholder,
+textarea::placeholder {
   color: var(--muted);
 }
-textarea{ min-height: 280px; resize: vertical; line-height: 1.6; }
+textarea {
+  min-height: 280px;
+  resize: vertical;
+  line-height: 1.6;
+}
 
 /* ─── 卡片 ─── */
-.card{
+.card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 16px;

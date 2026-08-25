@@ -4,7 +4,7 @@ defineProps({
   pageVersions: { type: Array, default: () => [] },
   selectedVersionId: { type: String, default: '' },
   selectedVersion: { type: Object, default: null },
-  versionDiff: { type: Object, default: null }
+  versionDiff: { type: Object, default: null },
 })
 
 const emit = defineEmits(['select-version'])
@@ -23,9 +23,7 @@ const emit = defineEmits(['select-version'])
     </div>
 
     <div v-else class="versionGrid">
-      <div v-if="pageVersions.length === 0" class="emptyDetail compactEmpty">
-        这页目前还没有可用的历史版本记录。
-      </div>
+      <div v-if="pageVersions.length === 0" class="emptyDetail compactEmpty">这页目前还没有可用的历史版本记录。</div>
 
       <div v-else class="versionList">
         <button
@@ -59,119 +57,146 @@ const emit = defineEmits(['select-version'])
             <pre class="evidenceItem">回滚后将把当前页面恢复到这个历史快照。</pre>
           </div>
         </div>
-        <div v-else class="emptyDetail compactEmpty">
-          点左边某个版本，我就把这个版本的关键信息展开给你看。
-        </div>
+        <div v-else class="emptyDetail compactEmpty">点左边某个版本，我就把这个版本的关键信息展开给你看。</div>
       </div>
     </div>
   </section>
 </template>
 
 <style scoped>
-.workspaceCard{
-  background: rgba(255,255,255,.05);
+.workspaceCard {
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border);
   border-radius: 20px;
   padding: 16px;
-  display:flex;
-  flex-direction:column;
+  display: flex;
+  flex-direction: column;
   gap: 14px;
   min-height: 0;
 }
-.span2{ grid-column: 1 / -1; }
-.cardHead{
-  display:flex;
+.span2 {
+  grid-column: 1 / -1;
+}
+.cardHead {
+  display: flex;
   justify-content: space-between;
-  align-items:flex-start;
+  align-items: flex-start;
   gap: 12px;
 }
-.cardTitle{ font-weight: 800; font-size: 16px; }
-.cardHint{ color: var(--muted); font-size: 12px; max-width: 360px; text-align: right; line-height: 1.5; }
-.cardSubhint{ margin-top: 4px; color: var(--muted); font-size: 12px; }
-.versionGrid{
-  display:grid;
+.cardTitle {
+  font-weight: 800;
+  font-size: 16px;
+}
+.cardHint {
+  color: var(--muted);
+  font-size: 12px;
+  max-width: 360px;
+  text-align: right;
+  line-height: 1.5;
+}
+.cardSubhint {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.versionGrid {
+  display: grid;
   grid-template-columns: minmax(260px, 360px) minmax(0, 1fr);
   gap: 14px;
   min-height: 0;
 }
-.versionList{
-  display:flex;
-  flex-direction:column;
+.versionList {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
-  overflow:auto;
+  overflow: auto;
 }
-.versionDetail{
+.versionDetail {
   min-width: 0;
 }
-.entryRow{
-  text-align:left;
-  display:flex;
-  align-items:center;
+.entryRow {
+  text-align: left;
+  display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
   padding: 12px 14px;
   border-radius: 16px;
 }
-.entryRow.active{
-  background: rgba(125,211,252,.12);
-  border-color: rgba(125,211,252,.35);
+.entryRow.active {
+  background: rgba(125, 211, 252, 0.12);
+  border-color: rgba(125, 211, 252, 0.35);
 }
-.entryMain{ font-weight: 700; }
-.entryMeta{ margin-top: 4px; font-size: 12px; color: var(--muted); }
-.governanceDetail{
+.entryMain {
+  font-weight: 700;
+}
+.entryMeta {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.governanceDetail {
   border: 1px solid var(--border);
   border-radius: 16px;
-  background: rgba(255,255,255,.03);
+  background: rgba(255, 255, 255, 0.03);
   padding: 16px;
 }
-.detailTitle{ font-weight: 800; font-size: 18px; }
-.detailMeta{ margin-top: 8px; color: var(--muted); font-size: 13px; line-height: 1.5; }
-.evidenceBlock{
+.detailTitle {
+  font-weight: 800;
+  font-size: 18px;
+}
+.detailMeta {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.evidenceBlock {
   margin-top: 14px;
-  display:flex;
-  flex-direction:column;
+  display: flex;
+  flex-direction: column;
   gap: 10px;
 }
-.evidenceTitle{
+.evidenceTitle {
   font-size: 13px;
   font-weight: 700;
 }
-.evidenceItem{
+.evidenceItem {
   margin: 0;
   padding: 12px;
   border-radius: 12px;
-  border: 1px solid rgba(255,255,255,.08);
-  background: rgba(15,23,42,.55);
-  color: rgba(226,232,240,.92);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(15, 23, 42, 0.55);
+  color: rgba(226, 232, 240, 0.92);
   font-size: 12px;
   white-space: pre-wrap;
-  overflow:auto;
+  overflow: auto;
 }
-.emptyDetail{
+.emptyDetail {
   border: 1px solid var(--border);
   border-radius: 16px;
-  background: rgba(255,255,255,.03);
+  background: rgba(255, 255, 255, 0.03);
   padding: 16px;
   color: var(--muted);
-  display:grid;
-  place-items:center;
+  display: grid;
+  place-items: center;
   min-height: 180px;
-  text-align:center;
+  text-align: center;
   line-height: 1.6;
 }
-.compactEmpty{
+.compactEmpty {
   min-height: 120px;
 }
-@media (max-width: 720px){
-  .cardHead{
+@media (max-width: 720px) {
+  .cardHead {
     flex-direction: column;
   }
-  .cardHint{
-    text-align:left;
+  .cardHint {
+    text-align: left;
   }
 }
-@media (max-width: 1120px){
-  .versionGrid{
+@media (max-width: 1120px) {
+  .versionGrid {
     grid-template-columns: 1fr;
   }
 }

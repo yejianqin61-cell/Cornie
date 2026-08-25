@@ -6,7 +6,7 @@ const props = defineProps({
   filterStatus: { type: String, default: 'pending' },
   pendingCount: { type: Number, default: 0 },
   statusMap: { type: Object, default: () => ({}) },
-  errorMap: { type: Object, default: () => ({}) }
+  errorMap: { type: Object, default: () => ({}) },
 })
 
 const emit = defineEmits(['confirm', 'reject', 'change', 'update:filterStatus'])
@@ -57,57 +57,66 @@ function handleStatusChange(event) {
 </template>
 
 <style scoped>
-.workspaceCard{
-  background: rgba(255,255,255,.05);
+.workspaceCard {
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border);
   border-radius: 20px;
   padding: 16px;
-  display:flex;
-  flex-direction:column;
+  display: flex;
+  flex-direction: column;
   gap: 14px;
   min-height: 0;
 }
-.span2{ grid-column: 1 / -1; }
-.cardHead{
-  display:flex;
+.span2 {
+  grid-column: 1 / -1;
+}
+.cardHead {
+  display: flex;
   justify-content: space-between;
-  align-items:flex-start;
+  align-items: flex-start;
   gap: 12px;
 }
-.cardTitle{ font-weight: 800; font-size: 16px; }
-.cardSubhint{ margin-top: 4px; color: var(--muted); font-size: 12px; }
-.cardFilters{
-  display:flex;
+.cardTitle {
+  font-weight: 800;
+  font-size: 16px;
+}
+.cardSubhint {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.cardFilters {
+  display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
-.queueSummary{
+.queueSummary {
   padding: 12px 14px;
   border-radius: 14px;
-  border: 1px dashed rgba(255,255,255,.14);
-  background: rgba(255,255,255,.03);
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.03);
   color: var(--muted);
   font-size: 13px;
 }
-.confirmGrid{
-  display:grid;
+.confirmGrid {
+  display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 12px;
 }
-.emptyDetail{
+.emptyDetail {
   border: 1px solid var(--border);
   border-radius: 16px;
-  background: rgba(255,255,255,.03);
+  background: rgba(255, 255, 255, 0.03);
   padding: 16px;
   color: var(--muted);
-  display:grid;
-  place-items:center;
+  display: grid;
+  place-items: center;
   min-height: 180px;
-  text-align:center;
+  text-align: center;
   line-height: 1.6;
 }
-@media (max-width: 720px){
-  .cardHead{
+@media (max-width: 720px) {
+  .cardHead {
     flex-direction: column;
   }
 }

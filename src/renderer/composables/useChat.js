@@ -1,11 +1,5 @@
 import { nextTick, ref } from 'vue'
-import {
-  getConversation,
-  listConfirmations,
-  sendMessage,
-  streamConversation,
-  submitConfirmationDecision
-} from '../api'
+import { getConversation, listConfirmations, sendMessage, streamConversation, submitConfirmationDecision } from '../api'
 import { collectChangedDomains, emitDataChanged } from '../syncSignals'
 import { today } from '../utils/date'
 
@@ -18,12 +12,8 @@ export function useChat() {
   function pushChatItem(item) {
     messages.value.push({
       id: item.id || `${item.kind}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      ...item
+      ...item,
     })
-  }
-
-  function findMessageIndexById(id) {
-    return messages.value.findIndex((item) => item.id === id)
   }
 
   function replaceMessageById(id, patch) {
@@ -73,7 +63,7 @@ export function useChat() {
             kind: 'message',
             role: 'cornie',
             content: line,
-            interim: true
+            interim: true,
           })
         }
       }
@@ -86,7 +76,7 @@ export function useChat() {
           id: data.cornieMessage.id,
           content: data.cornieMessage.content,
           streaming: false,
-          pendingSync: false
+          pendingSync: false,
         })
       } else {
         replaceMessageById(replaceId, { streaming: false, error: true })
@@ -96,14 +86,18 @@ export function useChat() {
         kind: 'message',
         role: 'cornie',
         content: data.cornieMessage.content,
-        id: data.cornieMessage.id
+        id: data.cornieMessage.id,
       })
     }
 
-    if (data?.toolExecution?.used && Array.isArray(data.toolExecution.results) && data.toolExecution.results.length > 0) {
+    if (
+      data?.toolExecution?.used &&
+      Array.isArray(data.toolExecution.results) &&
+      data.toolExecution.results.length > 0
+    ) {
       pushChatItem({
         kind: 'tool_result',
-        results: data.toolExecution.results
+        results: data.toolExecution.results,
       })
     }
 
@@ -114,18 +108,18 @@ export function useChat() {
         request: data.policyDecision.confirmRequest || {},
         pendingConfirmationId: data?.pendingConfirmation?.id || '',
         status: data?.pendingConfirmation?.status || 'pending',
-        errorMessage: ''
+        errorMessage: '',
       })
     } else if (decision === 'ask_back') {
       pushChatItem({
         kind: 'ask_back',
         question: data.policyDecision.question || '',
-        reason: data.policyDecision.reason || ''
+        reason: data.policyDecision.reason || '',
       })
     } else if (decision === 'deny') {
       pushChatItem({
         kind: 'error',
-        content: data.policyDecision.reason || '这个动作现在不能执行。'
+        content: data.policyDecision.reason || '这个动作现在不能执行。',
       })
     }
 
@@ -147,7 +141,7 @@ export function useChat() {
       role: 'user',
       content: text,
       id: tempId,
-      pendingSync: true
+      pendingSync: true,
     })
 
     if (liveId) {
@@ -156,7 +150,7 @@ export function useChat() {
         role: 'cornie',
         content: '',
         id: liveId,
-        streaming: true
+        streaming: true,
       })
     }
 
@@ -177,7 +171,7 @@ export function useChat() {
       if (data?.userMessage?.id) {
         replaceMessageById(tempId, {
           id: data.userMessage.id,
-          pendingSync: false
+          pendingSync: false,
         })
       }
 
@@ -189,7 +183,7 @@ export function useChat() {
         replaceMessageById(liveId, {
           content: '唔...我好像走神了，能再说一遍吗？',
           streaming: false,
-          error: true
+          error: true,
         })
       } else {
         pushChatItem({
@@ -197,7 +191,7 @@ export function useChat() {
           role: 'cornie',
           content: '唔...我好像走神了，能再说一遍吗？',
           id: 'err-' + Date.now(),
-          error: true
+          error: true,
         })
       }
       return null
@@ -228,10 +222,14 @@ export function useChat() {
 
       setConfirmMessageState(item.id, {
         status: result?.confirmation?.status || (action === 'confirm' ? 'approved' : 'rejected'),
-        errorMessage: ''
+        errorMessage: '',
       })
 
-      if (result?.toolExecution?.used && Array.isArray(result.toolExecution.results) && result.toolExecution.results.length > 0) {
+      if (
+        result?.toolExecution?.used &&
+        Array.isArray(result.toolExecution.results) &&
+        result.toolExecution.results.length > 0
+      ) {
         pushChatItem({ kind: 'tool_result', results: result.toolExecution.results })
       }
 
@@ -240,7 +238,7 @@ export function useChat() {
           kind: 'message',
           role: 'cornie',
           content: result.cornieMessage.content,
-          id: result.cornieMessage.id
+          id: result.cornieMessage.id,
         })
       }
 
@@ -250,7 +248,7 @@ export function useChat() {
           request: result.followupConfirmation.confirmRequest,
           pendingConfirmationId: result.followupConfirmation.id,
           status: result.followupConfirmation.status || 'pending',
-          errorMessage: ''
+          errorMessage: '',
         })
       }
 
@@ -258,7 +256,7 @@ export function useChat() {
     } catch (error) {
       setConfirmMessageState(item.id, {
         status: 'failed',
-        errorMessage: error?.message || '确认处理失败，请稍后再试。'
+        errorMessage: error?.message || '确认处理失败，请稍后再试。',
       })
     }
   }
@@ -276,7 +274,7 @@ export function useChat() {
             request: confirmation.confirmRequest || {},
             pendingConfirmationId: confirmation.id,
             status: confirmation.status || 'pending',
-            errorMessage: ''
+            errorMessage: '',
           })
         }
       }
@@ -296,7 +294,7 @@ export function useChat() {
               kind: 'message',
               role: msg.role === 'user' ? 'user' : 'cornie',
               content: msg.content,
-              id: msg.id
+              id: msg.id,
             })
           }
         }
@@ -383,6 +381,6 @@ export function useChat() {
     syncConversation,
     startConversationSync,
     stopConversationSync,
-    scrollChatToBottom
+    scrollChatToBottom,
   }
 }

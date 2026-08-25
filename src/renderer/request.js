@@ -78,7 +78,7 @@ export function createAbortContext({ signal, timeoutMs = DEFAULT_TIMEOUT_MS } = 
         timer = null
       }
       if (signal) signal.removeEventListener('abort', onExternalAbort)
-    }
+    },
   }
 }
 
@@ -117,10 +117,7 @@ export async function createHttpError(res) {
     if (text) {
       try {
         const parsed = JSON.parse(text)
-        message =
-          parsed && typeof parsed.error === 'string' && parsed.error
-            ? parsed.error
-            : text
+        message = parsed && typeof parsed.error === 'string' && parsed.error ? parsed.error : text
       } catch {
         message = text
       }
@@ -144,9 +141,7 @@ export function normalizeFetchError(err, ctx, timeoutMs = DEFAULT_TIMEOUT_MS) {
     return new ApiError('timeout', `request timed out after ${timeoutMs}ms`, { cause: err })
   }
   if (isAbortError(err) || ctx?.externalAborted?.()) {
-    return err && typeof err === 'object'
-      ? err
-      : new DOMException('The operation was aborted.', 'AbortError')
+    return err && typeof err === 'object' ? err : new DOMException('The operation was aborted.', 'AbortError')
   }
   return new ApiError('network', describeNetworkFailure(err), { cause: err })
 }
@@ -154,11 +149,7 @@ export function normalizeFetchError(err, ctx, timeoutMs = DEFAULT_TIMEOUT_MS) {
 /** 从任意被抛出的值提取可读的网络失败描述（Error.message 或原始字符串）。 */
 function describeNetworkFailure(err) {
   const detail =
-    err && typeof err === 'object'
-      ? err.message || 'unknown error'
-      : typeof err === 'string'
-        ? err
-        : 'unknown error'
+    err && typeof err === 'object' ? err.message || 'unknown error' : typeof err === 'string' ? err : 'unknown error'
   return `network request failed: ${detail}`
 }
 

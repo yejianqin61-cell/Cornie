@@ -4,13 +4,13 @@ import { computed } from 'vue'
 const props = defineProps({
   content: {
     type: String,
-    default: ''
+    default: '',
   },
   // 允许渲染的最大标题级别（1-3）。设为 0 时标题全部降级为 div（用于摘要/按钮内等非文档场景，避免 button 内嵌套 h1-h3）。
   headingLevel: {
     type: Number,
-    default: 3
-  }
+    default: 3,
+  },
 })
 
 function escapeHtml(value) {
@@ -24,16 +24,14 @@ function escapeHtml(value) {
 
 function renderInline(text) {
   const escaped = escapeHtml(text)
-  return escaped
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+  return escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\*(.+?)\*/g, '<em>$1</em>')
 }
 
 function flushParagraph(paragraphLines, blocks) {
   if (paragraphLines.length === 0) return
   blocks.push({
     type: 'paragraph',
-    html: paragraphLines.map((line) => renderInline(line)).join('<br />')
+    html: paragraphLines.map((line) => renderInline(line)).join('<br />'),
   })
   paragraphLines.length = 0
 }
@@ -42,7 +40,7 @@ function flushList(listItems, blocks) {
   if (listItems.length === 0) return
   blocks.push({
     type: 'list',
-    items: listItems.map((item) => renderInline(item))
+    items: listItems.map((item) => renderInline(item)),
   })
   listItems.length = 0
 }
@@ -51,13 +49,15 @@ function flushQuote(quoteLines, blocks) {
   if (quoteLines.length === 0) return
   blocks.push({
     type: 'quote',
-    html: quoteLines.map((line) => renderInline(line)).join('<br />')
+    html: quoteLines.map((line) => renderInline(line)).join('<br />'),
   })
   quoteLines.length = 0
 }
 
 function parseMarkdown(content) {
-  const normalized = String(content ?? '').replace(/\r\n/g, '\n').trim()
+  const normalized = String(content ?? '')
+    .replace(/\r\n/g, '\n')
+    .trim()
   if (!normalized) return []
 
   const lines = normalized.split('\n')
@@ -84,7 +84,7 @@ function parseMarkdown(content) {
       blocks.push({
         type: 'heading',
         level: headingMatch[1].length,
-        html: renderInline(headingMatch[2])
+        html: renderInline(headingMatch[2]),
       })
       continue
     }
@@ -139,7 +139,7 @@ const blocks = computed(() => parseMarkdown(props.content))
 </template>
 
 <style scoped>
-.cornieMarkdown{
+.cornieMarkdown {
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -148,28 +148,34 @@ const blocks = computed(() => parseMarkdown(props.content))
 
 .mdH1,
 .mdH2,
-.mdH3{
+.mdH3 {
   margin: 0;
   font-weight: 800;
   color: inherit;
   line-height: 1.35;
 }
 
-.mdH1{ font-size: 1.14rem; }
-.mdH2{ font-size: 1.02rem; }
-.mdH3{ font-size: 0.96rem; }
+.mdH1 {
+  font-size: 1.14rem;
+}
+.mdH2 {
+  font-size: 1.02rem;
+}
+.mdH3 {
+  font-size: 0.96rem;
+}
 
-.mdParagraph{
+.mdParagraph {
   margin: 0;
   line-height: 1.8;
 }
 
 .mdParagraph :deep(br),
-.mdQuote :deep(br){
+.mdQuote :deep(br) {
   content: '';
 }
 
-.mdQuote{
+.mdQuote {
   margin: 0;
   padding: 10px 12px;
   border-left: 3px solid rgba(155, 107, 122, 0.28);
@@ -179,7 +185,7 @@ const blocks = computed(() => parseMarkdown(props.content))
   color: inherit;
 }
 
-.mdList{
+.mdList {
   margin: 0;
   padding-left: 20px;
   display: flex;
@@ -188,11 +194,11 @@ const blocks = computed(() => parseMarkdown(props.content))
   line-height: 1.75;
 }
 
-:deep(strong){
+:deep(strong) {
   font-weight: 800;
 }
 
-:deep(em){
+:deep(em) {
   font-style: italic;
 }
 </style>

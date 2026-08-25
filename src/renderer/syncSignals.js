@@ -45,7 +45,7 @@ export function collectChangedDomains(results = []) {
     todo: false,
     schedule: false,
     observation: false,
-    memory: false
+    memory: false,
   }
 
   for (const item of Array.isArray(results) ? results : []) {
@@ -56,11 +56,7 @@ export function collectChangedDomains(results = []) {
     if (name.startsWith('todo.') || name.startsWith('todo_category.')) changed.todo = true
     if (name.startsWith('schedule.') || name.startsWith('schedule_category.')) changed.schedule = true
     if (name.startsWith('observation.')) changed.observation = true
-    if (
-      name.startsWith('memory_wiki.') ||
-      name.startsWith('memory_index.') ||
-      name.startsWith('memory_governance.')
-    ) {
+    if (name.startsWith('memory_wiki.') || name.startsWith('memory_index.') || name.startsWith('memory_governance.')) {
       changed.memory = true
     }
   }

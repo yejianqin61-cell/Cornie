@@ -54,6 +54,22 @@ function runNodeScript(scriptPath) {
   }
 }
 
+// T-01：fast/full 档在测试前先过 lint 门禁（ESLint + Prettier + Stylelint）。
+// Windows 上 .cmd 无法被 spawnSync 直接启动（EINVAL），须走 shell。
+if (mode !== 'integration') {
+  console.log('\n[tests:' + mode + '] running lint gate')
+  const lintResult = spawnSync('npm run lint', {
+    cwd: repoRoot,
+    stdio: 'inherit',
+    shell: true
+  })
+  if (lintResult.status !== 0) {
+    if (lintResult.error) console.error(lintResult.error)
+    console.error('[tests:' + mode + '] lint gate failed')
+    process.exit(lintResult.status ?? 1)
+  }
+}
+
 const directories = modeDirectories[mode]
 const testFiles = directories.flatMap(collectTestFiles)
 

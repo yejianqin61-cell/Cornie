@@ -25,9 +25,8 @@ import {
   updateMemoryWikiAliases,
   updateMemoryWikiGovernanceRequestStatus,
   updateMemoryWikiPage,
-  updateTopicIndexAliases
+  updateTopicIndexAliases,
 } from '../api'
-import ConfirmCard from './ConfirmCard.vue'
 // FE-09：工作台按职责拆分——各区块独立组件，本文件只做组合与状态协调。
 import MemoryWikiConfirmationPanel from './MemoryWikiConfirmationPanel.vue'
 import MemoryWikiGovernanceDetailPanel from './MemoryWikiGovernanceDetailPanel.vue'
@@ -107,12 +106,14 @@ function createEmptyPageForm() {
     body: '',
     aliasesText: '',
     status: 'active',
-    importance: 'medium'
+    importance: 'medium',
   }
 }
 
 const selectedPage = computed(() => pages.value.find((item) => item.pageId === selectedPageId.value) || null)
-const selectedVersion = computed(() => pageVersions.value.find((item) => item.versionId === selectedVersionId.value) || null)
+const selectedVersion = computed(
+  () => pageVersions.value.find((item) => item.versionId === selectedVersionId.value) || null
+)
 const governanceSections = computed(() =>
   Array.from(new Set(governanceItems.value.map((item) => item.queueSection).filter(Boolean)))
 )
@@ -128,7 +129,7 @@ const governanceEvidenceItems = computed(() => {
   return governanceDetail.value.evidence.map((item, index) => ({
     id: `${governanceDetail.value?.requestId || 'gov'}-${index}`,
     summary: buildEvidenceSummary(item, index),
-    body: formatEvidence(item)
+    body: formatEvidence(item),
   }))
 })
 const governanceSuggestedActions = computed(() => {
@@ -146,10 +147,12 @@ const identityPageOptions = computed(() =>
       pageId: item.pageId,
       title: item.title || item.pageId,
       pageType: item.pageType,
-      status: item.status
+      status: item.status,
     }))
 )
-const selectedRelatedPageIds = computed(() => Array.isArray(pageSourceTrace.value?.page?.relatedPageIds) ? pageSourceTrace.value.page.relatedPageIds : [])
+const selectedRelatedPageIds = computed(() =>
+  Array.isArray(pageSourceTrace.value?.page?.relatedPageIds) ? pageSourceTrace.value.page.relatedPageIds : []
+)
 const relatedPageMap = computed(() => {
   const map = new Map()
   for (const item of pageSourceTrace.value?.relatedPages || []) {
@@ -163,25 +166,25 @@ const identityRelationshipRules = computed(() => {
     return [
       '建议关联 identity_person：重要人物、关系对象、亲密联系人。',
       '建议关联 identity_preference：稳定偏好、忌讳、表达方式偏好。',
-      '建议关联 identity_trait：性格倾向、情绪模式、压力反应。'
+      '建议关联 identity_trait：性格倾向、情绪模式、压力反应。',
     ]
   }
   if (pageType === 'identity_person') {
     return [
       '建议至少关联一个 identity_profile：说明这个人物属于谁的人际网络。',
-      '必要时关联 identity_trait：记录这个人物和主人的互动特征或关系状态。'
+      '必要时关联 identity_trait：记录这个人物和主人的互动特征或关系状态。',
     ]
   }
   if (pageType === 'identity_preference') {
     return [
       '建议至少关联一个 identity_profile：偏好应归属于具体的人。',
-      '如偏好与某人物强相关，也可额外关联 identity_person。'
+      '如偏好与某人物强相关，也可额外关联 identity_person。',
     ]
   }
   if (pageType === 'identity_trait') {
     return [
       '建议至少关联一个 identity_profile： trait 应说明是在描写谁。',
-      '如 trait 与特定人物关系有关，也可关联 identity_person。'
+      '如 trait 与特定人物关系有关，也可关联 identity_person。',
     ]
   }
   return []
@@ -203,7 +206,7 @@ const identityRelationshipCandidates = computed(() => {
     .filter((item) => recommendTypes.includes(item.pageType))
     .map((item) => ({
       ...item,
-      linked: selectedIds.has(item.pageId)
+      linked: selectedIds.has(item.pageId),
     }))
 })
 const identityRelationshipWarnings = computed(() => {
@@ -211,9 +214,7 @@ const identityRelationshipWarnings = computed(() => {
   if (!String(pageType || '').startsWith('identity_') || !pageForm.value.pageId) return []
 
   const linkedTypes = new Set(
-    selectedRelatedPageIds.value
-      .map((pageId) => relatedPageMap.value.get(pageId)?.pageType)
-      .filter(Boolean)
+    selectedRelatedPageIds.value.map((pageId) => relatedPageMap.value.get(pageId)?.pageType).filter(Boolean)
   )
   const warnings = []
 
@@ -296,18 +297,20 @@ function findDuplicatePageSummary({ pageId = '', pageType = '', title = '' } = {
 
   if (!normalizedPageType || !targetSlug) return null
 
-  return pages.value.find((item) => {
-    if (String(item.pageId || '') === String(pageId || '')) return false
-    if (normalizeWorkspaceText(item.pageType) !== normalizedPageType) return false
-    const itemSlug = buildWorkspaceSlug(item.slug || item.title || '')
-    return itemSlug === targetSlug
-  }) || null
+  return (
+    pages.value.find((item) => {
+      if (String(item.pageId || '') === String(pageId || '')) return false
+      if (normalizeWorkspaceText(item.pageType) !== normalizedPageType) return false
+      const itemSlug = buildWorkspaceSlug(item.slug || item.title || '')
+      return itemSlug === targetSlug
+    }) || null
+  )
 }
 
 async function refreshPages() {
   const data = await listMemoryWikiPages({
     pageType: pageFilterType.value || undefined,
-    status: pageFilterStatus.value || undefined
+    status: pageFilterStatus.value || undefined,
   })
   pages.value = data.items || []
 }
@@ -320,7 +323,7 @@ async function refreshTopicItems() {
 async function refreshGovernanceItems() {
   const data = await listMemoryWikiGovernanceRequests({
     status: governanceFilterStatus.value || undefined,
-    queueSection: governanceFilterSection.value || undefined
+    queueSection: governanceFilterSection.value || undefined,
   })
   governanceItems.value = data.items || []
 
@@ -335,7 +338,7 @@ async function refreshGovernanceItems() {
 
 async function refreshConfirmations() {
   const data = await listConfirmations({
-    status: confirmationFilterStatus.value || undefined
+    status: confirmationFilterStatus.value || undefined,
   })
   confirmations.value = data.confirmations || []
 }
@@ -397,14 +400,16 @@ async function selectPage(pageId) {
       body: page.body ?? '',
       aliasesText: Array.isArray(page.aliases) ? page.aliases.join(', ') : '',
       status: page.status ?? 'active',
-      importance: page.importance ?? 'medium'
+      importance: page.importance ?? 'medium',
     }
     pageTopicKeyword.value = page.title ?? ''
     pageTopicAliasesText.value = Array.isArray(page.aliases) ? page.aliases.join(', ') : ''
     pageTopicNote.value = page.summary ?? ''
     const traceData = await getMemoryWikiPageSourceTrace(pageId)
     pageSourceTrace.value = traceData.trace || null
-    relatedPageSelection.value = Array.isArray(traceData.trace?.page?.relatedPageIds) ? [...traceData.trace.page.relatedPageIds] : []
+    relatedPageSelection.value = Array.isArray(traceData.trace?.page?.relatedPageIds)
+      ? [...traceData.trace.page.relatedPageIds]
+      : []
   } catch (error) {
     errorMsg.value = formatWorkspaceError(error, '读取页面详情')
   } finally {
@@ -421,7 +426,7 @@ async function selectTopic(normalizedKey) {
     const traceData = await getTopicIndexSourceTrace(normalizedKey)
     topicDetail.value = {
       ...data.item,
-      aliasesText: Array.isArray(data.item?.aliases) ? data.item.aliases.join(', ') : ''
+      aliasesText: Array.isArray(data.item?.aliases) ? data.item.aliases.join(', ') : '',
     }
     topicSourceTrace.value = traceData.trace || null
   } catch (error) {
@@ -467,7 +472,7 @@ async function selectVersion(versionId) {
     // 458：对比"所选历史版本 vs 当前页"，修复此前版本自比（恒为无变更）。
     const data = await getMemoryWikiPageVersionDiff(pageForm.value.pageId, {
       fromVersionId: versionId,
-      toVersionId: 'current'
+      toVersionId: 'current',
     })
     versionDiff.value = data.diff
   } catch (error) {
@@ -489,7 +494,7 @@ async function savePage() {
     const duplicatePage = findDuplicatePageSummary({
       pageId: pageForm.value.pageId,
       pageType: pageForm.value.pageType,
-      title
+      title,
     })
     if (duplicatePage) {
       throw new Error(`页面标题重复：已存在“${duplicatePage.title || duplicatePage.pageId}”，请换一个标题。`)
@@ -528,7 +533,7 @@ async function savePage() {
         .map((item) => item.trim())
         .filter(Boolean),
       summary: pageForm.value.summary,
-      body: pageForm.value.body
+      body: pageForm.value.body,
     }
 
     let finalPageId = pageForm.value.pageId
@@ -632,7 +637,9 @@ async function saveRelatedPages() {
   saving.value = true
   errorMsg.value = ''
   try {
-    const relatedPageIds = Array.from(new Set(relatedPageSelection.value.map((item) => String(item).trim()).filter(Boolean)))
+    const relatedPageIds = Array.from(
+      new Set(relatedPageSelection.value.map((item) => String(item).trim()).filter(Boolean))
+    )
     await linkMemoryWikiRelatedPages(pageForm.value.pageId, relatedPageIds)
     await refreshPages()
     await selectPage(pageForm.value.pageId)
@@ -658,7 +665,7 @@ async function linkSelectedPageToTopic() {
       keyword: pageTopicKeyword.value.trim(),
       aliases,
       note: pageTopicNote.value.trim(),
-      importance: pageForm.value.importance
+      importance: pageForm.value.importance,
     })
 
     await refreshPages()
@@ -701,19 +708,15 @@ async function changeGovernanceStatus(requestId, status) {
   }
 }
 
-function resolveConfirmationState(confirmation) {
-  return confirmStatusMap.value[confirmation.id] || confirmation.status || 'pending'
-}
-
 async function handleConfirmationAction(action, confirmation) {
   const nextStatus = action === 'approve' ? 'processing' : 'processing'
   confirmStatusMap.value = {
     ...confirmStatusMap.value,
-    [confirmation.id]: nextStatus
+    [confirmation.id]: nextStatus,
   }
   confirmErrorMap.value = {
     ...confirmErrorMap.value,
-    [confirmation.id]: ''
+    [confirmation.id]: '',
   }
 
   try {
@@ -725,17 +728,17 @@ async function handleConfirmationAction(action, confirmation) {
 
     confirmStatusMap.value = {
       ...confirmStatusMap.value,
-      [confirmation.id]: status
+      [confirmation.id]: status,
     }
     await refreshConfirmations()
   } catch (error) {
     confirmStatusMap.value = {
       ...confirmStatusMap.value,
-      [confirmation.id]: 'failed'
+      [confirmation.id]: 'failed',
     }
     confirmErrorMap.value = {
       ...confirmErrorMap.value,
-      [confirmation.id]: error?.message || String(error)
+      [confirmation.id]: error?.message || String(error),
     }
   }
 }
@@ -785,420 +788,458 @@ onMounted(refreshAll)
     <div v-if="errorMsg" class="workspaceError">{{ errorMsg }}</div>
 
     <div class="workspaceGrid">
-    <MemoryWikiPageListPanel
-      :pages="pages"
-      :selected-page-id="selectedPageId"
-      :filter-type="pageFilterType"
-      :filter-status="pageFilterStatus"
-      @select-page="selectPage"
-      @update:filter-type="pageFilterType = $event"
-      @update:filter-status="pageFilterStatus = $event"
-      @change="refreshPages"
-    />
+      <MemoryWikiPageListPanel
+        :pages="pages"
+        :selected-page-id="selectedPageId"
+        :filter-type="pageFilterType"
+        :filter-status="pageFilterStatus"
+        @select-page="selectPage"
+        @update:filter-type="pageFilterType = $event"
+        @update:filter-status="pageFilterStatus = $event"
+        @change="refreshPages"
+      />
 
-    <MemoryWikiPageEditorPanel
-      :selected-page="selectedPage"
-      :page-form="pageForm"
-      :saving="saving"
-      :page-source-trace="pageSourceTrace"
-      :selected-version-id="selectedVersionId"
-      :identity-page-options="identityPageOptions"
-      :identity-relationship-rules="identityRelationshipRules"
-      :identity-relationship-candidates="identityRelationshipCandidates"
-      :identity-relationship-warnings="identityRelationshipWarnings"
-      :related-page-issues="relatedPageIssues"
-      :related-page-selection="relatedPageSelection"
-      :page-topic-keyword="pageTopicKeyword"
-      :page-topic-aliases-text="pageTopicAliasesText"
-      :page-topic-note="pageTopicNote"
-      @reset="resetPageForm"
-      @save="savePage"
-      @archive="archivePage"
-      @restore="restorePage"
-      @rollback="rollbackPage"
-      @save-related-pages="saveRelatedPages"
-      @link-topic="linkSelectedPageToTopic"
-      @update:page-topic-keyword="pageTopicKeyword = $event"
-      @update:page-topic-aliases-text="pageTopicAliasesText = $event"
-      @update:page-topic-note="pageTopicNote = $event"
-      @update:related-page-selection="relatedPageSelection = $event"
-    />
+      <MemoryWikiPageEditorPanel
+        :selected-page="selectedPage"
+        v-model:page-form="pageForm"
+        :saving="saving"
+        :page-source-trace="pageSourceTrace"
+        :selected-version-id="selectedVersionId"
+        :identity-page-options="identityPageOptions"
+        :identity-relationship-rules="identityRelationshipRules"
+        :identity-relationship-candidates="identityRelationshipCandidates"
+        :identity-relationship-warnings="identityRelationshipWarnings"
+        :related-page-issues="relatedPageIssues"
+        :related-page-selection="relatedPageSelection"
+        :page-topic-keyword="pageTopicKeyword"
+        :page-topic-aliases-text="pageTopicAliasesText"
+        :page-topic-note="pageTopicNote"
+        @reset="resetPageForm"
+        @save="savePage"
+        @archive="archivePage"
+        @restore="restorePage"
+        @rollback="rollbackPage"
+        @save-related-pages="saveRelatedPages"
+        @link-topic="linkSelectedPageToTopic"
+        @update:page-topic-keyword="pageTopicKeyword = $event"
+        @update:page-topic-aliases-text="pageTopicAliasesText = $event"
+        @update:page-topic-note="pageTopicNote = $event"
+        @update:related-page-selection="relatedPageSelection = $event"
+      />
 
-    <MemoryWikiVersionPanel
-      :page-id="pageForm.pageId"
-      :page-versions="pageVersions"
-      :selected-version-id="selectedVersionId"
-      :selected-version="selectedVersion"
-      :version-diff="versionDiff"
-      @select-version="selectVersion"
-    />
+      <MemoryWikiVersionPanel
+        :page-id="pageForm.pageId"
+        :page-versions="pageVersions"
+        :selected-version-id="selectedVersionId"
+        :selected-version="selectedVersion"
+        :version-diff="versionDiff"
+        @select-version="selectVersion"
+      />
 
-    <MemoryWikiTopicIndexPanel
-      :topic-items="topicItems"
-      :selected-topic-key="selectedTopicKey"
-      :topic-detail="topicDetail"
-      :topic-source-trace="topicSourceTrace"
-      :saving="saving"
-      @select-topic="selectTopic"
-      @save-topic-aliases="saveTopicAliases"
-    />
+      <MemoryWikiTopicIndexPanel
+        :topic-items="topicItems"
+        :selected-topic-key="selectedTopicKey"
+        v-model:topic-detail="topicDetail"
+        :topic-source-trace="topicSourceTrace"
+        :saving="saving"
+        @select-topic="selectTopic"
+        @save-topic-aliases="saveTopicAliases"
+      />
 
-    <MemoryWikiGovernanceQueuePanel
-      :governance-items="governanceItems"
-      :selected-governance-id="selectedGovernanceId"
-      :filter-status="governanceFilterStatus"
-      :filter-section="governanceFilterSection"
-      :sections="governanceSections"
-      :pending-count="pendingGovernanceCount"
-      :filter-summary="governanceFilterSummary"
-      @select-governance="selectGovernance"
-      @update:filter-status="governanceFilterStatus = $event"
-      @update:filter-section="governanceFilterSection = $event"
-      @change="refreshGovernanceItems"
-    />
+      <MemoryWikiGovernanceQueuePanel
+        :governance-items="governanceItems"
+        :selected-governance-id="selectedGovernanceId"
+        :filter-status="governanceFilterStatus"
+        :filter-section="governanceFilterSection"
+        :sections="governanceSections"
+        :pending-count="pendingGovernanceCount"
+        :filter-summary="governanceFilterSummary"
+        @select-governance="selectGovernance"
+        @update:filter-status="governanceFilterStatus = $event"
+        @update:filter-section="governanceFilterSection = $event"
+        @change="refreshGovernanceItems"
+      />
 
-    <MemoryWikiGovernanceDetailPanel
-      :detail="governanceDetail"
-      :evidence-items="governanceEvidenceItems"
-      :suggested-actions="governanceSuggestedActions"
-      :filter-summary="governanceFilterSummary"
-      :saving="saving"
-      @approve="changeGovernanceStatus(governanceDetail?.requestId, 'approved')"
-      @defer="changeGovernanceStatus(governanceDetail?.requestId, 'deferred')"
-      @reject="changeGovernanceStatus(governanceDetail?.requestId, 'rejected')"
-    />
+      <MemoryWikiGovernanceDetailPanel
+        :detail="governanceDetail"
+        :evidence-items="governanceEvidenceItems"
+        :suggested-actions="governanceSuggestedActions"
+        :filter-summary="governanceFilterSummary"
+        :saving="saving"
+        @approve="changeGovernanceStatus(governanceDetail?.requestId, 'approved')"
+        @defer="changeGovernanceStatus(governanceDetail?.requestId, 'deferred')"
+        @reject="changeGovernanceStatus(governanceDetail?.requestId, 'rejected')"
+      />
 
-    <MemoryWikiConfirmationPanel
-      :confirmations="confirmations"
-      :filter-status="confirmationFilterStatus"
-      :pending-count="pendingConfirmationCount"
-      :status-map="confirmStatusMap"
-      :error-map="confirmErrorMap"
-      @confirm="handleConfirmationAction('approve', $event)"
-      @reject="handleConfirmationAction('reject', $event)"
-      @update:filter-status="confirmationFilterStatus = $event"
-      @change="refreshConfirmations"
-    />
+      <MemoryWikiConfirmationPanel
+        :confirmations="confirmations"
+        :filter-status="confirmationFilterStatus"
+        :pending-count="pendingConfirmationCount"
+        :status-map="confirmStatusMap"
+        :error-map="confirmErrorMap"
+        @confirm="handleConfirmationAction('approve', $event)"
+        @reject="handleConfirmationAction('reject', $event)"
+        @update:filter-status="confirmationFilterStatus = $event"
+        @change="refreshConfirmations"
+      />
     </div>
   </section>
 </template>
 
 <style scoped>
-.workspaceShell{
-  display:flex;
-  flex-direction:column;
+.workspaceShell {
+  display: flex;
+  flex-direction: column;
   gap: 14px;
   min-height: 0;
 }
-.workspaceHead{
-  display:flex;
+.workspaceHead {
+  display: flex;
   justify-content: space-between;
-  align-items:flex-start;
+  align-items: flex-start;
   gap: 12px;
 }
-.workspaceTitle{ font-size: 22px; font-weight: 800; }
-.workspaceHint{ margin-top: 6px; color: var(--muted); font-size: 13px; line-height: 1.5; max-width: 720px; }
-.headActions{
-  display:flex;
+.workspaceTitle {
+  font-size: 22px;
+  font-weight: 800;
+}
+.workspaceHint {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+  max-width: 720px;
+}
+.headActions {
+  display: flex;
   gap: 10px;
   flex-wrap: wrap;
 }
-.workspaceError{
+.workspaceError {
   padding: 12px 14px;
   border-radius: 14px;
-  border: 1px solid rgba(248,113,113,.35);
-  background: rgba(248,113,113,.08);
-  color: rgba(254,226,226,.95);
+  border: 1px solid rgba(248, 113, 113, 0.35);
+  background: rgba(248, 113, 113, 0.08);
+  color: rgba(254, 226, 226, 0.95);
 }
-.workspaceGrid{
-  display:grid;
+.workspaceGrid {
+  display: grid;
   grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
   gap: 14px;
   min-height: 0;
 }
-.workspaceCard{
-  background: rgba(255,255,255,.05);
+.workspaceCard {
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border);
   border-radius: 20px;
   padding: 16px;
-  display:flex;
-  flex-direction:column;
+  display: flex;
+  flex-direction: column;
   gap: 14px;
   min-height: 0;
 }
-.span2{ grid-column: 1 / -1; }
-.cardHead{
-  display:flex;
+.span2 {
+  grid-column: 1 / -1;
+}
+.cardHead {
+  display: flex;
   justify-content: space-between;
-  align-items:flex-start;
+  align-items: flex-start;
   gap: 12px;
 }
-.cardTitle{ font-weight: 800; font-size: 16px; }
-.cardHint{ color: var(--muted); font-size: 12px; max-width: 360px; text-align: right; line-height: 1.5; }
-.cardSubhint{ margin-top: 4px; color: var(--muted); font-size: 12px; }
-.cardFilters{
-  display:flex;
+.cardTitle {
+  font-weight: 800;
+  font-size: 16px;
+}
+.cardHint {
+  color: var(--muted);
+  font-size: 12px;
+  max-width: 360px;
+  text-align: right;
+  line-height: 1.5;
+}
+.cardSubhint {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.cardFilters {
+  display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
-.filterSummary{
+.filterSummary {
   padding: 12px 14px;
   border-radius: 14px;
-  border: 1px dashed rgba(125,211,252,.20);
-  background: rgba(125,211,252,.06);
-  color: rgba(224,242,254,.88);
+  border: 1px dashed rgba(125, 211, 252, 0.2);
+  background: rgba(125, 211, 252, 0.06);
+  color: rgba(224, 242, 254, 0.88);
   font-size: 13px;
 }
-.emptyState{
+.emptyState {
   padding: 14px 16px;
   border-radius: 16px;
   border: 1px dashed var(--border);
-  background: rgba(255,255,255,.03);
+  background: rgba(255, 255, 255, 0.03);
   color: var(--muted);
   line-height: 1.6;
 }
-.entryList{
-  display:flex;
-  flex-direction:column;
+.entryList {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
-  overflow:auto;
+  overflow: auto;
 }
-.entryRow{
-  text-align:left;
-  display:flex;
-  align-items:center;
+.entryRow {
+  text-align: left;
+  display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
   padding: 12px 14px;
   border-radius: 16px;
 }
-.entryRow.active{
-  background: rgba(125,211,252,.12);
-  border-color: rgba(125,211,252,.35);
+.entryRow.active {
+  background: rgba(125, 211, 252, 0.12);
+  border-color: rgba(125, 211, 252, 0.35);
 }
-.entryMain{ font-weight: 700; }
-.entryMeta{ margin-top: 4px; font-size: 12px; color: var(--muted); }
-.formGrid{
-  display:grid;
+.entryMain {
+  font-weight: 700;
+}
+.entryMeta {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.formGrid {
+  display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
-.formGrid label{
-  display:flex;
-  flex-direction:column;
+.formGrid label {
+  display: flex;
+  flex-direction: column;
   gap: 6px;
   font-size: 13px;
 }
-.formGrid .span2{
+.formGrid .span2 {
   grid-column: 1 / -1;
 }
-.actionRow{
-  display:flex;
+.actionRow {
+  display: flex;
   gap: 10px;
   flex-wrap: wrap;
 }
-.queueSummary{
+.queueSummary {
   padding: 12px 14px;
   border-radius: 14px;
-  border: 1px dashed rgba(255,255,255,.14);
-  background: rgba(255,255,255,.03);
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.03);
   color: var(--muted);
   font-size: 13px;
 }
-.topicGrid{
-  display:grid;
+.topicGrid {
+  display: grid;
   grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
   gap: 14px;
   min-height: 0;
 }
-.versionGrid{
-  display:grid;
+.versionGrid {
+  display: grid;
   grid-template-columns: minmax(260px, 360px) minmax(0, 1fr);
   gap: 14px;
   min-height: 0;
 }
-.versionList{
-  display:flex;
-  flex-direction:column;
+.versionList {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
-  overflow:auto;
+  overflow: auto;
 }
-.versionDetail{
+.versionDetail {
   min-width: 0;
 }
-.topicList{
-  display:flex;
-  flex-direction:column;
+.topicList {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
-  overflow:auto;
+  overflow: auto;
 }
 .topicDetail,
 .governanceDetail,
-.emptyDetail{
+.emptyDetail {
   border: 1px solid var(--border);
   border-radius: 16px;
-  background: rgba(255,255,255,.03);
+  background: rgba(255, 255, 255, 0.03);
   padding: 16px;
 }
-.detailTitle{ font-weight: 800; font-size: 18px; }
-.detailBadgeRow{
+.detailTitle {
+  font-weight: 800;
+  font-size: 18px;
+}
+.detailBadgeRow {
   margin-top: 10px;
-  display:flex;
+  display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
-.detailBadge{
+.detailBadge {
   padding: 4px 10px;
   border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(255,255,255,.05);
-  color: rgba(255,255,255,.82);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.82);
   font-size: 11px;
 }
-.detailMeta{ margin-top: 8px; color: var(--muted); font-size: 13px; line-height: 1.5; }
-.detailMetaGrid{
+.detailMeta {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.detailMetaGrid {
   margin-top: 14px;
-  display:grid;
+  display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
-.detailMetaCard{
-  border: 1px solid rgba(255,255,255,.10);
+.detailMetaCard {
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 14px;
-  background: rgba(255,255,255,.03);
+  background: rgba(255, 255, 255, 0.03);
   padding: 12px;
 }
-.detailMetaLabel{
+.detailMetaLabel {
   font-size: 11px;
   color: var(--muted);
 }
-.detailMetaValue{
+.detailMetaValue {
   margin-top: 6px;
   font-size: 13px;
   line-height: 1.5;
-  color: rgba(255,255,255,.90);
-  word-break: break-word;
+  color: rgba(255, 255, 255, 0.9);
+  overflow-wrap: anywhere;
 }
-.detailSection{
+.detailSection {
   margin-top: 14px;
 }
-.detailText{
+.detailText {
   margin-top: 12px;
   line-height: 1.6;
   white-space: pre-wrap;
 }
-.suggestionList{
+.suggestionList {
   margin-top: 10px;
-  display:flex;
-  flex-direction:column;
+  display: flex;
+  flex-direction: column;
   gap: 8px;
 }
-.suggestionItem{
+.suggestionItem {
   padding: 10px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.03);
-  color: rgba(255,255,255,.88);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.88);
   font-size: 13px;
   line-height: 1.5;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
-.warningItem{
-  border-color: rgba(248, 113, 113, .24);
-  background: rgba(248, 113, 113, .08);
+.warningItem {
+  border-color: rgba(248, 113, 113, 0.24);
+  background: rgba(248, 113, 113, 0.08);
 }
-.topicAliases{
-  display:flex;
-  flex-direction:column;
+.topicAliases {
+  display: flex;
+  flex-direction: column;
   gap: 6px;
   margin-top: 12px;
   font-size: 13px;
 }
-.relationshipGrid select{
+.relationshipGrid select {
   min-height: 160px;
 }
-.evidenceBlock{
+.evidenceBlock {
   margin-top: 14px;
-  display:flex;
-  flex-direction:column;
+  display: flex;
+  flex-direction: column;
   gap: 10px;
 }
-.evidenceTitle{
+.evidenceTitle {
   font-size: 13px;
   font-weight: 700;
 }
-.evidenceCards{
-  display:flex;
-  flex-direction:column;
+.evidenceCards {
+  display: flex;
+  flex-direction: column;
   gap: 10px;
 }
-.evidenceCard{
+.evidenceCard {
   border: 1px solid var(--border);
   border-radius: 14px;
-  background: rgba(255,255,255,.02);
+  background: rgba(255, 255, 255, 0.02);
   padding: 12px;
 }
-.evidenceSummary{
+.evidenceSummary {
   font-size: 12px;
   font-weight: 700;
-  color: rgba(248,250,252,.92);
+  color: rgba(248, 250, 252, 0.92);
   margin-bottom: 8px;
 }
-.evidenceItem{
+.evidenceItem {
   margin: 0;
   padding: 12px;
   border-radius: 12px;
-  border: 1px solid rgba(255,255,255,.08);
-  background: rgba(15,23,42,.55);
-  color: rgba(226,232,240,.92);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(15, 23, 42, 0.55);
+  color: rgba(226, 232, 240, 0.92);
   font-size: 12px;
   white-space: pre-wrap;
-  overflow:auto;
+  overflow: auto;
 }
-.emptyInline{
+.emptyInline {
   padding: 12px 14px;
   border-radius: 12px;
-  border: 1px dashed rgba(255,255,255,.14);
-  background: rgba(255,255,255,.02);
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.02);
   color: var(--muted);
   font-size: 13px;
   line-height: 1.5;
 }
-.confirmGrid{
-  display:grid;
+.confirmGrid {
+  display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 12px;
 }
-.emptyDetail{
+.emptyDetail {
   color: var(--muted);
-  display:grid;
-  place-items:center;
+  display: grid;
+  place-items: center;
   min-height: 180px;
-  text-align:center;
+  text-align: center;
   line-height: 1.6;
 }
-.compactEmpty{
+.compactEmpty {
   min-height: 120px;
 }
-@media (max-width: 1120px){
+@media (max-width: 1120px) {
   .workspaceGrid,
   .topicGrid,
-  .versionGrid{
+  .versionGrid {
     grid-template-columns: 1fr;
   }
 }
-@media (max-width: 720px){
+@media (max-width: 720px) {
   .workspaceHead,
-  .cardHead{
+  .cardHead {
     flex-direction: column;
   }
-  .cardHint{
-    text-align:left;
+  .cardHint {
+    text-align: left;
   }
-  .formGrid{
+  .formGrid {
     grid-template-columns: 1fr;
   }
-  .detailMetaGrid{
+  .detailMetaGrid {
     grid-template-columns: 1fr;
   }
 }

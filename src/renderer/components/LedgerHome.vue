@@ -6,7 +6,7 @@ import {
   createIncomeCategory,
   createIncomeEntry,
   listLedgerEntries,
-  listLedgerCategories
+  listLedgerCategories,
 } from '../api'
 import { listenDataChanged } from '../syncSignals'
 import { today } from '../utils/date'
@@ -24,7 +24,7 @@ const form = ref({
   categoryId: '',
   categoryName: '',
   item: '',
-  occurredAt: today()
+  occurredAt: today(),
 })
 const saving = ref(false)
 const creatingCategory = ref(false)
@@ -46,7 +46,7 @@ const trendChartFrame = Object.freeze({
   paddingLeft: 34,
   paddingRight: 16,
   paddingTop: 14,
-  paddingBottom: 28
+  paddingBottom: 28,
 })
 
 function pad2(value) {
@@ -79,7 +79,7 @@ function getMonthRange(date) {
   const end = new Date(year, month + 1, 0)
   return {
     from: `${formatLocalDateKey(start)}T00:00:00.000Z`,
-    to: `${formatLocalDateKey(end)}T23:59:59.999Z`
+    to: `${formatLocalDateKey(end)}T23:59:59.999Z`,
   }
 }
 
@@ -136,7 +136,7 @@ const trendChartStats = computed(() => {
   return {
     maxValue,
     safeMaxValue,
-    midValue: safeMaxValue / 2
+    midValue: safeMaxValue / 2,
   }
 })
 
@@ -145,47 +145,47 @@ const trendYAxisTicks = computed(() => {
   return [
     { label: '0', value: 0 },
     { label: formatCurrencyTick(midValue), value: midValue },
-    { label: formatCurrencyTick(safeMaxValue), value: safeMaxValue }
+    { label: formatCurrencyTick(safeMaxValue), value: safeMaxValue },
   ]
 })
 
 const trendXAxisTicks = computed(() => {
   const points = dailyTrendPoints.value
   if (points.length === 0) return []
-  const indices = Array.from(new Set([
-    0,
-    Math.floor((points.length - 1) / 2),
-    points.length - 1
-  ]))
+  const indices = Array.from(new Set([0, Math.floor((points.length - 1) / 2), points.length - 1]))
 
   return indices.map((index) => ({
     index,
-    label: formatShortDate(points[index].date)
+    label: formatShortDate(points[index].date),
   }))
 })
 
 const trendPointMarkers = computed(() =>
-  dailyTrendPoints.value.flatMap((point, index) => ([
+  dailyTrendPoints.value.flatMap((point, index) => [
     {
       key: `${point.date}-expense`,
       kind: 'expense',
       x: getTrendX(index, dailyTrendPoints.value.length),
       y: getTrendY(point.expense || 0, trendChartStats.value.safeMaxValue),
-      label: `${point.date} 支出 ¥${Number(point.expense || 0).toFixed(2)}`
+      label: `${point.date} 支出 ¥${Number(point.expense || 0).toFixed(2)}`,
     },
     {
       key: `${point.date}-income`,
       kind: 'income',
       x: getTrendX(index, dailyTrendPoints.value.length),
       y: getTrendY(point.income || 0, trendChartStats.value.safeMaxValue),
-      label: `${point.date} 收入 ¥${Number(point.income || 0).toFixed(2)}`
-    }
-  ]))
+      label: `${point.date} 收入 ¥${Number(point.income || 0).toFixed(2)}`,
+    },
+  ])
 )
 
 const hasTrendChart = computed(() => dailyTrendPoints.value.length >= 2)
-const chartPathExpense = computed(() => buildLinePath(dailyTrendPoints.value, 'expense', trendChartStats.value.safeMaxValue))
-const chartPathIncome = computed(() => buildLinePath(dailyTrendPoints.value, 'income', trendChartStats.value.safeMaxValue))
+const chartPathExpense = computed(() =>
+  buildLinePath(dailyTrendPoints.value, 'expense', trendChartStats.value.safeMaxValue)
+)
+const chartPathIncome = computed(() =>
+  buildLinePath(dailyTrendPoints.value, 'income', trendChartStats.value.safeMaxValue)
+)
 
 const categoryDistribution = computed(() => {
   const grouped = new Map()
@@ -199,7 +199,7 @@ const categoryDistribution = computed(() => {
       name,
       amount,
       ratio: total > 0 ? amount / total : 0,
-      color: chartColors[index % chartColors.length]
+      color: chartColors[index % chartColors.length],
     }))
     .sort((a, b) => b.amount - a.amount)
 })
@@ -210,16 +210,14 @@ const categorySegments = computed(() => {
     const segment = {
       ...item,
       dasharray: `${item.ratio * 100} ${100 - item.ratio * 100}`,
-      dashoffset: -offset
+      dashoffset: -offset,
     }
     offset += item.ratio * 100
     return segment
   })
 })
 
-const filteredCategories = computed(() =>
-  categories.value.filter((item) => item.type === form.value.type)
-)
+const filteredCategories = computed(() => categories.value.filter((item) => item.type === form.value.type))
 
 watch(
   () => form.value.type,
@@ -273,7 +271,7 @@ const calendarCells = computed(() => {
       day: date.getDate(),
       inMonth: date.getMonth() === month,
       expense: daySummary.expense,
-      income: daySummary.income
+      income: daySummary.income,
     })
   }
   return cells
@@ -282,10 +280,7 @@ const calendarCells = computed(() => {
 async function refresh() {
   loading.value = true
   try {
-    const [entryData, catData] = await Promise.all([
-      listLedgerEntries({}),
-      listLedgerCategories({})
-    ])
+    const [entryData, catData] = await Promise.all([listLedgerEntries({}), listLedgerCategories({})])
     const entryItems = entryData?.items || []
     entries.value = entryItems
     categories.value = catData?.items || []
@@ -333,15 +328,12 @@ async function submitQuickCategoryCreate() {
   categoryCreateError.value = ''
 
   try {
-    const createCategory =
-      form.value.type === 'income' ? createIncomeCategory : createExpenseCategory
+    const createCategory = form.value.type === 'income' ? createIncomeCategory : createExpenseCategory
     const result = await createCategory({ name })
     await refresh()
 
     const createdCategory =
-      result?.category ??
-      categories.value.find((item) => item.name === name && item.type === form.value.type) ??
-      null
+      result?.category ?? categories.value.find((item) => item.name === name && item.type === form.value.type) ?? null
 
     if (createdCategory) {
       form.value.categoryId = createdCategory.id
@@ -419,7 +411,7 @@ async function submitEntry() {
       occurredAt: form.value.occurredAt,
       categoryId: form.value.categoryId || null,
       categoryName: form.value.categoryName || null,
-      item: form.value.item || null
+      item: form.value.item || null,
     })
     form.value = {
       amount: '',
@@ -427,7 +419,7 @@ async function submitEntry() {
       categoryId: '',
       categoryName: '',
       item: '',
-      occurredAt: today()
+      occurredAt: today(),
     }
     showForm.value = false
     await refresh()
@@ -479,9 +471,16 @@ onBeforeUnmount(() => {
     <div class="loverview card">
       <div class="lovTitle">这个月的收支概览</div>
       <div class="lovGrid">
-        <div class="lovItem"><span class="lovLabel">收入</span><span class="lovVal inc">+¥{{ monthlyIncome.toFixed(2) }}</span></div>
-        <div class="lovItem"><span class="lovLabel">支出</span><span class="lovVal exp">-¥{{ monthlyExpense.toFixed(2) }}</span></div>
-        <div class="lovItem"><span class="lovLabel">结余</span><span class="lovVal">¥{{ (monthlyIncome - monthlyExpense).toFixed(2) }}</span></div>
+        <div class="lovItem">
+          <span class="lovLabel">收入</span><span class="lovVal inc">+¥{{ monthlyIncome.toFixed(2) }}</span>
+        </div>
+        <div class="lovItem">
+          <span class="lovLabel">支出</span><span class="lovVal exp">-¥{{ monthlyExpense.toFixed(2) }}</span>
+        </div>
+        <div class="lovItem">
+          <span class="lovLabel">结余</span
+          ><span class="lovVal">¥{{ (monthlyIncome - monthlyExpense).toFixed(2) }}</span>
+        </div>
       </div>
     </div>
 
@@ -548,9 +547,16 @@ onBeforeUnmount(() => {
           <div class="lchartHint">支出 / 收入</div>
         </div>
         <div v-if="dailyTrendPoints.length === 0" class="lchartEmpty">这个月还没有记录，所以暂时看不到走势。</div>
-        <div v-else-if="!hasTrendChart" class="lchartEmpty">目前只有一天的记录，等多记几笔后，这里就能看出变化趋势了。</div>
+        <div v-else-if="!hasTrendChart" class="lchartEmpty">
+          目前只有一天的记录，等多记几笔后，这里就能看出变化趋势了。
+        </div>
         <div v-else class="ltrendWrap">
-          <svg :viewBox="`0 0 ${trendChartFrame.width} ${trendChartFrame.height}`" class="ltrend" role="img" aria-label="收支趋势图，横轴为日期，纵轴为金额">
+          <svg
+            :viewBox="`0 0 ${trendChartFrame.width} ${trendChartFrame.height}`"
+            class="ltrend"
+            role="img"
+            aria-label="收支趋势图，横轴为日期，纵轴为金额"
+          >
             <line
               v-for="tick in trendYAxisTicks"
               :key="`grid-${tick.value}`"
@@ -574,13 +580,7 @@ onBeforeUnmount(() => {
               :y1="trendChartFrame.height - trendChartFrame.paddingBottom"
               :y2="trendChartFrame.height - trendChartFrame.paddingBottom"
             />
-            <text
-              class="ltrendAxisTitle y"
-              :x="14"
-              :y="trendChartFrame.paddingTop + 10"
-            >
-              金额
-            </text>
+            <text class="ltrendAxisTitle y" :x="14" :y="trendChartFrame.paddingTop + 10">金额</text>
             <text
               class="ltrendAxisTitle x"
               :x="trendChartFrame.width - trendChartFrame.paddingRight"
@@ -606,17 +606,25 @@ onBeforeUnmount(() => {
             >
               {{ tick.label }}
             </text>
-            <path v-if="chartPathExpense" :d="chartPathExpense" fill="none" stroke="var(--danger)" stroke-width="3" stroke-linecap="round"></path>
-            <path v-if="chartPathIncome" :d="chartPathIncome" fill="none" stroke="var(--success)" stroke-width="3" stroke-linecap="round"></path>
+            <path
+              v-if="chartPathExpense"
+              :d="chartPathExpense"
+              fill="none"
+              stroke="var(--danger)"
+              stroke-width="3"
+              stroke-linecap="round"
+            ></path>
+            <path
+              v-if="chartPathIncome"
+              :d="chartPathIncome"
+              fill="none"
+              stroke="var(--success)"
+              stroke-width="3"
+              stroke-linecap="round"
+            ></path>
             <g v-for="marker in trendPointMarkers" :key="marker.key">
               <title>{{ marker.label }}</title>
-              <circle
-                :cx="marker.x"
-                :cy="marker.y"
-                r="3.5"
-                class="ltrendPoint"
-                :class="marker.kind"
-              />
+              <circle :cx="marker.x" :cy="marker.y" r="3.5" class="ltrendPoint" :class="marker.kind" />
             </g>
           </svg>
           <div class="ltrendLegend">
@@ -673,7 +681,9 @@ onBeforeUnmount(() => {
             >
               {{ creatingCategory ? '创建中…' : '创建并选中' }}
             </button>
-            <button class="ghost" type="button" :disabled="creatingCategory" @click="closeQuickCategoryCreate">取消</button>
+            <button class="ghost" type="button" :disabled="creatingCategory" @click="closeQuickCategoryCreate">
+              取消
+            </button>
           </div>
           <div v-if="categoryCreateError" class="lquickCategoryError">{{ categoryCreateError }}</div>
         </div>
@@ -690,15 +700,24 @@ onBeforeUnmount(() => {
           <div class="lrecentTitle">{{ selectedDate ? '这一天的记录' : '这个月的记录' }}</div>
           <div class="lrecentHint">收支分开看得更清楚，类目和日期也会一起带上。</div>
         </div>
-        <button class="ghost" @click="showAllEntries = !showAllEntries">{{ showAllEntries ? '收起' : '查看全部' }}</button>
+        <button class="ghost" @click="showAllEntries = !showAllEntries">
+          {{ showAllEntries ? '收起' : '查看全部' }}
+        </button>
       </div>
       <div v-if="visibleEntries.length === 0" class="lrecentEmpty">当前筛选下还没有记录。</div>
       <div v-else class="lrecentList">
-        <div v-for="e in visibleEntries.slice(0, showAllEntries ? undefined : 8)" :key="e.id" class="lrecentRow" :class="e.type === 'income' ? 'income' : 'expense'">
+        <div
+          v-for="e in visibleEntries.slice(0, showAllEntries ? undefined : 8)"
+          :key="e.id"
+          class="lrecentRow"
+          :class="e.type === 'income' ? 'income' : 'expense'"
+        >
           <span class="lrecentType">{{ e.type === 'income' ? '收入' : '支出' }}</span>
           <div class="lrecentMain">
             <span class="lrecentItem">{{ e.item || e.categoryName || '未分类' }}</span>
-            <span class="lrecentCat">{{ toDateKey(e.occurredAt) }}{{ e.categoryName ? ' · ' + e.categoryName : '' }}</span>
+            <span class="lrecentCat"
+              >{{ toDateKey(e.occurredAt) }}{{ e.categoryName ? ' · ' + e.categoryName : '' }}</span
+            >
           </div>
           <span class="lrecentAmt" :class="e.type === 'income' ? 'inc' : 'exp'">
             {{ e.type === 'income' ? '+' : '-' }}¥{{ e.amount?.toFixed(2) }}
@@ -714,102 +733,141 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.lhome{ height: 100%; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; padding-right: 4px; }
-.lhome::-webkit-scrollbar{ width: 4px; }
-.lhome::-webkit-scrollbar-thumb{ background: rgba(0,0,0,.08); border-radius: 999px; }
+.lhome {
+  height: 100%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-right: 4px;
+}
+.lhome::-webkit-scrollbar {
+  width: 4px;
+}
+.lhome::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 999px;
+}
 
-.loverview{ background: var(--ledger-tint); padding: 16px 20px; }
-.lovTitle{ font-weight: 700; font-size: 14px; color: var(--muted); margin-bottom: 8px; }
-.lovGrid{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 0; }
-.lovItem{
+.loverview {
+  background: var(--ledger-tint);
+  padding: 16px 20px;
+}
+.lovTitle {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.lovGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0;
+}
+.lovItem {
   text-align: center;
   padding: 4px 0;
   border-right: 1px solid var(--border);
 }
-.lovItem:last-child{ border-right: none; }
-.lovLabel{ font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px; }
-.lovVal{ font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.lovVal.inc{ color: var(--success); }
-.lovVal.exp{ color: var(--danger); }
+.lovItem:last-child {
+  border-right: none;
+}
+.lovLabel {
+  font-size: 11px;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 4px;
+}
+.lovVal {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.lovVal.inc {
+  color: var(--success);
+}
+.lovVal.exp {
+  color: var(--danger);
+}
 
-.lfilter{
+.lfilter {
   padding: 12px 16px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  background: #FFFDFC;
+  background: #fffdfc;
 }
 
-.lfilterText{
+.lfilterText {
   font-size: 13px;
   color: var(--text);
 }
 
-.lfilterActions{
+.lfilterActions {
   display: flex;
   gap: 8px;
   align-items: center;
 }
 
-.lfilterActions select{
+.lfilterActions select {
   width: 120px;
 }
 
-.lcharts{
+.lcharts {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
 }
 
-.lchart{
+.lchart {
   padding: 14px 16px;
 }
 
-.lchartHead{
+.lchartHead {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.lchartTitle{
+.lchartTitle {
   font-weight: 700;
 }
 
-.lchartHint{
+.lchartHint {
   font-size: 12px;
   color: var(--muted);
   line-height: 1.5;
 }
 
-.lchartEmpty{
+.lchartEmpty {
   margin-top: 14px;
   color: var(--muted);
   font-size: 13px;
 }
 
-.ldonutWrap{
+.ldonutWrap {
   margin-top: 14px;
   display: flex;
   align-items: center;
   gap: 18px;
 }
 
-.ldonut{
+.ldonut {
   width: 140px;
   height: 140px;
   transform: rotate(-90deg);
   flex: 0 0 auto;
 }
 
-.ldonutLegend{
+.ldonutLegend {
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.ldonutItem{
+.ldonutItem {
   display: grid;
   grid-template-columns: auto 1fr auto;
   gap: 8px;
@@ -817,65 +875,65 @@ onBeforeUnmount(() => {
   font-size: 12px;
 }
 
-.ldonutColor{
+.ldonutColor {
   width: 10px;
   height: 10px;
   border-radius: 999px;
 }
 
-.ldonutName{
+.ldonutName {
   color: var(--text);
 }
 
-.ldonutValue{
+.ldonutValue {
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
 
-.ltrendWrap{
+.ltrendWrap {
   margin-top: 12px;
 }
 
-.ltrend{
+.ltrend {
   width: 100%;
   height: 176px;
 }
 
-.ltrendAxis{
+.ltrendAxis {
   stroke: rgba(60, 52, 48, 0.28);
   stroke-width: 1;
 }
 
-.ltrendGrid{
+.ltrendGrid {
   stroke: rgba(60, 52, 48, 0.12);
   stroke-width: 1;
   stroke-dasharray: 3 4;
 }
 
-.ltrendTickLabel{
+.ltrendTickLabel {
   fill: var(--muted);
   font-size: 10px;
 }
 
-.ltrendAxisTitle{
+.ltrendAxisTitle {
   fill: var(--muted);
   font-size: 10px;
   font-weight: 700;
 }
 
-.ltrendAxisTitle.x{
+.ltrendAxisTitle.x {
   text-anchor: end;
 }
 
-.ltrendTickLabel.y{
+.ltrendTickLabel.y {
   text-anchor: end;
 }
 
-.ltrendTickLabel.x{
+.ltrendTickLabel.x {
   text-anchor: middle;
 }
 
-.ltrendLegend{
+.ltrendLegend {
   margin-top: 8px;
   display: flex;
   flex-wrap: wrap;
@@ -884,24 +942,24 @@ onBeforeUnmount(() => {
   color: var(--muted);
 }
 
-.ltrendPoint{
-  stroke: #FFFDFC;
+.ltrendPoint {
+  stroke: #fffdfc;
   stroke-width: 1.5;
 }
 
-.ltrendPoint.expense{
+.ltrendPoint.expense {
   fill: var(--danger);
 }
 
-.ltrendPoint.income{
+.ltrendPoint.income {
   fill: var(--success);
 }
 
-.ltrendAxisHint{
+.ltrendAxisHint {
   color: var(--muted);
 }
 
-.legendDot{
+.legendDot {
   display: inline-block;
   width: 8px;
   height: 8px;
@@ -909,75 +967,124 @@ onBeforeUnmount(() => {
   margin-right: 6px;
 }
 
-.legendDot.exp{ background: var(--danger); }
-.legendDot.inc{ background: var(--success); }
+.legendDot.exp {
+  background: var(--danger);
+}
+.legendDot.inc {
+  background: var(--success);
+}
 
-.lquick{ padding: 14px 20px; }
-.lquickHead{ display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
-.lquickTitle{ font-weight: 700; }
-.lquickHint{ margin-top: 4px; font-size: 12px; color: var(--muted); }
-.lquickForm{ margin-top: 10px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.lquick {
+  padding: 14px 20px;
+}
+.lquickHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.lquickTitle {
+  font-weight: 700;
+}
+.lquickHint {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.lquickForm {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
 .lquickForm > button,
 .lquickForm > .lquickRow,
- .lquickForm > .lquickCategoryRow,
- .lquickForm > .lquickCategoryCreateBox,
- .lquickForm > .lquickError{ grid-column: 1 / -1; }
-.lquickRow{ display: flex; gap: 8px; }
-.lquickCategoryRow{
+.lquickForm > .lquickCategoryRow,
+.lquickForm > .lquickCategoryCreateBox,
+.lquickForm > .lquickError {
+  grid-column: 1 / -1;
+}
+.lquickRow {
+  display: flex;
+  gap: 8px;
+}
+.lquickCategoryRow {
   display: grid;
   grid-template-columns: 1fr auto;
   gap: 8px;
 }
-.lquickCategoryCreate{
+.lquickCategoryCreate {
   white-space: nowrap;
 }
-.lquickCategoryCreateBox{
+.lquickCategoryCreateBox {
   padding: 12px;
   border-radius: 12px;
-  border: 1px solid rgba(0,0,0,.08);
-  background: #FFFDFC;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: #fffdfc;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
-.lquickCategoryCreateTitle{
+.lquickCategoryCreateTitle {
   font-size: 13px;
   font-weight: 700;
 }
-.lquickCategoryCreateHint{
+.lquickCategoryCreateHint {
   font-size: 12px;
   color: var(--muted);
 }
-.lquickCategoryCreateActions{
+.lquickCategoryCreateActions {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 8px;
   align-items: center;
 }
-.lquickCategoryError{
+.lquickCategoryError {
   padding: 8px 12px;
   border-radius: 10px;
-  border: 1px solid rgba(217,106,92,.20);
+  border: 1px solid rgba(217, 106, 92, 0.2);
   background: var(--danger-soft);
   color: var(--danger);
   font-size: 12px;
 }
-.lquickError{
+.lquickError {
   padding: 8px 12px;
   border-radius: 10px;
-  border: 1px solid rgba(217,106,92,.20);
+  border: 1px solid rgba(217, 106, 92, 0.2);
   background: var(--danger-soft);
   color: var(--danger);
   font-size: 12px;
 }
 
-.lrecent{ padding: 14px 20px; }
-.lrecentHead{ display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; gap: 12px; }
-.lrecentTitle{ font-weight: 700; }
-.lrecentHint{ margin-top: 4px; font-size: 12px; color: var(--muted); }
-.lrecentEmpty{ color: var(--muted); font-size: 13px; padding: 10px 0; }
-.lrecentList{ display: flex; flex-direction: column; gap: 6px; }
-.lrecentRow{
+.lrecent {
+  padding: 14px 20px;
+}
+.lrecentHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+  gap: 12px;
+}
+.lrecentTitle {
+  font-weight: 700;
+}
+.lrecentHint {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.lrecentEmpty {
+  color: var(--muted);
+  font-size: 13px;
+  padding: 10px 0;
+}
+.lrecentList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.lrecentRow {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
@@ -986,83 +1093,98 @@ onBeforeUnmount(() => {
   border-radius: 14px;
   border: 1px solid var(--border);
   font-size: 13px;
-  background: #FFFFFF;
+  background: #ffffff;
 }
 
-.lrecentRow.expense{
-  background: #FFF9F8;
+.lrecentRow.expense {
+  background: #fff9f8;
 }
 
-.lrecentRow.income{
-  background: #F8FCF8;
+.lrecentRow.income {
+  background: #f8fcf8;
 }
 
-.lrecentType{
+.lrecentType {
   font-size: 11px;
   padding: 4px 8px;
   border-radius: 999px;
-  background: rgba(0,0,0,.05);
+  background: rgba(0, 0, 0, 0.05);
   color: var(--muted);
 }
 
-.lrecentMain{ min-width: 0; display: flex; flex-direction: column; gap: 2px; }
-.lrecentItem{ font-weight: 600; }
-.lrecentCat{
+.lrecentMain {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.lrecentItem {
+  font-weight: 600;
+}
+.lrecentCat {
   font-size: 11px;
   color: var(--muted);
 }
 
-.lrecentAmt{
+.lrecentAmt {
   font-weight: 700;
   font-size: 15px;
   font-variant-numeric: tabular-nums;
   text-align: right;
   white-space: nowrap;
 }
-.lrecentAmt.inc{ color: var(--success); }
-.lrecentAmt.exp{ color: var(--danger); }
+.lrecentAmt.inc {
+  color: var(--success);
+}
+.lrecentAmt.exp {
+  color: var(--danger);
+}
 
-.lcat{ padding: 10px 20px; text-align: center; font-size: 13px; }
+.lcat {
+  padding: 10px 20px;
+  text-align: center;
+  font-size: 13px;
+}
 
-@media (max-width: 900px){
-  .lcharts{
+@media (max-width: 900px) {
+  .lcharts {
     grid-template-columns: 1fr;
   }
 
-  .ldonutWrap{
+  .ldonutWrap {
     flex-direction: column;
     align-items: flex-start;
   }
 }
 
-@media (max-width: 720px){
+@media (max-width: 720px) {
   .lfilter,
   .lquickHead,
-  .lrecentHead{
+  .lrecentHead {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .lfilterActions{
+  .lfilterActions {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .lfilterActions select{
+  .lfilterActions select {
     width: 100%;
   }
 
-  .lquickForm{
+  .lquickForm {
     grid-template-columns: 1fr;
   }
 
   .lquickRow,
-  .lquickCategoryCreateActions{
+  .lquickCategoryCreateActions {
     flex-direction: column;
   }
 
   .lquickCategoryRow,
-  .lquickCategoryCreateActions{
+  .lquickCategoryCreateActions {
     grid-template-columns: 1fr;
   }
 }

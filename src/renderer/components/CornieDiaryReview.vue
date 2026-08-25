@@ -3,8 +3,12 @@ import { onMounted, ref } from 'vue'
 import { listEntries, getEntry } from '../api'
 import CornieDiaryMarkdown from './CornieDiaryMarkdown.vue'
 
-function pad2(n) { return String(n).padStart(2, '0') }
-function toISOMonth(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}` }
+function pad2(n) {
+  return String(n).padStart(2, '0')
+}
+function toISOMonth(d) {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`
+}
 
 const selectedMonth = ref(toISOMonth(new Date()))
 const entries = ref([])
@@ -22,8 +26,11 @@ async function refresh() {
       activeDate.value = ''
       activeEntry.value = null
     }
-  } catch { /* ignore */ }
-  finally { loading.value = false }
+  } catch {
+    /* ignore */
+  } finally {
+    loading.value = false
+  }
 }
 
 async function openEntry(date) {
@@ -36,7 +43,7 @@ async function openEntry(date) {
   } catch {
     activeDate.value = date
     activeEntry.value = {
-      cornieText: '这篇日记翻出来的时候有点小打结了，等铃湾缓一缓再陪你看。'
+      cornieText: '这篇日记翻出来的时候有点小打结了，等铃湾缓一缓再陪你看。',
     }
   } finally {
     detailLoading.value = false
@@ -58,9 +65,7 @@ onMounted(refresh)
     </header>
 
     <div v-if="loading" class="reviewLoading">翻翻日记…</div>
-    <div v-else-if="entries.length === 0" class="reviewEmpty">
-      这个月铃湾还没开始写日记呢，去和她说说话吧。
-    </div>
+    <div v-else-if="entries.length === 0" class="reviewEmpty">这个月铃湾还没开始写日记呢，去和她说说话吧。</div>
     <div v-else class="reviewList">
       <button
         v-for="e in entries"
@@ -93,14 +98,14 @@ onMounted(refresh)
 </template>
 
 <style scoped>
-.review{
+.review {
   height: 100%;
   display: flex;
   flex-direction: column;
   gap: 14px;
   overflow: hidden;
 }
-.reviewHead{
+.reviewHead {
   display: flex;
   align-items: center;
   gap: 14px;
@@ -109,75 +114,102 @@ onMounted(refresh)
   border: 1px solid var(--border);
   border-radius: 18px;
 }
-.reviewTitle{ font-size: 18px; font-weight: 800; }
-.reviewHint{ font-size: 12px; color: var(--muted); margin-top: 2px; }
-.monthInput{ margin-left: auto; width: 140px; }
+.reviewTitle {
+  font-size: 18px;
+  font-weight: 800;
+}
+.reviewHint {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.monthInput {
+  margin-left: auto;
+  width: 140px;
+}
 
-.reviewList{
+.reviewList {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 10px;
   padding-right: 2px;
 }
-.reviewList::-webkit-scrollbar{ width: 4px; }
-.reviewList::-webkit-scrollbar-thumb{ background: rgba(0,0,0,.08); border-radius: 999px; }
+.reviewList::-webkit-scrollbar {
+  width: 4px;
+}
+.reviewList::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 999px;
+}
 
-.reviewCard{
+.reviewCard {
   padding: 16px;
   text-align: left;
   background: var(--surface);
   cursor: pointer;
 }
-.reviewCard.active{
+.reviewCard.active {
   border-color: rgba(155, 107, 122, 0.28);
   box-shadow: 0 10px 24px rgba(155, 107, 122, 0.08);
 }
-.reviewDate{ font-weight: 700; margin-bottom: 6px; }
-.reviewExcerpt{
+.reviewDate {
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+.reviewExcerpt {
   font-size: 13px;
-  color: #9B6B7A;
+  color: #9b6b7a;
   display: -webkit-box;
   -webkit-line-clamp: 5;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-:deep(.reviewExcerpt .cornieMarkdown){ gap: 6px; }
+:deep(.reviewExcerpt .cornieMarkdown) {
+  gap: 6px;
+}
 :deep(.reviewExcerpt .mdParagraph),
 :deep(.reviewExcerpt .mdQuote),
-:deep(.reviewExcerpt .mdList){
+:deep(.reviewExcerpt .mdList) {
   font-size: 13px;
 }
 
-.reviewDetail{
+.reviewDetail {
   padding: 18px 20px;
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
-.reviewDetailHead{
+.reviewDetailHead {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
 }
-.reviewDetailTitle{
+.reviewDetailTitle {
   font-size: 17px;
   font-weight: 800;
 }
-.reviewDetailHint{
+.reviewDetailHint {
   margin-top: 4px;
   font-size: 12px;
   color: var(--muted);
 }
-.reviewDetailBody{
-  color: #9B6B7A;
+.reviewDetailBody {
+  color: #9b6b7a;
   line-height: 1.8;
 }
 
-.reviewLoading{ text-align: center; color: var(--muted); padding: 40px; }
-.reviewLoading.inline{ padding: 10px 0; text-align: left; }
-.reviewEmpty{
+.reviewLoading {
+  text-align: center;
+  color: var(--muted);
+  padding: 40px;
+}
+.reviewLoading.inline {
+  padding: 10px 0;
+  text-align: left;
+}
+.reviewEmpty {
   text-align: center;
   color: var(--muted);
   padding: 40px;

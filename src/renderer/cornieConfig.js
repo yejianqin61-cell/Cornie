@@ -7,7 +7,7 @@ export const corniePetTransform = {
   // 由于部件边界与窗口裁切的视觉差异，做一个轻微的左移/下移让完整主体落在框内
   offsetX: -120,
   // 小窗内整体平移（在上一版基础上再下移 30px：-210 + 30 = -180）
-  offsetY: -180
+  offsetY: -180,
 }
 
 // 由拼装编辑器导出并固化（version: 1）
@@ -15,7 +15,7 @@ export const cornieParts = [
   { id: 'tail1', x: 337, y: 314, scale: 0.54, rot: -160, opacity: 0.95, z: 0 },
   { id: 'body', x: 293, y: 197, scale: 1, rot: 0, opacity: 1, z: 1 },
   { id: 'head', x: 245, y: -35, scale: 1, rot: 0, opacity: 1, z: 4 },
-  { id: 'ring', x: 396, y: 228, scale: 0.74, rot: 0, opacity: 1, z: 5 }
+  { id: 'ring', x: 396, y: 228, scale: 0.74, rot: 0, opacity: 1, z: 5 },
 ]
 
 export const cornieCssVars = {
@@ -42,7 +42,7 @@ export const cornieCssVars = {
   '--ring-s': '0.740',
   '--ring-r': '0.0deg',
   '--ring-o': '1.000',
-  '--ring-z': '5'
+  '--ring-z': '5',
 }
 
 // 眨眼覆盖层（挂在 head 部件内，坐标系继承 head 的变换）
@@ -53,6 +53,5 @@ export const cornieEyeOverlay = {
   w: 176,
   h: 124,
   rot: -1.2,
-  opacity: 1
+  opacity: 1,
 }
-

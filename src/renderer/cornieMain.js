@@ -6,4 +6,3 @@ import './style.css'
 document.body.classList.add('transparent')
 
 createApp(CorniePet).mount('#app')
-

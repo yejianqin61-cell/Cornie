@@ -4,7 +4,7 @@ defineProps({
   evidenceItems: { type: Array, default: () => [] },
   suggestedActions: { type: Array, default: () => [] },
   filterSummary: { type: String, default: '' },
-  saving: { type: Boolean, default: false }
+  saving: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['approve', 'defer', 'reject'])
@@ -80,12 +80,8 @@ const emit = defineEmits(['approve', 'defer', 'reject'])
         <button class="primary" :disabled="saving || detail.status === 'approved'" @click="emit('approve')">
           标记已处理
         </button>
-        <button :disabled="saving || detail.status === 'deferred'" @click="emit('defer')">
-          稍后再看
-        </button>
-        <button :disabled="saving || detail.status === 'rejected'" @click="emit('reject')">
-          驳回建议
-        </button>
+        <button :disabled="saving || detail.status === 'deferred'" @click="emit('defer')">稍后再看</button>
+        <button :disabled="saving || detail.status === 'rejected'" @click="emit('reject')">驳回建议</button>
       </div>
     </div>
     <div v-else class="emptyDetail">点左边一条治理请求，我就把它的原因、证据和处理入口摊给你看。</div>
@@ -93,162 +89,178 @@ const emit = defineEmits(['approve', 'defer', 'reject'])
 </template>
 
 <style scoped>
-.workspaceCard{
-  background: rgba(255,255,255,.05);
+.workspaceCard {
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border);
   border-radius: 20px;
   padding: 16px;
-  display:flex;
-  flex-direction:column;
+  display: flex;
+  flex-direction: column;
   gap: 14px;
   min-height: 0;
 }
-.cardHead{
-  display:flex;
+.cardHead {
+  display: flex;
   justify-content: space-between;
-  align-items:flex-start;
+  align-items: flex-start;
   gap: 12px;
 }
-.cardTitle{ font-weight: 800; font-size: 16px; }
-.cardHint{ color: var(--muted); font-size: 12px; max-width: 360px; text-align: right; line-height: 1.5; }
-.cardSubhint{ margin-top: 4px; color: var(--muted); font-size: 12px; }
+.cardTitle {
+  font-weight: 800;
+  font-size: 16px;
+}
+.cardHint {
+  color: var(--muted);
+  font-size: 12px;
+  max-width: 360px;
+  text-align: right;
+  line-height: 1.5;
+}
+.cardSubhint {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
 .governanceDetail,
-.emptyDetail{
+.emptyDetail {
   border: 1px solid var(--border);
   border-radius: 16px;
-  background: rgba(255,255,255,.03);
+  background: rgba(255, 255, 255, 0.03);
   padding: 16px;
 }
-.detailTitle{ font-weight: 800; font-size: 18px; }
-.detailBadgeRow{
+.detailTitle {
+  font-weight: 800;
+  font-size: 18px;
+}
+.detailBadgeRow {
   margin-top: 10px;
-  display:flex;
+  display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
-.detailBadge{
+.detailBadge {
   padding: 4px 10px;
   border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.12);
-  background: rgba(255,255,255,.05);
-  color: rgba(255,255,255,.82);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.82);
   font-size: 11px;
 }
-.detailMetaGrid{
+.detailMetaGrid {
   margin-top: 14px;
-  display:grid;
+  display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
 }
-.detailMetaCard{
-  border: 1px solid rgba(255,255,255,.10);
+.detailMetaCard {
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 14px;
-  background: rgba(255,255,255,.03);
+  background: rgba(255, 255, 255, 0.03);
   padding: 12px;
 }
-.detailMetaLabel{
+.detailMetaLabel {
   font-size: 11px;
   color: var(--muted);
 }
-.detailMetaValue{
+.detailMetaValue {
   margin-top: 6px;
   font-size: 13px;
   line-height: 1.5;
-  color: rgba(255,255,255,.90);
-  word-break: break-word;
+  color: rgba(255, 255, 255, 0.9);
+  overflow-wrap: anywhere;
 }
-.detailSection{
+.detailSection {
   margin-top: 14px;
 }
-.detailText{
+.detailText {
   margin-top: 12px;
   line-height: 1.6;
   white-space: pre-wrap;
 }
-.suggestionList{
+.suggestionList {
   margin-top: 10px;
-  display:flex;
-  flex-direction:column;
+  display: flex;
+  flex-direction: column;
   gap: 8px;
 }
-.suggestionItem{
+.suggestionItem {
   padding: 10px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.03);
-  color: rgba(255,255,255,.88);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.88);
   font-size: 13px;
   line-height: 1.5;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
-.evidenceBlock{
+.evidenceBlock {
   margin-top: 14px;
-  display:flex;
-  flex-direction:column;
+  display: flex;
+  flex-direction: column;
   gap: 10px;
 }
-.evidenceTitle{
+.evidenceTitle {
   font-size: 13px;
   font-weight: 700;
 }
-.evidenceCards{
-  display:flex;
-  flex-direction:column;
+.evidenceCards {
+  display: flex;
+  flex-direction: column;
   gap: 10px;
 }
-.evidenceCard{
+.evidenceCard {
   border: 1px solid var(--border);
   border-radius: 14px;
-  background: rgba(255,255,255,.02);
+  background: rgba(255, 255, 255, 0.02);
   padding: 12px;
 }
-.evidenceSummary{
+.evidenceSummary {
   font-size: 12px;
   font-weight: 700;
-  color: rgba(248,250,252,.92);
+  color: rgba(248, 250, 252, 0.92);
   margin-bottom: 8px;
 }
-.evidenceItem{
+.evidenceItem {
   margin: 0;
   padding: 12px;
   border-radius: 12px;
-  border: 1px solid rgba(255,255,255,.08);
-  background: rgba(15,23,42,.55);
-  color: rgba(226,232,240,.92);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(15, 23, 42, 0.55);
+  color: rgba(226, 232, 240, 0.92);
   font-size: 12px;
   white-space: pre-wrap;
-  overflow:auto;
+  overflow: auto;
 }
-.emptyInline{
+.emptyInline {
   padding: 12px 14px;
   border-radius: 12px;
-  border: 1px dashed rgba(255,255,255,.14);
-  background: rgba(255,255,255,.02);
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.02);
   color: var(--muted);
   font-size: 13px;
   line-height: 1.5;
 }
-.actionRow{
-  display:flex;
+.actionRow {
+  display: flex;
   gap: 10px;
   flex-wrap: wrap;
 }
-.emptyDetail{
+.emptyDetail {
   color: var(--muted);
-  display:grid;
-  place-items:center;
+  display: grid;
+  place-items: center;
   min-height: 180px;
-  text-align:center;
+  text-align: center;
   line-height: 1.6;
 }
-@media (max-width: 720px){
-  .cardHead{
+@media (max-width: 720px) {
+  .cardHead {
     flex-direction: column;
   }
-  .cardHint{
-    text-align:left;
+  .cardHint {
+    text-align: left;
   }
-  .detailMetaGrid{
+  .detailMetaGrid {
     grid-template-columns: 1fr;
   }
 }

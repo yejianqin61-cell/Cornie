@@ -1,7 +1,7 @@
 <script setup>
 defineProps({
   loading: { type: Boolean, default: false },
-  saving: { type: Boolean, default: false }
+  saving: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['run-inspection', 'refresh'])
@@ -24,21 +24,30 @@ const emit = defineEmits(['run-inspection', 'refresh'])
 </template>
 
 <style scoped>
-.workspaceHead{
-  display:flex;
+.workspaceHead {
+  display: flex;
   justify-content: space-between;
-  align-items:flex-start;
+  align-items: flex-start;
   gap: 12px;
 }
-.workspaceTitle{ font-size: 22px; font-weight: 800; }
-.workspaceHint{ margin-top: 6px; color: var(--muted); font-size: 13px; line-height: 1.5; max-width: 720px; }
-.headActions{
-  display:flex;
+.workspaceTitle {
+  font-size: 22px;
+  font-weight: 800;
+}
+.workspaceHint {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+  max-width: 720px;
+}
+.headActions {
+  display: flex;
   gap: 10px;
   flex-wrap: wrap;
 }
-@media (max-width: 720px){
-  .workspaceHead{
+@media (max-width: 720px) {
+  .workspaceHead {
     flex-direction: column;
   }
 }

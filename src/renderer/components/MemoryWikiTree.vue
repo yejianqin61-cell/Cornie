@@ -9,7 +9,7 @@ const props = defineProps({
   pages: { type: Array, default: () => [] },
   selectedId: { type: String, default: '' },
   // 受控展开目录（传入则外部管理，否则组件内部管理）
-  expandedKeys: { type: Array, default: null }
+  expandedKeys: { type: Array, default: null },
 })
 
 const emit = defineEmits(['select', 'toggle'])
@@ -26,16 +26,14 @@ const TYPE_ORDER = [
   { key: 'project', label: '项目' },
   { key: 'routine', label: '习惯' },
   { key: 'need', label: '需要' },
-  { key: 'other', label: '其他' }
+  { key: 'other', label: '其他' },
 ]
 
 // 默认展开身份 4 类
 const internalExpanded = ref(new Set(['identity_profile', 'identity_person', 'identity_preference', 'identity_trait']))
 
 const isControlled = computed(() => Array.isArray(props.expandedKeys))
-const expandedSet = computed(() =>
-  isControlled.value ? new Set(props.expandedKeys) : internalExpanded.value
-)
+const expandedSet = computed(() => (isControlled.value ? new Set(props.expandedKeys) : internalExpanded.value))
 
 function isExpanded(key) {
   return expandedSet.value.has(key)
@@ -103,7 +101,7 @@ const tree = computed(() => {
 </template>
 
 <style scoped>
-.wikiTree{
+.wikiTree {
   height: 100%;
   overflow-y: auto;
   padding: 8px 6px;
@@ -112,10 +110,15 @@ const tree = computed(() => {
   gap: 2px;
   font-size: 13px;
 }
-.wikiTree::-webkit-scrollbar{ width: 4px; }
-.wikiTree::-webkit-scrollbar-thumb{ background: rgba(0,0,0,.08); border-radius: 999px; }
+.wikiTree::-webkit-scrollbar {
+  width: 4px;
+}
+.wikiTree::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 999px;
+}
 
-.treeDir{
+.treeDir {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -124,23 +127,43 @@ const tree = computed(() => {
   cursor: pointer;
   user-select: none;
 }
-.treeDir:hover{ background: rgba(0,0,0,.04); }
-.treeDirIcon{ font-size: 12px; }
-.treeDirLabel{ font-weight: 600; }
-.treeDirCount{ margin-left: auto; font-size: 11px; color: var(--muted); }
-.treeDirEmpty{ margin-left: auto; font-size: 11px; color: var(--muted); opacity: .7; }
+.treeDir:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+.treeDirIcon {
+  font-size: 12px;
+}
+.treeDirLabel {
+  font-weight: 600;
+}
+.treeDirCount {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--muted);
+}
+.treeDirEmpty {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--muted);
+  opacity: 0.7;
+}
 
-.treeFiles{
+.treeFiles {
   display: flex;
   flex-direction: column;
   gap: 1px;
   margin-left: 14px;
   padding-left: 8px;
-  border-left: 1px solid rgba(0,0,0,.06);
+  border-left: 1px solid rgba(0, 0, 0, 0.06);
 }
-.treeEmptyRow{ padding: 4px 8px; font-size: 12px; color: var(--muted); opacity: .7; }
+.treeEmptyRow {
+  padding: 4px 8px;
+  font-size: 12px;
+  color: var(--muted);
+  opacity: 0.7;
+}
 
-.treeFile{
+.treeFile {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -150,16 +173,32 @@ const tree = computed(() => {
   user-select: none;
   color: var(--text);
 }
-.treeFile:hover{ background: rgba(0,0,0,.04); }
-.treeFile.active{ background: rgba(232,133,106,.12); color: #C96F52; font-weight: 600; }
-.treeFileIcon{ font-size: 12px; opacity: .8; }
-.treeFileLabel{
+.treeFile:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+.treeFile.active {
+  background: rgba(232, 133, 106, 0.12);
+  color: #c96f52;
+  font-weight: 600;
+}
+.treeFileIcon {
+  font-size: 12px;
+  opacity: 0.8;
+}
+.treeFileLabel {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 /* 已归档：灰显 */
-.treeFile.archived{ color: var(--muted); opacity: .7; }
-.treeFile.archived.active{ background: rgba(0,0,0,.05); color: var(--muted); font-weight: 400; }
+.treeFile.archived {
+  color: var(--muted);
+  opacity: 0.7;
+}
+.treeFile.archived.active {
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--muted);
+  font-weight: 400;
+}
 </style>

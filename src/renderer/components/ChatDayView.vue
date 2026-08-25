@@ -4,7 +4,7 @@ import { getChatlog } from '../api'
 
 const props = defineProps({
   date: { type: String, required: true },
-  focusMessageId: { type: String, default: '' }
+  focusMessageId: { type: String, default: '' },
 })
 
 const emit = defineEmits(['back'])
@@ -61,13 +61,19 @@ async function loadMessages() {
   }
 }
 
-watch(() => props.date, () => {
-  loadMessages()
-})
+watch(
+  () => props.date,
+  () => {
+    loadMessages()
+  }
+)
 
-watch(() => props.focusMessageId, () => {
-  focusMessageIfNeeded()
-})
+watch(
+  () => props.focusMessageId,
+  () => {
+    focusMessageIfNeeded()
+  }
+)
 
 onMounted(async () => {
   await loadMessages()
@@ -97,9 +103,7 @@ function goBack() {
 
     <div v-if="loading" class="dayLoading">加载中…</div>
 
-    <div v-else-if="messages.length === 0" class="dayEmpty">
-      这一天还没有聊天记录。
-    </div>
+    <div v-else-if="messages.length === 0" class="dayEmpty">这一天还没有聊天记录。</div>
 
     <div v-else class="dayMessages">
       <div
@@ -109,7 +113,7 @@ function goBack() {
         class="dayBubble"
         :class="[
           msg.role === 'user' ? 'dayBubbleUser' : 'dayBubbleCornie',
-          highlightedMessageId && msg.id === highlightedMessageId ? 'dayBubbleFocus' : ''
+          highlightedMessageId && msg.id === highlightedMessageId ? 'dayBubbleFocus' : '',
         ]"
       >
         <div class="dayRole">{{ msg.role === 'user' ? '你' : '铃湾' }}</div>
@@ -120,93 +124,108 @@ function goBack() {
 </template>
 
 <style scoped>
-.dayView{
+.dayView {
   height: 100%;
-  display:flex;
-  flex-direction:column;
+  display: flex;
+  flex-direction: column;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 18px;
   overflow: hidden;
 }
 
-.dayHead{
-  display:flex;
-  align-items:center;
+.dayHead {
+  display: flex;
+  align-items: center;
   gap: 14px;
   padding: 14px 20px;
   border-bottom: 1px solid var(--border);
 }
-.dayDate{
+.dayDate {
   font-size: 18px;
   font-weight: 800;
 }
-.dayHint{
+.dayHint {
   font-size: 12px;
   color: var(--muted);
   margin-left: auto;
 }
 
-.dayMessages{
-  flex:1;
-  overflow-y:auto;
+.dayMessages {
+  flex: 1;
+  overflow-y: auto;
   padding: 20px;
-  display:flex;
-  flex-direction:column;
+  display: flex;
+  flex-direction: column;
   gap: 12px;
 }
-.dayMessages::-webkit-scrollbar{ width: 4px; }
-.dayMessages::-webkit-scrollbar-thumb{
-  background: rgba(0,0,0,.10);
+.dayMessages::-webkit-scrollbar {
+  width: 4px;
+}
+.dayMessages::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
   border-radius: 999px;
 }
 
-.dayBubble{
+.dayBubble {
   max-width: 75%;
   padding: 10px 14px;
   border-radius: 14px;
   line-height: 1.5;
   font-size: 14px;
-  transition: box-shadow .18s ease, transform .18s ease, border-color .18s ease;
+  transition:
+    box-shadow 0.18s ease,
+    transform 0.18s ease,
+    border-color 0.18s ease;
 }
-.dayBubbleUser{
-  align-self:flex-end;
+.dayBubbleUser {
+  align-self: flex-end;
   background: var(--accent);
-  color: #FFFFFF;
+  color: #ffffff;
   border-bottom-right-radius: 6px;
 }
-.dayBubbleCornie{
-  align-self:flex-start;
+.dayBubbleCornie {
+  align-self: flex-start;
   background: var(--surface-2);
   border: 1px solid var(--border);
   border-bottom-left-radius: 6px;
 }
 
-.dayBubbleFocus{
-  box-shadow: 0 0 0 3px rgba(232,133,106,.18), 0 12px 24px rgba(203,127,90,.14);
+.dayBubbleFocus {
+  box-shadow:
+    0 0 0 3px rgba(232, 133, 106, 0.18),
+    0 12px 24px rgba(203, 127, 90, 0.14);
   transform: translateY(-1px);
 }
 
-.dayRole{
+.dayRole {
   font-size: 11px;
-  opacity: .6;
+  opacity: 0.6;
   margin-bottom: 3px;
 }
-.dayText{ white-space: pre-wrap; word-break: break-word; }
+.dayText {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
 
 .dayLoading,
 .dayEmpty,
-.dayError{
+.dayError {
   margin: 20px;
   padding: 12px;
   border-radius: 12px;
   text-align: center;
 }
-.dayLoading{ color: var(--muted); }
-.dayEmpty{ border: 1px dashed var(--border); color: var(--muted); }
-.dayError{
-  border: 1px solid rgba(217,106,92,.25);
-  background: rgba(217,106,92,.06);
+.dayLoading {
+  color: var(--muted);
+}
+.dayEmpty {
+  border: 1px dashed var(--border);
+  color: var(--muted);
+}
+.dayError {
+  border: 1px solid rgba(217, 106, 92, 0.25);
+  background: rgba(217, 106, 92, 0.06);
   color: var(--danger);
 }
 </style>

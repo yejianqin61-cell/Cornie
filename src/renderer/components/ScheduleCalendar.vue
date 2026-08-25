@@ -2,24 +2,24 @@
 const props = defineProps({
   monthLabel: {
     type: String,
-    default: ''
+    default: '',
   },
   weekdayLabels: {
     type: Array,
-    default: () => []
+    default: () => [],
   },
   cells: {
     type: Array,
-    default: () => []
+    default: () => [],
   },
   selectedDate: {
     type: String,
-    default: ''
+    default: '',
   },
   todayDate: {
     type: String,
-    default: ''
-  }
+    default: '',
+  },
 })
 
 const emit = defineEmits(['prev-month', 'next-month', 'select-date'])
@@ -29,7 +29,7 @@ function cellClasses(cell) {
     isMuted: !cell.inMonth,
     isToday: cell.date === props.todayDate,
     isSelected: cell.date === props.selectedDate,
-    hasEntries: cell.hasEntries
+    hasEntries: cell.hasEntries,
   }
 }
 </script>
@@ -63,51 +63,51 @@ function cellClasses(cell) {
 </template>
 
 <style scoped>
-.calendarCard{
+.calendarCard {
   padding: 14px 16px;
-  background: #FFFDFC;
+  background: #fffdfc;
 }
 
-.calendarHead{
+.calendarHead {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
 }
 
-.calendarTitle{
+.calendarTitle {
   font-size: 15px;
   font-weight: 700;
   color: var(--text);
 }
 
-.calendarNav{
+.calendarNav {
   padding: 6px 10px;
   border-radius: 999px;
   color: var(--muted);
 }
 
-.calendarWeekdays{
+.calendarWeekdays {
   margin-top: 12px;
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 6px;
 }
 
-.calendarWeekday{
+.calendarWeekday {
   text-align: center;
   font-size: 11px;
   color: var(--muted);
 }
 
-.calendarGrid{
+.calendarGrid {
   margin-top: 8px;
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 6px;
 }
 
-.calendarCell{
+.calendarCell {
   min-height: 44px;
   border: none;
   border-radius: 14px;
@@ -121,38 +121,38 @@ function cellClasses(cell) {
   color: var(--text);
 }
 
-.calendarCell:hover{
-  background: rgba(0,0,0,.04);
+.calendarCell:hover {
+  background: rgba(0, 0, 0, 0.04);
 }
 
-.calendarCell.isMuted{
-  color: #B7AEA7;
+.calendarCell.isMuted {
+  color: #b7aea7;
 }
 
-.calendarCell.isToday{
-  box-shadow: inset 0 0 0 1px rgba(228,133,106,.26);
-  background: rgba(232,133,106,.08);
+.calendarCell.isToday {
+  box-shadow: inset 0 0 0 1px rgba(228, 133, 106, 0.26);
+  background: rgba(232, 133, 106, 0.08);
 }
 
-.calendarCell.isSelected{
+.calendarCell.isSelected {
   background: var(--accent);
-  color: #FFFFFF;
+  color: #ffffff;
 }
 
-.calendarCell.isSelected .calendarDot{
-  background: rgba(255,255,255,.92);
+.calendarCell.isSelected .calendarDot {
+  background: rgba(255, 255, 255, 0.92);
 }
 
-.calendarCell.hasEntries .calendarDay{
+.calendarCell.hasEntries .calendarDay {
   font-weight: 700;
 }
 
-.calendarDay{
+.calendarDay {
   font-size: 13px;
   line-height: 1;
 }
 
-.calendarDot{
+.calendarDot {
   width: 6px;
   height: 6px;
   border-radius: 999px;

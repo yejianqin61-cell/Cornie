@@ -23,10 +23,7 @@ const panels = [
       <div class="advTitle">高级设置</div>
       <div class="advToggle">
         <span class="advToggleLabel">高级模式</span>
-        <button
-          :class="advancedMode ? 'primary' : ''"
-          @click="advancedMode = !advancedMode"
-        >
+        <button :class="advancedMode ? 'primary' : ''" @click="advancedMode = !advancedMode">
           {{ advancedMode ? '已启用' : '已关闭' }}
         </button>
       </div>
@@ -67,14 +64,14 @@ const panels = [
 </template>
 
 <style scoped>
-.advanced{
+.advanced {
   height: 100%;
   display: flex;
   flex-direction: column;
   gap: 14px;
   overflow: hidden;
 }
-.advHead{
+.advHead {
   display: flex;
   align-items: center;
   gap: 14px;
@@ -83,11 +80,22 @@ const panels = [
   border: 1px solid var(--border);
   border-radius: 18px;
 }
-.advTitle{ font-size: 18px; font-weight: 800; }
-.advToggle{ margin-left: auto; display: flex; align-items: center; gap: 8px; }
-.advToggleLabel{ font-size: 13px; color: var(--muted); }
+.advTitle {
+  font-size: 18px;
+  font-weight: 800;
+}
+.advToggle {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.advToggleLabel {
+  font-size: 13px;
+  color: var(--muted);
+}
 
-.advOff{
+.advOff {
   padding: 40px;
   text-align: center;
   display: flex;
@@ -95,30 +103,66 @@ const panels = [
   align-items: center;
   gap: 8px;
 }
-.advOffIcon{ font-size: 32px; }
-.advOffTitle{ font-size: 16px; font-weight: 700; }
-.advOffHint{ font-size: 13px; color: var(--muted); line-height: 1.6; }
+.advOffIcon {
+  font-size: 32px;
+}
+.advOffTitle {
+  font-size: 16px;
+  font-weight: 700;
+}
+.advOffHint {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+}
 
-.advPanels{ flex: 1; display: flex; flex-direction: column; gap: 14px; overflow: hidden; min-height: 0; }
-.advGrid{ display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
-.advCard{
+.advPanels {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: hidden;
+  min-height: 0;
+}
+.advGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.advCard {
   padding: 14px;
   cursor: pointer;
   text-align: left;
 }
-.advCard.active{ border-color: rgba(232,133,106,.30); background: rgba(232,133,106,.06); }
-.advCardTitle{ font-weight: 600; font-size: 14px; }
-.advCardHint{ font-size: 12px; color: var(--muted); margin-top: 4px; }
+.advCard.active {
+  border-color: rgba(232, 133, 106, 0.3);
+  background: rgba(232, 133, 106, 0.06);
+}
+.advCardTitle {
+  font-weight: 600;
+  font-size: 14px;
+}
+.advCardHint {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+}
 
-.advPanelContent{ flex: 1; min-height: 0; overflow: auto; }
+.advPanelContent {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
 
-.advPlaceholder{
+.advPlaceholder {
   padding: 40px;
   text-align: center;
   color: var(--muted);
 }
 
-@media (max-width: 760px){
-  .advGrid{ grid-template-columns: 1fr 1fr; }
+@media (max-width: 760px) {
+  .advGrid {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 </style>

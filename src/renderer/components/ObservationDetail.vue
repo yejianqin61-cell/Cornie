@@ -3,27 +3,27 @@ import { computed, onMounted, ref } from 'vue'
 import { getObservation, updateObservation, deleteObservation } from '../api'
 
 const props = defineProps({
-  id: { type: String, required: true }
+  id: { type: String, required: true },
 })
 
 const emit = defineEmits(['back', 'deleted'])
 
 const OBSERVATION_TYPES = {
   event: {
-    label: '生活事件'
+    label: '生活事件',
   },
   fact: {
-    label: '事实片段'
+    label: '事实片段',
   },
   emotion: {
-    label: '情绪变化'
+    label: '情绪变化',
   },
   preference: {
-    label: '偏好线索'
+    label: '偏好线索',
   },
   misc: {
-    label: '小事记录'
-  }
+    label: '小事记录',
+  },
 }
 
 const obs = ref(null)
@@ -62,7 +62,7 @@ async function save() {
       title: obs.value.title,
       content: obs.value.content,
       type: obs.value.type,
-      date: obs.value.date
+      date: obs.value.date,
     })
     obs.value = data.observation
     dirty.value = false
@@ -130,7 +130,7 @@ async function remove() {
 </template>
 
 <style scoped>
-.odetail{
+.odetail {
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -138,7 +138,7 @@ async function remove() {
   overflow: hidden;
 }
 
-.odetailHead{
+.odetailHead {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -149,27 +149,27 @@ async function remove() {
   border-radius: 18px;
 }
 
-.odetailActions{
+.odetailActions {
   display: flex;
   gap: 8px;
 }
 
-.odetailLoading{
+.odetailLoading {
   text-align: center;
   color: var(--muted);
   padding: 40px;
 }
 
-.odetailError{
+.odetailError {
   padding: 10px 14px;
   border-radius: 12px;
-  border: 1px solid rgba(217,106,92,.25);
-  background: rgba(217,106,92,.06);
+  border: 1px solid rgba(217, 106, 92, 0.25);
+  background: rgba(217, 106, 92, 0.06);
   color: var(--danger);
   font-size: 13px;
 }
 
-.odetailCard{
+.odetailCard {
   flex: 1;
   overflow-y: auto;
   padding: 20px;
@@ -178,7 +178,7 @@ async function remove() {
   gap: 14px;
 }
 
-.odetailMeta{
+.odetailMeta {
   display: flex;
   gap: 12px;
   font-size: 13px;
@@ -186,71 +186,71 @@ async function remove() {
   flex-wrap: wrap;
 }
 
-.odetailType{
+.odetailType {
   padding: 3px 10px;
   border-radius: 999px;
   font-size: 12px;
   color: var(--accent-strong);
-  background: rgba(232,133,106,.12);
+  background: rgba(232, 133, 106, 0.12);
 }
 
-.odetailGuide{
+.odetailGuide {
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 16px;
-  background: linear-gradient(180deg, rgba(255,252,249,.95), #fff);
+  background: linear-gradient(180deg, rgba(255, 252, 249, 0.95), #ffffff);
 }
 
-.odetailGuideEyebrow{
+.odetailGuideEyebrow {
   font-size: 11px;
-  letter-spacing: .04em;
+  letter-spacing: 0.04em;
   color: var(--muted);
 }
 
-.odetailGuideTitle{
+.odetailGuideTitle {
   margin-top: 4px;
   font-size: 16px;
   font-weight: 800;
 }
 
-.odetailGuideBody{
+.odetailGuideBody {
   margin-top: 6px;
   font-size: 13px;
   color: var(--muted);
   line-height: 1.6;
 }
 
-.odetailField{
+.odetailField {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.odetailField > span{
+.odetailField > span {
   font-size: 12px;
   color: var(--muted);
 }
 
-.odetailFieldGrow{
+.odetailFieldGrow {
   flex: 1;
   min-height: 220px;
 }
 
 .odetailTitle,
-.odetailContent{
+.odetailContent {
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: #fff;
+  background: #ffffff;
   color: var(--text);
   padding: 12px 14px;
 }
 
-.odetailTitle{
+.odetailTitle {
   font-size: 16px;
   font-weight: 600;
 }
 
-.odetailContent{
+.odetailContent {
   flex: 1;
   min-height: 220px;
   resize: vertical;
@@ -258,13 +258,13 @@ async function remove() {
   line-height: 1.7;
 }
 
-@media (max-width: 760px){
-  .odetailHead{
+@media (max-width: 760px) {
+  .odetailHead {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .odetailActions{
+  .odetailActions {
     flex-direction: column;
   }
 }

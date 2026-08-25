@@ -3,7 +3,6 @@ import { computed } from 'vue'
 
 const props = defineProps({
   selectedPage: { type: Object, default: null },
-  pageForm: { type: Object, required: true },
   saving: { type: Boolean, default: false },
   pageSourceTrace: { type: Object, default: null },
   selectedVersionId: { type: String, default: '' },
@@ -15,7 +14,7 @@ const props = defineProps({
   relatedPageSelection: { type: Array, default: () => [] },
   pageTopicKeyword: { type: String, default: '' },
   pageTopicAliasesText: { type: String, default: '' },
-  pageTopicNote: { type: String, default: '' }
+  pageTopicNote: { type: String, default: '' },
 })
 
 const emit = defineEmits([
@@ -29,24 +28,28 @@ const emit = defineEmits([
   'update:pageTopicKeyword',
   'update:pageTopicAliasesText',
   'update:pageTopicNote',
-  'update:relatedPageSelection'
+  'update:relatedPageSelection',
 ])
+
+// T-01：pageForm 改为 v-model（defineModel）——父组件持有草稿对象，
+// 子组件原地编辑共享对象，行为与原先"改 prop"一致但不违反 no-mutating-props。
+const pageForm = defineModel('pageForm', { type: Object, required: true })
 
 const pageTopicKeywordModel = computed({
   get: () => props.pageTopicKeyword,
-  set: (value) => emit('update:pageTopicKeyword', value)
+  set: (value) => emit('update:pageTopicKeyword', value),
 })
 const pageTopicAliasesTextModel = computed({
   get: () => props.pageTopicAliasesText,
-  set: (value) => emit('update:pageTopicAliasesText', value)
+  set: (value) => emit('update:pageTopicAliasesText', value),
 })
 const pageTopicNoteModel = computed({
   get: () => props.pageTopicNote,
-  set: (value) => emit('update:pageTopicNote', value)
+  set: (value) => emit('update:pageTopicNote', value),
 })
 const relatedPageSelectionModel = computed({
   get: () => props.relatedPageSelection,
-  set: (value) => emit('update:relatedPageSelection', value)
+  set: (value) => emit('update:relatedPageSelection', value),
 })
 </script>
 
@@ -100,11 +103,19 @@ const relatedPageSelectionModel = computed({
         </label>
         <label class="span2">
           <span>身份摘要</span>
-          <textarea v-model="pageForm.identitySummary" rows="3" placeholder="例如：当前处于项目、考试、实习与求职压力交织阶段。" />
+          <textarea
+            v-model="pageForm.identitySummary"
+            rows="3"
+            placeholder="例如：当前处于项目、考试、实习与求职压力交织阶段。"
+          />
         </label>
         <label class="span2">
           <span>阶段概况</span>
-          <textarea v-model="pageForm.lifeStageSummary" rows="3" placeholder="例如：学业推进中，同时承担多个个人项目与求职任务。" />
+          <textarea
+            v-model="pageForm.lifeStageSummary"
+            rows="3"
+            placeholder="例如：学业推进中，同时承担多个个人项目与求职任务。"
+          />
         </label>
         <label>
           <span>当前关注</span>
@@ -116,7 +127,11 @@ const relatedPageSelectionModel = computed({
         </label>
         <label class="span2">
           <span>沟通偏好</span>
-          <textarea v-model="pageForm.communicationPreference" rows="2" placeholder="例如：希望被温柔、克制、记得上下文地陪伴。" />
+          <textarea
+            v-model="pageForm.communicationPreference"
+            rows="2"
+            placeholder="例如：希望被温柔、克制、记得上下文地陪伴。"
+          />
         </label>
       </template>
       <template v-if="pageForm.pageType === 'identity_preference'">
@@ -180,7 +195,11 @@ const relatedPageSelectionModel = computed({
         </label>
         <label class="span2">
           <span>共同经历</span>
-          <textarea v-model="pageForm.sharedExperienceSummary" rows="3" placeholder="例如：2021年冬天相恋，2022年春天疏远，2022年夏天决裂。" />
+          <textarea
+            v-model="pageForm.sharedExperienceSummary"
+            rows="3"
+            placeholder="例如：2021年冬天相恋，2022年春天疏远，2022年夏天决裂。"
+          />
         </label>
         <label>
           <span>情感权重</span>
@@ -232,7 +251,11 @@ const relatedPageSelectionModel = computed({
         </label>
         <label class="span2">
           <span>侧写摘要</span>
-          <textarea v-model="pageForm.traitSummary" rows="3" placeholder="例如：高压时容易疲惫，但会努力把情绪转成行动。" />
+          <textarea
+            v-model="pageForm.traitSummary"
+            rows="3"
+            placeholder="例如：高压时容易疲惫，但会努力把情绪转成行动。"
+          />
         </label>
         <label>
           <span>证据计数</span>
@@ -276,8 +299,12 @@ const relatedPageSelectionModel = computed({
 
     <div class="actionRow">
       <button class="primary" :disabled="saving" @click="emit('save')">{{ saving ? '保存中…' : '保存页面' }}</button>
-      <button v-if="pageForm.pageId && pageForm.status !== 'archived'" :disabled="saving" @click="emit('archive')">归档页面</button>
-      <button v-if="pageForm.pageId && pageForm.status === 'archived'" :disabled="saving" @click="emit('restore')">恢复页面</button>
+      <button v-if="pageForm.pageId && pageForm.status !== 'archived'" :disabled="saving" @click="emit('archive')">
+        归档页面
+      </button>
+      <button v-if="pageForm.pageId && pageForm.status === 'archived'" :disabled="saving" @click="emit('restore')">
+        恢复页面
+      </button>
       <button v-if="pageForm.pageId" :disabled="saving || !selectedVersionId" @click="emit('rollback')">
         {{ selectedVersionId ? '回滚到当前选中版本' : '先选择版本再回滚' }}
       </button>
@@ -285,9 +312,15 @@ const relatedPageSelectionModel = computed({
 
     <div v-if="pageSourceTrace && pageForm.pageId" class="detailSection">
       <div class="evidenceTitle">来源追溯</div>
-      <div class="detailMeta">关联页面：{{ (pageSourceTrace.relatedPages || []).map((item) => item.title).join(', ') || '无' }}</div>
-      <div class="detailMeta">聊天来源：{{ (pageSourceTrace.chatSources || []).map((item) => item.date).join(', ') || '无' }}</div>
-      <div class="detailMeta">观察来源：{{ (pageSourceTrace.observationSources || []).map((item) => item.title).join(', ') || '无' }}</div>
+      <div class="detailMeta">
+        关联页面：{{ (pageSourceTrace.relatedPages || []).map((item) => item.title).join(', ') || '无' }}
+      </div>
+      <div class="detailMeta">
+        聊天来源：{{ (pageSourceTrace.chatSources || []).map((item) => item.date).join(', ') || '无' }}
+      </div>
+      <div class="detailMeta">
+        观察来源：{{ (pageSourceTrace.observationSources || []).map((item) => item.title).join(', ') || '无' }}
+      </div>
       <div v-if="(pageSourceTrace.chatSources || []).length > 0" class="evidenceBlock">
         <div class="evidenceTitle">聊天片段</div>
         <div class="evidenceCards">
@@ -327,17 +360,15 @@ const relatedPageSelectionModel = computed({
       </div>
 
       <div class="actionRow">
-        <button :disabled="saving" @click="emit('save-related-pages')">{{ saving ? '保存中…' : '保存关系链路' }}</button>
+        <button :disabled="saving" @click="emit('save-related-pages')">
+          {{ saving ? '保存中…' : '保存关系链路' }}
+        </button>
       </div>
 
       <div v-if="identityRelationshipCandidates.length > 0" class="detailSection">
         <div class="evidenceTitle">推荐补链</div>
         <div class="suggestionList">
-          <div
-            v-for="item in identityRelationshipCandidates"
-            :key="item.pageId"
-            class="suggestionItem"
-          >
+          <div v-for="item in identityRelationshipCandidates" :key="item.pageId" class="suggestionItem">
             {{ item.title }} · {{ item.pageType }} · {{ item.linked ? '已关联' : '可补充关联' }}
           </div>
         </div>
@@ -346,7 +377,9 @@ const relatedPageSelectionModel = computed({
       <div v-if="identityRelationshipWarnings.length > 0" class="detailSection">
         <div class="evidenceTitle">治理提醒</div>
         <div class="suggestionList">
-          <div v-for="item in identityRelationshipWarnings" :key="item" class="suggestionItem warningItem">{{ item }}</div>
+          <div v-for="item in identityRelationshipWarnings" :key="item" class="suggestionItem warningItem">
+            {{ item }}
+          </div>
         </div>
       </div>
 
@@ -394,102 +427,114 @@ const relatedPageSelectionModel = computed({
 </template>
 
 <style scoped>
-.workspaceCard{
-  background: rgba(255,255,255,.05);
+.workspaceCard {
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border);
   border-radius: 20px;
   padding: 16px;
-  display:flex;
-  flex-direction:column;
+  display: flex;
+  flex-direction: column;
   gap: 14px;
   min-height: 0;
 }
-.cardHead{
-  display:flex;
+.cardHead {
+  display: flex;
   justify-content: space-between;
-  align-items:flex-start;
+  align-items: flex-start;
   gap: 12px;
 }
-.cardTitle{ font-weight: 800; font-size: 16px; }
-.cardSubhint{ margin-top: 4px; color: var(--muted); font-size: 12px; }
-.formGrid{
-  display:grid;
+.cardTitle {
+  font-weight: 800;
+  font-size: 16px;
+}
+.cardSubhint {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.formGrid {
+  display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
-.formGrid label{
-  display:flex;
-  flex-direction:column;
+.formGrid label {
+  display: flex;
+  flex-direction: column;
   gap: 6px;
   font-size: 13px;
 }
-.formGrid .span2{
+.formGrid .span2 {
   grid-column: 1 / -1;
 }
-.actionRow{
-  display:flex;
+.actionRow {
+  display: flex;
   gap: 10px;
   flex-wrap: wrap;
 }
-.detailSection{
+.detailSection {
   margin-top: 14px;
 }
-.detailMeta{ margin-top: 8px; color: var(--muted); font-size: 13px; line-height: 1.5; }
-.evidenceBlock{
-  margin-top: 14px;
-  display:flex;
-  flex-direction:column;
-  gap: 10px;
-}
-.evidenceTitle{
-  font-size: 13px;
-  font-weight: 700;
-}
-.evidenceCards{
-  display:flex;
-  flex-direction:column;
-  gap: 10px;
-}
-.evidenceCard{
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: rgba(255,255,255,.02);
-  padding: 12px;
-}
-.evidenceSummary{
-  font-size: 12px;
-  font-weight: 700;
-  color: rgba(248,250,252,.92);
-  margin-bottom: 8px;
-}
-.suggestionList{
-  margin-top: 10px;
-  display:flex;
-  flex-direction:column;
-  gap: 8px;
-}
-.suggestionItem{
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(255,255,255,.10);
-  background: rgba(255,255,255,.03);
-  color: rgba(255,255,255,.88);
+.detailMeta {
+  margin-top: 8px;
+  color: var(--muted);
   font-size: 13px;
   line-height: 1.5;
-  word-break: break-word;
 }
-.warningItem{
-  border-color: rgba(248, 113, 113, .24);
-  background: rgba(248, 113, 113, .08);
+.evidenceBlock {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
-.relationshipGrid select{
+.evidenceTitle {
+  font-size: 13px;
+  font-weight: 700;
+}
+.evidenceCards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.evidenceCard {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.02);
+  padding: 12px;
+}
+.evidenceSummary {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(248, 250, 252, 0.92);
+  margin-bottom: 8px;
+}
+.suggestionList {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.suggestionItem {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.warningItem {
+  border-color: rgba(248, 113, 113, 0.24);
+  background: rgba(248, 113, 113, 0.08);
+}
+.relationshipGrid select {
   min-height: 160px;
 }
-@media (max-width: 720px){
-  .cardHead{
+@media (max-width: 720px) {
+  .cardHead {
     flex-direction: column;
   }
-  .formGrid{
+  .formGrid {
     grid-template-columns: 1fr;
   }
 }

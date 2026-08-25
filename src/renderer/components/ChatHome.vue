@@ -9,13 +9,12 @@ import ToolResultPanel from './ToolResultPanel.vue'
 const {
   messages,
   sending,
-  send: sendFallback,
   streamSend,
   handleConfirmAction,
   restorePendingConfirmations,
   loadConversation,
   startConversationSync,
-  stopConversationSync
+  stopConversationSync,
 } = useChat()
 
 const message = ref('')
@@ -40,9 +39,7 @@ const greeting = computed(() => {
   return '晚上好，今天辛苦啦。'
 })
 
-const pendingCount = computed(() =>
-  messages.value.filter((m) => m.kind === 'confirm' && m.status === 'pending').length
-)
+const pendingCount = computed(() => messages.value.filter((m) => m.kind === 'confirm' && m.status === 'pending').length)
 
 defineEmits(['go-history'])
 
@@ -114,7 +111,7 @@ onMounted(async () => {
   startConversationSync(date, {
     onAfterSync: async () => {
       await scrollToBottom()
-    }
+    },
   })
 })
 
@@ -154,9 +151,7 @@ watch(
           v-for="m in messages"
           :key="m.id"
           class="chatItem"
-          :class="[
-            m.kind === 'message' && m.role === 'user' ? 'chatItemUser' : 'chatItemCornie',
-          ]"
+          :class="[m.kind === 'message' && m.role === 'user' ? 'chatItemUser' : 'chatItemCornie']"
         >
           <template v-if="m.kind === 'message'">
             <div class="bubble" :class="m.role === 'user' ? 'bubbleUser' : 'bubbleCornie'">
@@ -197,14 +192,7 @@ watch(
         </div>
       </div>
 
-      <button
-        v-if="hasUnreadBelow"
-        class="chatJumpBottom"
-        type="button"
-        @click="jumpToBottom"
-      >
-        回到底部
-      </button>
+      <button v-if="hasUnreadBelow" class="chatJumpBottom" type="button" @click="jumpToBottom">回到底部</button>
     </div>
 
     <!-- 输入区 -->
@@ -217,24 +205,16 @@ watch(
         @keydown.enter.exact.prevent="onSend"
         @input="autoResize"
       />
-      <button
-        class="primary chatSendBtn"
-        :disabled="!message.trim() || sending"
-        @click="onSend"
-      >
-        发送
-      </button>
+      <button class="primary chatSendBtn" :disabled="!message.trim() || sending" @click="onSend">发送</button>
     </div>
 
     <!-- 待确认提示 -->
-    <div v-if="pendingCount > 0" class="chatPendingHint">
-      有 {{ pendingCount }} 条待确认事项，请在上面处理。
-    </div>
+    <div v-if="pendingCount > 0" class="chatPendingHint">有 {{ pendingCount }} 条待确认事项，请在上面处理。</div>
   </div>
 </template>
 
 <style scoped>
-.chatPage{
+.chatPage {
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -246,7 +226,7 @@ watch(
 }
 
 /* ─── 顶部陪伴区（压缩为一行） ─── */
-.chatCompanion{
+.chatCompanion {
   display: flex;
   align-items: baseline;
   gap: 12px;
@@ -255,41 +235,43 @@ watch(
   background: var(--chat-tint);
   flex: 0 0 auto;
 }
-.chatGreeting{
+.chatGreeting {
   font-size: 14px;
   font-weight: 700;
   color: var(--text);
   white-space: nowrap;
 }
-.chatDate{
+.chatDate {
   font-size: 12px;
   color: var(--muted);
 }
-.chatHistoryBtn{
+.chatHistoryBtn {
   padding: 6px 10px;
   margin-left: 6px;
 }
-.chatTagline{
+.chatTagline {
   margin-left: auto;
   font-size: 12px;
   color: var(--muted);
 }
 
 /* ─── 主对话区 ─── */
-.chatMessages{
+.chatMessages {
   flex: 1;
   overflow-y: auto;
   padding: 14px 20px;
   scroll-behavior: smooth;
   position: relative;
 }
-.chatMessages::-webkit-scrollbar{ width: 4px; }
-.chatMessages::-webkit-scrollbar-thumb{
-  background: rgba(0,0,0,.10);
+.chatMessages::-webkit-scrollbar {
+  width: 4px;
+}
+.chatMessages::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
   border-radius: 999px;
 }
 
-.chatEmpty{
+.chatEmpty {
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -298,60 +280,75 @@ watch(
   gap: 8px;
   color: var(--muted);
 }
-.chatEmptyIcon{ font-size: 36px; }
-.chatEmptyTitle{ font-size: 15px; font-weight: 600; color: var(--text); }
-.chatEmptyHint{ font-size: 13px; }
+.chatEmptyIcon {
+  font-size: 36px;
+}
+.chatEmptyTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+.chatEmptyHint {
+  font-size: 13px;
+}
 
-.chatList{
+.chatList {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.chatItem{ width: 100%; display: flex; }
-.chatItemUser{ justify-content: flex-end; }
-.chatItemCornie{ justify-content: flex-start; }
+.chatItem {
+  width: 100%;
+  display: flex;
+}
+.chatItemUser {
+  justify-content: flex-end;
+}
+.chatItemCornie {
+  justify-content: flex-start;
+}
 
 /* ─── 气泡 ─── */
-.bubble{
+.bubble {
   max-width: 75%;
   padding: 8px 14px;
   border-radius: 14px;
   font-size: 14px;
   line-height: 1.6;
 }
-.bubbleUser{
+.bubbleUser {
   background: var(--accent);
-  color: #FFFFFF;
+  color: #ffffff;
   border-bottom-right-radius: 6px;
 }
-.bubbleCornie{
+.bubbleCornie {
   background: var(--surface-2);
   border: 1px solid var(--border);
   color: var(--text);
   border-bottom-left-radius: 6px;
 }
-.bubbleError{
+.bubbleError {
   max-width: 100%;
-  background: rgba(217,106,92,.08);
-  border: 1px solid rgba(217,106,92,.20);
+  background: rgba(217, 106, 92, 0.08);
+  border: 1px solid rgba(217, 106, 92, 0.2);
   color: var(--danger);
 }
-.bubbleRole{
+.bubbleRole {
   font-size: 11px;
-  opacity: .6;
+  opacity: 0.6;
   margin-bottom: 2px;
 }
-.bubbleText{
+.bubbleText {
   white-space: pre-wrap;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
-.bubbleText.thinking{
+.bubbleText.thinking {
   font-style: italic;
-  opacity: .6;
+  opacity: 0.6;
 }
 
-.chatJumpBottom{
+.chatJumpBottom {
   position: sticky;
   left: 100%;
   bottom: 10px;
@@ -361,21 +358,21 @@ watch(
   align-items: center;
   justify-content: center;
   padding: 8px 12px;
-  border: 1px solid rgba(0,0,0,.08);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 999px;
-  background: rgba(255,255,255,.92);
+  background: rgba(255, 255, 255, 0.92);
   color: var(--text);
   font-size: 12px;
-  box-shadow: 0 8px 20px rgba(0,0,0,.08);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
   backdrop-filter: blur(6px);
 }
 
-.chatJumpBottom:hover{
-  background: #fff;
+.chatJumpBottom:hover {
+  background: #ffffff;
 }
 
 /* ─── 输入区 ─── */
-.chatInputBar{
+.chatInputBar {
   display: flex;
   align-items: flex-end;
   gap: 8px;
@@ -383,7 +380,7 @@ watch(
   border-top: 1px solid var(--border);
   background: var(--surface);
 }
-.chatTextarea{
+.chatTextarea {
   flex: 1;
   min-height: 36px;
   max-height: 120px;
@@ -397,13 +394,13 @@ watch(
   color: var(--text);
   outline: none;
 }
-.chatTextarea:focus{
+.chatTextarea:focus {
   border-color: var(--accent);
 }
-.chatTextarea::placeholder{
+.chatTextarea::placeholder {
   color: var(--muted);
 }
-.chatSendBtn{
+.chatSendBtn {
   flex: 0 0 auto;
   padding: 8px 18px;
   border-radius: 10px;
@@ -412,7 +409,7 @@ watch(
 }
 
 /* ─── 待确认提示 ─── */
-.chatPendingHint{
+.chatPendingHint {
   padding: 6px 20px;
   text-align: center;
   font-size: 12px;

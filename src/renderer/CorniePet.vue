@@ -18,7 +18,7 @@ const {
   loadConversation,
   restorePendingConfirmations,
   startConversationSync,
-  stopConversationSync
+  stopConversationSync,
 } = useChat()
 
 const displayMessages = computed(() => messages.value.filter((item) => item.kind === 'message'))
@@ -32,21 +32,21 @@ const latestNotice = computed(() => {
     return {
       type: 'confirm',
       text: `有 ${pendingCount.value} 件事，小铃湾想先和主人确认一下。`,
-      actionLabel: '去主窗口'
+      actionLabel: '去主窗口',
     }
   }
   if (latestAskBack.value?.question) {
     return {
       type: 'ask_back',
       text: latestAskBack.value.question,
-      actionLabel: ''
+      actionLabel: '',
     }
   }
   if (latestError.value?.content) {
     return {
       type: 'error',
       text: latestError.value.content,
-      actionLabel: ''
+      actionLabel: '',
     }
   }
   return null
@@ -180,7 +180,7 @@ onMounted(async () => {
   startConversationSync(date, {
     onAfterSync: async () => {
       await scrollToLatest()
-    }
+    },
   })
 })
 
@@ -267,9 +267,7 @@ onBeforeUnmount(() => {
           >
             {{ pinned ? '停' : '留' }}
           </button>
-          <button type="button" class="petSendButton" :disabled="!message.trim() || sending" @click="send">
-            说
-          </button>
+          <button type="button" class="petSendButton" :disabled="!message.trim() || sending" @click="send">说</button>
         </div>
       </section>
 
@@ -334,8 +332,7 @@ onBeforeUnmount(() => {
   width: 124px;
   height: 124px;
   border-radius: 999px;
-  background:
-    radial-gradient(circle, rgba(247, 216, 202, 0.72) 0%, rgba(247, 216, 202, 0) 70%);
+  background: radial-gradient(circle, rgba(247, 216, 202, 0.72) 0%, rgba(247, 216, 202, 0) 70%);
   pointer-events: none;
 }
 
@@ -422,7 +419,7 @@ onBeforeUnmount(() => {
   font-size: 12px;
   line-height: 1.55;
   white-space: pre-wrap;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
 .petMessageText.is-thinking {
@@ -570,8 +567,7 @@ onBeforeUnmount(() => {
   width: 92px;
   height: 92px;
   border-radius: 999px;
-  background:
-    radial-gradient(circle, rgba(239, 179, 154, 0.28) 0%, rgba(239, 179, 154, 0) 72%);
+  background: radial-gradient(circle, rgba(239, 179, 154, 0.28) 0%, rgba(239, 179, 154, 0) 72%);
   pointer-events: none;
 }
 
@@ -595,7 +591,8 @@ onBeforeUnmount(() => {
 }
 
 @keyframes petBreath {
-  0%, 100% {
+  0%,
+  100% {
     transform: translateY(0);
   }
   50% {

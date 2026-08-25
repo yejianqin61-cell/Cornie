@@ -6,7 +6,7 @@ defineProps({
   filterSection: { type: String, default: '' },
   sections: { type: Array, default: () => [] },
   pendingCount: { type: Number, default: 0 },
-  filterSummary: { type: String, default: '' }
+  filterSummary: { type: String, default: '' },
 })
 
 const emit = defineEmits(['select-governance', 'change', 'update:filterStatus', 'update:filterSection'])
@@ -47,9 +47,7 @@ function handleSectionChange(event) {
       当前待处理 <strong>{{ pendingCount }}</strong> 项
     </div>
 
-    <div class="filterSummary">
-      当前筛选：{{ filterSummary }}
-    </div>
+    <div class="filterSummary">当前筛选：{{ filterSummary }}</div>
 
     <div v-if="governanceItems.length === 0" class="emptyDetail compactEmpty">
       现在没有新的治理建议。等巡检或整理过程发现问题，这里会再提醒你。
@@ -73,83 +71,96 @@ function handleSectionChange(event) {
 </template>
 
 <style scoped>
-.workspaceCard{
-  background: rgba(255,255,255,.05);
+.workspaceCard {
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border);
   border-radius: 20px;
   padding: 16px;
-  display:flex;
-  flex-direction:column;
+  display: flex;
+  flex-direction: column;
   gap: 14px;
   min-height: 0;
 }
-.cardHead{
-  display:flex;
+.cardHead {
+  display: flex;
   justify-content: space-between;
-  align-items:flex-start;
+  align-items: flex-start;
   gap: 12px;
 }
-.cardTitle{ font-weight: 800; font-size: 16px; }
-.cardSubhint{ margin-top: 4px; color: var(--muted); font-size: 12px; }
-.cardFilters{
-  display:flex;
+.cardTitle {
+  font-weight: 800;
+  font-size: 16px;
+}
+.cardSubhint {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.cardFilters {
+  display: flex;
   gap: 8px;
   flex-wrap: wrap;
 }
-.queueSummary{
+.queueSummary {
   padding: 12px 14px;
   border-radius: 14px;
-  border: 1px dashed rgba(255,255,255,.14);
-  background: rgba(255,255,255,.03);
+  border: 1px dashed rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.03);
   color: var(--muted);
   font-size: 13px;
 }
-.filterSummary{
+.filterSummary {
   padding: 12px 14px;
   border-radius: 14px;
-  border: 1px dashed rgba(125,211,252,.20);
-  background: rgba(125,211,252,.06);
-  color: rgba(224,242,254,.88);
+  border: 1px dashed rgba(125, 211, 252, 0.2);
+  background: rgba(125, 211, 252, 0.06);
+  color: rgba(224, 242, 254, 0.88);
   font-size: 13px;
 }
-.entryList{
-  display:flex;
-  flex-direction:column;
+.entryList {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
-  overflow:auto;
+  overflow: auto;
 }
-.entryRow{
-  text-align:left;
-  display:flex;
-  align-items:center;
+.entryRow {
+  text-align: left;
+  display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
   padding: 12px 14px;
   border-radius: 16px;
 }
-.entryRow.active{
-  background: rgba(125,211,252,.12);
-  border-color: rgba(125,211,252,.35);
+.entryRow.active {
+  background: rgba(125, 211, 252, 0.12);
+  border-color: rgba(125, 211, 252, 0.35);
 }
-.entryMain{ font-weight: 700; }
-.entryMeta{ margin-top: 4px; font-size: 12px; color: var(--muted); }
-.emptyDetail{
+.entryMain {
+  font-weight: 700;
+}
+.entryMeta {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.emptyDetail {
   border: 1px solid var(--border);
   border-radius: 16px;
-  background: rgba(255,255,255,.03);
+  background: rgba(255, 255, 255, 0.03);
   padding: 16px;
   color: var(--muted);
-  display:grid;
-  place-items:center;
+  display: grid;
+  place-items: center;
   min-height: 180px;
-  text-align:center;
+  text-align: center;
   line-height: 1.6;
 }
-.compactEmpty{
+.compactEmpty {
   min-height: 120px;
 }
-@media (max-width: 720px){
-  .cardHead{
+@media (max-width: 720px) {
+  .cardHead {
     flex-direction: column;
   }
 }

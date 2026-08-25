@@ -10,7 +10,6 @@ import OnThisDayPage from './components/OnThisDayPage.vue'
 import ObserveMemoryHome from './components/ObserveMemoryHome.vue'
 import ObservationList from './components/ObservationList.vue'
 import ObservationDetail from './components/ObservationDetail.vue'
-import MemoryPageDetail from './components/MemoryPageDetail.vue'
 import MemoryWikiHome from './components/MemoryWikiHome.vue'
 import LedgerHome from './components/LedgerHome.vue'
 import TodoHome from './components/TodoHome.vue'
@@ -21,15 +20,15 @@ import AdvancedSettings from './components/AdvancedSettings.vue'
 import ChatHistory from './ChatHistory.vue'
 
 const sections = [
-  { id: 'chat',            label: '聊天',       hint: '和铃湾说说话',       icon: '💬' },
-  { id: 'diary',           label: '日记',       hint: '写下今天的心情',       icon: '📔' },
-  { id: 'ledger',          label: '收支',       hint: '轻松记一笔',           icon: '💰' },
-  { id: 'todo',            label: '待办',       hint: '今天要做什么',         icon: '✅' },
-  { id: 'schedule',        label: '日程',       hint: '接下来的安排',         icon: '📅' },
+  { id: 'chat', label: '聊天', hint: '和铃湾说说话', icon: '💬' },
+  { id: 'diary', label: '日记', hint: '写下今天的心情', icon: '📔' },
+  { id: 'ledger', label: '收支', hint: '轻松记一笔', icon: '💰' },
+  { id: 'todo', label: '待办', hint: '今天要做什么', icon: '✅' },
+  { id: 'schedule', label: '日程', hint: '接下来的安排', icon: '📅' },
   // R-04：记忆三栏——观察日志 / 当天日记 / 记忆 Wiki 平级入口
-  { id: 'observe',         label: '观察日志',   hint: '今天留下的生活片段',     icon: '📝' },
-  { id: 'memory',          label: '记忆 Wiki',  hint: '想留住的长期记忆',       icon: '📖' },
-  { id: 'settings',        label: '设置',       hint: '铃湾的连接和偏好',     icon: '⚙️' },
+  { id: 'observe', label: '观察日志', hint: '今天留下的生活片段', icon: '📝' },
+  { id: 'memory', label: '记忆 Wiki', hint: '想留住的长期记忆', icon: '📖' },
+  { id: 'settings', label: '设置', hint: '铃湾的连接和偏好', icon: '⚙️' },
 ]
 
 const mode = ref('chat')
@@ -46,7 +45,6 @@ const diaryView = ref('home') // 'home' | 'editor' | 'cornie-review' | 'on-this-
 const observeView = ref('home') // 'home' | 'observation-list' | 'observation-detail'
 const observeDetailId = ref('')
 const memoryView = ref('home') // 'home' | 'memory-detail' | 'memory-create'
-const memoryDetailId = ref('')
 
 // Settings sub-view
 const settingsView = ref('home') // 'home' | 'deepseek-config' | 'advanced'
@@ -62,7 +60,6 @@ const {
   refresh: refreshModelState,
   check: checkModel,
   submit: submitModelSettings,
-  reset: resetModelSettings
 } = useModelSettings()
 
 const isGuideVisible = computed(() => !modelStatus.value.configured)
@@ -154,14 +151,17 @@ onMounted(async () => {
 
       <!-- 聊天模式 -->
       <section v-else-if="mode === 'chat'" class="contentFrame">
-        <ChatHome
-          v-if="chatView === 'home'"
-          @go-history="chatView = 'history'"
-        />
+        <ChatHome v-if="chatView === 'home'" @go-history="chatView = 'history'" />
         <ChatHistory
           v-else-if="chatView === 'history'"
           @back="chatView = 'home'"
-          @open-date="(date) => { chatHistoryDate = date; chatFocusMessageId = ''; chatView = 'day' }"
+          @open-date="
+            (date) => {
+              chatHistoryDate = date
+              chatFocusMessageId = ''
+              chatView = 'day'
+            }
+          "
         />
         <ChatDayView
           v-else-if="chatView === 'day'"
@@ -173,23 +173,10 @@ onMounted(async () => {
 
       <!-- 日记模式 -->
       <section v-else-if="mode === 'diary'" class="contentFrame">
-        <DiaryHome
-          v-if="diaryView === 'home'"
-          @go="(v) => diaryView = v"
-          @go-observe="mode = 'observe'"
-        />
-        <DiaryEditor
-          v-else-if="diaryView === 'editor'"
-          @back="diaryView = 'home'"
-        />
-        <CornieDiaryReview
-          v-else-if="diaryView === 'cornie-review'"
-          @back="diaryView = 'home'"
-        />
-        <OnThisDayPage
-          v-else-if="diaryView === 'on-this-day'"
-          @back="diaryView = 'home'"
-        />
+        <DiaryHome v-if="diaryView === 'home'" @go="(v) => (diaryView = v)" @go-observe="mode = 'observe'" />
+        <DiaryEditor v-else-if="diaryView === 'editor'" @back="diaryView = 'home'" />
+        <CornieDiaryReview v-else-if="diaryView === 'cornie-review'" @back="diaryView = 'home'" />
+        <OnThisDayPage v-else-if="diaryView === 'on-this-day'" @back="diaryView = 'home'" />
       </section>
 
       <!-- 收支模式 -->
@@ -211,13 +198,23 @@ onMounted(async () => {
       <section v-else-if="mode === 'observe'" class="contentFrame">
         <ObserveMemoryHome
           v-if="observeView === 'home'"
-          @go="(v, id) => { observeView = v; observeDetailId = id || '' }"
+          @go="
+            (v, id) => {
+              observeView = v
+              observeDetailId = id || ''
+            }
+          "
           @goChat="mode = 'chat'"
         />
         <ObservationList
           v-else-if="observeView === 'observation-list'"
           @back="observeView = 'home'"
-          @go="(v, id) => { observeView = v; observeDetailId = id || '' }"
+          @go="
+            (v, id) => {
+              observeView = v
+              observeDetailId = id || ''
+            }
+          "
         />
         <ObservationDetail
           v-else-if="observeView === 'observation-detail'"
@@ -230,8 +227,21 @@ onMounted(async () => {
       <!-- 记忆 Wiki（T-02：文件树双栏） -->
       <section v-else-if="mode === 'memory'" class="contentFrame">
         <MemoryWikiHome
-          @open-observation="(id) => { mode = 'observe'; observeDetailId = id; observeView = 'observation-detail' }"
-          @open-chat-source="({ date, messageId }) => { mode = 'chat'; chatHistoryDate = date || ''; chatFocusMessageId = messageId || ''; chatView = 'day' }"
+          @open-observation="
+            (id) => {
+              mode = 'observe'
+              observeDetailId = id
+              observeView = 'observation-detail'
+            }
+          "
+          @open-chat-source="
+            ({ date, messageId }) => {
+              mode = 'chat'
+              chatHistoryDate = date || ''
+              chatFocusMessageId = messageId || ''
+              chatView = 'day'
+            }
+          "
         />
       </section>
 
@@ -241,141 +251,146 @@ onMounted(async () => {
           v-if="settingsView === 'home'"
           :modelStatus="modelStatus"
           :modelSettings="modelSettings"
-          @go="(v) => settingsView = v"
+          @go="(v) => (settingsView = v)"
         />
         <DeepseekConfig
           v-else-if="settingsView === 'deepseek-config'"
           @back="settingsView = 'home'"
           @updated="refreshModelState()"
         />
-        <AdvancedSettings
-          v-else-if="settingsView === 'advanced'"
-          @back="settingsView = 'home'"
-        />
+        <AdvancedSettings v-else-if="settingsView === 'advanced'" @back="settingsView = 'home'" />
       </section>
     </main>
   </div>
 </template>
 
 <style scoped>
-.appShell{
+.appShell {
   height: 100vh;
-  display:grid;
+  display: grid;
   grid-template-columns: 260px minmax(0, 1fr);
   gap: 16px;
   padding: 16px;
 }
 
 /* ─── 导航面板 ─── */
-.navPanel{
+.navPanel {
   border: 1px solid var(--border);
   border-radius: 20px;
   background: var(--surface);
   padding: 16px;
-  display:flex;
-  flex-direction:column;
+  display: flex;
+  flex-direction: column;
   gap: 14px;
   min-height: 0;
 }
 
-.brandBlock{
-  display:flex;
-  align-items:baseline;
+.brandBlock {
+  display: flex;
+  align-items: baseline;
   gap: 8px;
   padding: 0 8px;
 }
-.brandTitle{
+.brandTitle {
   font-size: 22px;
   font-weight: 800;
   color: var(--text);
 }
-.brandSub{
+.brandSub {
   font-size: 12px;
   color: var(--muted);
 }
 
-.navList{
-  display:flex;
-  flex-direction:column;
+.navList {
+  display: flex;
+  flex-direction: column;
   gap: 6px;
-  overflow:auto;
-  flex:1;
+  overflow: auto;
+  flex: 1;
 }
 
-.navItem{
-  display:flex;
-  align-items:center;
+.navItem {
+  display: flex;
+  align-items: center;
   gap: 12px;
   padding: 12px 14px;
   border-radius: 14px;
-  text-align:left;
+  text-align: left;
   border: none;
   background: transparent;
   color: var(--text);
   cursor: pointer;
   width: 100%;
 }
-.navItem:hover{
+.navItem:hover {
   background: var(--surface-2);
 }
-.navItem.active{
-  background: rgba(232,133,106,.10);
+.navItem.active {
+  background: rgba(232, 133, 106, 0.1);
 }
-.navIcon{
+.navIcon {
   font-size: 20px;
   flex: 0 0 auto;
 }
-.navText{
-  display:flex;
-  flex-direction:column;
+.navText {
+  display: flex;
+  flex-direction: column;
   gap: 2px;
   min-width: 0;
 }
-.navLabel{
+.navLabel {
   font-weight: 700;
   font-size: 14px;
 }
-.navHint{
+.navHint {
   color: var(--muted);
   font-size: 11px;
   line-height: 1.3;
 }
 
-.navFooter{
+.navFooter {
   padding: 10px 14px;
   border-top: 1px solid var(--border);
 }
-.statusDot{
+.statusDot {
   font-size: 12px;
-  display:flex;
-  align-items:center;
+  display: flex;
+  align-items: center;
   gap: 6px;
 }
-.statusDot::before{
-  content:'';
+.statusDot::before {
+  content: '';
   width: 8px;
   height: 8px;
   border-radius: 999px;
 }
-.statusDot.ok{ color: #5B9A6B; }
-.statusDot.ok::before{ background: #5B9A6B; }
-.statusDot.off{ color: var(--muted); }
-.statusDot.off::before{ background: #D6D0C4; }
+.statusDot.ok {
+  color: #5b9a6b;
+}
+.statusDot.ok::before {
+  background: #5b9a6b;
+}
+.statusDot.off {
+  color: var(--muted);
+}
+.statusDot.off::before {
+  background: #d6d0c4;
+}
 
 /* ─── 主区 ─── */
-.mainPanel{
-  display:flex;
-  flex-direction:column;
+.mainPanel {
+  display: flex;
+  flex-direction: column;
   gap: 14px;
   min-height: 0;
 }
 /* FE-10：容器接收焦点但不高亮（内容元素各自有可见焦点）。 */
-.mainPanel:focus{
+.mainPanel:focus {
   outline: none;
 }
 
-.topBar{
-  display:flex;
+.topBar {
+  display: flex;
   align-items: baseline;
   gap: 14px;
   padding: 10px 18px;
@@ -383,90 +398,99 @@ onMounted(async () => {
   border-radius: 14px;
   background: var(--surface);
 }
-.topTitle{
+.topTitle {
   font-size: 20px;
   font-weight: 800;
 }
-.topHint{
+.topHint {
   color: var(--muted);
   font-size: 12px;
 }
-.monthInput{
+.monthInput {
   width: 160px;
 }
 
 /* ─── 配网引导横条 ─── */
-.guideBanner{
-  border: 1px solid rgba(232,133,106,.25);
+.guideBanner {
+  border: 1px solid rgba(232, 133, 106, 0.25);
   border-radius: 18px;
-  background: #FFF8F5;
+  background: #fff8f5;
   padding: 24px;
 }
-.guideBannerInner{
-  display:flex;
-  flex-direction:column;
+.guideBannerInner {
+  display: flex;
+  flex-direction: column;
   gap: 14px;
   max-width: 640px;
 }
-.guideBannerTitle{
+.guideBannerTitle {
   font-size: 18px;
   font-weight: 800;
 }
-.guideBannerText{
+.guideBannerText {
   color: var(--muted);
   line-height: 1.6;
 }
-.guideBannerForm{
-  display:grid;
+.guideBannerForm {
+  display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
 }
-.guideBannerForm input{
+.guideBannerForm input {
   min-width: 0;
 }
-.guideBannerActions{
+.guideBannerActions {
   grid-column: 1 / -1;
-  display:flex;
+  display: flex;
   gap: 10px;
 }
-.guideBannerError{
+.guideBannerError {
   padding: 10px 14px;
   border-radius: 12px;
-  border: 1px solid rgba(217,106,92,.25);
-  background: rgba(217,106,92,.06);
+  border: 1px solid rgba(217, 106, 92, 0.25);
+  background: rgba(217, 106, 92, 0.06);
   color: var(--danger);
   font-size: 13px;
 }
-.guideBannerNotice{
+.guideBannerNotice {
   padding: 10px 14px;
   border-radius: 12px;
-  border: 1px solid rgba(91,154,107,.25);
-  background: rgba(91,154,107,.06);
-  color: #5B9A6B;
+  border: 1px solid rgba(91, 154, 107, 0.25);
+  background: rgba(91, 154, 107, 0.06);
+  color: #5b9a6b;
   font-size: 13px;
 }
 /* ─── 内容区 ─── */
-.contentFrame{
-  flex:1;
+.contentFrame {
+  flex: 1;
   min-height: 0;
 }
 
 /* ─── 响应式 ─── */
-@media (max-width: 1180px){
-  .appShell{
+@media (max-width: 1180px) {
+  .appShell {
     grid-template-columns: 1fr;
     height: auto;
     min-height: 100vh;
   }
-  .navPanel{ min-height: auto; }
-  .navList{
-    display:grid;
+  .navPanel {
+    min-height: auto;
+  }
+  .navList {
+    display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
-@media (max-width: 760px){
-  .navList{ grid-template-columns: 1fr; }
-  .topBar{ flex-direction: column; align-items: flex-start; }
-  .guideBannerForm{ grid-template-columns: 1fr; }
+@media (max-width: 760px) {
+  .navList {
+    grid-template-columns: 1fr;
+  }
+  .topBar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .guideBannerForm {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

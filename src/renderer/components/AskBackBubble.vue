@@ -2,12 +2,12 @@
 const props = defineProps({
   question: {
     type: String,
-    default: ''
+    default: '',
   },
   reason: {
     type: String,
-    default: ''
-  }
+    default: '',
+  },
 })
 </script>
 
@@ -23,38 +23,38 @@ const props = defineProps({
 
 <style scoped>
 /* FE-10：配色对齐全局暖色主题（原深蓝黑底为旧样式残留）。 */
-.askBackBubble{
+.askBackBubble {
   width: 100%;
   padding: 10px 12px;
   border-radius: 14px;
-  border: 1px solid rgba(232,133,106,.25);
-  background: rgba(232,133,106,.06);
+  border: 1px solid rgba(232, 133, 106, 0.25);
+  background: rgba(232, 133, 106, 0.06);
 }
 
-.askBackRole{
+.askBackRole {
   font-size: 10px;
   color: var(--muted);
 }
 
-.askBackQuestion{
+.askBackQuestion {
   margin-top: 4px;
   font-size: 12px;
   line-height: 1.5;
   color: inherit;
   white-space: pre-wrap;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
-.askBackReason{
+.askBackReason {
   margin-top: 6px;
   font-size: 11px;
   line-height: 1.45;
   color: var(--muted);
   white-space: pre-wrap;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
-.askBackReasonLabel{
+.askBackReasonLabel {
   color: inherit;
 }
 </style>

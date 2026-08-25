@@ -14,7 +14,7 @@ const OBSERVATION_TYPES = [
   { value: 'fact', label: '事实片段' },
   { value: 'emotion', label: '情绪变化' },
   { value: 'preference', label: '偏好线索' },
-  { value: 'misc', label: '小事记录' }
+  { value: 'misc', label: '小事记录' },
 ]
 
 function getTodayDate() {
@@ -46,7 +46,9 @@ const selectedDate = ref(getTodayDate())
 const selectedType = ref('')
 const keyword = ref('')
 
-const typeMap = Object.fromEntries(OBSERVATION_TYPES.filter((item) => item.value).map((item) => [item.value, item.label]))
+const typeMap = Object.fromEntries(
+  OBSERVATION_TYPES.filter((item) => item.value).map((item) => [item.value, item.label])
+)
 
 const groupedHistory = computed(() => {
   const groups = new Map()
@@ -60,20 +62,17 @@ const groupedHistory = computed(() => {
     date,
     label: formatDateLabel(date),
     count: items.length,
-    items
+    items,
   }))
 })
 
-const archiveDates = computed(() => groupedHistory.value.map((group) => ({
-  date: group.date,
-  label: group.label,
-  count: group.count
-})))
-
-const todaySummary = computed(() => {
-  if (observations.value.length === 0) return '今天还没有被留下来的观察。'
-  return `今天铃湾留了 ${observations.value.length} 条小事。`
-})
+const archiveDates = computed(() =>
+  groupedHistory.value.map((group) => ({
+    date: group.date,
+    label: group.label,
+    count: group.count,
+  }))
+)
 
 async function refresh() {
   const { token, signal } = obsGuard.begin('list')
@@ -97,7 +96,7 @@ async function refresh() {
       type: selectedType.value || undefined,
       q: keyword.value.trim() || undefined,
       limit: 200,
-      signal
+      signal,
     })
     if (!obsGuard.isCurrent('list', token)) return
     observations.value = data?.observations || []
@@ -198,7 +197,9 @@ onMounted(refresh)
       <label class="filterField">
         <span>类别</span>
         <select v-model="selectedType">
-          <option v-for="item in OBSERVATION_TYPES" :key="item.value || 'all'" :value="item.value">{{ item.label }}</option>
+          <option v-for="item in OBSERVATION_TYPES" :key="item.value || 'all'" :value="item.value">
+            {{ item.label }}
+          </option>
         </select>
       </label>
       <label class="filterField grow">
@@ -217,12 +218,7 @@ onMounted(refresh)
       </div>
 
       <div v-else class="olistList">
-        <div
-          v-for="obs in observations"
-          :key="obs.id"
-          class="olistCard card"
-          @click="$emit('go', 'detail', obs.id)"
-        >
+        <div v-for="obs in observations" :key="obs.id" class="olistCard card" @click="$emit('go', 'detail', obs.id)">
           <div class="olistCardHead">
             <div>
               <div class="olistCardTitle">{{ obs.title }}</div>
@@ -281,7 +277,9 @@ onMounted(refresh)
                       <span class="olistType">{{ typeMap[obs.type] || '小事记录' }}</span>
                     </div>
                   </div>
-                  <div class="olistCardContent">{{ truncated(obs.content || '铃湾把这件小事留在了这一天。', 150) }}</div>
+                  <div class="olistCardContent">
+                    {{ truncated(obs.content || '铃湾把这件小事留在了这一天。', 150) }}
+                  </div>
                 </article>
               </div>
             </section>
@@ -293,7 +291,7 @@ onMounted(refresh)
 </template>
 
 <style scoped>
-.olist{
+.olist {
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -301,7 +299,7 @@ onMounted(refresh)
   overflow: hidden;
 }
 
-.olistHead{
+.olistHead {
   display: flex;
   align-items: flex-start;
   gap: 14px;
@@ -311,31 +309,31 @@ onMounted(refresh)
   border-radius: 18px;
 }
 
-.olistHeadBody{
+.olistHeadBody {
   min-width: 0;
   flex: 1;
 }
 
-.olistTitle{
+.olistTitle {
   font-size: 18px;
   font-weight: 800;
 }
 
-.olistHint{
+.olistHint {
   margin-top: 4px;
   font-size: 12px;
   color: var(--muted);
   line-height: 1.6;
 }
 
-.olistTabs{
+.olistTabs {
   display: flex;
   gap: 8px;
 }
 
-.tabBtn{
+.tabBtn {
   border: 1px solid var(--border);
-  background: rgba(255,255,255,.72);
+  background: rgba(255, 255, 255, 0.72);
   color: var(--text);
   border-radius: 999px;
   padding: 8px 14px;
@@ -343,50 +341,50 @@ onMounted(refresh)
   font-weight: 600;
 }
 
-.tabBtn.active{
-  background: rgba(232,133,106,.16);
-  border-color: rgba(232,133,106,.28);
+.tabBtn.active {
+  background: rgba(232, 133, 106, 0.16);
+  border-color: rgba(232, 133, 106, 0.28);
   color: var(--accent-strong);
 }
 
-.olistGuide{
+.olistGuide {
   padding: 14px 16px;
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
-.olistGuideTitle{
+.olistGuideTitle {
   font-size: 13px;
   font-weight: 700;
 }
 
-.olistGuideText{
+.olistGuideText {
   font-size: 13px;
   color: var(--muted);
   line-height: 1.6;
 }
 
-.olistGuideSoft{
+.olistGuideSoft {
   font-size: 12px;
   color: var(--accent-strong);
-  background: rgba(232,133,106,.10);
+  background: rgba(232, 133, 106, 0.1);
   align-self: flex-start;
   border-radius: 999px;
   padding: 4px 8px;
 }
 
-.olistError{
+.olistError {
   padding: 10px 14px;
   border-radius: 12px;
-  border: 1px solid rgba(217,106,92,.25);
-  background: rgba(217,106,92,.06);
+  border: 1px solid rgba(217, 106, 92, 0.25);
+  background: rgba(217, 106, 92, 0.06);
   color: var(--danger);
   font-size: 13px;
 }
 
 .olistAdd,
-.olistFilters{
+.olistFilters {
   padding: 16px;
   display: flex;
   gap: 10px;
@@ -394,49 +392,49 @@ onMounted(refresh)
   align-items: end;
 }
 
-.olistAdd{
+.olistAdd {
   flex-direction: column;
   align-items: stretch;
 }
 
-.olistAddTitle{
+.olistAddTitle {
   font-size: 14px;
   font-weight: 700;
 }
 
-.olistAddHint{
+.olistAddHint {
   font-size: 12px;
   color: var(--muted);
   line-height: 1.6;
 }
 
-.olistAdd textarea{
+.olistAdd textarea {
   min-height: 80px;
 }
 
-.filterField{
+.filterField {
   display: flex;
   flex-direction: column;
   gap: 6px;
   min-width: 150px;
 }
 
-.filterField span{
+.filterField span {
   font-size: 12px;
   color: var(--muted);
 }
 
-.filterField.grow{
+.filterField.grow {
   flex: 1;
 }
 
-.olistLoading{
+.olistLoading {
   text-align: center;
   color: var(--muted);
   padding: 30px;
 }
 
-.olistEmpty{
+.olistEmpty {
   text-align: center;
   color: var(--muted);
   padding: 40px;
@@ -444,24 +442,24 @@ onMounted(refresh)
   border-radius: 14px;
 }
 
-.olistEmptyIcon{
+.olistEmptyIcon {
   font-size: 28px;
   margin-bottom: 8px;
 }
 
-.olistEmptyTitle{
+.olistEmptyTitle {
   font-size: 15px;
   font-weight: 700;
   color: var(--text);
 }
 
-.olistEmptyHint{
+.olistEmptyHint {
   margin-top: 8px;
   font-size: 12px;
   line-height: 1.6;
 }
 
-.olistList{
+.olistList {
   flex: 1;
   overflow-y: auto;
   display: flex;
@@ -471,17 +469,17 @@ onMounted(refresh)
 }
 
 .olistList::-webkit-scrollbar,
-.archiveContent::-webkit-scrollbar{
+.archiveContent::-webkit-scrollbar {
   width: 4px;
 }
 
 .olistList::-webkit-scrollbar-thumb,
-.archiveContent::-webkit-scrollbar-thumb{
-  background: rgba(0,0,0,.08);
+.archiveContent::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.08);
   border-radius: 999px;
 }
 
-.olistCard{
+.olistCard {
   padding: 14px 16px;
   cursor: pointer;
   display: flex;
@@ -490,23 +488,23 @@ onMounted(refresh)
 }
 
 .olistCard:hover,
-.archiveItem:hover{
-  border-color: rgba(232,133,106,.25);
+.archiveItem:hover {
+  border-color: rgba(232, 133, 106, 0.25);
 }
 
 .olistCardHead,
-.archiveItemHead{
+.archiveItemHead {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 10px;
 }
 
-.olistCardTitle{
+.olistCardTitle {
   font-weight: 600;
 }
 
-.olistMetaRow{
+.olistMetaRow {
   display: flex;
   gap: 8px;
   align-items: center;
@@ -514,31 +512,31 @@ onMounted(refresh)
   flex-wrap: wrap;
 }
 
-.olistType{
+.olistType {
   font-size: 12px;
   color: var(--accent-strong);
-  background: rgba(232,133,106,.12);
+  background: rgba(232, 133, 106, 0.12);
   border-radius: 999px;
   padding: 3px 8px;
 }
 
-.olistCardDate{
+.olistCardDate {
   font-size: 12px;
   color: var(--muted);
 }
 
-.olistCardContent{
+.olistCardContent {
   font-size: 13px;
   color: var(--muted);
   line-height: 1.6;
 }
 
-.olistDelBtn{
+.olistDelBtn {
   font-size: 12px;
   align-self: flex-end;
 }
 
-.archivePanel{
+.archivePanel {
   min-height: 0;
   flex: 1;
   display: grid;
@@ -546,7 +544,7 @@ onMounted(refresh)
   gap: 12px;
 }
 
-.archiveRail{
+.archiveRail {
   padding: 14px;
   display: flex;
   flex-direction: column;
@@ -554,19 +552,19 @@ onMounted(refresh)
   overflow-y: auto;
 }
 
-.archiveRailTitle{
+.archiveRailTitle {
   font-size: 13px;
   font-weight: 700;
 }
 
-.archiveDateBtn{
+.archiveDateBtn {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
   width: 100%;
   border: 1px solid transparent;
-  background: rgba(255,255,255,.72);
+  background: rgba(255, 255, 255, 0.72);
   border-radius: 12px;
   padding: 10px 12px;
   font-size: 12px;
@@ -574,36 +572,36 @@ onMounted(refresh)
   text-align: left;
 }
 
-.archiveDateBtn.active{
-  background: rgba(232,133,106,.12);
-  border-color: rgba(232,133,106,.28);
+.archiveDateBtn.active {
+  background: rgba(232, 133, 106, 0.12);
+  border-color: rgba(232, 133, 106, 0.28);
   color: var(--accent-strong);
 }
 
-.archiveEmpty{
+.archiveEmpty {
   padding: 10px 4px;
   color: var(--muted);
   font-size: 12px;
   line-height: 1.6;
 }
 
-.archiveContent{
+.archiveContent {
   min-height: 0;
   overflow-y: auto;
   padding-right: 2px;
 }
 
-.archiveGroups{
+.archiveGroups {
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.archiveGroup{
+.archiveGroup {
   padding: 14px 16px;
 }
 
-.archiveGroupHead{
+.archiveGroupHead {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -611,40 +609,40 @@ onMounted(refresh)
   margin-bottom: 12px;
 }
 
-.archiveGroupTitle{
+.archiveGroupTitle {
   font-size: 15px;
   font-weight: 700;
 }
 
-.archiveGroupCount{
+.archiveGroupCount {
   font-size: 12px;
   color: var(--muted);
 }
 
-.archiveGroupList{
+.archiveGroupList {
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
 
-.archiveItem{
+.archiveItem {
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 12px 14px;
-  background: rgba(255,255,255,.62);
+  background: rgba(255, 255, 255, 0.62);
   cursor: pointer;
 }
 
 @media (max-width: 960px) {
-  .olistHead{
+  .olistHead {
     flex-direction: column;
   }
 
-  .archivePanel{
+  .archivePanel {
     grid-template-columns: 1fr;
   }
 
-  .archiveRail{
+  .archiveRail {
     max-height: 180px;
   }
 }

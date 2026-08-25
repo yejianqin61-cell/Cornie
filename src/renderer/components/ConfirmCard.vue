@@ -4,16 +4,16 @@ import { computed } from 'vue'
 const props = defineProps({
   request: {
     type: Object,
-    default: () => ({})
+    default: () => ({}),
   },
   status: {
     type: String,
-    default: 'pending'
+    default: 'pending',
   },
   errorMessage: {
     type: String,
-    default: ''
-  }
+    default: '',
+  },
 })
 
 const emit = defineEmits(['confirm', 'reject'])
@@ -40,7 +40,7 @@ function getDetails(request) {
     return [
       `所属领域：${request.domain || '未提供'}`,
       `建议类目：${request.proposedCategoryName || '未提供'}`,
-      `触发动作：${request.pendingAction?.toolName || request.toolName || '未提供'}`
+      `触发动作：${request.pendingAction?.toolName || request.toolName || '未提供'}`,
     ]
   }
 
@@ -52,7 +52,7 @@ function getDetails(request) {
       `所属领域：${request.domain || '未提供'}`,
       `推荐类目：${request.recommendedCategory?.name || '未提供'}`,
       candidates.length > 0 ? `可选候选：${candidates.join('、')}` : null,
-      `触发动作：${request.pendingAction?.toolName || request.toolName || '未提供'}`
+      `触发动作：${request.pendingAction?.toolName || request.toolName || '未提供'}`,
     ].filter(Boolean)
   }
 
@@ -113,122 +113,122 @@ const statusLabel = computed(() => {
 </template>
 
 <style scoped>
-.confirmCard{
+.confirmCard {
   width: 100%;
   padding: 14px;
   border-radius: 18px;
-  border: 1px solid rgba(228,163,94,.24);
+  border: 1px solid rgba(228, 163, 94, 0.24);
   background: var(--warning-soft);
 }
 
-.confirmTopline{
+.confirmTopline {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
 }
 
-.confirmEyebrow{
+.confirmEyebrow {
   font-size: 11px;
-  letter-spacing: .08em;
-  color: #B5783F;
+  letter-spacing: 0.08em;
+  color: #b5783f;
 }
 
-.confirmStatusPill{
+.confirmStatusPill {
   padding: 3px 9px;
   border-radius: 999px;
-  border: 1px solid rgba(0,0,0,.08);
-  background: rgba(255,255,255,.72);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.72);
   color: var(--text);
   font-size: 10px;
   white-space: nowrap;
 }
 
-.confirmStatusPill.is-approved{
-  border-color: rgba(91,154,107,.22);
+.confirmStatusPill.is-approved {
+  border-color: rgba(91, 154, 107, 0.22);
   background: var(--success-soft);
   color: var(--success);
 }
 
 .confirmStatusPill.is-rejected,
-.confirmStatusPill.is-failed{
-  border-color: rgba(217,106,92,.20);
+.confirmStatusPill.is-failed {
+  border-color: rgba(217, 106, 92, 0.2);
   background: var(--danger-soft);
   color: var(--danger);
 }
 
-.confirmStatusPill.is-processing{
-  border-color: rgba(228,163,94,.24);
-  background: rgba(255,255,255,.78);
-  color: #9B6A36;
+.confirmStatusPill.is-processing {
+  border-color: rgba(228, 163, 94, 0.24);
+  background: rgba(255, 255, 255, 0.78);
+  color: #9b6a36;
 }
 
-.confirmTitle{
+.confirmTitle {
   margin-top: 6px;
   font-size: 14px;
   font-weight: 700;
   color: var(--text);
 }
 
-.confirmReason{
+.confirmReason {
   margin-top: 6px;
   font-size: 13px;
   line-height: 1.5;
-  color: #6C5648;
+  color: #6c5648;
   white-space: pre-wrap;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
-.confirmDetails{
+.confirmDetails {
   margin-top: 8px;
   display: flex;
   flex-direction: column;
   gap: 5px;
 }
 
-.confirmDetail{
+.confirmDetail {
   font-size: 11px;
   color: var(--muted);
   white-space: pre-wrap;
-  word-break: break-word;
+  overflow-wrap: anywhere;
 }
 
-.confirmError{
+.confirmError {
   margin-top: 8px;
   font-size: 11px;
   color: var(--danger);
 }
 
-.confirmState{
+.confirmState {
   margin-top: 8px;
   font-size: 11px;
   color: #866955;
 }
 
-.confirmActions{
+.confirmActions {
   margin-top: 10px;
   display: flex;
   gap: 8px;
 }
 
-.confirmBtn{
+.confirmBtn {
   flex: 1 1 0;
   height: 30px;
   border-radius: 999px;
-  border: 1px solid rgba(0,0,0,.08);
-  background: rgba(255,255,255,.72);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.72);
   color: var(--text);
   font-size: 12px;
   cursor: pointer;
 }
 
-.confirmBtnPrimary{
-  border-color: rgba(228,133,106,.18);
-  background: rgba(232,133,106,.16);
+.confirmBtnPrimary {
+  border-color: rgba(228, 133, 106, 0.18);
+  background: rgba(232, 133, 106, 0.16);
 }
 
-.confirmBtn:disabled{
-  opacity: .55;
+.confirmBtn:disabled {
+  opacity: 0.55;
   cursor: not-allowed;
 }
 </style>

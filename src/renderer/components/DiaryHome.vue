@@ -1,10 +1,14 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { getEntry, listEntries, listOnThisDay, listObservations } from '../api'
+import { getEntry, listOnThisDay, listObservations } from '../api'
 import CornieDiaryMarkdown from './CornieDiaryMarkdown.vue'
 
-function pad2(n) { return String(n).padStart(2, '0') }
-function toISODate(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}` }
+function pad2(n) {
+  return String(n).padStart(2, '0')
+}
+function toISODate(d) {
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`
+}
 
 const today = new Date()
 const todayStr = toISODate(today)
@@ -28,26 +32,30 @@ onMounted(async () => {
   try {
     const data = await getEntry(todayStr)
     entry.value = data.entry
-  } catch { /* ignore */ }
-  finally { loading.value = false }
+  } catch {
+    /* ignore */
+  } finally {
+    loading.value = false
+  }
 
   loadingOtd.value = true
   try {
     const data = await listOnThisDay(todayStr, { limit: 10 })
     onThisDayItems.value = data.items || []
-  } catch { /* ignore */ }
-  finally { loadingOtd.value = false }
+  } catch {
+    /* ignore */
+  } finally {
+    loadingOtd.value = false
+  }
 
   // R-08：当天观察联动——摘要展示 + 跳观察日志
   try {
     const data = await listObservations({ date: todayStr, limit: 3 })
     todayObservations.value = data?.observations || []
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 })
-
-function emitGo(where) {
-  // parent handles navigation
-}
 </script>
 
 <template>
@@ -105,9 +113,7 @@ function emitGo(where) {
         <button class="ghost" @click="$emit('go', 'on-this-day')">查看全部</button>
       </div>
       <div v-if="loadingOtd" class="otdLoading">翻翻回忆…</div>
-      <div v-else-if="onThisDayItems.length === 0" class="otdEmpty">
-        那时候我还没出生呢，不过现在我在了。
-      </div>
+      <div v-else-if="onThisDayItems.length === 0" class="otdEmpty">那时候我还没出生呢，不过现在我在了。</div>
       <div v-else class="otdList">
         <div v-for="it in onThisDayItems.slice(0, 3)" :key="it.date" class="otdItem">
           <div class="otdDate">{{ it.date }}</div>
@@ -119,7 +125,7 @@ function emitGo(where) {
 </template>
 
 <style scoped>
-.diaryPage{
+.diaryPage {
   height: 100%;
   overflow-y: auto;
   display: flex;
@@ -127,11 +133,16 @@ function emitGo(where) {
   gap: 14px;
   padding-right: 4px;
 }
-.diaryPage::-webkit-scrollbar{ width: 4px; }
-.diaryPage::-webkit-scrollbar-thumb{ background: rgba(0,0,0,.08); border-radius: 999px; }
+.diaryPage::-webkit-scrollbar {
+  width: 4px;
+}
+.diaryPage::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.08);
+  border-radius: 999px;
+}
 
 /* ─── 今天卡片 ─── */
-.todayCard{
+.todayCard {
   background: var(--diary-tint);
   padding: 24px;
   text-align: center;
@@ -140,97 +151,152 @@ function emitGo(where) {
   align-items: center;
   gap: 10px;
 }
-.todayDate{ font-size: 22px; font-weight: 800; }
-.todayMood{ font-size: 15px; color: var(--muted); }
-.todayStatus{
+.todayDate {
+  font-size: 22px;
+  font-weight: 800;
+}
+.todayMood {
+  font-size: 15px;
+  color: var(--muted);
+}
+.todayStatus {
   display: flex;
   gap: 12px;
   font-size: 13px;
   color: var(--muted);
 }
-.todayActions{
+.todayActions {
   display: flex;
   gap: 10px;
   margin-top: 6px;
 }
 
 /* ─── 双栏预览 ─── */
-.previewGrid{
+.previewGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
-.previewCard{
+.previewCard {
   padding: 16px 18px;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
-.previewTitle{ font-weight: 700; font-size: 14px; }
-.previewText{
+.previewTitle {
+  font-weight: 700;
+  font-size: 14px;
+}
+.previewText {
   white-space: pre-wrap;
   line-height: 1.6;
   font-size: 13px;
   max-height: 160px;
   overflow-y: auto;
 }
-.corniePreview{
+.corniePreview {
   white-space: normal;
-  color: #9B6B7A;
+  color: #9b6b7a;
 }
-:deep(.corniePreview .cornieMarkdown){ gap: 8px; }
+:deep(.corniePreview .cornieMarkdown) {
+  gap: 8px;
+}
 :deep(.corniePreview .mdParagraph),
 :deep(.corniePreview .mdQuote),
-:deep(.corniePreview .mdList){
+:deep(.corniePreview .mdList) {
   font-size: 13px;
 }
-.emptyPreview{ opacity: .65; background: var(--surface-2); }
-.previewHint{ color: var(--muted); font-size: 13px; }
+.emptyPreview {
+  opacity: 0.65;
+  background: var(--surface-2);
+}
+.previewHint {
+  color: var(--muted);
+  font-size: 13px;
+}
 
-@media (max-width: 760px){
-  .previewGrid{ grid-template-columns: 1fr; }
+@media (max-width: 760px) {
+  .previewGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ─── 当天观察（R-08） ─── */
-.todayObsCard{ padding: 16px 20px; }
-.todayObsHead{
+.todayObsCard {
+  padding: 16px 20px;
+}
+.todayObsHead {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 12px;
 }
-.todayObsTitle{ font-weight: 700; }
-.todayObsEmpty{ color: var(--muted); font-size: 13px; }
-.todayObsList{ display: flex; flex-direction: column; gap: 8px; }
-.todayObsItem{
+.todayObsTitle {
+  font-weight: 700;
+}
+.todayObsEmpty {
+  color: var(--muted);
+  font-size: 13px;
+}
+.todayObsList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.todayObsItem {
   padding: 10px 12px;
   border-radius: 12px;
   border: 1px solid var(--border);
 }
-.todayObsItemTitle{ font-weight: 600; font-size: 13px; }
-.todayObsItemSnippet{ font-size: 12px; color: var(--muted); margin-top: 2px; }
+.todayObsItemTitle {
+  font-weight: 600;
+  font-size: 13px;
+}
+.todayObsItemSnippet {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
 
 /* ─── 往年今日 ─── */
-.otdCard{ padding: 16px 20px; }
-.otdHead{
+.otdCard {
+  padding: 16px 20px;
+}
+.otdHead {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 12px;
 }
-.otdTitle{ font-weight: 700; }
-.otdLoading{ color: var(--muted); font-size: 13px; }
-.otdEmpty{
+.otdTitle {
+  font-weight: 700;
+}
+.otdLoading {
+  color: var(--muted);
+  font-size: 13px;
+}
+.otdEmpty {
   color: var(--muted);
   font-size: 13px;
   padding: 8px 0;
 }
-.otdList{ display: flex; flex-direction: column; gap: 8px; }
-.otdItem{
+.otdList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.otdItem {
   padding: 10px 12px;
   border-radius: 12px;
   border: 1px solid var(--border);
 }
-.otdDate{ font-weight: 700; font-size: 13px; margin-bottom: 4px; }
-.otdSnippet{ font-size: 13px; color: var(--muted); }
+.otdDate {
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+.otdSnippet {
+  font-size: 13px;
+  color: var(--muted);
+}
 </style>

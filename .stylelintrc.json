@@ -1,0 +1,14 @@
+{
+  "extends": ["stylelint-config-recommended-vue"],
+  "rules": {
+    "color-hex-length": "long",
+    "color-no-hex": [
+      true,
+      {
+        "severity": "warning",
+        "message": "裸 hex 色值请改用设计 token（见 doc/Cornie-026 §3）；存量豁免清单：全量现有文件，随 T-02/T-03 迁移逐步清零"
+      }
+    ],
+    "no-descending-specificity": null
+  }
+}
