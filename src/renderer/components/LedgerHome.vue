@@ -755,7 +755,7 @@ onBeforeUnmount(() => {
 }
 .lovTitle {
   font-weight: 700;
-  font-size: 14px;
+  font-size: var(--text-md);
   color: var(--muted);
   margin-bottom: 8px;
 }
@@ -773,7 +773,7 @@ onBeforeUnmount(() => {
   border-right: none;
 }
 .lovLabel {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--muted);
   display: block;
   margin-bottom: 4px;
@@ -800,7 +800,7 @@ onBeforeUnmount(() => {
 }
 
 .lfilterText {
-  font-size: 13px;
+  font-size: var(--text-base);
   color: var(--text);
 }
 
@@ -835,7 +835,7 @@ onBeforeUnmount(() => {
 }
 
 .lchartHint {
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
   line-height: 1.5;
 }
@@ -843,7 +843,7 @@ onBeforeUnmount(() => {
 .lchartEmpty {
   margin-top: 14px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-base);
 }
 
 .ldonutWrap {
@@ -872,7 +872,7 @@ onBeforeUnmount(() => {
   grid-template-columns: auto 1fr auto;
   gap: 8px;
   align-items: center;
-  font-size: 12px;
+  font-size: var(--text-sm);
 }
 
 .ldonutColor {
@@ -938,7 +938,7 @@ onBeforeUnmount(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 14px;
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 
@@ -988,7 +988,7 @@ onBeforeUnmount(() => {
 }
 .lquickHint {
   margin-top: 4px;
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 .lquickForm {
@@ -1026,11 +1026,11 @@ onBeforeUnmount(() => {
   gap: 8px;
 }
 .lquickCategoryCreateTitle {
-  font-size: 13px;
+  font-size: var(--text-base);
   font-weight: 700;
 }
 .lquickCategoryCreateHint {
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 .lquickCategoryCreateActions {
@@ -1042,18 +1042,18 @@ onBeforeUnmount(() => {
 .lquickCategoryError {
   padding: 8px 12px;
   border-radius: 10px;
-  border: 1px solid rgba(217, 106, 92, 0.2);
+  border: 1px solid color-mix(in srgb, var(--color-danger) 20%, transparent);
   background: var(--danger-soft);
   color: var(--danger);
-  font-size: 12px;
+  font-size: var(--text-sm);
 }
 .lquickError {
   padding: 8px 12px;
   border-radius: 10px;
-  border: 1px solid rgba(217, 106, 92, 0.2);
+  border: 1px solid color-mix(in srgb, var(--color-danger) 20%, transparent);
   background: var(--danger-soft);
   color: var(--danger);
-  font-size: 12px;
+  font-size: var(--text-sm);
 }
 
 .lrecent {
@@ -1071,12 +1071,12 @@ onBeforeUnmount(() => {
 }
 .lrecentHint {
   margin-top: 4px;
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 .lrecentEmpty {
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-base);
   padding: 10px 0;
 }
 .lrecentList {
@@ -1092,8 +1092,8 @@ onBeforeUnmount(() => {
   padding: 12px 14px;
   border-radius: 14px;
   border: 1px solid var(--border);
-  font-size: 13px;
-  background: #ffffff;
+  font-size: var(--text-base);
+  background: var(--color-surface);
 }
 
 .lrecentRow.expense {
@@ -1105,7 +1105,7 @@ onBeforeUnmount(() => {
 }
 
 .lrecentType {
-  font-size: 11px;
+  font-size: var(--text-xs);
   padding: 4px 8px;
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.05);
@@ -1122,7 +1122,7 @@ onBeforeUnmount(() => {
   font-weight: 600;
 }
 .lrecentCat {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--muted);
 }
 
@@ -1143,7 +1143,7 @@ onBeforeUnmount(() => {
 .lcat {
   padding: 10px 20px;
   text-align: center;
-  font-size: 13px;
+  font-size: var(--text-base);
 }
 
 @media (max-width: 900px) {

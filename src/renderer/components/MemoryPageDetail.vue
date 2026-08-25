@@ -638,7 +638,7 @@ onMounted(loadPage)
   border: 1px solid rgba(217, 106, 92, 0.25);
   background: rgba(217, 106, 92, 0.06);
   color: var(--danger);
-  font-size: 13px;
+  font-size: var(--text-base);
 }
 
 .mdetailLoadError {
@@ -656,13 +656,13 @@ onMounted(loadPage)
 }
 
 .mdetailLoadErrorTitle {
-  font-size: 16px;
+  font-size: var(--text-lg);
   font-weight: 800;
   color: var(--text);
 }
 
 .mdetailLoadErrorHint {
-  font-size: 13px;
+  font-size: var(--text-base);
   color: var(--muted);
   line-height: 1.6;
 }
@@ -695,17 +695,17 @@ onMounted(loadPage)
   gap: 14px;
 }
 .mdetailReadTitle {
-  font-size: 20px;
+  font-size: var(--text-2xl);
   font-weight: 800;
   line-height: 1.4;
 }
 .mdetailReadSummary {
-  font-size: 14px;
+  font-size: var(--text-md);
   color: var(--muted);
   line-height: 1.6;
 }
 .mdetailReadContent {
-  font-size: 14px;
+  font-size: var(--text-md);
   line-height: 1.8;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -713,7 +713,7 @@ onMounted(loadPage)
 }
 
 .mdetailMode {
-  font-size: 18px;
+  font-size: var(--text-xl);
   font-weight: 800;
 }
 
@@ -723,7 +723,7 @@ onMounted(loadPage)
   border-radius: 999px;
   background: rgba(232, 133, 106, 0.12);
   color: var(--text);
-  font-size: 12px;
+  font-size: var(--text-sm);
 }
 
 .mdetailTypePillOrdinary {
@@ -732,7 +732,7 @@ onMounted(loadPage)
 }
 
 .mdetailHint {
-  font-size: 13px;
+  font-size: var(--text-base);
   color: var(--muted);
   line-height: 1.6;
 }
@@ -741,7 +741,7 @@ onMounted(loadPage)
   border: 1px solid var(--border);
   border-radius: 16px;
   padding: 16px;
-  background: linear-gradient(180deg, rgba(255, 252, 249, 0.95), #ffffff);
+  background: linear-gradient(180deg, rgba(255, 252, 249, 0.95), var(--color-surface));
 }
 
 .mdetailGuidePrimary {
@@ -750,33 +750,33 @@ onMounted(loadPage)
 }
 
 .mdetailGuidePerson {
-  background: linear-gradient(180deg, rgba(255, 250, 246, 0.92), #ffffff);
+  background: linear-gradient(180deg, rgba(255, 250, 246, 0.92), var(--color-surface));
 }
 
 .mdetailGuideProfile {
-  background: linear-gradient(180deg, rgba(255, 248, 242, 0.94), #ffffff);
+  background: linear-gradient(180deg, rgba(255, 248, 242, 0.94), var(--color-surface));
 }
 
 .mdetailGuideOrdinary {
-  background: linear-gradient(180deg, rgba(244, 247, 250, 0.94), #ffffff);
+  background: linear-gradient(180deg, rgba(244, 247, 250, 0.94), var(--color-surface));
   border-color: rgba(120, 140, 160, 0.16);
 }
 
 .mdetailGuideEyebrow {
-  font-size: 11px;
+  font-size: var(--text-xs);
   letter-spacing: 0.04em;
   color: var(--muted);
 }
 
 .mdetailGuideTitle {
   margin-top: 4px;
-  font-size: 16px;
+  font-size: var(--text-lg);
   font-weight: 800;
 }
 
 .mdetailGuideBody {
   margin-top: 6px;
-  font-size: 13px;
+  font-size: var(--text-base);
   color: var(--muted);
   line-height: 1.6;
 }
@@ -791,9 +791,9 @@ onMounted(loadPage)
 .mdetailPromptItem {
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: #ffffff;
+  background: var(--color-surface);
   padding: 10px 12px;
-  font-size: 13px;
+  font-size: var(--text-base);
   color: var(--muted);
   line-height: 1.6;
 }
@@ -807,12 +807,12 @@ onMounted(loadPage)
 }
 
 .mdetailConfirmTitle {
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 700;
 }
 
 .mdetailConfirmHint {
-  font-size: 13px;
+  font-size: var(--text-base);
   color: var(--muted);
   line-height: 1.6;
 }
@@ -831,7 +831,7 @@ onMounted(loadPage)
 }
 
 .sectionTitle {
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 700;
   margin-bottom: 10px;
 }
@@ -846,17 +846,17 @@ onMounted(loadPage)
   border: 1px solid var(--border);
   border-radius: 14px;
   padding: 12px;
-  background: #ffffff;
+  background: var(--color-surface);
 }
 
 .sourceSummaryValue {
-  font-size: 20px;
+  font-size: var(--text-2xl);
   font-weight: 800;
 }
 
 .sourceSummaryLabel {
   margin-top: 4px;
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 
@@ -868,7 +868,7 @@ onMounted(loadPage)
 }
 
 .sourceBlockTitle {
-  font-size: 13px;
+  font-size: var(--text-base);
   font-weight: 600;
 }
 
@@ -884,7 +884,7 @@ onMounted(loadPage)
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 10px 12px;
-  background: #ffffff;
+  background: var(--color-surface);
 }
 
 .sourceItemLink {
@@ -903,7 +903,7 @@ onMounted(loadPage)
 
 .sourceItemTitle,
 .relatedPageTitle {
-  font-size: 13px;
+  font-size: var(--text-base);
   font-weight: 600;
 }
 
@@ -911,7 +911,7 @@ onMounted(loadPage)
 .relatedPageMeta,
 .mdetailMuted {
   margin-top: 4px;
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
   line-height: 1.6;
 }
@@ -933,7 +933,7 @@ onMounted(loadPage)
 }
 
 .mdetailField > span {
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 
@@ -948,14 +948,14 @@ onMounted(loadPage)
 .mdetailField select {
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: #ffffff;
+  background: var(--color-surface);
   color: var(--text);
   padding: 12px 14px;
-  font-size: 14px;
+  font-size: var(--text-md);
 }
 
 .mdetailTitle {
-  font-size: 16px;
+  font-size: var(--text-lg);
   font-weight: 600;
 }
 

@@ -1,0 +1,137 @@
+/* T-02：只引入 theme（token 变量发射）与 utilities，跳过 preflight——
+   应用样式为手写元素级（style.css 的 button/input/.card），preflight 重置会破坏现有观感。 */
+@import 'tailwindcss/theme' layer(theme);
+@import 'tailwindcss/utilities' layer(utilities);
+
+/* stylelint-disable color-no-hex */
+
+/* ─────────────────────────────────────────────────────────────
+   Cornie 设计 Token（T-02，对应 doc/Cornie-026 §3）
+   - 规范命名空间：--color-* / --text-* / --spacing-* / --radius-* /
+     --shadow-* / --duration-* / --ease-*  供 Tailwind 工具类与新增代码使用；
+   - 旧名（--bg / --surface / --accent / --pet-* …）为兼容层，与规范名同值，
+     存量组件 var(--x) 零改动；
+   - 字号收敛：现存 18 种手拍取值 → 10 档刻度（11/12/13/14/16/18/20/24/28/32px）。
+   ───────────────────────────────────────────────────────────── */
+/* @theme static：强制发射全部 token 变量（Tailwind 4.3 默认会摇树未使用变量，
+   而存量组件直接 var(--radius-*)/var(--spacing-*) 引用，必须全部保留）。 */
+@theme static {
+  /* ── 基底 ── */
+  --color-bg: #faf8f5;
+  --color-surface: #ffffff;
+  --color-surface-2: #f5f2ee;
+  --color-text: #2d2a26;
+  --color-muted: #9a948c;
+  --color-border: rgba(0, 0, 0, 0.08);
+
+  /* ── 强调 / 语义 ── */
+  --color-accent: #e8856a;
+  --color-accent-hover: #d96f53;
+  --color-danger: #d96a5c;
+  --color-success: #5b9a6b;
+  --color-success-soft: #eef6f0;
+  --color-warning: #e4a35e;
+  --color-warning-soft: #fff7ea;
+  --color-danger-soft: #fbedea;
+  --color-info-soft: #f5f8fb;
+
+  /* ── 模块 tint ── */
+  --color-tint-chat: #fff4f0;
+  --color-tint-diary: #fff0f3;
+  --color-tint-ledger: #f0f5f0;
+  --color-tint-todo: #fff7ef;
+  --color-tint-schedule: #fff7ef;
+  --color-tint-memory: #eff4f9;
+
+  /* ── 字号刻度（10 档） ── */
+  --text-xs: 11px;
+  --text-xs--line-height: 1.5;
+  --text-sm: 12px;
+  --text-sm--line-height: 1.5;
+  --text-base: 13px;
+  --text-base--line-height: 1.5;
+  --text-md: 14px;
+  --text-md--line-height: 1.6;
+  --text-lg: 16px;
+  --text-lg--line-height: 1.5;
+  --text-xl: 18px;
+  --text-xl--line-height: 1.5;
+  --text-2xl: 20px;
+  --text-2xl--line-height: 1.4;
+  --text-3xl: 24px;
+  --text-3xl--line-height: 1.3;
+  --text-4xl: 28px;
+  --text-4xl--line-height: 1.3;
+  --text-5xl: 32px;
+  --text-5xl--line-height: 1.2;
+
+  /* ── 间距刻度 ── */
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-8: 32px;
+
+  /* ── 圆角刻度（5 档） ── */
+  --radius-sm: 10px;
+  --radius-md: 12px;
+  --radius-lg: 14px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+
+  /* ── 阴影 ── */
+  --shadow-card: 0 2px 10px rgba(45, 42, 38, 0.05);
+  --shadow-raised: 0 8px 24px rgba(45, 42, 38, 0.08);
+
+  /* ── 动效 ── */
+  --duration-fast: 160ms;
+  --duration-base: 220ms;
+  --duration-slow: 320ms;
+  --ease-standard: ease;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* ── 兼容层：旧名与规范名同值（存量组件 var(--x) 零改动） ── */
+  --bg: var(--color-bg);
+  --surface: var(--color-surface);
+  --surface-2: var(--color-surface-2);
+  --text: var(--color-text);
+  --muted: var(--color-muted);
+  --border: var(--color-border);
+  --accent: var(--color-accent);
+  --accent-hover: var(--color-accent-hover);
+  --danger: var(--color-danger);
+  --success: var(--color-success);
+  --success-soft: var(--color-success-soft);
+  --warning: var(--color-warning);
+  --warning-soft: var(--color-warning-soft);
+  --danger-soft: var(--color-danger-soft);
+  --info-soft: var(--color-info-soft);
+  --chat-tint: var(--color-tint-chat);
+  --diary-tint: var(--color-tint-diary);
+  --ledger-tint: var(--color-tint-ledger);
+  --todo-tint: var(--color-tint-todo);
+  --schedule-tint: var(--color-tint-schedule);
+  --memory-tint: var(--color-tint-memory);
+
+  /* 桌宠专属（仅小窗使用，保留为普通变量） */
+  --pet-bg: rgba(255, 250, 242, 0.92);
+  --pet-bg-soft: rgba(255, 246, 236, 0.82);
+  --pet-surface: rgba(255, 255, 255, 0.72);
+  --pet-border: rgba(196, 168, 146, 0.24);
+  --pet-shadow-soft: 0 10px 30px rgba(124, 93, 72, 0.14);
+  --pet-shadow-hover: 0 14px 34px rgba(124, 93, 72, 0.18);
+  --pet-text: #5b4638;
+  --pet-text-soft: #826b5b;
+  --pet-text-faint: #a18d80;
+  --pet-accent: #efb39a;
+  --pet-accent-strong: #df8d70;
+  --pet-accent-soft: #f7d8ca;
+  --pet-user-bubble: #f6d3c4;
+  --pet-cornie-bubble: rgba(255, 255, 255, 0.78);
+  --pet-input-bg: rgba(255, 255, 255, 0.68);
+  --pet-transition-fast: 160ms ease;
+  --pet-transition-base: 220ms ease;
+  --pet-transition-slow: 320ms ease;
+}
