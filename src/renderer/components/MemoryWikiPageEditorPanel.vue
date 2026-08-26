@@ -101,19 +101,11 @@ const relatedPageSelectionModel = computed({
         </label>
         <label class="span2">
           <span>身份摘要</span>
-          <textarea
-            v-model="pageForm.identitySummary"
-            rows="3"
-            placeholder="例如：当前处于项目、考试、实习与求职压力交织阶段。"
-          />
+          <textarea v-model="pageForm.identitySummary" rows="3" placeholder="例如：项目与求职并行推进中" />
         </label>
         <label class="span2">
           <span>阶段概况</span>
-          <textarea
-            v-model="pageForm.lifeStageSummary"
-            rows="3"
-            placeholder="例如：学业推进中，同时承担多个个人项目与求职任务。"
-          />
+          <textarea v-model="pageForm.lifeStageSummary" rows="3" placeholder="例如：学业与多个项目并行" />
         </label>
         <label>
           <span>当前关注</span>
@@ -249,11 +241,7 @@ const relatedPageSelectionModel = computed({
         </label>
         <label class="span2">
           <span>侧写摘要</span>
-          <textarea
-            v-model="pageForm.traitSummary"
-            rows="3"
-            placeholder="例如：高压时容易疲惫，但会努力把情绪转成行动。"
-          />
+          <textarea v-model="pageForm.traitSummary" rows="3" placeholder="例如：高压时容易疲惫" />
         </label>
         <label>
           <span>证据计数</span>
@@ -434,7 +422,7 @@ const relatedPageSelectionModel = computed({
   display: flex;
   flex-direction: column;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--text-base);
 }
 .formGrid .span2 {
   grid-column: 1 / -1;
@@ -450,7 +438,7 @@ const relatedPageSelectionModel = computed({
 .detailMeta {
   margin-top: 8px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-base);
   line-height: 1.5;
 }
 .evidenceBlock {
@@ -460,7 +448,7 @@ const relatedPageSelectionModel = computed({
   gap: 10px;
 }
 .evidenceTitle {
-  font-size: 13px;
+  font-size: var(--text-base);
   font-weight: 700;
 }
 .evidenceCards {
@@ -469,15 +457,14 @@ const relatedPageSelectionModel = computed({
   gap: 10px;
 }
 .evidenceCard {
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.02);
-  padding: 12px;
+  border-radius: var(--radius-lg);
+  background: transparent;
+  padding: 12px 0;
 }
 .evidenceSummary {
-  font-size: 12px;
+  font-size: var(--text-sm);
   font-weight: 700;
-  color: rgba(248, 250, 252, 0.92);
+  color: var(--text);
   margin-bottom: 8px;
 }
 .suggestionList {
@@ -489,16 +476,14 @@ const relatedPageSelectionModel = computed({
 .suggestionItem {
   padding: 10px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.03);
-  color: rgba(255, 255, 255, 0.88);
-  font-size: 13px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: var(--text-base);
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
 .warningItem {
-  border-color: rgba(248, 113, 113, 0.24);
-  background: rgba(248, 113, 113, 0.08);
+  background: var(--color-danger-soft);
 }
 .relationshipGrid select {
   min-height: 160px;

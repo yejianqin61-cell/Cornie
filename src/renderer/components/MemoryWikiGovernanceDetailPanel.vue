@@ -81,20 +81,17 @@ const emit = defineEmits(['approve', 'defer', 'reject'])
         <button :disabled="saving || detail.status === 'rejected'" @click="emit('reject')">驳回建议</button>
       </div>
     </div>
-    <UiEmpty v-else icon="📋" text="点左边一条治理请求，我就把它的原因、证据和处理入口摊给你看。" />
+    <UiEmpty v-else icon="📋" text="选择治理请求查看详情" />
   </UiCard>
 </template>
 
 <style scoped>
 .governanceDetail {
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.03);
-  padding: 16px;
+  padding: 4px 0 0 0;
 }
 .detailTitle {
   font-weight: 800;
-  font-size: 18px;
+  font-size: var(--text-xl);
 }
 .detailBadgeRow {
   margin-top: 10px;
@@ -105,10 +102,9 @@ const emit = defineEmits(['approve', 'defer', 'reject'])
 .detailBadge {
   padding: 4px 10px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.82);
-  font-size: 11px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-size: var(--text-xs);
 }
 .detailMetaGrid {
   margin-top: 14px;
@@ -117,20 +113,17 @@ const emit = defineEmits(['approve', 'defer', 'reject'])
   gap: 10px;
 }
 .detailMetaCard {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.03);
-  padding: 12px;
+  padding: 12px 0;
 }
 .detailMetaLabel {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--muted);
 }
 .detailMetaValue {
   margin-top: 6px;
-  font-size: 13px;
+  font-size: var(--text-base);
   line-height: 1.5;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--text);
   overflow-wrap: anywhere;
 }
 .detailSection {
@@ -150,10 +143,9 @@ const emit = defineEmits(['approve', 'defer', 'reject'])
 .suggestionItem {
   padding: 10px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.03);
-  color: rgba(255, 255, 255, 0.88);
-  font-size: 13px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: var(--text-base);
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
@@ -164,7 +156,7 @@ const emit = defineEmits(['approve', 'defer', 'reject'])
   gap: 10px;
 }
 .evidenceTitle {
-  font-size: 13px;
+  font-size: var(--text-base);
   font-weight: 700;
 }
 .evidenceCards {
@@ -173,35 +165,30 @@ const emit = defineEmits(['approve', 'defer', 'reject'])
   gap: 10px;
 }
 .evidenceCard {
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.02);
-  padding: 12px;
+  padding: 12px 0;
 }
 .evidenceSummary {
-  font-size: 12px;
+  font-size: var(--text-sm);
   font-weight: 700;
-  color: rgba(248, 250, 252, 0.92);
+  color: var(--text);
   margin-bottom: 8px;
 }
 .evidenceItem {
   margin: 0;
   padding: 12px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(15, 23, 42, 0.55);
-  color: rgba(226, 232, 240, 0.92);
-  font-size: 12px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: var(--text-sm);
   white-space: pre-wrap;
   overflow: auto;
 }
 .emptyInline {
   padding: 12px 14px;
   border-radius: 12px;
-  border: 1px dashed rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.02);
+  background: transparent;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-base);
   line-height: 1.5;
 }
 .actionRow {

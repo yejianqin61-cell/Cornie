@@ -2,6 +2,8 @@
 import { computed, onMounted, ref } from 'vue'
 import { getEntry, listOnThisDay, listObservations } from '../api'
 import CornieDiaryMarkdown from './CornieDiaryMarkdown.vue'
+import UiButton from './ui/UiButton.vue'
+import UiCard from './ui/UiCard.vue'
 
 function pad2(n) {
   return String(n).padStart(2, '0')
@@ -16,26 +18,17 @@ const todayStr = toISODate(today)
 const entry = ref({ userText: '', cornieText: '' })
 const onThisDayItems = ref([])
 const todayObservations = ref([])
-const loading = ref(false)
 const loadingOtd = ref(false)
 
 const hasWritten = computed(() => entry.value.userText?.trim().length > 0)
 const hasCornieWritten = computed(() => entry.value.cornieText?.trim().length > 0)
 
-const moodHint = computed(() => {
-  if (hasWritten.value) return '今天已经记下了一点'
-  return '今天发生了什么呢？'
-})
-
 onMounted(async () => {
-  loading.value = true
   try {
     const data = await getEntry(todayStr)
     entry.value = data.entry
   } catch {
     /* ignore */
-  } finally {
-    loading.value = false
   }
 
   loadingOtd.value = true
@@ -48,7 +41,7 @@ onMounted(async () => {
     loadingOtd.value = false
   }
 
-  // R-08：当天观察联动——摘要展示 + 跳观察日志
+  // R-08：当天观察联动
   try {
     const data = await listObservations({ date: todayStr, limit: 3 })
     todayObservations.value = data?.observations || []
@@ -61,66 +54,65 @@ onMounted(async () => {
 <template>
   <div class="diaryPage">
     <!-- 今天卡片 -->
-    <div class="todayCard card">
+    <UiCard class="todayCard">
       <div class="todayDate">{{ todayStr }}</div>
-      <div class="todayMood">{{ moodHint }}</div>
       <div class="todayStatus">
         <span v-if="!hasWritten && !hasCornieWritten">还没有任何记录</span>
         <span v-if="hasWritten">✏️ 你写了一点</span>
         <span v-if="hasCornieWritten">🌸 铃湾也写了一篇</span>
       </div>
       <div class="todayActions">
-        <button class="primary" @click="$emit('go', 'editor')">写日记</button>
-        <button @click="$emit('go', 'cornie-review')">查看铃湾日记</button>
+        <UiButton variant="default" @click="$emit('go', 'editor')">写日记</UiButton>
+        <UiButton variant="outline" @click="$emit('go', 'cornie-review')">查看铃湾日记</UiButton>
       </div>
-    </div>
+    </UiCard>
 
     <!-- 双栏日记预览 -->
     <div class="previewGrid">
-      <div class="previewCard card" :class="{ emptyPreview: !hasWritten }">
+      <UiCard class="previewCard" :class="{ emptyPreview: !hasWritten }">
         <div class="previewTitle">✏️ 我今天写的</div>
         <div class="previewText" v-if="hasWritten">{{ entry.userText }}</div>
-        <div class="previewHint" v-else>还没写，点击上方写日记。</div>
-      </div>
-      <div class="previewCard card" :class="{ emptyPreview: !hasCornieWritten }">
+        <div class="previewHint" v-else>还没写</div>
+      </UiCard>
+      <UiCard class="previewCard" :class="{ emptyPreview: !hasCornieWritten }">
         <div class="previewTitle">🌸 铃湾今天写的</div>
         <div class="previewText corniePreview" v-if="hasCornieWritten">
           <CornieDiaryMarkdown :content="entry.cornieText" />
         </div>
         <div class="previewHint" v-else>铃湾还没写今天的日记。</div>
-      </div>
+      </UiCard>
     </div>
 
     <!-- R-08：当天观察联动 -->
-    <div class="todayObsCard card">
+    <UiCard class="todayObsCard">
       <div class="todayObsHead">
         <div class="todayObsTitle">今天的观察</div>
-        <button class="ghost" @click="$emit('go-observe')">看全部观察</button>
+        <UiButton variant="ghost" @click="$emit('go-observe')">看全部观察</UiButton>
       </div>
-      <div v-if="todayObservations.length === 0" class="todayObsEmpty">今天还没有留下观察。</div>
+      <div v-if="todayObservations.length === 0" class="todayObsEmpty">今天还没有观察。</div>
       <div v-else class="todayObsList">
         <div v-for="item in todayObservations.slice(0, 3)" :key="item.id" class="todayObsItem">
           <div class="todayObsItemTitle">{{ item.title }}</div>
           <div class="todayObsItemSnippet">{{ (item.content || '').slice(0, 50) }}</div>
         </div>
       </div>
-    </div>
+    </UiCard>
 
     <!-- 往年今日入口 -->
-    <div class="otdCard card">
+    <UiCard class="otdCard">
       <div class="otdHead">
         <div class="otdTitle">往年今日</div>
-        <button class="ghost" @click="$emit('go', 'on-this-day')">查看全部</button>
+        <UiButton variant="ghost" @click="$emit('go', 'on-this-day')">查看全部</UiButton>
       </div>
-      <div v-if="loadingOtd" class="otdLoading">翻翻回忆…</div>
-      <div v-else-if="onThisDayItems.length === 0" class="otdEmpty">那时候我还没出生呢，不过现在我在了。</div>
+      <div v-if="loadingOtd" class="otdLoading">加载中…</div>
+      <div v-else-if="onThisDayItems.length === 0" class="otdEmpty">暂无记录</div>
       <div v-else class="otdList">
         <div v-for="it in onThisDayItems.slice(0, 3)" :key="it.date" class="otdItem">
           <div class="otdDate">{{ it.date }}</div>
           <div class="otdSnippet">{{ (it.userText || it.cornieText || '').slice(0, 60) }}…</div>
         </div>
       </div>
-    </div>
+    </UiCard>
   </div>
 </template>
 
@@ -137,7 +129,7 @@ onMounted(async () => {
   width: 4px;
 }
 .diaryPage::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.08);
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
   border-radius: 999px;
 }
 
@@ -152,17 +144,13 @@ onMounted(async () => {
   gap: 10px;
 }
 .todayDate {
-  font-size: 22px;
+  font-size: var(--text-2xl);
   font-weight: 800;
-}
-.todayMood {
-  font-size: 15px;
-  color: var(--muted);
 }
 .todayStatus {
   display: flex;
   gap: 12px;
-  font-size: 13px;
+  font-size: var(--text-base);
   color: var(--muted);
 }
 .todayActions {
@@ -185,18 +173,18 @@ onMounted(async () => {
 }
 .previewTitle {
   font-weight: 700;
-  font-size: 14px;
+  font-size: var(--text-md);
 }
 .previewText {
   white-space: pre-wrap;
   line-height: 1.6;
-  font-size: 13px;
+  font-size: var(--text-base);
   max-height: 160px;
   overflow-y: auto;
 }
 .corniePreview {
   white-space: normal;
-  color: #9b6b7a;
+  color: color-mix(in srgb, var(--color-accent) 45%, var(--color-text));
 }
 :deep(.corniePreview .cornieMarkdown) {
   gap: 8px;
@@ -204,7 +192,7 @@ onMounted(async () => {
 :deep(.corniePreview .mdParagraph),
 :deep(.corniePreview .mdQuote),
 :deep(.corniePreview .mdList) {
-  font-size: 13px;
+  font-size: var(--text-base);
 }
 .emptyPreview {
   opacity: 0.65;
@@ -212,7 +200,7 @@ onMounted(async () => {
 }
 .previewHint {
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-base);
 }
 
 @media (max-width: 760px) {
@@ -236,7 +224,7 @@ onMounted(async () => {
 }
 .todayObsEmpty {
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-base);
 }
 .todayObsList {
   display: flex;
@@ -244,16 +232,14 @@ onMounted(async () => {
   gap: 8px;
 }
 .todayObsItem {
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
+  padding: 10px 0;
 }
 .todayObsItemTitle {
   font-weight: 600;
-  font-size: 13px;
+  font-size: var(--text-base);
 }
 .todayObsItemSnippet {
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
   margin-top: 2px;
 }
@@ -273,11 +259,11 @@ onMounted(async () => {
 }
 .otdLoading {
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-base);
 }
 .otdEmpty {
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-base);
   padding: 8px 0;
 }
 .otdList {
@@ -286,17 +272,15 @@ onMounted(async () => {
   gap: 8px;
 }
 .otdItem {
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
+  padding: 10px 0;
 }
 .otdDate {
   font-weight: 700;
-  font-size: 13px;
+  font-size: var(--text-base);
   margin-bottom: 4px;
 }
 .otdSnippet {
-  font-size: 13px;
+  font-size: var(--text-base);
   color: var(--muted);
 }
 </style>

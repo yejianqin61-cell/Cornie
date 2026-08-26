@@ -196,9 +196,8 @@ const {
 .workspaceError {
   padding: 12px 14px;
   border-radius: 14px;
-  border: 1px solid rgba(248, 113, 113, 0.35);
-  background: rgba(248, 113, 113, 0.08);
-  color: rgba(254, 226, 226, 0.95);
+  background: var(--color-danger-soft);
+  color: var(--danger);
 }
 .workspaceGrid {
   display: grid;

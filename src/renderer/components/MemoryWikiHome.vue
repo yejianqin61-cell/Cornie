@@ -204,7 +204,7 @@ function onOpenMemory(id) {
         />
         <div v-else class="wikiEmpty">
           <div class="wikiEmptyIcon">📖</div>
-          <div class="wikiEmptyText">从左边选一页记忆，在这里慢慢看。</div>
+          <div class="wikiEmptyText">选择左侧记忆查看</div>
         </div>
       </main>
     </div>
@@ -223,13 +223,10 @@ function onOpenMemory(id) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 18px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 18px;
+  padding: 4px 0 0 0;
 }
 .wikiTitle {
-  font-size: 18px;
+  font-size: var(--text-xl);
   font-weight: 800;
 }
 
@@ -237,26 +234,24 @@ function onOpenMemory(id) {
 .wikiSearch {
   width: 220px;
   padding: 6px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  font-size: 13px;
-  background: var(--surface-2, #ffffff);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-base);
+  background: var(--surface-2);
 }
 .wikiSearch:focus {
   outline: none;
-  border-color: rgba(232, 133, 106, 0.4);
 }
 
 .wikiSearchMeta {
   padding: 8px 12px;
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid color-mix(in srgb, var(--color-text) 5%, transparent);
 }
 .wikiSearchEmpty {
   padding: 20px 12px;
   text-align: center;
-  font-size: 13px;
+  font-size: var(--text-base);
   color: var(--muted);
 }
 
@@ -268,22 +263,16 @@ function onOpenMemory(id) {
   gap: 12px;
 }
 .wikiSidebar {
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: var(--surface);
   overflow: hidden;
   min-height: 0;
 }
 .wikiSideLoading {
   padding: 16px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-base);
   text-align: center;
 }
 .wikiContent {
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: var(--surface);
   overflow: hidden;
   min-height: 0;
 }
@@ -297,10 +286,10 @@ function onOpenMemory(id) {
   color: var(--muted);
 }
 .wikiEmptyIcon {
-  font-size: 32px;
+  font-size: var(--text-5xl);
 }
 .wikiEmptyText {
-  font-size: 13px;
+  font-size: var(--text-base);
 }
 
 @media (max-width: 760px) {

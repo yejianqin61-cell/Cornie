@@ -10,6 +10,7 @@ import {
 } from '../api'
 import { listenDataChanged } from '../syncSignals'
 import ScheduleCalendar from './ScheduleCalendar.vue'
+import UiButton from './ui/UiButton.vue'
 
 const schedules = ref([])
 const categories = ref([])
@@ -224,27 +225,23 @@ onBeforeUnmount(() => {
           <div class="stoolbarInfo">
             <div class="stoolbarLabel">当前查看</div>
             <div class="stoolbarText">{{ currentFilterLabel }}</div>
-            <div class="stoolbarHint">
-              {{ selectedDate ? '换个日期就能快速切到那一天。' : '先看整个月，再点某一天细看安排。' }}
-            </div>
           </div>
           <div class="stoolbarActions">
-            <button class="ghost" type="button" @click="jumpToToday">回到今天</button>
-            <button class="ghost" type="button" :disabled="!selectedDate" @click="clearDateFilter">清除筛选</button>
-            <button class="primary" type="button" @click="showForm = !showForm">
+            <UiButton variant="ghost" type="button" @click="jumpToToday">回到今天</UiButton>
+            <UiButton variant="ghost" type="button" :disabled="!selectedDate" @click="clearDateFilter"
+              >清除筛选</UiButton
+            >
+            <UiButton variant="default" type="button" @click="showForm = !showForm">
               {{ showForm ? '收起新增' : '新增安排' }}
-            </button>
+            </UiButton>
           </div>
         </div>
       </div>
 
       <div v-if="showForm" class="squickCard card">
         <div class="squickHead">
-          <div>
-            <div class="squickTitle">新增安排</div>
-            <div class="squickHint">把时间先记下来，下面的列表就会马上更新。</div>
-          </div>
-          <button class="ghost" type="button" @click="showForm = false">取消</button>
+          <div class="squickTitle">新增安排</div>
+          <UiButton variant="ghost" type="button" @click="showForm = false">取消</UiButton>
         </div>
         <div class="squickForm">
           <input v-model="newForm.title" placeholder="标题" />
@@ -259,9 +256,13 @@ onBeforeUnmount(() => {
             </select>
             <input v-model="newForm.location" placeholder="地点（可选）" />
           </div>
-          <button class="primary" :disabled="adding || !newForm.title.trim() || !newForm.startAt" @click="addSchedule">
+          <UiButton
+            variant="default"
+            :disabled="adding || !newForm.title.trim() || !newForm.startAt"
+            @click="addSchedule"
+          >
             {{ adding ? '保存中…' : '保存' }}
-          </button>
+          </UiButton>
           <div v-if="errorMsg" class="serr">{{ errorMsg }}</div>
         </div>
       </div>
@@ -270,16 +271,7 @@ onBeforeUnmount(() => {
     <!-- 日程列表 -->
     <div class="slist card">
       <div class="slistHead">
-        <div>
-          <div class="slistTitle">{{ selectedDate ? '这一天的安排' : '这个月的安排' }}</div>
-          <div class="slistHint">
-            {{
-              selectedDate
-                ? '点一下别的日期，就能换着看那一天的安排。'
-                : '先从这个月的节奏看起，想看某一天就点上面的日期。'
-            }}
-          </div>
-        </div>
+        <div class="slistTitle">{{ selectedDate ? '这一天的安排' : '这个月的安排' }}</div>
       </div>
       <div v-if="filteredSchedules.length === 0 && !loading" class="sempty">还没有日程安排</div>
       <div v-else class="sitems">
@@ -293,8 +285,10 @@ onBeforeUnmount(() => {
             </div>
           </div>
           <div class="sitemActions">
-            <button class="ghost" @click="toggleStatus(s)">{{ s.status === 'cancelled' ? '恢复' : '取消' }}</button>
-            <button class="ghost sdel" @click="removeSchedule(s.id)">删除</button>
+            <UiButton variant="ghost" size="sm" @click="toggleStatus(s)">
+              {{ s.status === 'cancelled' ? '恢复' : '取消' }}
+            </UiButton>
+            <UiButton variant="dangerGhost" size="sm" @click="removeSchedule(s.id)">删除</UiButton>
           </div>
         </div>
       </div>
@@ -315,7 +309,7 @@ onBeforeUnmount(() => {
   width: 4px;
 }
 .shome::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.08);
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
   border-radius: 999px;
 }
 
@@ -325,7 +319,7 @@ onBeforeUnmount(() => {
   text-align: center;
 }
 .ssumText {
-  font-size: 15px;
+  font-size: var(--text-md);
 }
 
 .scontrolRow {
@@ -341,7 +335,7 @@ onBeforeUnmount(() => {
 
 .stoolbar {
   padding: 12px 16px;
-  background: #fffdfc;
+  background: var(--color-surface);
 }
 
 .stoolbarTop {
@@ -359,19 +353,13 @@ onBeforeUnmount(() => {
 }
 
 .stoolbarLabel {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--muted);
 }
 
 .stoolbarText {
-  font-size: 13px;
+  font-size: var(--text-base);
   color: var(--text);
-}
-
-.stoolbarHint {
-  font-size: 12px;
-  color: var(--muted);
-  line-height: 1.5;
 }
 
 .stoolbarActions {
@@ -383,7 +371,7 @@ onBeforeUnmount(() => {
 
 .squickCard {
   padding: 12px 16px;
-  background: #fffdfc;
+  background: var(--color-surface);
 }
 .squickHead {
   display: flex;
@@ -392,11 +380,6 @@ onBeforeUnmount(() => {
 }
 .squickTitle {
   font-weight: 700;
-}
-.squickHint {
-  margin-top: 4px;
-  font-size: 12px;
-  color: var(--muted);
 }
 .squickForm {
   margin-top: 10px;
@@ -416,11 +399,10 @@ onBeforeUnmount(() => {
 }
 .serr {
   padding: 8px 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(217, 106, 92, 0.25);
-  background: rgba(217, 106, 92, 0.06);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--color-danger) 6%, transparent);
   color: var(--danger);
-  font-size: 12px;
+  font-size: var(--text-sm);
 }
 
 .slist {
@@ -435,14 +417,9 @@ onBeforeUnmount(() => {
 .slistTitle {
   font-weight: 700;
 }
-.slistHint {
-  margin-top: 4px;
-  font-size: 12px;
-  color: var(--muted);
-}
 .sempty {
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-base);
   padding: 10px 0;
 }
 .sitems {
@@ -456,9 +433,8 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 10px;
   padding: 10px 14px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  font-size: 13px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-base);
 }
 .sitem:hover {
   background: var(--surface-2);
@@ -468,7 +444,7 @@ onBeforeUnmount(() => {
 }
 .sitemTime {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--text-sm);
   white-space: nowrap;
 }
 .sitemMain {
@@ -486,14 +462,14 @@ onBeforeUnmount(() => {
   align-items: center;
 }
 .sitemCat {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--muted);
   padding: 2px 8px;
-  border: 1px solid var(--border);
   border-radius: 999px;
+  background: var(--surface-2);
 }
 .sitemLoc {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--muted);
 }
 .sitemActions {
@@ -504,9 +480,6 @@ onBeforeUnmount(() => {
 }
 .sitem:hover .sitemActions {
   opacity: 1;
-}
-.sdel {
-  color: var(--danger);
 }
 
 @media (max-width: 720px) {

@@ -43,6 +43,10 @@
   --color-tint-schedule: #fff7ef;
   --color-tint-memory: #eff4f9;
 
+  /* ── 图表辅助色 ── */
+  --color-chart-sage: #8db5a7;
+  --color-chart-sand: #c59e7a;
+
   /* ── 字号刻度（10 档） ── */
   --text-xs: 11px;
   --text-xs--line-height: 1.5;

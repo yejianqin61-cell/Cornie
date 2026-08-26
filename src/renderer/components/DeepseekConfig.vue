@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted } from 'vue'
 import { useModelSettings } from '../composables/useModelSettings'
+import UiButton from './ui/UiButton.vue'
 
 const emit = defineEmits(['back', 'updated'])
 
@@ -33,13 +34,13 @@ onMounted(refresh)
 <template>
   <div class="config">
     <header class="configHead">
-      <button class="ghost" @click="$emit('back')">← 返回设置</button>
+      <UiButton variant="ghost" @click="$emit('back')">← 返回设置</UiButton>
       <div class="configTitle">DeepSeek 配置</div>
     </header>
 
     <div v-if="loading" class="configLoading">检查中…</div>
 
-    <form v-else class="configForm card" @submit.prevent="save">
+    <form v-else class="configForm" @submit.prevent="save">
       <label>
         <span>DeepSeek API Key</span>
         <input v-model="form.apiKey" type="password" autocomplete="off" placeholder="把你的钥匙放在这里" />
@@ -62,13 +63,19 @@ onMounted(refresh)
       <div v-if="noticeMsg" class="configNotice">{{ noticeMsg }}</div>
 
       <div class="configActions">
-        <button class="primary" :disabled="saving" type="submit">
+        <UiButton variant="default" :disabled="saving" type="submit">
           {{ saving ? '保存中…' : '保存并检测' }}
-        </button>
-        <button :disabled="saving" type="button" @click="checkOnly">只检测</button>
-        <button v-if="modelSettings.configured" class="danger" :disabled="saving" type="button" @click="clearAll">
+        </UiButton>
+        <UiButton variant="outline" :disabled="saving" type="button" @click="checkOnly">只检测</UiButton>
+        <UiButton
+          v-if="modelSettings.configured"
+          variant="dangerGhost"
+          :disabled="saving"
+          type="button"
+          @click="clearAll"
+        >
           清空钥匙
-        </button>
+        </UiButton>
       </div>
     </form>
   </div>
@@ -86,13 +93,9 @@ onMounted(refresh)
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 14px 18px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 18px;
 }
 .configTitle {
-  font-size: 18px;
+  font-size: var(--text-xl);
   font-weight: 800;
 }
 
@@ -113,7 +116,7 @@ onMounted(refresh)
   display: flex;
   flex-direction: column;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--text-base);
   font-weight: 600;
 }
 
@@ -121,22 +124,19 @@ onMounted(refresh)
 .configError,
 .configNotice {
   padding: 10px 14px;
-  border-radius: 12px;
-  font-size: 13px;
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
 }
 .configCurrent {
-  border: 1px solid rgba(232, 133, 106, 0.25);
-  background: rgba(232, 133, 106, 0.06);
+  background: color-mix(in srgb, var(--color-accent) 6%, transparent);
 }
 .configError {
-  border: 1px solid rgba(217, 106, 92, 0.25);
-  background: rgba(217, 106, 92, 0.06);
+  background: color-mix(in srgb, var(--color-danger) 6%, transparent);
   color: var(--danger);
 }
 .configNotice {
-  border: 1px solid rgba(91, 154, 107, 0.25);
-  background: rgba(91, 154, 107, 0.06);
-  color: #5b9a6b;
+  background: color-mix(in srgb, var(--color-success) 6%, transparent);
+  color: var(--success);
 }
 .configActions {
   display: flex;

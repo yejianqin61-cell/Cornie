@@ -238,35 +238,35 @@ export function useMemoryWikiWorkspace() {
     const message = String(rawMessage || '').trim()
 
     if (!message) {
-      return `${action}时出了点小问题，请稍后再试一次。`
+      return `${action}失败，请稍后再试`
     }
 
     if (message.includes('memory wiki page already exists')) {
-      return '这个页面标题已经存在了，请换一个标题，或者先看看列表里是不是已经有同名页面。'
+      return '页面标题已存在，换一个吧'
     }
 
     if (message.includes('invalid memory wiki frontmatter line')) {
-      return '有一页长期记忆文档的结构已经损坏，工作台暂时无法完整读取。请先修复那一页，再继续创建或编辑。'
+      return '文档结构损坏，暂时无法读取'
     }
 
     if (message.includes('memory wiki page is missing frontmatter boundary')) {
-      return '有一页长期记忆文档缺少必要的页面头信息，工作台目前没法正确读取它。'
+      return '缺少页面头信息，无法读取'
     }
 
     if (message.includes('memory wiki page frontmatter is not closed')) {
-      return '有一页长期记忆文档的页面头信息没有正确结束，工作台暂时无法读取。'
+      return '页面头未闭合，无法读取'
     }
 
     if (message.includes('unsupported memory wiki page type')) {
-      return '当前页面类型暂时不被支持，请重新选择页面类型后再试。'
+      return '暂不支持该页面类型'
     }
 
     if (message.includes('memory wiki page not found')) {
-      return '这页长期记忆可能已经被删除或移动了，刷新列表后再试一次吧。'
+      return '页面不存在或已被移动'
     }
 
     if (message.includes('Failed to fetch')) {
-      return '暂时连不上长期记忆服务，请确认应用后端已经正常启动。'
+      return '无法连接后端服务'
     }
 
     return message

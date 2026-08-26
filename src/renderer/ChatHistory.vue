@@ -3,6 +3,8 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { exportChatlogByDate, exportChatlogByMonth, getChatlog, listChatlogDates } from './api'
 import { useRequestGuard } from './composables/useRequestGuard'
 
+import UiButton from './components/ui/UiButton.vue'
+
 const emit = defineEmits(['back', 'open-date'])
 
 // FE-05：快速切换日期时旧响应不得覆盖新视图。
@@ -232,7 +234,7 @@ onMounted(async () => {
     <aside class="historySidebar card">
       <div class="historyHead">
         <div class="historyHeadTop">
-          <button class="ghost historyBackBtn" type="button" @click="emit('back')">← 返回聊天</button>
+          <UiButton variant="ghost" class="historyBackBtn" type="button" @click="emit('back')">← 返回聊天</UiButton>
           <div class="historyTitle">聊天记录</div>
         </div>
         <div class="historyToolbar">
@@ -276,15 +278,17 @@ onMounted(async () => {
         <div v-if="entries.length === 0 && !loadingDates" class="historyEmptySm">
           {{ searchQuery.trim() ? '没有找到相关聊天记录' : '这里还没有聊天记录' }}
         </div>
-        <button
+        <UiButton
           v-if="datePagination.hasMore"
-          class="ghost historyMoreBtn"
+          variant="ghost"
+          size="sm"
+          class="historyMoreBtn"
           type="button"
           :disabled="loadingDates"
           @click="loadMoreDates"
         >
           {{ loadingDates ? '加载中…' : '查看更多日期' }}
-        </button>
+        </UiButton>
       </div>
     </aside>
 
@@ -300,25 +304,31 @@ onMounted(async () => {
           </div>
         </div>
         <div class="historyActions">
-          <button
-            class="ghost"
+          <UiButton
+            variant="ghost"
             type="button"
             :disabled="exporting || !selectedMonth"
             @click="exportSelectedMonth('json')"
           >
             {{ exporting ? '导出中…' : '导出本月 JSON' }}
-          </button>
-          <button class="ghost" type="button" :disabled="exporting || !selectedDate" @click="exportSelectedDate('txt')">
+          </UiButton>
+          <UiButton
+            variant="ghost"
+            type="button"
+            :disabled="exporting || !selectedDate"
+            @click="exportSelectedDate('txt')"
+          >
             {{ exporting ? '导出中…' : '导出当日 TXT' }}
-          </button>
-          <button
-            class="primary historyOpenBtn"
+          </UiButton>
+          <UiButton
+            variant="default"
+            class="historyOpenBtn"
             type="button"
             :disabled="loadingMessages || !selectedDate"
             @click="openSelectedDate"
           >
             查看这一天
-          </button>
+          </UiButton>
         </div>
       </div>
 
@@ -339,15 +349,17 @@ onMounted(async () => {
             {{ msg.matchedPreview }}
           </div>
         </div>
-        <button
+        <UiButton
           v-if="messagePagination.hasMore"
-          class="ghost historyMoreBtn historyMoreMsgBtn"
+          variant="ghost"
+          size="sm"
+          class="historyMoreBtn historyMoreMsgBtn"
           type="button"
           :disabled="loadingMessages"
           @click="loadMoreMessages"
         >
           {{ loadingMessages ? '加载中…' : '查看更多消息' }}
-        </button>
+        </UiButton>
       </div>
     </section>
   </div>
@@ -386,7 +398,7 @@ onMounted(async () => {
 }
 .historyHint {
   margin-top: 4px;
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 .historyToolbar {
@@ -403,7 +415,7 @@ onMounted(async () => {
 }
 .historyFilterHint {
   margin-top: 8px;
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 .historyBackBtn {
@@ -434,9 +446,8 @@ onMounted(async () => {
   align-items: flex-start;
   gap: 8px;
   padding: 10px 12px;
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   text-align: left;
-  border: 1px solid transparent;
   background: transparent;
   color: var(--text);
   cursor: pointer;
@@ -445,12 +456,11 @@ onMounted(async () => {
   background: var(--surface-2);
 }
 .historyRow.active {
-  border-color: rgba(232, 133, 106, 0.25);
-  background: rgba(232, 133, 106, 0.08);
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
 }
 
 .historyCount {
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
   white-space: nowrap;
 }
@@ -461,7 +471,7 @@ onMounted(async () => {
   min-width: 0;
 }
 .historyPreview {
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
@@ -488,25 +498,24 @@ onMounted(async () => {
 .historyBubble {
   max-width: 80%;
   padding: 10px 14px;
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   line-height: 1.5;
-  font-size: 14px;
+  font-size: var(--text-md);
 }
 .historyBubbleUser {
   align-self: flex-end;
   background: var(--accent);
-  color: #ffffff;
+  color: var(--color-surface);
   border-bottom-right-radius: 6px;
 }
 .historyBubbleCornie {
   align-self: flex-start;
   background: var(--surface-2);
-  border: 1px solid var(--border);
   border-bottom-left-radius: 6px;
 }
 
 .historyRole {
-  font-size: 11px;
+  font-size: var(--text-xs);
   opacity: 0.6;
   margin-bottom: 3px;
 }
@@ -516,7 +525,7 @@ onMounted(async () => {
 }
 .historyMatchedPreview {
   margin-top: 6px;
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -525,22 +534,20 @@ onMounted(async () => {
 .historyEmptySm {
   padding: 20px 12px;
   text-align: center;
-  font-size: 13px;
+  font-size: var(--text-base);
   color: var(--muted);
 }
 .historyEmpty,
 .historyError {
   margin: 16px;
   padding: 12px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
 }
 .historyEmpty {
-  border: 1px dashed var(--border);
   color: var(--muted);
 }
 .historyError {
-  border: 1px solid rgba(217, 106, 92, 0.25);
-  background: rgba(217, 106, 92, 0.06);
+  background: color-mix(in srgb, var(--color-danger) 6%, transparent);
   color: var(--danger);
 }
 

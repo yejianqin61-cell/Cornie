@@ -49,11 +49,7 @@ function handleSectionChange(event) {
 
     <div class="filterSummary">当前筛选：{{ filterSummary }}</div>
 
-    <UiEmpty
-      v-if="governanceItems.length === 0"
-      icon="🧭"
-      text="现在没有新的治理建议。等巡检或整理过程发现问题，这里会再提醒你。"
-    />
+    <UiEmpty v-if="governanceItems.length === 0" icon="🧭" text="暂无治理建议" />
 
     <div v-else class="entryList">
       <button
@@ -81,18 +77,16 @@ function handleSectionChange(event) {
 .queueSummary {
   padding: 12px 14px;
   border-radius: 14px;
-  border: 1px dashed rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--surface-2);
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-base);
 }
 .filterSummary {
   padding: 12px 14px;
   border-radius: 14px;
-  border: 1px dashed rgba(125, 211, 252, 0.2);
-  background: rgba(125, 211, 252, 0.06);
-  color: rgba(224, 242, 254, 0.88);
-  font-size: 13px;
+  background: var(--color-info-soft);
+  color: var(--text);
+  font-size: var(--text-base);
 }
 .entryList {
   display: flex;
@@ -110,15 +104,14 @@ function handleSectionChange(event) {
   border-radius: 16px;
 }
 .entryRow.active {
-  background: rgba(125, 211, 252, 0.12);
-  border-color: rgba(125, 211, 252, 0.35);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
 }
 .entryMain {
   font-weight: 700;
 }
 .entryMeta {
   margin-top: 4px;
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 </style>

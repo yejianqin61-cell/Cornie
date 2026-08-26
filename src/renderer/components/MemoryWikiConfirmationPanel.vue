@@ -51,7 +51,7 @@ function handleStatusChange(event) {
         @reject="emit('reject', confirmation)"
       />
     </div>
-    <UiEmpty v-else icon="🛡️" text="现在没有排队等你点头的高风险动作，小铃湾先乖乖看着。" />
+    <UiEmpty v-else icon="🛡️" text="暂无待确认动作" />
   </UiCard>
 </template>
 
@@ -67,10 +67,9 @@ function handleStatusChange(event) {
 .queueSummary {
   padding: 12px 14px;
   border-radius: 14px;
-  border: 1px dashed rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--surface-2);
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-base);
 }
 .confirmGrid {
   display: grid;

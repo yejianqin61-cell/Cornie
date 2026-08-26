@@ -15,10 +15,10 @@ const emit = defineEmits(['select-version'])
 
 <template>
   <UiCard class="span2" title="版本历史与回滚">
-    <UiEmpty v-if="!pageId" icon="📚" text="先从左边选中一个记忆页面，我就把这页的版本历史整理给你看。" />
+    <UiEmpty v-if="!pageId" icon="📚" text="先选择一个记忆页面" />
 
     <div v-else class="versionGrid">
-      <UiEmpty v-if="pageVersions.length === 0" icon="🕐" text="这页目前还没有可用的历史版本记录。" />
+      <UiEmpty v-if="pageVersions.length === 0" icon="🕐" text="暂无历史版本" />
 
       <div v-else class="versionList">
         <button
@@ -52,7 +52,7 @@ const emit = defineEmits(['select-version'])
             <pre class="evidenceItem">回滚后将把当前页面恢复到这个历史快照。</pre>
           </div>
         </div>
-        <UiEmpty v-else icon="🕘" text="点左边某个版本，我就把这个版本的关键信息展开给你看。" />
+        <UiEmpty v-else icon="🕘" text="选择版本查看详情" />
       </div>
     </div>
   </UiCard>
@@ -87,31 +87,27 @@ const emit = defineEmits(['select-version'])
   border-radius: 16px;
 }
 .entryRow.active {
-  background: rgba(125, 211, 252, 0.12);
-  border-color: rgba(125, 211, 252, 0.35);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
 }
 .entryMain {
   font-weight: 700;
 }
 .entryMeta {
   margin-top: 4px;
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 .governanceDetail {
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.03);
-  padding: 16px;
+  padding: 4px 0 0 0;
 }
 .detailTitle {
   font-weight: 800;
-  font-size: 18px;
+  font-size: var(--text-xl);
 }
 .detailMeta {
   margin-top: 8px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-base);
   line-height: 1.5;
 }
 .evidenceBlock {
@@ -121,17 +117,16 @@ const emit = defineEmits(['select-version'])
   gap: 10px;
 }
 .evidenceTitle {
-  font-size: 13px;
+  font-size: var(--text-base);
   font-weight: 700;
 }
 .evidenceItem {
   margin: 0;
   padding: 12px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(15, 23, 42, 0.55);
-  color: rgba(226, 232, 240, 0.92);
-  font-size: 12px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: var(--text-sm);
   white-space: pre-wrap;
   overflow: auto;
 }

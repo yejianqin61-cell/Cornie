@@ -61,7 +61,7 @@ function getCardTitle(item) {
 
 <template>
   <div class="toolPanel">
-    <div class="toolPanelIntro">这轮对话里，铃湾已经动手帮你做了这些事</div>
+    <div class="toolPanelIntro">已完成的操作</div>
     <div
       v-for="(item, index) in props.results"
       :key="`${item.tool_name || 'tool'}-${index}`"
@@ -76,7 +76,7 @@ function getCardTitle(item) {
             <div class="toolName">{{ getToolTitle(item.tool_name) }}</div>
           </div>
         </div>
-        <div class="toolBadge">{{ item?.ok === false ? '这次没办成' : '已经写好了' }}</div>
+        <div class="toolBadge">{{ item?.ok === false ? '失败' : '完成' }}</div>
       </div>
       <div class="toolSummary">{{ getSummary(item) }}</div>
       <div v-if="getSourceText(item)" class="toolSource">你刚才说的是：{{ getSourceText(item) }}</div>
@@ -93,25 +93,22 @@ function getCardTitle(item) {
 }
 
 .toolPanelIntro {
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
   padding-left: 4px;
 }
 
 .toolCard {
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   padding: 12px 14px;
-  border: 1px solid var(--border);
   background: var(--surface);
 }
 
 .toolCardSuccess {
-  border-color: rgba(91, 154, 107, 0.22);
   background: var(--success-soft);
 }
 
 .toolCardError {
-  border-color: rgba(217, 106, 92, 0.22);
   background: var(--danger-soft);
 }
 
@@ -136,11 +133,11 @@ function getCardTitle(item) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: var(--text-sm);
   font-weight: 700;
   flex: 0 0 auto;
   color: var(--text);
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--surface);
 }
 
 .toolHeadText {
@@ -148,7 +145,7 @@ function getCardTitle(item) {
 }
 
 .toolLabel {
-  font-size: 12px;
+  font-size: var(--text-sm);
   font-weight: 700;
   color: var(--text);
   line-height: 1.5;
@@ -156,7 +153,7 @@ function getCardTitle(item) {
 
 .toolName {
   margin-top: 2px;
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--muted);
 }
 
@@ -164,16 +161,15 @@ function getCardTitle(item) {
   flex: 0 0 auto;
   padding: 4px 9px;
   border-radius: 999px;
-  font-size: 10px;
+  font-size: var(--text-xs);
   color: var(--text);
-  background: rgba(255, 255, 255, 0.78);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: var(--surface);
   white-space: nowrap;
 }
 
 .toolSummary {
   margin-top: 6px;
-  font-size: 13px;
+  font-size: var(--text-base);
   line-height: 1.5;
   color: var(--text);
   white-space: pre-wrap;
@@ -182,7 +178,7 @@ function getCardTitle(item) {
 
 .toolSource {
   margin-top: 6px;
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--muted);
   white-space: pre-wrap;
   overflow-wrap: anywhere;

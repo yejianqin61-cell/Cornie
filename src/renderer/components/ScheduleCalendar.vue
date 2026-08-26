@@ -65,7 +65,7 @@ function cellClasses(cell) {
 <style scoped>
 .calendarCard {
   padding: 14px 16px;
-  background: #fffdfc;
+  background: var(--color-surface);
 }
 
 .calendarHead {
@@ -76,7 +76,7 @@ function cellClasses(cell) {
 }
 
 .calendarTitle {
-  font-size: 15px;
+  font-size: var(--text-md);
   font-weight: 700;
   color: var(--text);
 }
@@ -96,7 +96,7 @@ function cellClasses(cell) {
 
 .calendarWeekday {
   text-align: center;
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--muted);
 }
 
@@ -109,8 +109,7 @@ function cellClasses(cell) {
 
 .calendarCell {
   min-height: 44px;
-  border: none;
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background: transparent;
   display: flex;
   flex-direction: column;
@@ -122,16 +121,16 @@ function cellClasses(cell) {
 }
 
 .calendarCell:hover {
-  background: rgba(0, 0, 0, 0.04);
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
 }
 
 .calendarCell.isMuted {
-  color: #b7aea7;
+  color: color-mix(in srgb, var(--color-text) 35%, transparent);
 }
 
 .calendarCell.isToday {
-  box-shadow: inset 0 0 0 1px rgba(228, 133, 106, 0.26);
-  background: rgba(232, 133, 106, 0.08);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-accent) 26%, transparent);
+  background: color-mix(in srgb, var(--color-accent) 8%, transparent);
 }
 
 .calendarCell.isSelected {
@@ -140,7 +139,7 @@ function cellClasses(cell) {
 }
 
 .calendarCell.isSelected .calendarDot {
-  background: rgba(255, 255, 255, 0.92);
+  background: color-mix(in srgb, var(--color-surface) 92%, transparent);
 }
 
 .calendarCell.hasEntries .calendarDay {
@@ -148,7 +147,7 @@ function cellClasses(cell) {
 }
 
 .calendarDay {
-  font-size: 13px;
+  font-size: var(--text-base);
   line-height: 1;
 }
 

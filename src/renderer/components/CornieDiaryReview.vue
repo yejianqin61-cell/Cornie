@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { listEntries, getEntry } from '../api'
 import CornieDiaryMarkdown from './CornieDiaryMarkdown.vue'
+import UiButton from './ui/UiButton.vue'
 
 function pad2(n) {
   return String(n).padStart(2, '0')
@@ -43,7 +44,7 @@ async function openEntry(date) {
   } catch {
     activeDate.value = date
     activeEntry.value = {
-      cornieText: '这篇日记翻出来的时候有点小打结了，等铃湾缓一缓再陪你看。',
+      cornieText: '加载失败，请稍后再试',
     }
   } finally {
     detailLoading.value = false
@@ -56,16 +57,15 @@ onMounted(refresh)
 <template>
   <div class="review">
     <header class="reviewHead">
-      <button class="ghost" @click="$emit('back')">← 返回日记首页</button>
+      <UiButton variant="ghost" @click="$emit('back')">← 返回日记首页</UiButton>
       <div>
         <div class="reviewTitle">铃湾的日记</div>
-        <div class="reviewHint">铃湾为你写的每一篇日记</div>
       </div>
       <input class="monthInput" type="month" v-model="selectedMonth" @change="refresh" />
     </header>
 
-    <div v-if="loading" class="reviewLoading">翻翻日记…</div>
-    <div v-else-if="entries.length === 0" class="reviewEmpty">这个月铃湾还没开始写日记呢，去和她说说话吧。</div>
+    <div v-if="loading" class="reviewLoading">加载中…</div>
+    <div v-else-if="entries.length === 0" class="reviewEmpty">这个月还没有日记</div>
     <div v-else class="reviewList">
       <button
         v-for="e in entries"
@@ -77,19 +77,16 @@ onMounted(refresh)
       >
         <div class="reviewDate">{{ e.date }}</div>
         <div class="reviewExcerpt">
-          <CornieDiaryMarkdown :content="e.cornieText || '铃湾那天没有留下文字。'" :heading-level="0" />
+          <CornieDiaryMarkdown :content="e.cornieText || '暂无内容'" :heading-level="0" />
         </div>
       </button>
     </div>
 
     <div v-if="activeEntry?.cornieText || detailLoading" class="reviewDetail card">
       <div class="reviewDetailHead">
-        <div>
-          <div class="reviewDetailTitle">{{ activeDate || '铃湾日记' }}</div>
-          <div class="reviewDetailHint">这一篇会按铃湾真正写下来的样子排版给你看。</div>
-        </div>
+        <div class="reviewDetailTitle">{{ activeDate || '铃湾日记' }}</div>
       </div>
-      <div v-if="detailLoading" class="reviewLoading inline">铃湾正在把这一页翻开给你看…</div>
+      <div v-if="detailLoading" class="reviewLoading inline">加载中…</div>
       <div v-else class="reviewDetailBody">
         <CornieDiaryMarkdown :content="activeEntry?.cornieText || ''" />
       </div>
@@ -109,19 +106,10 @@ onMounted(refresh)
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 14px 18px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 18px;
 }
 .reviewTitle {
-  font-size: 18px;
+  font-size: var(--text-xl);
   font-weight: 800;
-}
-.reviewHint {
-  font-size: 12px;
-  color: var(--muted);
-  margin-top: 2px;
 }
 .monthInput {
   margin-left: auto;
@@ -139,7 +127,7 @@ onMounted(refresh)
   width: 4px;
 }
 .reviewList::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.08);
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
   border-radius: 999px;
 }
 
@@ -150,16 +138,15 @@ onMounted(refresh)
   cursor: pointer;
 }
 .reviewCard.active {
-  border-color: rgba(155, 107, 122, 0.28);
-  box-shadow: 0 10px 24px rgba(155, 107, 122, 0.08);
+  box-shadow: var(--shadow-card);
 }
 .reviewDate {
   font-weight: 700;
   margin-bottom: 6px;
 }
 .reviewExcerpt {
-  font-size: 13px;
-  color: #9b6b7a;
+  font-size: var(--text-base);
+  color: color-mix(in srgb, var(--color-accent) 45%, var(--color-text));
   display: -webkit-box;
   -webkit-line-clamp: 5;
   -webkit-box-orient: vertical;
@@ -171,7 +158,7 @@ onMounted(refresh)
 :deep(.reviewExcerpt .mdParagraph),
 :deep(.reviewExcerpt .mdQuote),
 :deep(.reviewExcerpt .mdList) {
-  font-size: 13px;
+  font-size: var(--text-base);
 }
 
 .reviewDetail {
@@ -180,23 +167,12 @@ onMounted(refresh)
   flex-direction: column;
   gap: 12px;
 }
-.reviewDetailHead {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-}
 .reviewDetailTitle {
-  font-size: 17px;
+  font-size: var(--text-lg);
   font-weight: 800;
 }
-.reviewDetailHint {
-  margin-top: 4px;
-  font-size: 12px;
-  color: var(--muted);
-}
 .reviewDetailBody {
-  color: #9b6b7a;
+  color: color-mix(in srgb, var(--color-accent) 45%, var(--color-text));
   line-height: 1.8;
 }
 
@@ -213,7 +189,5 @@ onMounted(refresh)
   text-align: center;
   color: var(--muted);
   padding: 40px;
-  border: 1px dashed var(--border);
-  border-radius: 14px;
 }
 </style>

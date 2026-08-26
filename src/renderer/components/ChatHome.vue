@@ -2,6 +2,8 @@
 import { computed, nextTick, onMounted, onBeforeUnmount, ref, watch } from 'vue'
 import { useChat } from '../composables/useChat'
 import { today } from '../utils/date'
+import UiButton from './ui/UiButton.vue'
+import UiEmpty from './ui/UiEmpty.vue'
 import ConfirmCard from './ConfirmCard.vue'
 import AskBackBubble from './AskBackBubble.vue'
 import ToolResultPanel from './ToolResultPanel.vue'
@@ -134,16 +136,16 @@ watch(
     <div class="chatCompanion">
       <span class="chatGreeting">{{ greeting }}</span>
       <span class="chatDate">{{ todayDate }}</span>
-      <button class="ghost chatHistoryBtn" type="button" @click="$emit('go-history')">翻看以前聊天</button>
+      <UiButton variant="ghost" class="chatHistoryBtn" type="button" @click="$emit('go-history')"
+        >翻看以前聊天</UiButton
+      >
       <span class="chatTagline">想和我聊点什么？</span>
     </div>
 
     <!-- 主对话区 -->
     <div class="chatMessages" ref="chatListRef" @scroll="handleChatScroll">
       <div v-if="messages.length === 0 && !sending" class="chatEmpty">
-        <div class="chatEmptyIcon">💬</div>
-        <div class="chatEmptyTitle">还没有消息</div>
-        <div class="chatEmptyHint">给铃湾发一条消息吧</div>
+        <UiEmpty icon="💬" text="给铃湾发一条消息吧" />
       </div>
 
       <div v-else class="chatList">
@@ -192,7 +194,9 @@ watch(
         </div>
       </div>
 
-      <button v-if="hasUnreadBelow" class="chatJumpBottom" type="button" @click="jumpToBottom">回到底部</button>
+      <UiButton v-if="hasUnreadBelow" variant="secondary" class="chatJumpBottom" type="button" @click="jumpToBottom">
+        回到底部
+      </UiButton>
     </div>
 
     <!-- 输入区 -->
@@ -205,7 +209,9 @@ watch(
         @keydown.enter.exact.prevent="onSend"
         @input="autoResize"
       />
-      <button class="primary chatSendBtn" :disabled="!message.trim() || sending" @click="onSend">发送</button>
+      <UiButton variant="default" class="chatSendBtn" :disabled="!message.trim() || sending" @click="onSend">
+        发送
+      </UiButton>
     </div>
 
     <!-- 待确认提示 -->
@@ -220,8 +226,7 @@ watch(
   flex-direction: column;
   gap: 0;
   background: var(--surface);
-  border-radius: 16px;
-  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   overflow: hidden;
 }
 
@@ -236,13 +241,13 @@ watch(
   flex: 0 0 auto;
 }
 .chatGreeting {
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 700;
   color: var(--text);
   white-space: nowrap;
 }
 .chatDate {
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 .chatHistoryBtn {
@@ -251,7 +256,7 @@ watch(
 }
 .chatTagline {
   margin-left: auto;
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 
@@ -267,7 +272,7 @@ watch(
   width: 4px;
 }
 .chatMessages::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.1);
+  background: color-mix(in srgb, var(--color-text) 10%, transparent);
   border-radius: 999px;
 }
 
@@ -279,17 +284,6 @@ watch(
   justify-content: center;
   gap: 8px;
   color: var(--muted);
-}
-.chatEmptyIcon {
-  font-size: 36px;
-}
-.chatEmptyTitle {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text);
-}
-.chatEmptyHint {
-  font-size: 13px;
 }
 
 .chatList {
@@ -313,29 +307,27 @@ watch(
 .bubble {
   max-width: 75%;
   padding: 8px 14px;
-  border-radius: 14px;
-  font-size: 14px;
+  border-radius: var(--radius-lg);
+  font-size: var(--text-md);
   line-height: 1.6;
 }
 .bubbleUser {
   background: var(--accent);
-  color: #ffffff;
+  color: var(--color-surface);
   border-bottom-right-radius: 6px;
 }
 .bubbleCornie {
   background: var(--surface-2);
-  border: 1px solid var(--border);
   color: var(--text);
   border-bottom-left-radius: 6px;
 }
 .bubbleError {
   max-width: 100%;
-  background: rgba(217, 106, 92, 0.08);
-  border: 1px solid rgba(217, 106, 92, 0.2);
+  background: color-mix(in srgb, var(--color-danger) 8%, transparent);
   color: var(--danger);
 }
 .bubbleRole {
-  font-size: 11px;
+  font-size: var(--text-xs);
   opacity: 0.6;
   margin-bottom: 2px;
 }
@@ -357,18 +349,10 @@ watch(
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 8px 12px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.92);
-  color: var(--text);
-  font-size: 12px;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(6px);
 }
 
 .chatJumpBottom:hover {
-  background: #ffffff;
+  background: var(--color-surface);
 }
 
 /* ─── 输入区 ─── */
@@ -385,11 +369,10 @@ watch(
   min-height: 36px;
   max-height: 120px;
   resize: none;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   padding: 8px 14px;
-  font-size: 14px;
+  font-size: var(--text-md);
   line-height: 1.5;
-  border: 1px solid var(--border);
   background: var(--bg);
   color: var(--text);
   outline: none;
@@ -402,17 +385,14 @@ watch(
 }
 .chatSendBtn {
   flex: 0 0 auto;
-  padding: 8px 18px;
-  border-radius: 10px;
   white-space: nowrap;
-  font-size: 14px;
 }
 
 /* ─── 待确认提示 ─── */
 .chatPendingHint {
   padding: 6px 20px;
   text-align: center;
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
   background: var(--chat-tint);
   border-top: 1px solid var(--border);

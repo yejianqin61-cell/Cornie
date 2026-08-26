@@ -69,7 +69,7 @@ function cellClasses(cell) {
 <style scoped>
 .ledgerCalendar {
   padding: 14px 16px;
-  background: #fffdfc;
+  background: var(--color-surface);
 }
 
 .ledgerCalendarHead {
@@ -80,7 +80,7 @@ function cellClasses(cell) {
 }
 
 .calendarTitle {
-  font-size: 15px;
+  font-size: var(--text-md);
   font-weight: 700;
   color: var(--text);
 }
@@ -100,7 +100,7 @@ function cellClasses(cell) {
 
 .calendarWeekday {
   text-align: center;
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--muted);
 }
 
@@ -126,25 +126,25 @@ function cellClasses(cell) {
 }
 
 .calendarCell:hover {
-  background: rgba(0, 0, 0, 0.04);
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
 }
 
 .calendarCell.isMuted {
-  color: #b7aea7;
+  color: color-mix(in srgb, var(--color-text) 35%, transparent);
 }
 
 .calendarCell.isToday {
-  box-shadow: inset 0 0 0 1px rgba(91, 154, 107, 0.22);
-  background: rgba(91, 154, 107, 0.07);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-success) 22%, transparent);
+  background: color-mix(in srgb, var(--color-success) 7%, transparent);
 }
 
 .calendarCell.isSelected {
-  background: #dcecdd;
+  background: var(--success-soft);
   color: var(--text);
 }
 
 .calendarDay {
-  font-size: 13px;
+  font-size: var(--text-base);
   line-height: 1;
 }
 

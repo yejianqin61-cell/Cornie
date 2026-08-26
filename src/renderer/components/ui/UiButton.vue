@@ -2,7 +2,7 @@
 import { cn } from '../../lib/utils'
 
 defineProps({
-  variant: { type: String, default: 'default' }, // default | destructive | outline | secondary | ghost | link
+  variant: { type: String, default: 'default' }, // default | destructive | outline | secondary | ghost | link | dangerGhost
   size: { type: String, default: 'default' }, // default | sm | lg | icon
 })
 
@@ -13,6 +13,7 @@ const variantClasses = {
   secondary: 'bg-(--color-surface-2) hover:bg-(--color-surface-2)',
   ghost: 'bg-transparent text-(--color-muted) hover:bg-(--color-surface-2) hover:text-(--color-text)',
   link: 'bg-transparent text-(--color-accent) underline-offset-4 hover:underline',
+  dangerGhost: 'bg-transparent text-(--color-danger) hover:bg-(--color-danger-soft)',
 }
 
 const sizeClasses = {

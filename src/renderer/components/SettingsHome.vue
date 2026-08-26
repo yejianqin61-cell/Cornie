@@ -1,5 +1,7 @@
 <script setup>
 import { computed } from 'vue'
+import UiButton from './ui/UiButton.vue'
+import UiCard from './ui/UiCard.vue'
 
 const props = defineProps({
   modelStatus: { type: Object, default: () => ({ ok: false, configured: false, model: '' }) },
@@ -24,38 +26,32 @@ const statusClass = computed(() => {
 <template>
   <div class="settingsPage">
     <!-- 铃湾连接状态 -->
-    <div class="sCard card">
+    <UiCard class="sCard">
       <div class="sCardTitle">铃湾连接状态</div>
       <div class="sStatus" :class="statusClass">{{ statusText }}</div>
       <div class="sStatusHint" v-if="modelStatus.ok">
-        铃湾已经连上了，当前模型：{{ modelStatus.model || modelSettings.model || 'deepseek-chat' }}
+        当前模型：{{ modelStatus.model || modelSettings.model || 'deepseek-chat' }}
       </div>
       <div class="sStatusHint" v-else-if="modelSettings.configured">钥匙已保存：{{ modelSettings.maskedApiKey }}</div>
-      <div class="sStatusHint" v-else>还没配置 DeepSeek 钥匙，铃湾暂时不能帮你处理事情。</div>
-    </div>
+    </UiCard>
 
     <!-- DeepSeek 配置入口 -->
-    <div class="sCard card">
+    <UiCard class="sCard">
       <div class="sCardTitle">DeepSeek 配置</div>
-      <div class="sCardHint">配置铃湾连接的大模型</div>
-      <button class="primary" style="margin-top: 10px" @click="$emit('go', 'deepseek-config')">前往配置</button>
-    </div>
+      <UiButton variant="default" @click="$emit('go', 'deepseek-config')">前往配置</UiButton>
+    </UiCard>
 
     <!-- 数据与隐私 -->
-    <div class="sCard card">
+    <UiCard class="sCard">
       <div class="sCardTitle">数据与隐私</div>
-      <div class="sCardHint">
-        你的数据保存在本地。当你和铃湾对话时，内容会发送给 DeepSeek。<br />
-        铃湾会尽量少带无关内容，但对话本身需要联网。
-      </div>
-    </div>
+      <div class="sCardHint">数据保存在本地；对话内容会发送给模型服务。</div>
+    </UiCard>
 
     <!-- 高级设置入口 -->
-    <div class="sCard card">
+    <UiCard class="sCard">
       <div class="sCardTitle">高级设置</div>
-      <div class="sCardHint">包含高级模式和复杂治理功能，普通用户不需要进入。</div>
-      <button class="ghost" style="margin-top: 8px" @click="$emit('go', 'advanced')">进入高级设置 →</button>
-    </div>
+      <UiButton variant="ghost" @click="$emit('go', 'advanced')">进入高级设置 →</UiButton>
+    </UiCard>
   </div>
 </template>
 
@@ -73,7 +69,7 @@ const statusClass = computed(() => {
   width: 4px;
 }
 .settingsPage::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.08);
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
   border-radius: 999px;
 }
 
@@ -81,42 +77,35 @@ const statusClass = computed(() => {
   padding: 16px 20px;
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
 }
 .sCardTitle {
   font-weight: 700;
-  font-size: 15px;
+  font-size: var(--text-md);
   margin-bottom: 6px;
 }
 .sCardHint {
-  font-size: 13px;
+  font-size: var(--text-base);
   color: var(--muted);
   line-height: 1.6;
-  flex: 1;
 }
 
 .sStatus {
-  font-size: 20px;
-  font-weight: 700;
-  margin-bottom: 4px;
+  font-size: var(--text-2xl);
+  font-weight: 800;
+  margin-bottom: 6px;
 }
 .sStatus.ok {
-  color: #5b9a6b;
+  color: var(--success);
 }
 .sStatus.warn {
-  color: #d9a55c;
+  color: var(--warning);
 }
 .sStatus.off {
   color: var(--muted);
 }
 .sStatusHint {
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
-  margin-top: 4px;
-}
-
-@media (max-width: 760px) {
-  .settingsPage {
-    grid-template-columns: 1fr;
-  }
 }
 </style>

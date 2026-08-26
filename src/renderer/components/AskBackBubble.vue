@@ -1,5 +1,5 @@
 <script setup>
-const props = defineProps({
+defineProps({
   question: {
     type: String,
     default: '',
@@ -26,19 +26,18 @@ const props = defineProps({
 .askBackBubble {
   width: 100%;
   padding: 10px 12px;
-  border-radius: 14px;
-  border: 1px solid rgba(232, 133, 106, 0.25);
-  background: rgba(232, 133, 106, 0.06);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--color-accent) 6%, transparent);
 }
 
 .askBackRole {
-  font-size: 10px;
+  font-size: var(--text-xs);
   color: var(--muted);
 }
 
 .askBackQuestion {
   margin-top: 4px;
-  font-size: 12px;
+  font-size: var(--text-sm);
   line-height: 1.5;
   color: inherit;
   white-space: pre-wrap;
@@ -47,7 +46,7 @@ const props = defineProps({
 
 .askBackReason {
   margin-top: 6px;
-  font-size: 11px;
+  font-size: var(--text-xs);
   line-height: 1.45;
   color: var(--muted);
   white-space: pre-wrap;

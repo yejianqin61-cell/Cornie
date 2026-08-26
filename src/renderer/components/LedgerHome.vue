@@ -11,6 +11,7 @@ import {
 import { listenDataChanged } from '../syncSignals'
 import { today } from '../utils/date'
 import LedgerCalendar from './LedgerCalendar.vue'
+import UiButton from './ui/UiButton.vue'
 
 const entries = ref([])
 const categories = ref([])
@@ -39,7 +40,14 @@ const monthlyIncome = ref(0)
 const monthlyExpense = ref(0)
 
 const weekdayLabels = ['一', '二', '三', '四', '五', '六', '日']
-const chartColors = ['#E8856A', '#E4A35E', '#5B9A6B', '#8DB5A7', '#C59E7A', '#D96A5C']
+const chartColors = [
+  'var(--color-accent)',
+  'var(--color-warning)',
+  'var(--color-success)',
+  'var(--color-chart-sage)',
+  'var(--color-chart-sand)',
+  'var(--color-danger)',
+]
 const trendChartFrame = Object.freeze({
   width: 320,
   height: 164,
@@ -344,10 +352,10 @@ async function submitQuickCategoryCreate() {
   } catch (error) {
     const message = String(error?.message || '')
     categoryCreateError.value = message.includes('invalid category name')
-      ? '这个类目名现在还不太合适，换一个更清楚的名字试试吧。'
+      ? '类目名不合适，换一个吧'
       : message.includes('similar') || message.includes('duplicate')
-        ? '好像已经有很接近的类目啦，换一个名字或者直接选已有的吧。'
-        : '这次没能把类目建好，我们再试一次好不好。'
+        ? '类目已存在或太接近'
+        : '创建失败，请稍后再试'
   } finally {
     creatingCategory.value = false
   }
@@ -503,8 +511,8 @@ onBeforeUnmount(() => {
           <option value="expense">只看支出</option>
           <option value="income">只看收入</option>
         </select>
-        <button class="ghost" type="button" @click="jumpToToday">回到今天</button>
-        <button class="ghost" type="button" @click="clearFilters">清除筛选</button>
+        <UiButton variant="ghost" type="button" @click="jumpToToday">回到今天</UiButton>
+        <UiButton variant="ghost" type="button" @click="clearFilters">清除筛选</UiButton>
       </div>
     </div>
 
@@ -512,12 +520,11 @@ onBeforeUnmount(() => {
       <div class="lchart card">
         <div class="lchartHead">
           <div class="lchartTitle">钱主要花在了哪里</div>
-          <div class="lchartHint">先看支出结构，比较容易一眼发现最近的花销重心。</div>
         </div>
         <div v-if="categoryDistribution.length === 0" class="lchartEmpty">这个月还没有支出记录。</div>
         <div v-else class="ldonutWrap">
           <svg viewBox="0 0 42 42" class="ldonut">
-            <circle cx="21" cy="21" r="15.9155" fill="none" stroke="#EFEAE4" stroke-width="6"></circle>
+            <circle cx="21" cy="21" r="15.9155" fill="none" class="ldonutTrack" stroke-width="6"></circle>
             <circle
               v-for="segment in categorySegments"
               :key="segment.name"
@@ -525,7 +532,7 @@ onBeforeUnmount(() => {
               cy="21"
               r="15.9155"
               fill="none"
-              :stroke="segment.color"
+              :style="{ stroke: segment.color }"
               stroke-width="6"
               :stroke-dasharray="segment.dasharray"
               :stroke-dashoffset="segment.dashoffset"
@@ -547,9 +554,7 @@ onBeforeUnmount(() => {
           <div class="lchartHint">支出 / 收入</div>
         </div>
         <div v-if="dailyTrendPoints.length === 0" class="lchartEmpty">这个月还没有记录，所以暂时看不到走势。</div>
-        <div v-else-if="!hasTrendChart" class="lchartEmpty">
-          目前只有一天的记录，等多记几笔后，这里就能看出变化趋势了。
-        </div>
+        <div v-else-if="!hasTrendChart" class="lchartEmpty">只有一天记录，暂无趋势</div>
         <div v-else class="ltrendWrap">
           <svg
             :viewBox="`0 0 ${trendChartFrame.width} ${trendChartFrame.height}`"
@@ -642,9 +647,8 @@ onBeforeUnmount(() => {
       <div class="lquickHead">
         <div>
           <div class="lquickTitle">记一笔</div>
-          <div class="lquickHint">想起一笔就顺手记下，别让它从脑子里溜走。</div>
         </div>
-        <button class="primary" @click="showForm = !showForm">{{ showForm ? '收起' : '记一笔' }}</button>
+        <UiButton variant="default" @click="showForm = !showForm">{{ showForm ? '收起' : '记一笔' }}</UiButton>
       </div>
 
       <div v-if="showForm" class="lquickForm">
@@ -662,34 +666,35 @@ onBeforeUnmount(() => {
             <option value="">选择类目</option>
             <option v-for="c in filteredCategories" :key="c.id" :value="c.id">{{ c.name }}</option>
           </select>
-          <button class="ghost lquickCategoryCreate" type="button" @click="openQuickCategoryCreate">新建类目</button>
+          <UiButton variant="ghost" class="lquickCategoryCreate" type="button" @click="openQuickCategoryCreate">
+            新建类目
+          </UiButton>
         </div>
         <div v-if="showQuickCategoryCreate" class="lquickCategoryCreateBox">
-          <div class="lquickCategoryCreateTitle">给这笔{{ form.type === 'income' ? '收入' : '支出' }}新起一个类目</div>
-          <div class="lquickCategoryCreateHint">建好后会自动帮你选中，不会把这笔记账内容弄丢。</div>
+          <div class="lquickCategoryCreateTitle">新建类目</div>
           <div class="lquickCategoryCreateActions">
             <input
               v-model="draftCategoryName"
-              placeholder="比如：游戏充值、云服务、学习资料"
+              placeholder="比如：游戏充值、学习资料"
               @keydown.enter.prevent="submitQuickCategoryCreate"
             />
-            <button
-              class="primary"
+            <UiButton
+              variant="default"
               type="button"
               :disabled="creatingCategory || !draftCategoryName.trim()"
               @click="submitQuickCategoryCreate"
             >
               {{ creatingCategory ? '创建中…' : '创建并选中' }}
-            </button>
-            <button class="ghost" type="button" :disabled="creatingCategory" @click="closeQuickCategoryCreate">
+            </UiButton>
+            <UiButton variant="ghost" type="button" :disabled="creatingCategory" @click="closeQuickCategoryCreate">
               取消
-            </button>
+            </UiButton>
           </div>
           <div v-if="categoryCreateError" class="lquickCategoryError">{{ categoryCreateError }}</div>
         </div>
-        <button class="primary" :disabled="saving || !form.amount" @click="submitEntry">
+        <UiButton variant="default" :disabled="saving || !form.amount" @click="submitEntry">
           {{ saving ? '保存中…' : '保存' }}
-        </button>
+        </UiButton>
         <div v-if="errorMsg" class="lquickError">{{ errorMsg }}</div>
       </div>
     </div>
@@ -698,11 +703,10 @@ onBeforeUnmount(() => {
       <div class="lrecentHead">
         <div>
           <div class="lrecentTitle">{{ selectedDate ? '这一天的记录' : '这个月的记录' }}</div>
-          <div class="lrecentHint">收支分开看得更清楚，类目和日期也会一起带上。</div>
         </div>
-        <button class="ghost" @click="showAllEntries = !showAllEntries">
+        <UiButton variant="ghost" @click="showAllEntries = !showAllEntries">
           {{ showAllEntries ? '收起' : '查看全部' }}
-        </button>
+        </UiButton>
       </div>
       <div v-if="visibleEntries.length === 0" class="lrecentEmpty">当前筛选下还没有记录。</div>
       <div v-else class="lrecentList">
@@ -727,7 +731,7 @@ onBeforeUnmount(() => {
     </div>
 
     <div class="lcat card">
-      <button @click="showForm = true">管理收支类目 →</button>
+      <UiButton variant="outline" @click="showForm = true">管理收支类目 →</UiButton>
     </div>
   </div>
 </template>
@@ -745,7 +749,7 @@ onBeforeUnmount(() => {
   width: 4px;
 }
 .lhome::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.08);
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
   border-radius: 999px;
 }
 
@@ -779,7 +783,7 @@ onBeforeUnmount(() => {
   margin-bottom: 4px;
 }
 .lovVal {
-  font-size: 22px;
+  font-size: var(--text-2xl);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
@@ -796,7 +800,7 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  background: #fffdfc;
+  background: var(--color-surface);
 }
 
 .lfilterText {
@@ -860,6 +864,10 @@ onBeforeUnmount(() => {
   flex: 0 0 auto;
 }
 
+.ldonutTrack {
+  stroke: var(--surface-2);
+}
+
 .ldonutLegend {
   flex: 1;
   display: flex;
@@ -900,24 +908,24 @@ onBeforeUnmount(() => {
 }
 
 .ltrendAxis {
-  stroke: rgba(60, 52, 48, 0.28);
+  stroke: color-mix(in srgb, var(--color-text) 28%, transparent);
   stroke-width: 1;
 }
 
 .ltrendGrid {
-  stroke: rgba(60, 52, 48, 0.12);
+  stroke: color-mix(in srgb, var(--color-text) 12%, transparent);
   stroke-width: 1;
   stroke-dasharray: 3 4;
 }
 
 .ltrendTickLabel {
   fill: var(--muted);
-  font-size: 10px;
+  font-size: var(--text-xs);
 }
 
 .ltrendAxisTitle {
   fill: var(--muted);
-  font-size: 10px;
+  font-size: var(--text-xs);
   font-weight: 700;
 }
 
@@ -943,7 +951,7 @@ onBeforeUnmount(() => {
 }
 
 .ltrendPoint {
-  stroke: #fffdfc;
+  stroke: var(--color-surface);
   stroke-width: 1.5;
 }
 
@@ -1018,9 +1026,8 @@ onBeforeUnmount(() => {
 }
 .lquickCategoryCreateBox {
   padding: 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  background: #fffdfc;
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1041,16 +1048,14 @@ onBeforeUnmount(() => {
 }
 .lquickCategoryError {
   padding: 8px 12px;
-  border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--color-danger) 20%, transparent);
+  border-radius: var(--radius-sm);
   background: var(--danger-soft);
   color: var(--danger);
   font-size: var(--text-sm);
 }
 .lquickError {
   padding: 8px 12px;
-  border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--color-danger) 20%, transparent);
+  border-radius: var(--radius-sm);
   background: var(--danger-soft);
   color: var(--danger);
   font-size: var(--text-sm);
@@ -1090,25 +1095,24 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 10px;
   padding: 12px 14px;
-  border-radius: 14px;
-  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   font-size: var(--text-base);
   background: var(--color-surface);
 }
 
 .lrecentRow.expense {
-  background: #fff9f8;
+  background: color-mix(in srgb, var(--color-danger) 3%, var(--color-surface));
 }
 
 .lrecentRow.income {
-  background: #f8fcf8;
+  background: color-mix(in srgb, var(--color-success) 3%, var(--color-surface));
 }
 
 .lrecentType {
   font-size: var(--text-xs);
   padding: 4px 8px;
   border-radius: 999px;
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--surface-2);
   color: var(--muted);
 }
 
@@ -1128,7 +1132,7 @@ onBeforeUnmount(() => {
 
 .lrecentAmt {
   font-weight: 700;
-  font-size: 15px;
+  font-size: var(--text-md);
   font-variant-numeric: tabular-nums;
   text-align: right;
   white-space: nowrap;

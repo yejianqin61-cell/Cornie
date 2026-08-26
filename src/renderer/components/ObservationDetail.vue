@@ -1,6 +1,9 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { getObservation, updateObservation, deleteObservation } from '../api'
+import UiButton from './ui/UiButton.vue'
+import UiBadge from './ui/UiBadge.vue'
+import UiCard from './ui/UiCard.vue'
 
 const props = defineProps({
   id: { type: String, required: true },
@@ -34,11 +37,11 @@ const dirty = ref(false)
 
 const typeMeta = computed(() => OBSERVATION_TYPES[obs.value?.type] || OBSERVATION_TYPES.misc)
 const contentPlaceholder = computed(() => {
-  if (obs.value?.type === 'event') return '可以写这件事是什么时候发生的、当时有什么细节、为什么值得留一下。'
-  if (obs.value?.type === 'fact') return '可以把这条事实写得更清楚一点，方便以后回想时不混淆。'
-  if (obs.value?.type === 'emotion') return '可以写当时的感受、触发它的事，以及你自己注意到的变化。'
-  if (obs.value?.type === 'preference') return '可以写你喜欢或不喜欢什么，这种偏好通常在什么情景下出现。'
-  return '把这件小事补充完整一点，让以后回来看时还能想起当时的感觉。'
+  if (obs.value?.type === 'event') return '何时发生、有什么细节'
+  if (obs.value?.type === 'fact') return '把事实写清楚'
+  if (obs.value?.type === 'emotion') return '当时的感受与变化'
+  if (obs.value?.type === 'preference') return '喜欢或不喜欢什么'
+  return '补充细节'
 })
 
 onMounted(async () => {
@@ -47,7 +50,7 @@ onMounted(async () => {
     const data = await getObservation(props.id)
     obs.value = data.observation
   } catch (e) {
-    errorMsg.value = e?.message || '这条观察暂时没打开成功，稍后再试一次吧。'
+    errorMsg.value = e?.message || '加载失败，请稍后再试'
   } finally {
     loading.value = false
   }
@@ -67,19 +70,19 @@ async function save() {
     obs.value = data.observation
     dirty.value = false
   } catch (e) {
-    errorMsg.value = e?.message || '这次还没保存成功，不过内容还在，我们再试一次就好。'
+    errorMsg.value = e?.message || '保存失败，请稍后再试'
   } finally {
     saving.value = false
   }
 }
 
 async function remove() {
-  if (!confirm('要把这条观察收起来吗？删掉之后，它就不会再留在今天的小事里了。')) return
+  if (!confirm('确认删除这条观察？')) return
   try {
     await deleteObservation(props.id)
     emit('deleted')
   } catch (e) {
-    errorMsg.value = e?.message || '这条观察这次还没删掉，我们稍后再试一次吧。'
+    errorMsg.value = e?.message || '删除失败，请稍后再试'
   }
 }
 </script>
@@ -87,35 +90,30 @@ async function remove() {
 <template>
   <div class="odetail">
     <header class="odetailHead">
-      <button class="ghost" @click="$emit('back')">← 返回观察记录</button>
+      <UiButton variant="ghost" @click="$emit('back')">← 返回</UiButton>
       <div class="odetailActions">
-        <button class="danger" @click="remove">删除</button>
-        <button class="primary" :disabled="saving || !dirty" @click="save">
+        <UiButton variant="dangerGhost" @click="remove">删除</UiButton>
+        <UiButton variant="default" :disabled="saving || !dirty" @click="save">
           {{ saving ? '保存中…' : '保存修改' }}
-        </button>
+        </UiButton>
       </div>
     </header>
 
     <div v-if="loading" class="odetailLoading">加载中…</div>
     <div v-else-if="errorMsg && !obs" class="odetailError">{{ errorMsg }}</div>
-    <div v-else-if="obs" class="odetailCard card">
+    <UiCard v-else-if="obs" class="odetailCard">
       <div class="odetailMeta">
         <span>{{ obs.date }}</span>
-        <span class="odetailType">{{ typeMeta.label }}</span>
+        <UiBadge>{{ typeMeta.label }}</UiBadge>
       </div>
 
       <label class="odetailField">
-        <span>这件小事的标题</span>
-        <input
-          v-model="obs.title"
-          class="odetailTitle"
-          placeholder="先给这条观察起个容易翻回来的名字"
-          @input="dirty = true"
-        />
+        <span>标题</span>
+        <input v-model="obs.title" class="odetailTitle" placeholder="标题" @input="dirty = true" />
       </label>
 
       <label class="odetailField odetailFieldGrow">
-        <span>把当时的情况写下来</span>
+        <span>内容</span>
         <textarea
           v-model="obs.content"
           class="odetailContent"
@@ -125,7 +123,7 @@ async function remove() {
       </label>
 
       <div v-if="errorMsg" class="odetailError">{{ errorMsg }}</div>
-    </div>
+    </UiCard>
   </div>
 </template>
 
@@ -143,10 +141,6 @@ async function remove() {
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  padding: 12px 16px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 18px;
 }
 
 .odetailActions {
@@ -162,11 +156,10 @@ async function remove() {
 
 .odetailError {
   padding: 10px 14px;
-  border-radius: 12px;
-  border: 1px solid rgba(217, 106, 92, 0.25);
-  background: rgba(217, 106, 92, 0.06);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-danger) 6%, transparent);
   color: var(--danger);
-  font-size: 13px;
+  font-size: var(--text-base);
 }
 
 .odetailCard {
@@ -181,43 +174,10 @@ async function remove() {
 .odetailMeta {
   display: flex;
   gap: 12px;
-  font-size: 13px;
+  align-items: center;
+  font-size: var(--text-base);
   color: var(--muted);
   flex-wrap: wrap;
-}
-
-.odetailType {
-  padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  color: var(--accent-strong);
-  background: rgba(232, 133, 106, 0.12);
-}
-
-.odetailGuide {
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 16px;
-  background: linear-gradient(180deg, rgba(255, 252, 249, 0.95), #ffffff);
-}
-
-.odetailGuideEyebrow {
-  font-size: 11px;
-  letter-spacing: 0.04em;
-  color: var(--muted);
-}
-
-.odetailGuideTitle {
-  margin-top: 4px;
-  font-size: 16px;
-  font-weight: 800;
-}
-
-.odetailGuideBody {
-  margin-top: 6px;
-  font-size: 13px;
-  color: var(--muted);
-  line-height: 1.6;
 }
 
 .odetailField {
@@ -227,7 +187,7 @@ async function remove() {
 }
 
 .odetailField > span {
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 
@@ -236,17 +196,8 @@ async function remove() {
   min-height: 220px;
 }
 
-.odetailTitle,
-.odetailContent {
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: #ffffff;
-  color: var(--text);
-  padding: 12px 14px;
-}
-
 .odetailTitle {
-  font-size: 16px;
+  font-size: var(--text-lg);
   font-weight: 600;
 }
 
@@ -254,7 +205,7 @@ async function remove() {
   flex: 1;
   min-height: 220px;
   resize: vertical;
-  font-size: 14px;
+  font-size: var(--text-md);
   line-height: 1.7;
 }
 

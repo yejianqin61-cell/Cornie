@@ -4,6 +4,10 @@ import { createObservation, deleteObservation, listObservations } from '../api'
 import { today } from '../utils/date'
 import { useDebouncedValue } from '../composables/useTimers'
 import { useRequestGuard } from '../composables/useRequestGuard'
+import UiButton from './ui/UiButton.vue'
+import UiBadge from './ui/UiBadge.vue'
+import UiCard from './ui/UiCard.vue'
+import UiEmpty from './ui/UiEmpty.vue'
 
 // FE-05：筛选/日期快速变化时旧响应不得覆盖新列表。
 const obsGuard = useRequestGuard()
@@ -102,7 +106,7 @@ async function refresh() {
     observations.value = data?.observations || []
   } catch (e) {
     if (!obsGuard.isCurrent('list', token)) return
-    errorMsg.value = e?.message || '这页小事暂时没打开成功，稍后再试一次吧。'
+    errorMsg.value = e?.message || '加载失败，请稍后再试'
   } finally {
     if (obsGuard.isCurrent('list', token)) {
       loading.value = false
@@ -123,19 +127,19 @@ async function addObservation() {
     showAdd.value = false
     await refresh()
   } catch (e) {
-    errorMsg.value = e?.message || '这件小事这次还没记下来，我们再试一次吧。'
+    errorMsg.value = e?.message || '保存失败，请稍后再试'
   } finally {
     adding.value = false
   }
 }
 
 async function removeObservation(id) {
-  if (!confirm('要把这条小事删掉吗？删掉后，它就不会再留在观察里了。')) return
+  if (!confirm('确认删除这条观察？')) return
   try {
     await deleteObservation(id)
     await refresh()
   } catch (e) {
-    errorMsg.value = e?.message || '这条小事这次还没删掉，我们稍后再试一次吧。'
+    errorMsg.value = e?.message || '删除失败，请稍后再试'
   }
 }
 
@@ -163,13 +167,13 @@ onMounted(refresh)
 <template>
   <div class="olist">
     <header class="olistHead">
-      <button class="ghost" @click="$emit('back')">← 返回</button>
+      <UiButton variant="ghost" @click="$emit('back')">← 返回</UiButton>
       <div class="olistHeadBody">
         <div class="olistTitle">观察记录</div>
       </div>
-      <button class="primary" @click="showAdd = !showAdd">
+      <UiButton variant="default" @click="showAdd = !showAdd">
         {{ showAdd ? '先不记了' : '记一件小事' }}
-      </button>
+      </UiButton>
     </header>
 
     <div class="olistTabs">
@@ -179,17 +183,16 @@ onMounted(refresh)
 
     <div v-if="errorMsg" class="olistError">{{ errorMsg }}</div>
 
-    <div v-if="showAdd" class="olistAdd card">
+    <UiCard v-if="showAdd" class="olistAdd">
       <div class="olistAddTitle">记下一件小事</div>
-      <div class="olistAddHint">先写一个容易翻回来的标题，再把当时的情况简单记下来就好。</div>
-      <input v-model="newForm.title" placeholder="比如：今天中午又吃了粿条" />
-      <textarea v-model="newForm.content" placeholder="把这件小事补充完整一点。" rows="3" />
-      <button class="primary" :disabled="adding || !newForm.title.trim()" @click="addObservation">
+      <input v-model="newForm.title" placeholder="标题，比如：今天中午吃了粿条" />
+      <textarea v-model="newForm.content" placeholder="补充细节" rows="3" />
+      <UiButton variant="default" :disabled="adding || !newForm.title.trim()" @click="addObservation">
         {{ adding ? '保存中…' : '保存这件小事' }}
-      </button>
-    </div>
+      </UiButton>
+    </UiCard>
 
-    <div v-if="activeTab === 'history'" class="olistFilters card">
+    <div v-if="activeTab === 'history'" class="olistFilters">
       <label class="filterField">
         <span>日期</span>
         <input v-model="selectedDate" type="date" />
@@ -204,39 +207,37 @@ onMounted(refresh)
       </label>
       <label class="filterField grow">
         <span>关键词</span>
-        <input v-model="keyword" type="text" placeholder="比如：龙虾、钟奕菲、考试、花钱" />
+        <input v-model="keyword" type="text" placeholder="比如：龙虾、考试" />
       </label>
     </div>
 
-    <div v-if="loading" class="olistLoading">铃湾正在翻这些小事…</div>
+    <div v-if="loading" class="olistLoading">加载中…</div>
 
     <template v-else-if="activeTab === 'today'">
-      <div v-if="observations.length === 0" class="olistEmpty">
-        <div class="olistEmptyIcon">📝</div>
-        <div class="olistEmptyTitle">今天还没有新的观察记录</div>
-        <div class="olistEmptyHint">铃湾不会把每句闲聊都写成流水账，只有觉得值得留一下的时候，才会记在这里。</div>
-      </div>
+      <UiEmpty v-if="observations.length === 0" icon="📝" text="今天还没有观察记录" />
 
       <div v-else class="olistList">
-        <div v-for="obs in observations" :key="obs.id" class="olistCard card" @click="$emit('go', 'detail', obs.id)">
+        <UiCard v-for="obs in observations" :key="obs.id" class="olistCard" @click="$emit('go', 'detail', obs.id)">
           <div class="olistCardHead">
             <div>
               <div class="olistCardTitle">{{ obs.title }}</div>
               <div class="olistMetaRow">
-                <span class="olistType">{{ typeMap[obs.type] || '小事记录' }}</span>
+                <UiBadge>{{ typeMap[obs.type] || '小事记录' }}</UiBadge>
                 <span class="olistCardDate">{{ obs.date }}</span>
               </div>
             </div>
           </div>
-          <div class="olistCardContent">{{ truncated(obs.content || '铃湾先把这件小事轻轻放在了今天。', 140) }}</div>
-          <button class="ghost olistDelBtn" @click.stop="removeObservation(obs.id)">删除这条</button>
-        </div>
+          <div class="olistCardContent">{{ truncated(obs.content || '暂无内容', 140) }}</div>
+          <UiButton variant="dangerGhost" size="sm" class="olistDelBtn" @click.stop="removeObservation(obs.id)">
+            删除这条
+          </UiButton>
+        </UiCard>
       </div>
     </template>
 
     <template v-else>
       <div class="archivePanel">
-        <aside class="archiveRail card">
+        <aside class="archiveRail">
           <div class="archiveRailTitle">回翻日期</div>
           <button
             v-for="item in archiveDates"
@@ -248,18 +249,14 @@ onMounted(refresh)
             <span>{{ item.label }}</span>
             <span>{{ item.count }}</span>
           </button>
-          <div v-if="archiveDates.length === 0" class="archiveEmpty">当前筛选下，还没有找到能翻回来的小事。</div>
+          <div v-if="archiveDates.length === 0" class="archiveEmpty">暂无匹配结果</div>
         </aside>
 
         <div class="archiveContent">
-          <div v-if="groupedHistory.length === 0" class="olistEmpty">
-            <div class="olistEmptyIcon">🗂️</div>
-            <div class="olistEmptyTitle">还没有找到匹配的小事</div>
-            <div class="olistEmptyHint">换个日期、类别或关键词，也许就能把那天的片段翻出来了。</div>
-          </div>
+          <UiEmpty v-if="groupedHistory.length === 0" icon="🗂️" text="没有匹配的小事" />
 
           <div v-else class="archiveGroups">
-            <section v-for="group in groupedHistory" :key="group.date" class="archiveGroup card">
+            <section v-for="group in groupedHistory" :key="group.date" class="archiveGroup">
               <div class="archiveGroupHead">
                 <div class="archiveGroupTitle">{{ group.label }}</div>
                 <div class="archiveGroupCount">{{ group.count }} 条</div>
@@ -274,11 +271,11 @@ onMounted(refresh)
                   <div class="archiveItemHead">
                     <div class="olistCardTitle">{{ obs.title }}</div>
                     <div class="olistMetaRow">
-                      <span class="olistType">{{ typeMap[obs.type] || '小事记录' }}</span>
+                      <UiBadge>{{ typeMap[obs.type] || '小事记录' }}</UiBadge>
                     </div>
                   </div>
                   <div class="olistCardContent">
-                    {{ truncated(obs.content || '铃湾把这件小事留在了这一天。', 150) }}
+                    {{ truncated(obs.content || '暂无内容', 150) }}
                   </div>
                 </article>
               </div>
@@ -301,12 +298,8 @@ onMounted(refresh)
 
 .olistHead {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 14px;
-  padding: 16px 18px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 18px;
 }
 
 .olistHeadBody {
@@ -315,15 +308,8 @@ onMounted(refresh)
 }
 
 .olistTitle {
-  font-size: 18px;
+  font-size: var(--text-xl);
   font-weight: 800;
-}
-
-.olistHint {
-  margin-top: 4px;
-  font-size: 12px;
-  color: var(--muted);
-  line-height: 1.6;
 }
 
 .olistTabs {
@@ -332,80 +318,29 @@ onMounted(refresh)
 }
 
 .tabBtn {
-  border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--surface-2);
   color: var(--text);
   border-radius: 999px;
   padding: 8px 14px;
-  font-size: 13px;
+  font-size: var(--text-base);
   font-weight: 600;
 }
 
 .tabBtn.active {
-  background: rgba(232, 133, 106, 0.16);
-  border-color: rgba(232, 133, 106, 0.28);
-  color: var(--accent-strong);
-}
-
-.olistGuide {
-  padding: 14px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.olistGuideTitle {
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.olistGuideText {
-  font-size: 13px;
-  color: var(--muted);
-  line-height: 1.6;
-}
-
-.olistGuideSoft {
-  font-size: 12px;
-  color: var(--accent-strong);
-  background: rgba(232, 133, 106, 0.1);
-  align-self: flex-start;
-  border-radius: 999px;
-  padding: 4px 8px;
+  background: color-mix(in srgb, var(--color-accent) 16%, transparent);
+  color: var(--accent-hover);
 }
 
 .olistError {
   padding: 10px 14px;
-  border-radius: 12px;
-  border: 1px solid rgba(217, 106, 92, 0.25);
-  background: rgba(217, 106, 92, 0.06);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-danger) 6%, transparent);
   color: var(--danger);
-  font-size: 13px;
-}
-
-.olistAdd,
-.olistFilters {
-  padding: 16px;
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  align-items: end;
+  font-size: var(--text-base);
 }
 
 .olistAdd {
-  flex-direction: column;
-  align-items: stretch;
-}
-
-.olistAddTitle {
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.olistAddHint {
-  font-size: 12px;
-  color: var(--muted);
-  line-height: 1.6;
+  gap: 10px;
 }
 
 .olistAdd textarea {
@@ -420,7 +355,7 @@ onMounted(refresh)
 }
 
 .filterField span {
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 
@@ -432,31 +367,6 @@ onMounted(refresh)
   text-align: center;
   color: var(--muted);
   padding: 30px;
-}
-
-.olistEmpty {
-  text-align: center;
-  color: var(--muted);
-  padding: 40px;
-  border: 1px dashed var(--border);
-  border-radius: 14px;
-}
-
-.olistEmptyIcon {
-  font-size: 28px;
-  margin-bottom: 8px;
-}
-
-.olistEmptyTitle {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.olistEmptyHint {
-  margin-top: 8px;
-  font-size: 12px;
-  line-height: 1.6;
 }
 
 .olistList {
@@ -475,7 +385,7 @@ onMounted(refresh)
 
 .olistList::-webkit-scrollbar-thumb,
 .archiveContent::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.08);
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
   border-radius: 999px;
 }
 
@@ -487,9 +397,8 @@ onMounted(refresh)
   gap: 8px;
 }
 
-.olistCard:hover,
-.archiveItem:hover {
-  border-color: rgba(232, 133, 106, 0.25);
+.olistCard:hover {
+  background: var(--surface-2);
 }
 
 .olistCardHead,
@@ -512,27 +421,18 @@ onMounted(refresh)
   flex-wrap: wrap;
 }
 
-.olistType {
-  font-size: 12px;
-  color: var(--accent-strong);
-  background: rgba(232, 133, 106, 0.12);
-  border-radius: 999px;
-  padding: 3px 8px;
-}
-
 .olistCardDate {
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 
 .olistCardContent {
-  font-size: 13px;
+  font-size: var(--text-base);
   color: var(--muted);
   line-height: 1.6;
 }
 
 .olistDelBtn {
-  font-size: 12px;
   align-self: flex-end;
 }
 
@@ -545,7 +445,7 @@ onMounted(refresh)
 }
 
 .archiveRail {
-  padding: 14px;
+  padding: 4px 0 0 0;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -553,7 +453,7 @@ onMounted(refresh)
 }
 
 .archiveRailTitle {
-  font-size: 13px;
+  font-size: var(--text-base);
   font-weight: 700;
 }
 
@@ -563,25 +463,27 @@ onMounted(refresh)
   align-items: center;
   gap: 8px;
   width: 100%;
-  border: 1px solid transparent;
-  background: rgba(255, 255, 255, 0.72);
-  border-radius: 12px;
+  background: transparent;
+  border-radius: var(--radius-md);
   padding: 10px 12px;
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--text);
   text-align: left;
 }
 
+.archiveDateBtn:hover {
+  background: var(--surface-2);
+}
+
 .archiveDateBtn.active {
-  background: rgba(232, 133, 106, 0.12);
-  border-color: rgba(232, 133, 106, 0.28);
-  color: var(--accent-strong);
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  color: var(--color-accent-hover);
 }
 
 .archiveEmpty {
   padding: 10px 4px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--text-sm);
   line-height: 1.6;
 }
 
@@ -594,11 +496,7 @@ onMounted(refresh)
 .archiveGroups {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-}
-
-.archiveGroup {
-  padding: 14px 16px;
+  gap: 16px;
 }
 
 .archiveGroupHead {
@@ -610,12 +508,12 @@ onMounted(refresh)
 }
 
 .archiveGroupTitle {
-  font-size: 15px;
+  font-size: var(--text-lg);
   font-weight: 700;
 }
 
 .archiveGroupCount {
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 
@@ -626,11 +524,12 @@ onMounted(refresh)
 }
 
 .archiveItem {
-  border: 1px solid var(--border);
-  border-radius: 14px;
   padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.62);
   cursor: pointer;
+}
+
+.archiveItem:hover {
+  background: var(--surface-2);
 }
 
 @media (max-width: 960px) {

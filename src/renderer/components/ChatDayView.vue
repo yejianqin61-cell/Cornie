@@ -1,6 +1,8 @@
 <script setup>
 import { nextTick, onMounted, ref, watch } from 'vue'
 import { getChatlog } from '../api'
+import UiButton from './ui/UiButton.vue'
+import UiEmpty from './ui/UiEmpty.vue'
 
 const props = defineProps({
   date: { type: String, required: true },
@@ -55,7 +57,7 @@ async function loadMessages() {
     messages.value = data.messages || []
     await focusMessageIfNeeded()
   } catch (error) {
-    errorMsg.value = error?.message || '加载聊天记录失败，请稍后再试。'
+    errorMsg.value = error?.message || '加载失败，请稍后再试'
   } finally {
     loading.value = false
   }
@@ -94,7 +96,7 @@ function goBack() {
 <template>
   <div class="dayView">
     <header class="dayHead">
-      <button class="ghost" @click="goBack">← 返回聊天记录</button>
+      <UiButton variant="ghost" @click="goBack">← 返回聊天记录</UiButton>
       <div class="dayDate">{{ formatDateLabel(date) }}</div>
       <div class="dayHint" v-if="!loading">{{ messages.length }} 条消息</div>
     </header>
@@ -103,7 +105,7 @@ function goBack() {
 
     <div v-if="loading" class="dayLoading">加载中…</div>
 
-    <div v-else-if="messages.length === 0" class="dayEmpty">这一天还没有聊天记录。</div>
+    <UiEmpty v-else-if="messages.length === 0" icon="💬" text="这一天还没有聊天记录" />
 
     <div v-else class="dayMessages">
       <div
@@ -129,8 +131,7 @@ function goBack() {
   display: flex;
   flex-direction: column;
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
 }
 
@@ -142,11 +143,11 @@ function goBack() {
   border-bottom: 1px solid var(--border);
 }
 .dayDate {
-  font-size: 18px;
+  font-size: var(--text-xl);
   font-weight: 800;
 }
 .dayHint {
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
   margin-left: auto;
 }
@@ -163,43 +164,37 @@ function goBack() {
   width: 4px;
 }
 .dayMessages::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.1);
+  background: color-mix(in srgb, var(--color-text) 10%, transparent);
   border-radius: 999px;
 }
 
 .dayBubble {
   max-width: 75%;
   padding: 10px 14px;
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   line-height: 1.5;
-  font-size: 14px;
-  transition:
-    box-shadow 0.18s ease,
-    transform 0.18s ease,
-    border-color 0.18s ease;
+  font-size: var(--text-md);
 }
 .dayBubbleUser {
   align-self: flex-end;
   background: var(--accent);
-  color: #ffffff;
+  color: var(--color-surface);
   border-bottom-right-radius: 6px;
 }
 .dayBubbleCornie {
   align-self: flex-start;
   background: var(--surface-2);
-  border: 1px solid var(--border);
   border-bottom-left-radius: 6px;
 }
 
 .dayBubbleFocus {
   box-shadow:
-    0 0 0 3px rgba(232, 133, 106, 0.18),
-    0 12px 24px rgba(203, 127, 90, 0.14);
-  transform: translateY(-1px);
+    0 0 0 3px color-mix(in srgb, var(--color-accent) 18%, transparent),
+    0 12px 24px color-mix(in srgb, var(--color-accent) 14%, transparent);
 }
 
 .dayRole {
-  font-size: 11px;
+  font-size: var(--text-xs);
   opacity: 0.6;
   margin-bottom: 3px;
 }
@@ -213,19 +208,17 @@ function goBack() {
 .dayError {
   margin: 20px;
   padding: 12px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   text-align: center;
 }
 .dayLoading {
   color: var(--muted);
 }
 .dayEmpty {
-  border: 1px dashed var(--border);
   color: var(--muted);
 }
 .dayError {
-  border: 1px solid rgba(217, 106, 92, 0.25);
-  background: rgba(217, 106, 92, 0.06);
+  background: color-mix(in srgb, var(--color-danger) 6%, transparent);
   color: var(--danger);
 }
 </style>

@@ -2,6 +2,8 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { completeTodo, createTodo, listTodoCategories, listTodos, reopenTodo, deleteTodo } from '../api'
 import { listenDataChanged } from '../syncSignals'
+import UiButton from './ui/UiButton.vue'
+import UiEmpty from './ui/UiEmpty.vue'
 
 const todos = ref([])
 const categories = ref([])
@@ -27,11 +29,7 @@ const activeTodos = computed(() => todos.value.filter((todo) => !isDone(todo)))
 const archivedTodos = computed(() => todos.value.filter(isDone))
 const visibleTodos = computed(() => (currentTab.value === 'archived' ? archivedTodos.value : activeTodos.value))
 
-const tabSummary = computed(() =>
-  currentTab.value === 'archived'
-    ? '这里会收好已经完成的事情，想重新捡起来也很方便。'
-    : '先把眼前还没做完的小事放在最前面，铃湾会陪你一件件看。'
-)
+const tabSummary = computed(() => (currentTab.value === 'archived' ? '已完成的待办' : '进行中的待办'))
 
 async function refresh() {
   loading.value = true
@@ -129,16 +127,15 @@ onBeforeUnmount(() => {
 
     <div class="tquick card">
       <div class="tquickTitle">记下一件小事</div>
-      <div class="tquickHint">标题先写清楚，类目不急，能顺手补就补上。</div>
       <div class="tquickRow">
         <input v-model="newTitle" placeholder="新增待办..." @keydown.enter="addTodo" />
         <select v-model="newCategoryId">
           <option value="">类目</option>
           <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
         </select>
-        <button class="primary" :disabled="adding || !newTitle.trim()" @click="addTodo">
+        <UiButton variant="default" :disabled="adding || !newTitle.trim()" @click="addTodo">
           {{ adding ? '保存中…' : '新增' }}
-        </button>
+        </UiButton>
       </div>
       <div v-if="errorMsg" class="terr">{{ errorMsg }}</div>
     </div>
@@ -167,14 +164,11 @@ onBeforeUnmount(() => {
         </button>
       </div>
 
-      <div v-if="visibleTodos.length === 0 && !loading" class="tempty">
-        <div class="temptyTitle">{{ currentTab === 'archived' ? '这里还空着' : '今天先轻松一点' }}</div>
-        <div class="temptyHint">
-          {{
-            currentTab === 'archived' ? '做完的小事以后会安静地收在这里。' : '还没有待办要处理，想起什么再慢慢记下来。'
-          }}
-        </div>
-      </div>
+      <UiEmpty
+        v-if="visibleTodos.length === 0 && !loading"
+        icon="🗒️"
+        :text="currentTab === 'archived' ? '暂无归档' : '暂无待办'"
+      />
 
       <div v-else class="titems">
         <div v-for="t in visibleTodos" :key="t.id" class="titem" :class="{ archived: isDone(t) }">
@@ -190,8 +184,8 @@ onBeforeUnmount(() => {
             </div>
           </div>
           <div class="titemActions">
-            <button v-if="isDone(t)" class="ghost" @click="toggleTodo(t)">恢复</button>
-            <button class="ghost tdel" @click="removeTodo(t.id)">删除</button>
+            <UiButton v-if="isDone(t)" variant="ghost" size="sm" @click="toggleTodo(t)">恢复</UiButton>
+            <UiButton variant="dangerGhost" size="sm" @click="removeTodo(t.id)">删除</UiButton>
           </div>
         </div>
       </div>
@@ -213,7 +207,7 @@ onBeforeUnmount(() => {
   width: 4px;
 }
 .thome::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.08);
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
   border-radius: 999px;
 }
 
@@ -233,25 +227,25 @@ onBeforeUnmount(() => {
 }
 
 .tsummaryLabel {
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 
 .tsummaryValue {
   margin-top: 4px;
-  font-size: 26px;
+  font-size: var(--text-3xl);
   font-weight: 700;
   color: var(--text);
 }
 
 .tsummaryValue.subtle {
-  color: #7c6a5e;
+  color: var(--muted);
 }
 
 .tsummaryDivider {
   width: 1px;
   height: 38px;
-  background: rgba(0, 0, 0, 0.08);
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
 }
 
 .tquick {
@@ -259,14 +253,8 @@ onBeforeUnmount(() => {
 }
 
 .tquickTitle {
-  font-size: 15px;
+  font-size: var(--text-md);
   font-weight: 700;
-}
-
-.tquickHint {
-  margin-top: 4px;
-  font-size: 12px;
-  color: var(--muted);
 }
 
 .tquickRow {
@@ -286,11 +274,10 @@ onBeforeUnmount(() => {
 .terr {
   margin-top: 8px;
   padding: 8px 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(217, 106, 92, 0.2);
+  border-radius: var(--radius-sm);
   background: var(--danger-soft);
   color: var(--danger);
-  font-size: 12px;
+  font-size: var(--text-sm);
 }
 
 .tlist {
@@ -310,7 +297,7 @@ onBeforeUnmount(() => {
 
 .tlistHint {
   margin-top: 4px;
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
   line-height: 1.5;
 }
@@ -321,7 +308,7 @@ onBeforeUnmount(() => {
   gap: 8px;
   padding: 4px;
   border-radius: 999px;
-  background: #f7f3ee;
+  background: var(--surface-2);
 }
 
 .ttab {
@@ -336,9 +323,9 @@ onBeforeUnmount(() => {
 }
 
 .ttab.active {
-  background: #ffffff;
+  background: var(--color-surface);
   color: var(--text);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-card);
 }
 
 .ttabCount {
@@ -349,28 +336,8 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 11px;
-  background: rgba(0, 0, 0, 0.06);
-}
-
-.tempty {
-  margin-top: 12px;
-  padding: 18px 16px;
-  border-radius: 16px;
-  border: 1px dashed var(--border);
-  background: rgba(255, 255, 255, 0.55);
-}
-
-.temptyTitle {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text);
-}
-
-.temptyHint {
-  margin-top: 4px;
-  font-size: 12px;
-  color: var(--muted);
+  font-size: var(--text-xs);
+  background: var(--surface-2);
 }
 
 .titems {
@@ -386,14 +353,12 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  background: #ffffff;
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
 }
 
 .titem.archived {
-  background: #fcfaf7;
-  border-color: rgba(0, 0, 0, 0.06);
+  background: color-mix(in srgb, var(--color-text) 3%, var(--color-surface));
 }
 
 .titemCheck {
@@ -414,14 +379,14 @@ onBeforeUnmount(() => {
   width: 18px;
   height: 18px;
   border-radius: 999px;
-  border: 1px solid rgba(0, 0, 0, 0.16);
-  background: #ffffff;
+  border: 1px solid color-mix(in srgb, var(--color-text) 16%, transparent);
+  background: var(--color-surface);
 }
 
 .titemCheck input:checked + .tcheckVisual {
   background: var(--success);
   border-color: var(--success);
-  box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.95);
+  box-shadow: inset 0 0 0 4px var(--color-surface);
 }
 
 .titemMain {
@@ -429,12 +394,12 @@ onBeforeUnmount(() => {
 }
 
 .titemTitle {
-  font-size: 14px;
+  font-size: var(--text-md);
   color: var(--text);
 }
 
 .titem.archived .titemTitle {
-  color: #7c6a5e;
+  color: var(--muted);
 }
 
 .titemMeta {
@@ -446,15 +411,15 @@ onBeforeUnmount(() => {
 }
 
 .titemCat {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--muted);
   padding: 2px 8px;
-  border: 1px solid var(--border);
   border-radius: 999px;
+  background: var(--surface-2);
 }
 
 .titemDate {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--muted);
 }
 
@@ -462,10 +427,6 @@ onBeforeUnmount(() => {
   display: flex;
   gap: 6px;
   align-items: center;
-}
-
-.tdel {
-  color: var(--danger);
 }
 
 @media (max-width: 720px) {

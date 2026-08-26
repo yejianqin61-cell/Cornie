@@ -46,11 +46,7 @@ function handleStatusChange(event) {
       </div>
     </template>
 
-    <UiEmpty
-      v-if="pages.length === 0"
-      icon="📄"
-      text="这里暂时还没有记忆页面。等铃湾和主人慢慢把重要的人、事、偏好记下来，这里就会热闹起来。"
-    />
+    <UiEmpty v-if="pages.length === 0" icon="📄" text="暂无记忆页面" />
 
     <div v-else class="entryList">
       <button
@@ -91,15 +87,14 @@ function handleStatusChange(event) {
   border-radius: 16px;
 }
 .entryRow.active {
-  background: rgba(125, 211, 252, 0.12);
-  border-color: rgba(125, 211, 252, 0.35);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
 }
 .entryMain {
   font-weight: 700;
 }
 .entryMeta {
   margin-top: 4px;
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 </style>

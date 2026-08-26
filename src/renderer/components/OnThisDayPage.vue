@@ -2,6 +2,9 @@
 import { onMounted, ref } from 'vue'
 import { listOnThisDay } from '../api'
 import CornieDiaryMarkdown from './CornieDiaryMarkdown.vue'
+import UiButton from './ui/UiButton.vue'
+import UiCard from './ui/UiCard.vue'
+import UiEmpty from './ui/UiEmpty.vue'
 
 function pad2(n) {
   return String(n).padStart(2, '0')
@@ -29,17 +32,16 @@ onMounted(async () => {
 
 <template>
   <div class="otdPage">
-    <button class="ghost backBtn" @click="$emit('back')">← 返回日记首页</button>
+    <UiButton variant="ghost" class="backBtn" @click="$emit('back')">← 返回日记首页</UiButton>
 
-    <div class="otdHeader card">
+    <div class="otdHeader">
       <div class="otdTitle">往年今日</div>
-      <div class="otdHint">回顾过去几年的今天</div>
     </div>
 
-    <div v-if="loading" class="otdStatus">翻翻回忆…</div>
-    <div v-else-if="items.length === 0" class="otdStatus empty">那时候我还没出生呢，不过现在我在了。</div>
+    <div v-if="loading" class="otdStatus">加载中…</div>
+    <UiEmpty v-else-if="items.length === 0" icon="📅" text="暂无记录" />
     <div v-else class="otdGrid">
-      <div v-for="it in items" :key="it.date" class="otdCard card">
+      <UiCard v-for="it in items" :key="it.date" class="otdCard">
         <div class="otdDate">{{ it.date }}</div>
         <div class="otdCols">
           <div class="otdCol">
@@ -54,7 +56,7 @@ onMounted(async () => {
             <div v-else class="otdText">（空）</div>
           </div>
         </div>
-      </div>
+      </UiCard>
     </div>
   </div>
 </template>
@@ -72,27 +74,18 @@ onMounted(async () => {
 }
 
 .otdHeader {
-  padding: 18px 20px;
+  padding: 4px 0 0 0;
   text-align: center;
 }
 .otdTitle {
-  font-size: 20px;
+  font-size: var(--text-2xl);
   font-weight: 800;
-}
-.otdHint {
-  font-size: 13px;
-  color: var(--muted);
-  margin-top: 4px;
 }
 
 .otdStatus {
   text-align: center;
   color: var(--muted);
   padding: 40px;
-}
-.otdStatus.empty {
-  border: 1px dashed var(--border);
-  border-radius: 14px;
 }
 
 .otdGrid {
@@ -107,7 +100,7 @@ onMounted(async () => {
   width: 4px;
 }
 .otdGrid::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.08);
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
   border-radius: 999px;
 }
 
@@ -124,20 +117,20 @@ onMounted(async () => {
   gap: 14px;
 }
 .otdLabel {
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
   margin-bottom: 4px;
 }
 .otdText {
   white-space: pre-wrap;
   line-height: 1.5;
-  font-size: 14px;
+  font-size: var(--text-md);
   max-height: 240px;
   overflow-y: auto;
 }
 .cornieText {
   white-space: normal;
-  color: #9b6b7a;
+  color: color-mix(in srgb, var(--color-accent) 45%, var(--color-text));
 }
 :deep(.cornieText .cornieMarkdown) {
   gap: 8px;
@@ -145,7 +138,7 @@ onMounted(async () => {
 :deep(.cornieText .mdParagraph),
 :deep(.cornieText .mdQuote),
 :deep(.cornieText .mdList) {
-  font-size: 14px;
+  font-size: var(--text-md);
 }
 
 @media (max-width: 760px) {

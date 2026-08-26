@@ -2,6 +2,7 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { RouterView, useRoute, useRouter } from 'vue-router'
 import { useModelSettings } from './composables/useModelSettings'
+import UiButton from './components/ui/UiButton.vue'
 
 // F-05：导航由路由驱动（router.js 是唯一事实源）；本文件只保留壳层
 // （左侧导航 + 顶部栏 + RouterView + 配网引导）与跨模块跳转接线。
@@ -146,10 +147,17 @@ const routeExtraProps = computed(() =>
             <input v-model="settingsForm.model" placeholder="模型名（默认 deepseek-chat）" />
             <input v-model="settingsForm.timeoutMs" inputmode="numeric" placeholder="超时毫秒（如 30000）" />
             <div class="guideBannerActions">
-              <button class="primary" :disabled="settingsSaving || settingsLoading" type="submit">
+              <UiButton variant="default" :disabled="settingsSaving || settingsLoading" type="submit">
                 {{ settingsSaving ? '保存中…' : '保存并检测' }}
-              </button>
-              <button :disabled="settingsSaving || settingsLoading" type="button" @click="checkModel">只检测</button>
+              </UiButton>
+              <UiButton
+                variant="outline"
+                :disabled="settingsSaving || settingsLoading"
+                type="button"
+                @click="checkModel"
+              >
+                只检测
+              </UiButton>
             </div>
           </form>
           <div v-if="settingsError" class="guideBannerError">{{ settingsError }}</div>
@@ -195,12 +203,12 @@ const routeExtraProps = computed(() =>
   padding: 0 8px;
 }
 .brandTitle {
-  font-size: 22px;
+  font-size: var(--text-2xl);
   font-weight: 800;
   color: var(--text);
 }
 .brandSub {
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 
@@ -243,11 +251,11 @@ const routeExtraProps = computed(() =>
 }
 .navLabel {
   font-weight: 700;
-  font-size: 14px;
+  font-size: var(--text-md);
 }
 .navHint {
   color: var(--muted);
-  font-size: 11px;
+  font-size: var(--text-xs);
   line-height: 1.3;
 }
 
@@ -256,7 +264,7 @@ const routeExtraProps = computed(() =>
   border-top: 1px solid var(--border);
 }
 .statusDot {
-  font-size: 12px;
+  font-size: var(--text-sm);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -268,16 +276,16 @@ const routeExtraProps = computed(() =>
   border-radius: 999px;
 }
 .statusDot.ok {
-  color: #5b9a6b;
+  color: var(--success);
 }
 .statusDot.ok::before {
-  background: #5b9a6b;
+  background: var(--success);
 }
 .statusDot.off {
   color: var(--muted);
 }
 .statusDot.off::before {
-  background: #d6d0c4;
+  background: color-mix(in srgb, var(--color-text) 20%, transparent);
 }
 
 /* ─── 主区 ─── */
@@ -302,12 +310,12 @@ const routeExtraProps = computed(() =>
   background: var(--surface);
 }
 .topTitle {
-  font-size: 20px;
+  font-size: var(--text-2xl);
   font-weight: 800;
 }
 .topHint {
   color: var(--muted);
-  font-size: 12px;
+  font-size: var(--text-sm);
 }
 .monthInput {
   width: 160px;
@@ -315,9 +323,8 @@ const routeExtraProps = computed(() =>
 
 /* ─── 配网引导横条 ─── */
 .guideBanner {
-  border: 1px solid rgba(232, 133, 106, 0.25);
-  border-radius: 18px;
-  background: #fff8f5;
+  border-radius: var(--radius-lg);
+  background: var(--chat-tint);
   padding: 24px;
 }
 .guideBannerInner {
@@ -327,7 +334,7 @@ const routeExtraProps = computed(() =>
   max-width: 640px;
 }
 .guideBannerTitle {
-  font-size: 18px;
+  font-size: var(--text-xl);
   font-weight: 800;
 }
 .guideBannerText {
@@ -349,19 +356,17 @@ const routeExtraProps = computed(() =>
 }
 .guideBannerError {
   padding: 10px 14px;
-  border-radius: 12px;
-  border: 1px solid rgba(217, 106, 92, 0.25);
-  background: rgba(217, 106, 92, 0.06);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-danger) 6%, transparent);
   color: var(--danger);
-  font-size: 13px;
+  font-size: var(--text-base);
 }
 .guideBannerNotice {
   padding: 10px 14px;
-  border-radius: 12px;
-  border: 1px solid rgba(91, 154, 107, 0.25);
-  background: rgba(91, 154, 107, 0.06);
-  color: #5b9a6b;
-  font-size: 13px;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--color-success) 6%, transparent);
+  color: var(--success);
+  font-size: var(--text-base);
 }
 /* ─── 内容区 ─── */
 .contentFrame {

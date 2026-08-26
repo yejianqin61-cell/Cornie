@@ -108,13 +108,13 @@ const tree = computed(() => {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  font-size: 13px;
+  font-size: var(--text-base);
 }
 .wikiTree::-webkit-scrollbar {
   width: 4px;
 }
 .wikiTree::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.08);
+  background: color-mix(in srgb, var(--color-text) 8%, transparent);
   border-radius: 999px;
 }
 
@@ -128,22 +128,22 @@ const tree = computed(() => {
   user-select: none;
 }
 .treeDir:hover {
-  background: rgba(0, 0, 0, 0.04);
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
 }
 .treeDirIcon {
-  font-size: 12px;
+  font-size: var(--text-sm);
 }
 .treeDirLabel {
   font-weight: 600;
 }
 .treeDirCount {
   margin-left: auto;
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--muted);
 }
 .treeDirEmpty {
   margin-left: auto;
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--muted);
   opacity: 0.7;
 }
@@ -154,11 +154,11 @@ const tree = computed(() => {
   gap: 1px;
   margin-left: 14px;
   padding-left: 8px;
-  border-left: 1px solid rgba(0, 0, 0, 0.06);
+  border-left: 1px solid color-mix(in srgb, var(--color-text) 6%, transparent);
 }
 .treeEmptyRow {
   padding: 4px 8px;
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
   opacity: 0.7;
 }
@@ -174,15 +174,15 @@ const tree = computed(() => {
   color: var(--text);
 }
 .treeFile:hover {
-  background: rgba(0, 0, 0, 0.04);
+  background: color-mix(in srgb, var(--color-text) 4%, transparent);
 }
 .treeFile.active {
-  background: rgba(232, 133, 106, 0.12);
-  color: #c96f52;
+  background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+  color: var(--color-accent-hover);
   font-weight: 600;
 }
 .treeFileIcon {
-  font-size: 12px;
+  font-size: var(--text-sm);
   opacity: 0.8;
 }
 .treeFileLabel {
@@ -197,7 +197,7 @@ const tree = computed(() => {
   opacity: 0.7;
 }
 .treeFile.archived.active {
-  background: rgba(0, 0, 0, 0.05);
+  background: color-mix(in srgb, var(--color-text) 5%, transparent);
   color: var(--muted);
   font-weight: 400;
 }

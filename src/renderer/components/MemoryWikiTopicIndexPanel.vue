@@ -18,11 +18,7 @@ const topicDetail = defineModel('topicDetail', { type: Object, default: null })
 <template>
   <UiCard class="span2" title="Topic Index">
     <div class="topicGrid">
-      <UiEmpty
-        v-if="topicItems.length === 0"
-        icon="🔗"
-        text="现在还没有可用的主题索引。等记忆页面和聊天慢慢积累起来，这里就会帮你把关键词串起来。"
-      />
+      <UiEmpty v-if="topicItems.length === 0" icon="🔗" text="暂无主题索引" />
 
       <div v-else class="topicList">
         <button
@@ -59,7 +55,7 @@ const topicDetail = defineModel('topicDetail', { type: Object, default: null })
         </label>
         <button class="primary" :disabled="saving" @click="emit('save-topic-aliases')">保存主题别名</button>
       </div>
-      <UiEmpty v-else icon="🔍" text="点一个主题，我就把它的索引详情展开给主人看。" />
+      <UiEmpty v-else icon="🔍" text="选择主题查看详情" />
     </div>
   </UiCard>
 </template>
@@ -81,10 +77,7 @@ const topicDetail = defineModel('topicDetail', { type: Object, default: null })
   overflow: auto;
 }
 .topicDetail {
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.03);
-  padding: 16px;
+  padding: 4px 0 0 0;
 }
 .entryRow {
   text-align: left;
@@ -96,25 +89,24 @@ const topicDetail = defineModel('topicDetail', { type: Object, default: null })
   border-radius: 16px;
 }
 .entryRow.active {
-  background: rgba(125, 211, 252, 0.12);
-  border-color: rgba(125, 211, 252, 0.35);
+  background: color-mix(in srgb, var(--color-accent) 10%, transparent);
 }
 .entryMain {
   font-weight: 700;
 }
 .entryMeta {
   margin-top: 4px;
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 .detailTitle {
   font-weight: 800;
-  font-size: 18px;
+  font-size: var(--text-xl);
 }
 .detailMeta {
   margin-top: 8px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: var(--text-base);
   line-height: 1.5;
 }
 .topicAliases {
@@ -122,7 +114,7 @@ const topicDetail = defineModel('topicDetail', { type: Object, default: null })
   flex-direction: column;
   gap: 6px;
   margin-top: 12px;
-  font-size: 13px;
+  font-size: var(--text-base);
 }
 @media (max-width: 1120px) {
   .topicGrid {

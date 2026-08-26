@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue'
+import UiButton from './ui/UiButton.vue'
 
 const props = defineProps({
   request: {
@@ -20,15 +21,15 @@ const emit = defineEmits(['confirm', 'reject'])
 
 function getTitle(request) {
   if (request?.title) return request.title
-  if (request?.kind === 'category_creation_confirmation') return '铃湾想先和你确认一下这个新类目'
-  if (request?.kind === 'category_mapping_confirmation') return '铃湾想先确认要不要改用这个类目'
-  if (request?.tool_name) return `这一步要不要继续处理 ${request.tool_name}？`
-  if (request?.toolName) return `这一步要不要继续处理 ${request.toolName}？`
-  return '这一步需要你点个头'
+  if (request?.kind === 'category_creation_confirmation') return '确认新建这个类目'
+  if (request?.kind === 'category_mapping_confirmation') return '确认改用这个类目'
+  if (request?.tool_name) return `继续执行 ${request.tool_name}？`
+  if (request?.toolName) return `继续执行 ${request.toolName}？`
+  return '需要你确认'
 }
 
 function getReason(request) {
-  return request?.reason || '这件事继续做下去之前，铃湾想先征求你的同意。'
+  return request?.reason || '需要你确认后继续'
 }
 
 function getDetails(request) {
@@ -64,18 +65,18 @@ function getDetails(request) {
 }
 
 const statusLabel = computed(() => {
-  if (props.status === 'approved') return '你已经同意啦'
-  if (props.status === 'rejected') return '这次先不做'
-  if (props.status === 'failed') return '这次没继续成功'
-  if (props.status === 'processing') return '铃湾正在继续处理'
-  return '等你来决定'
+  if (props.status === 'approved') return '已同意'
+  if (props.status === 'rejected') return '已拒绝'
+  if (props.status === 'failed') return '执行失败'
+  if (props.status === 'processing') return '处理中'
+  return '待确认'
 })
 </script>
 
 <template>
   <div class="confirmCard">
     <div class="confirmTopline">
-      <div class="confirmEyebrow">需要你点头</div>
+      <div class="confirmEyebrow">需要你确认</div>
       <div class="confirmStatusPill" :class="`is-${props.status || 'pending'}`">{{ statusLabel }}</div>
     </div>
     <div class="confirmTitle">{{ getTitle(props.request) }}</div>
@@ -86,28 +87,26 @@ const statusLabel = computed(() => {
     </div>
 
     <div v-if="props.errorMessage" class="confirmError">{{ props.errorMessage }}</div>
-    <div v-if="props.status === 'approved'" class="confirmState">铃湾已经收到你的同意，正在继续做下去。</div>
-    <div v-else-if="props.status === 'rejected'" class="confirmState">这次就先停在这里，不会继续执行。</div>
-    <div v-else-if="props.status === 'failed'" class="confirmState">继续处理的时候出了点小岔子，可以稍后再试。</div>
-    <div v-else-if="props.status === 'processing'" class="confirmState">铃湾正在顺着你的选择继续处理...</div>
 
     <div class="confirmActions">
-      <button
+      <UiButton
         type="button"
+        variant="default"
         class="confirmBtn confirmBtnPrimary"
         :disabled="props.status !== 'pending'"
         @click="emit('confirm', props.request)"
       >
         {{ props.status === 'processing' ? '处理中' : '同意' }}
-      </button>
-      <button
+      </UiButton>
+      <UiButton
         type="button"
+        variant="ghost"
         class="confirmBtn"
         :disabled="props.status !== 'pending'"
         @click="emit('reject', props.request)"
       >
         先不要
-      </button>
+      </UiButton>
     </div>
   </div>
 </template>
@@ -116,8 +115,7 @@ const statusLabel = computed(() => {
 .confirmCard {
   width: 100%;
   padding: 14px;
-  border-radius: 18px;
-  border: 1px solid rgba(228, 163, 94, 0.24);
+  border-radius: var(--radius-lg);
   background: var(--warning-soft);
 }
 
@@ -129,52 +127,48 @@ const statusLabel = computed(() => {
 }
 
 .confirmEyebrow {
-  font-size: 11px;
+  font-size: var(--text-xs);
   letter-spacing: 0.08em;
-  color: #b5783f;
+  color: color-mix(in srgb, var(--color-warning) 60%, var(--color-text));
 }
 
 .confirmStatusPill {
   padding: 3px 9px;
   border-radius: 999px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--surface);
   color: var(--text);
-  font-size: 10px;
+  font-size: var(--text-xs);
   white-space: nowrap;
 }
 
 .confirmStatusPill.is-approved {
-  border-color: rgba(91, 154, 107, 0.22);
   background: var(--success-soft);
   color: var(--success);
 }
 
 .confirmStatusPill.is-rejected,
 .confirmStatusPill.is-failed {
-  border-color: rgba(217, 106, 92, 0.2);
   background: var(--danger-soft);
   color: var(--danger);
 }
 
 .confirmStatusPill.is-processing {
-  border-color: rgba(228, 163, 94, 0.24);
-  background: rgba(255, 255, 255, 0.78);
-  color: #9b6a36;
+  background: var(--surface);
+  color: color-mix(in srgb, var(--color-warning) 60%, var(--color-text));
 }
 
 .confirmTitle {
   margin-top: 6px;
-  font-size: 14px;
+  font-size: var(--text-md);
   font-weight: 700;
   color: var(--text);
 }
 
 .confirmReason {
   margin-top: 6px;
-  font-size: 13px;
+  font-size: var(--text-base);
   line-height: 1.5;
-  color: #6c5648;
+  color: color-mix(in srgb, var(--color-warning) 40%, var(--color-text));
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
@@ -187,7 +181,7 @@ const statusLabel = computed(() => {
 }
 
 .confirmDetail {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--muted);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -195,14 +189,8 @@ const statusLabel = computed(() => {
 
 .confirmError {
   margin-top: 8px;
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--danger);
-}
-
-.confirmState {
-  margin-top: 8px;
-  font-size: 11px;
-  color: #866955;
 }
 
 .confirmActions {
@@ -213,22 +201,5 @@ const statusLabel = computed(() => {
 
 .confirmBtn {
   flex: 1 1 0;
-  height: 30px;
-  border-radius: 999px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  background: rgba(255, 255, 255, 0.72);
-  color: var(--text);
-  font-size: 12px;
-  cursor: pointer;
-}
-
-.confirmBtnPrimary {
-  border-color: rgba(228, 133, 106, 0.18);
-  background: rgba(232, 133, 106, 0.16);
-}
-
-.confirmBtn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
 }
 </style>

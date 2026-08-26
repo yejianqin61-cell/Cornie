@@ -1,6 +1,8 @@
 <script setup>
 import { ref } from 'vue'
 import MemoryWikiWorkspace from './MemoryWikiWorkspace.vue'
+import UiButton from './ui/UiButton.vue'
+import UiEmpty from './ui/UiEmpty.vue'
 
 const advancedMode = ref(false)
 const activePanel = ref('') // '' | 'memory-wiki' | 'versions' | 'rollback' | 'governance' | 'inspection' | 'audit'
@@ -19,31 +21,28 @@ const panels = [
 <template>
   <div class="advanced">
     <header class="advHead">
-      <button class="ghost" @click="$emit('back')">← 返回设置</button>
+      <UiButton variant="ghost" @click="$emit('back')">← 返回设置</UiButton>
       <div class="advTitle">高级设置</div>
       <div class="advToggle">
         <span class="advToggleLabel">高级模式</span>
-        <button :class="advancedMode ? 'primary' : ''" @click="advancedMode = !advancedMode">
+        <UiButton :variant="advancedMode ? 'default' : 'outline'" @click="advancedMode = !advancedMode">
           {{ advancedMode ? '已启用' : '已关闭' }}
-        </button>
+        </UiButton>
       </div>
     </header>
 
-    <div v-if="!advancedMode" class="advOff card">
-      <div class="advOffIcon">🔒</div>
-      <div class="advOffTitle">高级模式已关闭</div>
-      <div class="advOffHint">
-        这些功能面向高级用户，包含复杂治理和系统管理能力。<br />
-        日常使用不需要开启。
-      </div>
-    </div>
+    <UiEmpty v-if="!advancedMode" icon="🔒" text="高级模式已关闭，面向高级用户">
+      <template #action>
+        <UiButton variant="default" @click="advancedMode = true">开启高级模式</UiButton>
+      </template>
+    </UiEmpty>
 
     <div v-else class="advPanels">
       <div class="advGrid">
         <button
           v-for="p in panels"
           :key="p.id"
-          class="advCard card"
+          class="advCard"
           :class="{ active: activePanel === p.id }"
           @click="activePanel = activePanel === p.id ? '' : p.id"
         >
@@ -56,9 +55,7 @@ const panels = [
         <MemoryWikiWorkspace />
       </div>
 
-      <div v-else-if="activePanel" class="advPlaceholder card">
-        <div class="advPlaceholderText">{{ activePanel }} 功能将在后续版本中提供。</div>
-      </div>
+      <div v-else-if="activePanel" class="advPlaceholder">即将提供</div>
     </div>
   </div>
 </template>
@@ -75,13 +72,9 @@ const panels = [
   display: flex;
   align-items: center;
   gap: 14px;
-  padding: 12px 18px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 18px;
 }
 .advTitle {
-  font-size: 18px;
+  font-size: var(--text-xl);
   font-weight: 800;
 }
 .advToggle {
@@ -91,29 +84,8 @@ const panels = [
   gap: 8px;
 }
 .advToggleLabel {
-  font-size: 13px;
+  font-size: var(--text-base);
   color: var(--muted);
-}
-
-.advOff {
-  padding: 40px;
-  text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-.advOffIcon {
-  font-size: 32px;
-}
-.advOffTitle {
-  font-size: 16px;
-  font-weight: 700;
-}
-.advOffHint {
-  font-size: 13px;
-  color: var(--muted);
-  line-height: 1.6;
 }
 
 .advPanels {
@@ -133,17 +105,20 @@ const panels = [
   padding: 14px;
   cursor: pointer;
   text-align: left;
+  background: transparent;
+}
+.advCard:hover {
+  background: var(--surface-2);
 }
 .advCard.active {
-  border-color: rgba(232, 133, 106, 0.3);
-  background: rgba(232, 133, 106, 0.06);
+  background: color-mix(in srgb, var(--color-accent) 6%, transparent);
 }
 .advCardTitle {
   font-weight: 600;
-  font-size: 14px;
+  font-size: var(--text-md);
 }
 .advCardHint {
-  font-size: 12px;
+  font-size: var(--text-sm);
   color: var(--muted);
   margin-top: 4px;
 }
