@@ -7,8 +7,13 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const repoRoot = path.resolve(__dirname, '..')
 
+// 日记流门禁（React + Mantine 重写版）：
+// - 保存失败分支（'保存日记失败'）；
+// - 往年今日加载失败分支（'往年今日加载失败'）；
+// - regenerate-cornie 长任务流程（含本地未保存 userText 不被覆盖的重写修复）。
+
 async function main() {
-  const testPath = path.join(repoRoot, 'tests/frontend/app-diary-flow.test.mjs')
+  const testPath = path.join(repoRoot, 'tests/frontend/app-diary-flow.test.tsx')
   const content = await fs.readFile(testPath, 'utf8')
 
   assert.match(content, /保存日记失败/, 'app diary tests should cover save failure branch')

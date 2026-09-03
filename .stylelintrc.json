@@ -1,14 +1,37 @@
 {
-  "extends": ["stylelint-config-recommended-vue"],
+  "extends": ["stylelint-config-standard"],
   "rules": {
     "color-hex-length": "long",
     "color-no-hex": [
       true,
       {
-        "severity": "warning",
-        "message": "裸 hex 色值请改用设计 token（见 doc/Cornie-026 §3）；存量豁免清单：全量现有文件，随 T-02/T-03 迁移逐步清零"
+        "severity": "error",
+        "message": "组件/全局 CSS 禁止裸 hex：色值一律收敛进 theme.ts（Mantine createTheme）或 styles/tokens.css；组件样式必须引用 Mantine CSS 变量或 --color-*/--pet-* token"
       }
     ],
-    "no-descending-specificity": null
-  }
+    "no-descending-specificity": null,
+    "custom-property-empty-line-before": null,
+    "declaration-empty-line-before": null
+  },
+  "overrides": [
+    {
+      "files": ["src/renderer/styles/tokens.css"],
+      "rules": {
+        "color-no-hex": null,
+        "alpha-value-notation": null,
+        "color-function-alias-notation": null,
+        "color-function-notation": null
+      }
+    },
+    {
+      "files": ["src/renderer/CorniePet.css"],
+      "rules": {
+        "alpha-value-notation": null,
+        "color-function-alias-notation": null,
+        "color-function-notation": null,
+        "selector-class-pattern": null,
+        "keyframes-name-pattern": null
+      }
+    }
+  ]
 }

@@ -1,0 +1,324 @@
+/* 桌宠小窗样式（CorniePet.tsx 专用；从 Vue 版 scoped style 原样迁移）。
+   色值纪律：本文件仅使用 --pet-* token 与 rgba()，不出现裸 hex（stylelint 门禁）。 */
+
+.petRoot {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: flex-end;
+  align-items: flex-end;
+  padding: 12px;
+  background: transparent;
+  overflow: hidden;
+  -webkit-app-region: no-drag;
+}
+
+.petShell {
+  position: relative;
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  cursor: default;
+  user-select: none;
+}
+
+.petShell.is-draggable {
+  cursor: grab;
+}
+
+.petShell.is-draggable:active {
+  cursor: grabbing;
+}
+
+.petPanel {
+  position: relative;
+  width: min(320px, calc(100vw - 24px));
+  padding: 14px 14px 12px;
+  border-radius: 24px;
+  background: var(--pet-bg);
+  border: 1px solid var(--pet-border);
+  box-shadow: var(--pet-shadow-soft);
+  backdrop-filter: blur(10px);
+  -webkit-app-region: no-drag;
+  animation: petPanelIn var(--pet-transition-base);
+  overflow: hidden;
+}
+
+.petPanelAura {
+  position: absolute;
+  inset: auto -12px -28px auto;
+  width: 124px;
+  height: 124px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(247, 216, 202, 0.72) 0%, rgba(247, 216, 202, 0) 70%);
+  pointer-events: none;
+}
+
+.petMessages {
+  position: relative;
+  z-index: 1;
+  max-height: 136px;
+  min-height: 88px;
+  overflow-y: auto;
+  padding-right: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  scroll-behavior: smooth;
+}
+
+.petMessages::-webkit-scrollbar {
+  width: 4px;
+}
+
+.petMessages::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(161, 141, 128, 0.32);
+}
+
+.petEmpty {
+  min-height: 88px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 2px;
+}
+
+.petEmptyTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--pet-text);
+}
+
+.petEmptyHint {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--pet-text-soft);
+}
+
+.petMessageRow {
+  display: flex;
+  width: 100%;
+}
+
+.petMessageRow.is-user {
+  justify-content: flex-end;
+}
+
+.petMessageRow.is-cornie {
+  justify-content: flex-start;
+}
+
+.petMessageBubble {
+  max-width: 82%;
+  padding: 9px 12px 10px;
+  border-radius: 18px;
+  box-shadow: 0 6px 18px rgba(124, 93, 72, 0.06);
+}
+
+.petMessageBubble.is-user {
+  background: var(--pet-user-bubble);
+  color: var(--pet-text);
+}
+
+.petMessageBubble.is-cornie {
+  background: var(--pet-cornie-bubble);
+  color: var(--pet-text);
+}
+
+.petMessageRole {
+  margin-bottom: 2px;
+  font-size: 10px;
+  color: var(--pet-text-faint);
+}
+
+.petMessageText {
+  font-size: 12px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.petMessageText.is-thinking {
+  color: var(--pet-text-soft);
+  font-style: italic;
+}
+
+.petInputBar {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.petNotice {
+  position: relative;
+  z-index: 1;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.66);
+  border: 1px solid rgba(196, 168, 146, 0.18);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.petNotice.is-confirm {
+  background: rgba(247, 216, 202, 0.54);
+}
+
+.petNotice.is-error {
+  background: rgba(246, 212, 208, 0.72);
+}
+
+.petNoticeText {
+  flex: 1 1 auto;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--pet-text-soft);
+}
+
+.petNoticeAction {
+  flex: 0 0 auto;
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(196, 168, 146, 0.16);
+  background: rgba(255, 255, 255, 0.84);
+  color: var(--pet-text);
+  font-size: 12px;
+}
+
+.petInput {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 38px;
+  border-radius: 999px;
+  background: var(--pet-input-bg);
+  border: 1px solid rgba(196, 168, 146, 0.18);
+  color: var(--pet-text);
+  font-size: 13px;
+  padding: 0 14px;
+}
+
+.petInput:focus {
+  outline: none;
+  border-color: rgba(223, 141, 112, 0.38);
+  box-shadow: 0 0 0 4px rgba(239, 179, 154, 0.16);
+}
+
+.petInput::placeholder {
+  color: var(--pet-text-faint);
+}
+
+.petTopButton,
+.petPinButton,
+.petSendButton {
+  flex: 0 0 auto;
+  height: 36px;
+  min-width: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  border: 1px solid rgba(196, 168, 146, 0.18);
+  background: var(--pet-surface);
+  color: var(--pet-text-soft);
+  -webkit-app-region: no-drag;
+}
+
+.petTopButton:hover,
+.petPinButton:hover,
+.petSendButton:hover {
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.petTopButton.is-on,
+.petPinButton.is-on {
+  background: var(--pet-accent-soft);
+  color: var(--pet-accent-strong);
+}
+
+.petSendButton {
+  background: var(--pet-accent);
+  color: rgba(255, 250, 245, 1);
+  border-color: transparent;
+}
+
+.petSendButton:hover {
+  background: var(--pet-accent-strong);
+}
+
+.petSendButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.petFace {
+  position: relative;
+  min-width: 86px;
+  height: 48px;
+  padding: 0 16px;
+  border-radius: 20px;
+  border: 1px solid var(--pet-border);
+  background: var(--pet-bg-soft);
+  box-shadow: var(--pet-shadow-soft);
+  color: var(--pet-text);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  -webkit-app-region: no-drag;
+  animation: petBreath 3.8s ease-in-out infinite;
+}
+
+.petFace.is-active {
+  box-shadow: var(--pet-shadow-hover);
+}
+
+.petFaceGlow {
+  position: absolute;
+  inset: auto auto -18px -10px;
+  width: 92px;
+  height: 92px;
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(239, 179, 154, 0.28) 0%, rgba(239, 179, 154, 0) 72%);
+  pointer-events: none;
+}
+
+.petFaceText {
+  position: relative;
+  z-index: 1;
+  font-size: 18px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+}
+
+@keyframes petPanelIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes petBreath {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-2px);
+  }
+}

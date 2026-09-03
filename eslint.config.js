@@ -1,12 +1,13 @@
 import js from '@eslint/js'
-import pluginVue from 'eslint-plugin-vue'
 import eslintConfigPrettier from 'eslint-config-prettier'
+import reactHooks from 'eslint-plugin-react-hooks'
+import reactRefresh from 'eslint-plugin-react-refresh'
+import tseslint from 'typescript-eslint'
 import globals from 'globals'
 
-// T-01：前端工程 lint 基座。
-// 范围决策（见 doc/task-025/T-01）：本批仅覆盖 src/renderer 与 tests/frontend；
-// electron/ 与 scripts/（Node 侧 85 文件 / 16.5k 行）留待后续任务接入 node 全局环境后单独启用。
-export default [
+// Cornie 前端 lint 基座（React + TypeScript + Mantine 重写版）。
+// 范围：src/renderer 与 tests/frontend；electron/ 与 scripts/（Node 侧）留待后续接入。
+export default tseslint.config(
   {
     ignores: [
       'node_modules/**',
@@ -23,19 +24,18 @@ export default [
       '!tests/frontend/**',
       '*.log',
       '*.html',
+      'electron-out.txt',
     ],
   },
   js.configs.recommended,
-  ...pluginVue.configs['flat/essential'],
+  ...tseslint.configs.recommended,
   eslintConfigPrettier,
   {
-    files: ['vite.config.js'],
-    languageOptions: {
-      globals: globals.node,
+    files: ['**/*.{ts,tsx}'],
+    plugins: {
+      'react-hooks': reactHooks,
+      'react-refresh': reactRefresh,
     },
-  },
-  {
-    files: ['src/renderer/**/*.{js,vue}'],
     languageOptions: {
       globals: {
         ...globals.browser,
@@ -43,14 +43,27 @@ export default [
       },
     },
     rules: {
-      'no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      ...reactHooks.configs.recommended.rules,
+      'react-refresh/only-export-components': 'off',
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      '@typescript-eslint/consistent-type-imports': [
+        'error',
+        { prefer: 'type-imports', fixStyle: 'inline-type-imports' },
+      ],
       'no-console': 'off',
       // 桌宠拖拽等"尽力而为"调用使用空 catch 是刻意的，允许空 catch 块
       'no-empty': ['error', { allowEmptyCatch: true }],
     },
   },
   {
-    files: ['tests/frontend/**/*.mjs'],
+    files: ['vite.config.ts'],
+    extends: [],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
+  {
+    files: ['tests/frontend/**/*.{ts,tsx}'],
     languageOptions: {
       globals: {
         ...globals.vitest,
@@ -59,7 +72,7 @@ export default [
       },
     },
     rules: {
-      'no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
     },
-  },
-]
+  }
+)
