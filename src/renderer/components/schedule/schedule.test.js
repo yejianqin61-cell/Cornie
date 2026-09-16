@@ -45,4 +45,9 @@ describe('ScheduleForm', () => {
       startAt: '2026-09-16T10:00',
     })
   })
+
+  it('shows submitting state', () => {
+    const wrapper = mount(ScheduleForm, { props: { submitting: true } })
+    expect(wrapper.text()).toContain('添加中')
+  })
 })

@@ -1,7 +1,11 @@
 <script setup>
-import { Plus } from '@lucide/vue'
+import { Plus, Loader2 } from '@lucide/vue'
 import { Button, Input } from 'neobrutalism-vue'
 import { ref } from 'vue'
+
+const props = defineProps({
+  submitting: { type: Boolean, default: false },
+})
 
 const emit = defineEmits(['create'])
 
@@ -18,11 +22,12 @@ function submit() {
 
 <template>
   <div class="sch-form">
-    <Input v-model="title" placeholder="日程标题..." class="sch-form-input" />
-    <Input v-model="startAt" type="datetime-local" class="sch-form-date" />
-    <Button variant="neutral" size="sm" @click="submit">
-      <Plus :size="14" />
-      添加
+    <Input v-model="title" placeholder="日程标题..." class="sch-form-input" :disabled="submitting" />
+    <Input v-model="startAt" type="datetime-local" class="sch-form-date" :disabled="submitting" />
+    <Button variant="neutral" size="sm" :disabled="submitting" @click="submit">
+      <Loader2 v-if="submitting" :size="14" class="spin" />
+      <Plus v-else :size="14" />
+      {{ submitting ? '添加中...' : '添加' }}
     </Button>
   </div>
 </template>
@@ -42,5 +47,13 @@ function submit() {
 
 .sch-form-date {
   width: 200px;
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 </style>
