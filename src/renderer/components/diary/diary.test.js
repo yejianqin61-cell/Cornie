@@ -54,6 +54,21 @@ describe('CornieDiaryView', () => {
     const wrapper = mount(CornieDiaryView, { props: { text: '今天天气很好' } })
     expect(wrapper.text()).toContain('今天天气很好')
   })
+
+  it('renders skeleton when loading', () => {
+    const wrapper = mount(CornieDiaryView, { props: { text: '', loading: true } })
+    expect(wrapper.find('.cornie-diary-skeleton').exists()).toBe(true)
+  })
+
+  it('renders error message', () => {
+    const wrapper = mount(CornieDiaryView, { props: { text: '', error: '加载失败' } })
+    expect(wrapper.text()).toContain('加载失败')
+  })
+
+  it('renders placeholder when text is empty', () => {
+    const wrapper = mount(CornieDiaryView, { props: { text: '' } })
+    expect(wrapper.text()).toContain('等待')
+  })
 })
 
 describe('UserDiaryEditor', () => {
@@ -102,6 +117,11 @@ describe('DiaryRegenerateBtn', () => {
     const wrapper = mount(DiaryRegenerateBtn, { props: { date: '2026-09-16' } })
     await wrapper.findComponent({ name: 'Button' }).trigger('click')
     expect(wrapper.emitted('regenerate')).toBeTruthy()
+  })
+
+  it('shows regenerating state', () => {
+    const wrapper = mount(DiaryRegenerateBtn, { props: { date: '2026-09-16', regenerating: true } })
+    expect(wrapper.text()).toContain('生成中')
   })
 })
 
