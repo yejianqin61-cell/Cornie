@@ -83,6 +83,16 @@ describe('MemoryWikiEditor', () => {
     expect(wrapper.text()).toContain('编辑记忆页面')
     expect(wrapper.find('input').element.value).toBe('Test')
   })
+
+  it('shows saving state', () => {
+    const wrapper = mount(MemoryWikiEditor, { props: { page: {}, saving: true } })
+    expect(wrapper.text()).toContain('保存中')
+  })
+
+  it('shows saveError', () => {
+    const wrapper = mount(MemoryWikiEditor, { props: { page: {}, saveError: '保存失败' } })
+    expect(wrapper.text()).toContain('保存失败')
+  })
 })
 
 describe('MemoryWikiCompare', () => {

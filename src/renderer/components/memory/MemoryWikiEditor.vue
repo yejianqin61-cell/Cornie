@@ -1,10 +1,12 @@
 <script setup>
 import { ref } from 'vue'
 import { Button } from 'neobrutalism-vue'
-import { X } from '@lucide/vue'
+import { X, Loader2 } from '@lucide/vue'
 
 const props = defineProps({
   page: { type: Object, default: () => ({}) },
+  saving: { type: Boolean, default: false },
+  saveError: { type: String, default: '' },
 })
 
 const emit = defineEmits(['save', 'cancel'])
@@ -25,25 +27,29 @@ function submit() {
     <div class="mw-editor">
       <div class="mw-editor-header">
         <span class="mw-editor-title">编辑记忆页面</span>
-        <Button variant="neutral" size="icon" @click="$emit('cancel')">
+        <Button variant="neutral" size="icon" :disabled="saving" @click="$emit('cancel')">
           <X :size="16" />
         </Button>
       </div>
       <label class="mw-editor-field">
         <span>标题</span>
-        <input v-model="form.title" type="text" class="mw-editor-input" />
+        <input v-model="form.title" type="text" class="mw-editor-input" :disabled="saving" />
       </label>
       <label class="mw-editor-field">
         <span>摘要</span>
-        <textarea v-model="form.summary" class="mw-editor-input mw-editor-textarea" rows="3" />
+        <textarea v-model="form.summary" class="mw-editor-input mw-editor-textarea" rows="3" :disabled="saving" />
       </label>
       <label class="mw-editor-field">
         <span>正文</span>
-        <textarea v-model="form.body" class="mw-editor-input mw-editor-textarea" rows="8" />
+        <textarea v-model="form.body" class="mw-editor-input mw-editor-textarea" rows="8" :disabled="saving" />
       </label>
+      <div v-if="saveError" class="mw-editor-error">{{ saveError }}</div>
       <div class="mw-editor-actions">
-        <Button variant="neutral" @click="$emit('cancel')">取消</Button>
-        <Button @click="submit">保存</Button>
+        <Button variant="neutral" :disabled="saving" @click="$emit('cancel')">取消</Button>
+        <Button :disabled="saving" @click="submit">
+          <Loader2 v-if="saving" :size="14" class="spin" />
+          {{ saving ? '保存中...' : '保存' }}
+        </Button>
       </div>
     </div>
   </div>
@@ -117,5 +123,19 @@ function submit() {
   display: flex;
   justify-content: flex-end;
   gap: 0.5rem;
+}
+
+.mw-editor-error {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--nb-danger, #d32f2f);
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 </style>
