@@ -5,6 +5,7 @@ import ObservationEmptyState from './ObservationEmptyState.vue'
 import ObservationLinkedMemory from './ObservationLinkedMemory.vue'
 import ObservationDeleteConfirm from './ObservationDeleteConfirm.vue'
 import ObservationDetailPage from './ObservationDetailPage.vue'
+import ObservationForm from './ObservationForm.vue'
 
 describe('ObservationCard', () => {
   it('renders date, type, title, and truncated content', () => {
@@ -75,5 +76,29 @@ describe('ObservationDetailPage', () => {
     const btn = wrapper.findComponent({ name: 'Button' })
     await btn.trigger('click')
     expect(wrapper.emitted('back')).toBeTruthy()
+  })
+})
+
+describe('ObservationForm', () => {
+  it('renders form fields', () => {
+    const wrapper = mount(ObservationForm)
+    expect(wrapper.text()).toContain('新建')
+  })
+
+  it('renders edit mode with initial data', () => {
+    const wrapper = mount(ObservationForm, {
+      props: { initial: { id: '1', title: '测试', type: 'dream' } },
+    })
+    expect(wrapper.text()).toContain('编辑')
+  })
+
+  it('shows saving state', () => {
+    const wrapper = mount(ObservationForm, { props: { saving: true } })
+    expect(wrapper.text()).toContain('保存中')
+  })
+
+  it('shows saveError', () => {
+    const wrapper = mount(ObservationForm, { props: { saveError: '保存失败' } })
+    expect(wrapper.text()).toContain('保存失败')
   })
 })

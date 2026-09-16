@@ -1,7 +1,7 @@
 <script setup>
 import { ref, nextTick } from 'vue'
 import { Send, Loader2 } from '@lucide/vue'
-import { Button, Textarea } from 'neobrutalism-vue'
+import { Button } from 'neobrutalism-vue'
 import ChatDateNav from './ChatDateNav.vue'
 import ChatHistoryPage from './ChatHistoryPage.vue'
 import { sendMessage } from '../../api/conversation.js'
@@ -78,7 +78,7 @@ function handleConfirmResolved() {
     <div class="chat-panel-footer">
       <div v-if="sendError" class="chat-panel-error">{{ sendError }}</div>
       <div class="chat-panel-input-row">
-        <Textarea
+        <textarea
           v-model="inputText"
           class="chat-panel-input"
           placeholder="输入消息..."

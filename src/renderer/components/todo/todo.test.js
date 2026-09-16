@@ -47,4 +47,9 @@ describe('TodoForm', () => {
     expect(wrapper.emitted('create')).toBeTruthy()
     expect(wrapper.emitted('create')[0][0]).toBe('新待办')
   })
+
+  it('shows submitting state', () => {
+    const wrapper = mount(TodoForm, { props: { submitting: true } })
+    expect(wrapper.text()).toContain('添加中')
+  })
 })

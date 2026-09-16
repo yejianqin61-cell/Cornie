@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { Eye, Plus } from '@lucide/vue'
+import { Eye, Plus, RefreshCw } from '@lucide/vue'
 import { Button } from 'neobrutalism-vue'
 import { Input } from 'neobrutalism-vue'
 import PageHeader from '../common/PageHeader.vue'
@@ -12,6 +12,8 @@ import ObservationEmptyState from './ObservationEmptyState.vue'
 import { listObservations, createObservation, updateObservation, deleteObservation } from '../../api/observation.js'
 
 const observations = ref([])
+const loading = ref(false)
+const error = ref('')
 const filterType = ref('')
 const searchQuery = ref('')
 const view = ref('list')
@@ -19,6 +21,8 @@ const selectedId = ref(null)
 const formOpen = ref(false)
 const editingObservation = ref(null)
 const deleteTarget = ref(null)
+const saving = ref(false)
+const saveError = ref('')
 
 const TYPES = [
   { value: '', label: '全部' },
@@ -33,15 +37,19 @@ const selectedObservation = computed(
 )
 
 async function fetchList() {
+  loading.value = true
+  error.value = ''
   try {
     const params = {}
     if (filterType.value) params.type = filterType.value
     if (searchQuery.value) params.q = searchQuery.value
     const res = await listObservations(params)
     observations.value = res.observations || []
-  } catch {
+  } catch (e) {
     observations.value = []
+    error.value = e.message || '加载失败'
   }
+  loading.value = false
 }
 
 watch([filterType, searchQuery], fetchList, { immediate: true })
@@ -58,10 +66,13 @@ function goBack() {
 
 function openNew() {
   editingObservation.value = {}
+  saveError.value = ''
   formOpen.value = true
 }
 
 async function onSave(formData) {
+  saving.value = true
+  saveError.value = ''
   try {
     if (editingObservation.value?.id) {
       await updateObservation(editingObservation.value.id, formData)
@@ -71,9 +82,10 @@ async function onSave(formData) {
     formOpen.value = false
     editingObservation.value = null
     fetchList()
-  } catch {
-    // ignore
+  } catch (e) {
+    saveError.value = e.message || '保存失败'
   }
+  saving.value = false
 }
 
 function onDelete() {
@@ -121,7 +133,17 @@ async function confirmDelete() {
           </Button>
         </div>
       </div>
-      <ObservationEmptyState v-if="observations.length === 0" />
+
+      <div v-if="loading" class="obs-skeleton">
+        <div class="obs-skeleton-card" v-for="n in 4" :key="n" />
+      </div>
+      <div v-else-if="error" class="obs-banner obs-banner--error">
+        <span>{{ error }}</span>
+        <Button variant="neutral" size="sm" @click="fetchList">
+          <RefreshCw :size="12" /> 重试
+        </Button>
+      </div>
+      <ObservationEmptyState v-else-if="observations.length === 0" />
       <div v-else class="obs-list-grid">
         <ObservationCard
           v-for="o in observations"
@@ -142,8 +164,10 @@ async function confirmDelete() {
     <ObservationForm
       v-if="formOpen"
       :initial="editingObservation"
+      :saving="saving"
+      :saveError="saveError"
       @save="onSave"
-      @cancel="formOpen = false; editingObservation = null"
+      @cancel="formOpen = false; editingObservation = null; saveError = ''"
     />
 
     <ObservationDeleteConfirm
@@ -198,5 +222,39 @@ async function confirmDelete() {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+.obs-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  border: 2px solid #000;
+  border-radius: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.obs-banner--error {
+  background: #fff0f0;
+  color: var(--nb-danger, #d32f2f);
+}
+
+.obs-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.obs-skeleton-card {
+  height: 64px;
+  border-radius: 0.5rem;
+  background: var(--nb-border);
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.8; }
 }
 </style>
