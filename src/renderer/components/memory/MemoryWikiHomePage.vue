@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import { Brain, Plus, RefreshCw, Loader2 } from '@lucide/vue'
+import { Brain, Plus, RefreshCw, Loader2, Shield, Hash } from '@lucide/vue'
 import { Button } from 'neobrutalism-vue'
 import PageHeader from '../common/PageHeader.vue'
 import MemoryWikiTree from './MemoryWikiTree.vue'
@@ -8,7 +8,10 @@ import MemoryWikiDetail from './MemoryWikiDetail.vue'
 import MemoryWikiCompare from './MemoryWikiCompare.vue'
 import MemoryWikiEditor from './MemoryWikiEditor.vue'
 import MemoryWikiEmptyState from './MemoryWikiEmptyState.vue'
-import { listPages, getPage, createPage, updatePage, listVersions, getVersionDiff } from '../../api/memory-wiki.js'
+import {
+  listPages, getPage, createPage, updatePage,
+  listVersions, getVersionDiff, listTopics, listGovernance,
+} from '../../api/memory-wiki.js'
 
 const pages = ref([])
 const loading = ref(false)
@@ -22,11 +25,18 @@ const editorInitial = ref({})
 const saving = ref(false)
 const saveError = ref('')
 
+const topics = ref([])
+const activeTopic = ref('')
+const governanceOpen = ref(false)
+const governanceItems = ref([])
+const governanceLoading = ref(false)
+
 async function fetchPages() {
   loading.value = true
   error.value = ''
   try {
-    const res = await listPages()
+    const params = activeTopic.value ? { pageType: activeTopic.value } : {}
+    const res = await listPages(params)
     pages.value = res.items || []
   } catch (e) {
     pages.value = []
@@ -36,6 +46,20 @@ async function fetchPages() {
 }
 
 fetchPages()
+
+async function loadTopics() {
+  try {
+    const res = await listTopics()
+    topics.value = res.items || []
+  } catch { /* ignore */ }
+}
+
+loadTopics()
+
+function filterByTopic(topic) {
+  activeTopic.value = activeTopic.value === topic ? '' : topic
+  fetchPages()
+}
 
 async function selectPage(pageId) {
   pageLoading.value = true
@@ -66,6 +90,18 @@ async function openCompare() {
     }
     compareOpen.value = true
   } catch { /* ignore */ }
+}
+
+async function openGovernance() {
+  governanceOpen.value = true
+  governanceLoading.value = true
+  try {
+    const res = await listGovernance()
+    governanceItems.value = res.items || []
+  } catch {
+    governanceItems.value = []
+  }
+  governanceLoading.value = false
 }
 
 function openNew() {
@@ -110,9 +146,28 @@ function goBack() {
   <div class="mw-home">
     <div class="mw-toolbar">
       <PageHeader title="记忆" :icon="Brain" />
-      <Button variant="neutral" size="sm" @click="openNew">
-        <Plus :size="14" />
-        新建
+      <div class="mw-toolbar-actions">
+        <Button variant="neutral" size="sm" @click="openGovernance">
+          <Shield :size="14" />
+          治理
+        </Button>
+        <Button variant="neutral" size="sm" @click="openNew">
+          <Plus :size="14" />
+          新建
+        </Button>
+      </div>
+    </div>
+
+    <div v-if="topics.length > 0" class="mw-topics">
+      <Button
+        v-for="t in topics"
+        :key="t.normalizedKey || t.key"
+        :variant="activeTopic === (t.normalizedKey || t.key) ? '' : 'neutral'"
+        size="sm"
+        @click="filterByTopic(t.normalizedKey || t.key)"
+      >
+        <Hash :size="12" />
+        {{ t.normalizedKey || t.key }}
       </Button>
     </div>
 
@@ -165,6 +220,36 @@ function goBack() {
       v-bind="compareData"
       @close="compareOpen = false"
     />
+
+    <div v-if="governanceOpen" class="mw-governance-overlay" @click.self="governanceOpen = false">
+      <div class="mw-governance">
+        <div class="mw-governance-header">
+          <h3>治理面板</h3>
+          <Button variant="neutral" size="icon" @click="governanceOpen = false">
+            <span>&times;</span>
+          </Button>
+        </div>
+        <div v-if="governanceLoading" class="mw-skeleton">
+          <div class="mw-skeleton-line" v-for="n in 3" :key="n" />
+        </div>
+        <div v-else-if="governanceItems.length === 0" class="mw-governance-empty">
+          暂无治理请求
+        </div>
+        <div v-else class="mw-governance-list">
+          <div
+            v-for="item in governanceItems"
+            :key="item.requestId"
+            class="mw-governance-item"
+          >
+            <div class="mw-governance-item-head">
+              <span class="mw-governance-item-type">{{ item.requestType }}</span>
+              <span class="mw-governance-item-status">{{ item.status }}</span>
+            </div>
+            <div class="mw-governance-item-id">{{ item.requestId }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -177,10 +262,15 @@ function goBack() {
   gap: 1rem;
 }
 
-.mw-toolbar {
+.mw-toolbar-actions {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.mw-topics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
 }
 
 .mw-layout {
@@ -240,4 +330,26 @@ function goBack() {
   0%, 100% { opacity: 0.4; }
   50% { opacity: 0.8; }
 }
+
+.mw-governance-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; z-index: 100; }
+
+.mw-governance { background: var(--nb-background); border: 2px solid #000; border-radius: 0.75rem; padding: 1.25rem; width: 500px; max-width: 90vw; max-height: 70vh; overflow-y: auto; }
+
+.mw-governance-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+
+.mw-governance-header h3 { font-size: 1.1rem; font-weight: 800; }
+
+.mw-governance-empty { font-size: 0.85rem; color: var(--nb-text-secondary); text-align: center; padding: 2rem 0; }
+
+.mw-governance-list { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.mw-governance-item { border: 2px solid #000; border-radius: 0.5rem; padding: 0.75rem; }
+
+.mw-governance-item-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; }
+
+.mw-governance-item-type { font-size: 0.75rem; font-weight: 700; }
+
+.mw-governance-item-status { font-size: 0.65rem; padding: 1px 6px; border: 1.5px solid #000; border-radius: 99px; }
+
+.mw-governance-item-id { font-size: 0.7rem; color: var(--nb-text-secondary); word-break: break-all; }
 </style>

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { Eye, Plus, RefreshCw } from '@lucide/vue'
 import { Button } from 'neobrutalism-vue'
 import { Input } from 'neobrutalism-vue'
@@ -9,7 +9,10 @@ import ObservationDetailPage from './ObservationDetailPage.vue'
 import ObservationForm from './ObservationForm.vue'
 import ObservationDeleteConfirm from './ObservationDeleteConfirm.vue'
 import ObservationEmptyState from './ObservationEmptyState.vue'
-import { listObservations, createObservation, updateObservation, deleteObservation } from '../../api/observation.js'
+import {
+  listObservations, getObservation,
+  createObservation, updateObservation, deleteObservation,
+} from '../../api/observation.js'
 
 const observations = ref([])
 const loading = ref(false)
@@ -17,12 +20,15 @@ const error = ref('')
 const filterType = ref('')
 const searchQuery = ref('')
 const view = ref('list')
-const selectedId = ref(null)
 const formOpen = ref(false)
 const editingObservation = ref(null)
 const deleteTarget = ref(null)
 const saving = ref(false)
 const saveError = ref('')
+
+const detailObservation = ref(null)
+const detailLoading = ref(false)
+const detailError = ref('')
 
 const TYPES = [
   { value: '', label: '全部' },
@@ -31,10 +37,6 @@ const TYPES = [
   { value: 'insight', label: '洞察' },
   { value: 'misc', label: '其他' },
 ]
-
-const selectedObservation = computed(
-  () => observations.value.find((o) => o.id === selectedId.value) || null,
-)
 
 async function fetchList() {
   loading.value = true
@@ -54,13 +56,23 @@ async function fetchList() {
 
 watch([filterType, searchQuery], fetchList, { immediate: true })
 
-function openDetail(id) {
-  selectedId.value = id
+async function openDetail(id) {
   view.value = 'detail'
+  detailLoading.value = true
+  detailError.value = ''
+  try {
+    const res = await getObservation(id)
+    detailObservation.value = res.observation || null
+  } catch (e) {
+    detailObservation.value = null
+    detailError.value = e.message || '加载失败'
+  }
+  detailLoading.value = false
 }
 
 function goBack() {
-  selectedId.value = null
+  detailObservation.value = null
+  detailError.value = ''
   view.value = 'list'
 }
 
@@ -89,7 +101,7 @@ async function onSave(formData) {
 }
 
 function onDelete() {
-  deleteTarget.value = selectedObservation.value
+  deleteTarget.value = detailObservation.value
 }
 
 async function confirmDelete() {
@@ -155,8 +167,10 @@ async function confirmDelete() {
     </div>
 
     <ObservationDetailPage
-      v-else-if="selectedObservation"
-      :observation="selectedObservation"
+      v-else
+      :observation="detailObservation"
+      :loading="detailLoading"
+      :error="detailError"
       @back="goBack"
       @delete="onDelete"
     />

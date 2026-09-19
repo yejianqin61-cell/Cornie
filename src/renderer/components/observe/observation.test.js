@@ -69,6 +69,21 @@ describe('ObservationDetailPage', () => {
     expect(wrapper.text()).toContain('内容')
   })
 
+  it('shows loading skeleton', () => {
+    const wrapper = mount(ObservationDetailPage, {
+      props: { loading: true, observation: null },
+    })
+    expect(wrapper.find('.obs-detail-skeleton').exists()).toBe(true)
+  })
+
+  it('shows error with back button', () => {
+    const wrapper = mount(ObservationDetailPage, {
+      props: { error: '加载失败', observation: null },
+    })
+    expect(wrapper.text()).toContain('加载失败')
+    expect(wrapper.text()).toContain('返回列表')
+  })
+
   it('emits back', async () => {
     const wrapper = mount(ObservationDetailPage, {
       props: { observation: { id: '1' } },

@@ -58,3 +58,39 @@ export function listGovernance(params = {}) {
 export function getGovernanceRequest(requestId) {
   return apiGet(`/api/memory-wiki/governance/${requestId}`)
 }
+
+export function updateGovernanceStatus(requestId, status) {
+  return apiPut(`/api/memory-wiki/governance/${requestId}/status`, { status })
+}
+
+export function applyGovernanceRequest(requestId) {
+  return apiPost(`/api/memory-wiki/governance/${requestId}/apply`)
+}
+
+export function inspectionScan() {
+  return apiPost('/api/memory-wiki/governance/inspection-scan')
+}
+
+export function archivePage(pageId) {
+  return apiPost(`/api/memory-wiki/pages/${pageId}/archive`)
+}
+
+export function restorePage(pageId) {
+  return apiPost(`/api/memory-wiki/pages/${pageId}/restore`)
+}
+
+export function rollbackPage(pageId, versionId) {
+  return apiPost(`/api/memory-wiki/pages/${pageId}/rollback`, { versionId })
+}
+
+export function mergePages(targetPageId, sourcePageId) {
+  return apiPost('/api/memory-wiki/pages/merge', { targetPageId, sourcePageId })
+}
+
+export function updatePageStatus(pageId, status) {
+  return apiPut(`/api/memory-wiki/pages/${pageId}/status`, { status })
+}
+
+export function updatePageImportance(pageId, importance) {
+  return apiPut(`/api/memory-wiki/pages/${pageId}/importance`, { importance })
+}
