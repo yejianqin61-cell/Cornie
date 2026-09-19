@@ -1,0 +1,24 @@
+# Cornie Frontend Rules
+
+## Component Reuse
+- ALWAYS prefer existing neobrutalism-vue components before writing custom ones.
+- ALWAYS prefer lucide-vue icons before creating custom icons.
+- NEVER write a component from scratch if a neobrutalism-vue equivalent exists.
+- All project-specific reusable components go into src/renderer/components/.
+
+## Forbidden: Descriptive Copy
+- NEVER include feature description text in cards, headers, or any UI element.
+- NO marketing copy, NO feature explanations, NO "about" text anywhere.
+- Module cards show ONLY: icon + title + badge. No description paragraph.
+- Greetings are limited to time-based short phrases only (e.g., "上午好").
+
+## Forbidden: Emoji
+- NEVER use emoji characters (🐐 📖 🧠 🔍 💰 ✅ 📅 ⚙️ etc.) in any Vue component.
+- ALL icons MUST come from @lucide/vue.
+- If a Lucide icon does not exist, use the closest available alternative.
+
+## Code Style
+- No comments in Vue components or JavaScript unless documenting a non-obvious workaround.
+- Use `<script setup>` exclusively.
+- Prefer composition over configuration.
+- Import only what is used; avoid barrel imports that pull in unused code.

@@ -4,7 +4,8 @@ import { registerTool, getTool } from '../electron/backend/tools/registry.js'
 import { registerLedgerTools } from '../electron/backend/ledger/tools.js'
 import { cleanupSqliteFile, createRuntimeSqlitePath } from './tmp-artifacts.mjs'
 
-function assert(condition, message, details) {
+function assert(condition, message, details) {// 断言条件为真
+  // 如果条件为假，抛出错误
   if (!condition) {
     const error = new Error(message)
     error.details = details

@@ -1,0 +1,23 @@
+@import 'neobrutalism-vue/styles/neobrutalism.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: #f5f0eb;
+  color: #1a1a1a;
+  min-height: 100vh;
+}
+
+#app {
+  min-height: 100vh;
+}
