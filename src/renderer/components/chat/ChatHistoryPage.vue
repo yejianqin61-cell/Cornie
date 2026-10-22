@@ -7,6 +7,7 @@ import { getChatDay } from '../../api/chatlog.js'
 
 const props = defineProps({
   date: { type: String, required: true },
+  transientMessages: { type: Array, default: () => [] },
 })
 
 const messages = ref([])
@@ -48,6 +49,11 @@ defineExpose({ refresh: load })
     <div v-else class="chat-history-messages">
       <MessageRow
         v-for="msg in messages"
+        :key="msg.id"
+        :message="msg"
+      />
+      <MessageRow
+        v-for="msg in transientMessages"
         :key="msg.id"
         :message="msg"
       />

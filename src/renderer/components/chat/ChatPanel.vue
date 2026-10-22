@@ -1,15 +1,17 @@
 <script setup>
 import { ref, nextTick } from 'vue'
-import { Send, Loader2 } from '@lucide/vue'
+import { Send, Loader2, X } from '@lucide/vue'
 import { Button } from 'neobrutalism-vue'
 import ChatDateNav from './ChatDateNav.vue'
 import ChatHistoryPage from './ChatHistoryPage.vue'
-import { sendMessage } from '../../api/conversation.js'
+import { sendMessageStreamed } from '../../api/conversation.js'
 import { listChatDays } from '../../api/chatlog.js'
 
 const inputText = ref('')
 const sending = ref(false)
 const sendError = ref('')
+const transientMessages = ref([])
+const activeRequest = ref(null)
 
 const days = ref([])
 const selectedDate = ref('')
@@ -43,17 +45,44 @@ loadDays()
 async function handleSend() {
   const text = inputText.value.trim()
   if (!text || sending.value) return
+  const controller = new AbortController()
   sending.value = true
   sendError.value = ''
   inputText.value = ''
+  activeRequest.value = controller
+  transientMessages.value = [
+    { id: `pending-user-${Date.now()}`, role: 'user', text },
+    { id: `pending-assistant-${Date.now()}`, role: 'assistant', text: '' },
+  ]
   try {
-    await sendMessage({ message: text, date: selectedDate.value })
+    let streamError = null
+    await sendMessageStreamed(
+      { message: text, date: selectedDate.value },
+      (delta) => {
+        const assistant = transientMessages.value.at(-1)
+        if (assistant) assistant.text += delta
+      },
+      () => {},
+      (error) => {
+        streamError = error
+      },
+      { signal: controller.signal }
+    )
+    if (streamError) throw streamError
     if (historyRef.value?.refresh) await historyRef.value.refresh()
+    transientMessages.value = []
   } catch (e) {
-    sendError.value = e.message || '发送失败'
+    inputText.value = text
+    transientMessages.value = []
+    if (!controller.signal.aborted) sendError.value = e.message || '发送失败'
   } finally {
+    activeRequest.value = null
     sending.value = false
   }
+}
+
+function cancelSend() {
+  activeRequest.value?.abort()
 }
 
 function handleConfirmResolved() {
@@ -74,6 +103,7 @@ function handleConfirmResolved() {
     <ChatHistoryPage
       ref="historyRef"
       :date="selectedDate"
+      :transient-messages="transientMessages"
     />
     <div class="chat-panel-footer">
       <div v-if="sendError" class="chat-panel-error">{{ sendError }}</div>
@@ -94,6 +124,15 @@ function handleConfirmResolved() {
         >
           <Loader2 v-if="sending" :size="16" class="spin" />
           <Send v-else :size="16" />
+        </Button>
+        <Button
+          v-if="sending"
+          class="chat-panel-cancel"
+          size="icon"
+          variant="neutral"
+          @click="cancelSend"
+        >
+          <X :size="16" />
         </Button>
       </div>
     </div>

@@ -27,12 +27,19 @@ export function apiDelete(path) {
   return request(path, { method: 'DELETE' })
 }
 
-export function apiStream(path, body, onDelta, onDone, onError) {
+export function apiStream(path, body, onDelta, onDone, onError, { signal } = {}) {
   return fetch(`${BASE}${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
+    signal,
   }).then(async (res) => {
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      const error = new Error(data.error || `HTTP ${res.status}`)
+      onError?.(error)
+      throw error
+    }
     const reader = res.body.getReader()
     const decoder = new TextDecoder()
     let buffer = ''
