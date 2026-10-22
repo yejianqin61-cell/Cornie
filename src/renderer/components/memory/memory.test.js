@@ -130,6 +130,23 @@ describe('MemoryWikiDetail', () => {
     await btn.trigger('click')
     expect(wrapper.emitted('back')).toBeTruthy()
   })
+
+  it('emits explicit lifecycle actions with a listed version', async () => {
+    const wrapper = mount(MemoryWikiDetail, {
+      props: {
+        page: { pageId: 'p1', title: 'Test', status: 'active', importance: 'medium' },
+        versions: [{ versionId: 'v1', version: 'v1' }],
+      },
+    })
+    expect(wrapper.text()).toContain('归档')
+    await wrapper.get('[data-testid="memory-archive"]').trigger('click')
+    await wrapper.get('select[data-testid="memory-rollback-version"]').setValue('v1')
+    await wrapper.get('[data-testid="memory-rollback"]').trigger('click')
+    await wrapper.get('select[data-testid="memory-importance"]').setValue('high')
+    expect(wrapper.emitted('archive')).toBeTruthy()
+    expect(wrapper.emitted('rollback')[0][0]).toBe('v1')
+    expect(wrapper.emitted('importance')[0][0]).toBe('high')
+  })
 })
 
 describe('MemoryWikiEmptyState', () => {
