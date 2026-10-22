@@ -10,6 +10,9 @@ const api = vi.hoisted(() => ({
   getVersionDiff: vi.fn(),
   listTopics: vi.fn(),
   listGovernance: vi.fn(),
+  getGovernanceRequest: vi.fn(),
+  updateGovernanceStatus: vi.fn(),
+  applyGovernanceRequest: vi.fn(),
 }))
 
 vi.mock('../../api/memory-wiki.js', () => api)
@@ -48,6 +51,9 @@ beforeEach(() => {
   api.listVersions.mockResolvedValue({ items: [] })
   api.getVersionDiff.mockResolvedValue({ diff: { summaryDiff: 'changed' } })
   api.listGovernance.mockResolvedValue({ items: [] })
+  api.getGovernanceRequest.mockResolvedValue({ item: null })
+  api.updateGovernanceStatus.mockResolvedValue({ item: { requestId: 'gov-1', status: 'approved' } })
+  api.applyGovernanceRequest.mockResolvedValue({ result: { action: 'archive_page' } })
 })
 
 describe('MemoryWikiHomePage', () => {
@@ -81,5 +87,29 @@ describe('MemoryWikiHomePage', () => {
 
     expect(wrapper.findComponent({ name: 'MemoryWikiCompare' }).props('unavailable')).toBe(true)
     expect(wrapper.text()).toContain('至少需要两个版本')
+  })
+
+  it('shows governance evidence and applies only after approval', async () => {
+    const request = {
+      requestId: 'gov-1',
+      status: 'pending',
+      reason: '归档过期偏好',
+      evidence: [{ action: 'archive_page', pageId: 'coffee-page' }],
+    }
+    api.listGovernance.mockResolvedValue({ items: [request] })
+    api.getGovernanceRequest.mockResolvedValue({ item: request })
+    const wrapper = await mountHome()
+
+    await wrapper.vm.openGovernance()
+    await wrapper.vm.selectGovernance('gov-1')
+    expect(wrapper.text()).toContain('归档过期偏好')
+    expect(wrapper.text()).toContain('archive_page')
+
+    await wrapper.vm.decideGovernance('approved')
+    expect(api.updateGovernanceStatus).toHaveBeenCalledWith('gov-1', 'approved')
+
+    await wrapper.vm.applyGovernance()
+    expect(api.applyGovernanceRequest).toHaveBeenCalledWith('gov-1')
+    expect(wrapper.text()).toContain('archive_page')
   })
 })
