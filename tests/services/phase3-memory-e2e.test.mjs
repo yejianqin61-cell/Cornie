@@ -109,6 +109,13 @@ async function testMemoryLifecycleThroughRealHttp() {
       assert(proposal?.status === 'pending', 'expected archive proposal in governance queue', governance)
       assert(proposal.evidence[0]?.action === 'archive_page', 'expected archive evidence retained', proposal)
 
+      const approved = await json(`${base}/memory-wiki/governance/${proposal.requestId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'approved' })
+      })
+      assert(approved.item.status === 'approved', 'expected human approval before applying proposal', approved)
+
       const applied = await json(`${base}/memory-wiki/governance/${proposal.requestId}/apply`, { method: 'POST' })
       assert(applied.result.request.status === 'approved', 'expected applied proposal to be approved', applied)
 
