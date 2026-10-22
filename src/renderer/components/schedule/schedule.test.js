@@ -6,8 +6,8 @@ import ScheduleForm from './ScheduleForm.vue'
 
 describe('ScheduleList', () => {
   const items = [
-    { id: '1', title: '会议', startAt: '2026-09-16T10:00:00' },
-    { id: '2', title: '已取消', startAt: '2026-09-16T14:00:00', cancelledAt: '2026-09-16' },
+    { id: '1', title: '会议', startAt: '2026-09-16T10:00:00', status: 'scheduled' },
+    { id: '2', title: '已取消', startAt: '2026-09-16T14:00:00', status: 'cancelled' },
   ]
 
   it('renders items with times', () => {
@@ -22,6 +22,15 @@ describe('ScheduleList', () => {
     const firstIcon = buttons[0]
     await firstIcon.trigger('click')
     expect(wrapper.emitted('cancel')).toBeTruthy()
+  })
+
+  it('emits restore for a cancelled item from the service status', async () => {
+    const wrapper = mount(ScheduleList, {
+      props: { items: [{ id: '2', title: '已取消', startAt: '2026-09-16T14:00:00', status: 'cancelled' }] },
+    })
+    const buttons = wrapper.findAllComponents({ name: 'Button' })
+    await buttons[0].trigger('click')
+    expect(wrapper.emitted('restore')).toEqual([['2']])
   })
 })
 

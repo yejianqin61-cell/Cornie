@@ -5,7 +5,7 @@ import TodoEmptyState from './TodoEmptyState.vue'
 import TodoForm from './TodoForm.vue'
 
 describe('TodoList', () => {
-  const items = [{ id: '1', title: '买菜' }, { id: '2', title: '跑步', completedAt: '2026-09-16' }]
+  const items = [{ id: '1', title: '买菜', status: 'pending' }, { id: '2', title: '跑步', status: 'done' }]
 
   it('renders items', () => {
     const wrapper = mount(TodoList, { props: { items } })
@@ -21,6 +21,16 @@ describe('TodoList', () => {
       await checkBtn.trigger('click')
       expect(wrapper.emitted('complete')).toBeTruthy()
     }
+  })
+
+  it('emits reopen for a done item from the service status', async () => {
+    const wrapper = mount(TodoList, {
+      props: { items: [{ id: '2', title: '跑步', status: 'done' }] },
+    })
+    const buttons = wrapper.findAllComponents({ name: 'Button' })
+
+    await buttons[0].trigger('click')
+    expect(wrapper.emitted('reopen')).toEqual([['2']])
   })
 
   it('emits delete', async () => {
