@@ -22,8 +22,8 @@ function inferConfirmType(confirmRequest) {
   return 'tool_confirmation'
 }
 
-export function createConfirmService(store) {
-  const executor = createConfirmExecutor(store)
+export function createConfirmService(store, { chatFn } = {}) {
+  const executor = createConfirmExecutor(store, { chatFn })
 
   function requireExisting(id) {
     const confirmation = getPendingConfirmation(store, id)

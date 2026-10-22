@@ -1,8 +1,8 @@
 import { deleteMessagesByDate, getMessagesByDate } from '../../db.js'
 import { createConversationOrchestrator } from '../agent/orchestrator.js'
 
-export function conversationService(store, { baseDir = process.cwd() } = {}) {
-  const orchestrator = createConversationOrchestrator(store, { baseDir })
+export function conversationService(store, { baseDir = process.cwd(), chatFn, chatStreamFn } = {}) {
+  const orchestrator = createConversationOrchestrator(store, { baseDir, chatFn, chatStreamFn })
 
   return {
     sendMessage: ({ date, message }) => orchestrator.runTurn({ date, message }),

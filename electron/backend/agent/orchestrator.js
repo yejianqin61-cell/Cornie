@@ -66,8 +66,8 @@ function buildSpeakPrompt(assistantReply) {
 }
 
 // BE-04：streamFinalSpeak 支持外部取消 signal（透传至 chatStream）。
-async function streamFinalSpeak(assistantReply, onDelta, signal = null) {
-  const { content } = await chatStream(
+async function streamFinalSpeak(assistantReply, onDelta, signal = null, chatStreamFn = chatStream) {
+  const { content } = await chatStreamFn(
     {
       messages: [{ role: 'system', content: buildSpeakPrompt(assistantReply) }],
       temperature: 0.7,
@@ -143,7 +143,7 @@ function logLookupAudit(message, lookupContexts) {
   }
 }
 
-export function createConversationOrchestrator(store, { baseDir = process.cwd() } = {}) {
+export function createConversationOrchestrator(store, { baseDir = process.cwd(), chatFn, chatStreamFn } = {}) {
   const confirm = createConfirmService(store)
 
   return {
@@ -178,7 +178,8 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd() 
 
       try {
         let firstEnvelope = await requestProtocolEnvelope(baseMessages, telemetry, {
-          phase: 'conversation_initial'
+          phase: 'conversation_initial',
+          chatFn
         })
 
         if (firstEnvelope.type === 'reply' && looksLikeWriteIntent(message)) {
@@ -197,7 +198,8 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd() 
             legacyPromptCharsEstimate: recoveryPrompt.length
           })
           firstEnvelope = await requestProtocolEnvelope(recoveryMessages, telemetry, {
-            phase: 'conversation_write_intent_recovery'
+            phase: 'conversation_write_intent_recovery',
+            chatFn
           })
         }
 
@@ -327,7 +329,8 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd() 
               recordFollowupPromptTelemetry(telemetry, nextMessages.promptMetrics)
 
               const nextEnvelope = await requestProtocolEnvelope(currentMessages, telemetry, {
-                phase: isLookupOnlyRound ? 'conversation_lookup_followup' : 'conversation_tool_followup'
+                phase: isLookupOnlyRound ? 'conversation_lookup_followup' : 'conversation_tool_followup',
+                chatFn
               })
               if (nextEnvelope.type === 'reply') {
                 finalReply = nextEnvelope.assistant_reply
@@ -346,7 +349,7 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd() 
           // 454：说话段——直接回复时可选流式重说（tool_call 信封不流式）。
           if (streamFinalReply && typeof onFinalDelta === 'function') {
             try {
-              const streamed = await streamFinalSpeak(firstEnvelope.assistant_reply, onFinalDelta, signal)
+              const streamed = await streamFinalSpeak(firstEnvelope.assistant_reply, onFinalDelta, signal, chatStreamFn)
               finalReply = streamed ?? firstEnvelope.assistant_reply
             } catch (error) {
               console.error('Stream final speak failed, falling back to envelope reply:', error)

@@ -30,7 +30,7 @@ import { applyPersistedModelSettingsToEnv, createSettingsService } from './backe
 import { settingsRoutes } from './backend/settings/routes.js'
 import { listTelemetryRecords } from './backend/agent/telemetryStore.js'
 
-export async function createServer({ store, baseDir = process.cwd() }) {
+export async function createServer({ store, baseDir = process.cwd(), conversationOptions = {} }) {
   const app = express()
   app.use(express.json({ limit: '1mb' }))
   applyPersistedModelSettingsToEnv(store)
@@ -120,10 +120,10 @@ export async function createServer({ store, baseDir = process.cwd() }) {
   // BE-08：await 注册——失败显式抛错退出启动（不再静默 console），且先于 conversation 路由挂载，消除首轮竞态。
   await registerMemoryWikiTools({ baseDir, store }, { registerTool })
 
-  const confirm = createConfirmService(store)
+  const confirm = createConfirmService(store, conversationOptions)
   app.use('/api', confirmRoutes({ confirm }))
 
-  const conversation = conversationService(store, { baseDir })
+  const conversation = conversationService(store, { baseDir, ...conversationOptions })
   app.use('/api', conversationRoutes({ conversation }))
 
   app.get('/api/model/status', async (_req, res) => {

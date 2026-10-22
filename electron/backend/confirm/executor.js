@@ -236,7 +236,7 @@ function buildCategoryValidationReply(error) {
   return error?.message || '这个类目名现在还不太适合直接创建，小铃湾想再确认一下。'
 }
 
-export function createConfirmExecutor(store) {
+export function createConfirmExecutor(store, { chatFn } = {}) {
   return {
     async execute(confirmation) {
       const telemetry = createTurnTelemetry({
@@ -336,7 +336,8 @@ export function createConfirmExecutor(store) {
       recordFollowupPromptTelemetry(telemetry, followupMessages.promptMetrics)
 
       const envelope = await requestProtocolEnvelope(followupMessages.messages, telemetry, {
-        phase: 'confirmation_followup'
+        phase: 'confirmation_followup',
+        chatFn
       })
       const finalReply =
         envelope.type === 'reply'
