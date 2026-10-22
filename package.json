@@ -11,7 +11,7 @@
     "preview": "vite preview",
     "dist": "npm.cmd run build && electron-builder",
     "pack": "npm.cmd run build && electron-builder --dir",
-    "lint": "eslint . && prettier --check .",
+    "lint": "eslint . && prettier --check electron scripts tests eslint.config.js vite.config.js vitest.config.js",
     "clean:tmp": "node scripts/cleanup-runtime-artifacts.mjs",
     "clean:root-tmp": "node scripts/cleanup-root-tmp-sqlite.mjs",
     "test:fast": "node scripts/run-tests.mjs fast",
