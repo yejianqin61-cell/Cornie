@@ -9,6 +9,7 @@ import LedgerTransactionList from './LedgerTransactionList.vue'
 import LedgerTransactionForm from './LedgerTransactionForm.vue'
 import LedgerMonthSummary from './LedgerMonthSummary.vue'
 import { listEntries, listLedgerCategories, addExpense, addIncome, updateEntry, deleteEntry } from '../../api/ledger.js'
+import { singaporeDate } from '../../../../shared/local-date.js'
 
 const transactions = ref([])
 const categories = ref([])
@@ -19,7 +20,7 @@ const editTarget = ref(null)
 const deleteTarget = ref(null)
 const deleteError = ref('')
 const filterType = ref('all')
-const filterMonth = ref(new Date().toISOString().slice(0, 7))
+const filterMonth = ref(singaporeDate().slice(0, 7))
 const saving = ref(false)
 const saveError = ref('')
 

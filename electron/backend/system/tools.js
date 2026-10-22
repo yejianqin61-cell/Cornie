@@ -2,11 +2,12 @@ import { getModelConfig } from '../model/config.js'
 import { checkHealth as checkModelHealth } from '../model/deepseek/client.js'
 import { createChatlogService } from '../chatlog/service.js'
 import { createObservationService } from '../observation/service.js'
+import { singaporeDate } from '../../../shared/local-date.js'
 
 function buildRuntimeContext() {
   const config = getModelConfig()
   return {
-    date: new Date().toISOString().slice(0, 10),
+    date: singaporeDate(),
     provider: config.provider,
     model: config.model,
     configured: Boolean(config.apiKey),

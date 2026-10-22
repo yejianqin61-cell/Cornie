@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { Button } from 'neobrutalism-vue'
 import { X, Loader2 } from '@lucide/vue'
+import { singaporeDate } from '../../../../shared/local-date.js'
 
 const props = defineProps({
   initial: { type: Object, default: () => ({}) },
@@ -12,7 +13,7 @@ const props = defineProps({
 const emit = defineEmits(['save', 'cancel'])
 
 const form = ref({
-  date: props.initial.date || new Date().toISOString().slice(0, 10),
+  date: props.initial.date || singaporeDate(),
   type: props.initial.type || 'note',
   title: props.initial.title || '',
   content: props.initial.content || '',

@@ -1,6 +1,7 @@
 <script setup>
 import { XCircle, RotateCcw, Trash2 } from '@lucide/vue'
 import { Button } from 'neobrutalism-vue'
+import { SINGAPORE_TIME_ZONE } from '../../../../shared/local-date.js'
 
 const props = defineProps({
   items: { type: Array, default: () => [] },
@@ -11,6 +12,7 @@ const emit = defineEmits(['cancel', 'restore', 'delete'])
 function formatTime(t) {
   if (!t) return ''
   return new Date(t).toLocaleString('zh-CN', {
+    timeZone: SINGAPORE_TIME_ZONE,
     month: 'numeric', day: 'numeric',
     hour: '2-digit', minute: '2-digit',
   })

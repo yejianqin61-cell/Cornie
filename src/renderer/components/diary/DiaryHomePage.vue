@@ -8,11 +8,13 @@ import { ref, computed, watch } from 'vue'
 import { BookOpen, Clock, RefreshCw } from '@lucide/vue'
 import { Button } from 'neobrutalism-vue'
 import { listEntries, getEntry, upsertEntry, regenerateCornie, getOnThisDay } from '../../api/diary.js'
+import { singaporeDate } from '../../../../shared/local-date.js'
 
-const now = new Date()
-const year = ref(now.getFullYear())
-const month = ref(now.getMonth() + 1)
-const selectedDate = ref(now.toISOString().slice(0, 10))
+const today = singaporeDate()
+const [todayYear, todayMonth] = today.split('-').map(Number)
+const year = ref(todayYear)
+const month = ref(todayMonth)
+const selectedDate = ref(today)
 const entries = ref([])
 const entry = ref(null)
 const onThisDayItems = ref([])

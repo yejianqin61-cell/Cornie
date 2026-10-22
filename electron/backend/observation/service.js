@@ -2,10 +2,11 @@ import { deleteObservationLog, getObservationLog, listObservationLogs, saveObser
 import { buildObservationPromptPolicySummary, getObservationPromptPolicy, OBSERVATION_PROMPT_POLICY } from './policy.js'
 import { enqueueObservationCompressionCandidates } from './governance.js'
 import { badRequest, HttpError } from '../http/errors.js'
+import { singaporeDate } from '../../../shared/local-date.js'
 
 function normalizeObservationInput(input = {}) {
   return {
-    date: String(input.date ?? new Date().toISOString().slice(0, 10)),
+    date: String(input.date ?? singaporeDate()),
     type: String(input.type ?? 'misc'),
     title: String(input.title ?? '').trim(),
     content: String(input.content ?? '').trim(),
@@ -202,7 +203,7 @@ export function createObservationService(store) {
     },
     get: (id) => getObservationLog(store, id),
     listByDate,
-    listToday: (date = new Date().toISOString().slice(0, 10)) => listObservationLogs(store, { date }),
+    listToday: (date = singaporeDate()) => listObservationLogs(store, { date }),
     listByRange: ({ from, to, type, q, limit }) => listObservationLogs(store, { from, to, type, q, limit }),
     listByRecall,
     listTodayForConversation: (date) => listObservationLogs(store, {

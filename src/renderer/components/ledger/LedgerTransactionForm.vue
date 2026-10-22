@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { X, Loader2 } from '@lucide/vue'
 import { Button } from 'neobrutalism-vue'
+import { singaporeDate } from '../../../../shared/local-date.js'
 
 const props = defineProps({
   initialData: { type: Object, default: null },
@@ -15,7 +16,7 @@ const emit = defineEmits(['save', 'cancel'])
 const type = ref(props.initialData?.type || 'expense')
 const category = ref(props.initialData?.categoryId || props.initialData?.category || '')
 const amount = ref(props.initialData?.amount || '')
-const date = ref(props.initialData?.date || new Date().toISOString().slice(0, 10))
+const date = ref(props.initialData?.date || singaporeDate())
 const note = ref(props.initialData?.note || '')
 
 const filteredCategories = computed(() =>

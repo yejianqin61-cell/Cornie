@@ -1,8 +1,9 @@
 import { Router } from 'express'
 import { asyncHandler } from '../http/middleware.js'
 import { requireISODate, requireString } from '../validators.js'
+import { singaporeDate } from '../../../shared/local-date.js'
 
-export function conversationRoutes({ conversation }) {
+export function conversationRoutes({ conversation, now = () => new Date() }) {
   const r = Router()
 
   r.post(
@@ -11,7 +12,7 @@ export function conversationRoutes({ conversation }) {
       const message = requireString(req.body?.message ?? '', 'message', { maxLen: 5000 })
       const date = req.body?.date
         ? requireISODate(req.body.date)
-        : new Date().toISOString().slice(0, 10)
+        : singaporeDate(now())
 
       const result = await conversation.sendMessage({ date, message })
       res.json(result)
@@ -26,7 +27,7 @@ export function conversationRoutes({ conversation }) {
       const message = requireString(req.body?.message ?? '', 'message', { maxLen: 5000 })
       const date = req.body?.date
         ? requireISODate(req.body.date)
-        : new Date().toISOString().slice(0, 10)
+        : singaporeDate(now())
 
       res.setHeader('Content-Type', 'text/event-stream')
       res.setHeader('Cache-Control', 'no-cache')

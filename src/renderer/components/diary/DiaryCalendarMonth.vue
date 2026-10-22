@@ -1,6 +1,7 @@
 <script setup>
 import { ChevronLeft, ChevronRight } from '@lucide/vue'
 import { Button } from 'neobrutalism-vue'
+import { singaporeDate } from '../../../../shared/local-date.js'
 
 const props = defineProps({
   entries: { type: Array, default: () => [] },
@@ -20,7 +21,7 @@ const firstDayOfWeek = (new Date(props.year, props.month - 1, 1).getDay() + 6) %
 const entryMap = new Map(props.entries.map((e) => [e.date, e]))
 
 function isToday(dateStr) {
-  return dateStr === new Date().toISOString().slice(0, 10)
+  return dateStr === singaporeDate()
 }
 
 function dayClasses(dateStr) {

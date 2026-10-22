@@ -6,6 +6,7 @@ import ChatDateNav from './ChatDateNav.vue'
 import ChatHistoryPage from './ChatHistoryPage.vue'
 import { sendMessageStreamed } from '../../api/conversation.js'
 import { listChatDays } from '../../api/chatlog.js'
+import { singaporeDate } from '../../../../shared/local-date.js'
 
 const inputText = ref('')
 const sending = ref(false)
@@ -20,7 +21,7 @@ const daysLoading = ref(false)
 const historyRef = ref(null)
 
 function todayStr() {
-  return new Date().toISOString().slice(0, 10)
+  return singaporeDate()
 }
 
 async function loadDays() {
