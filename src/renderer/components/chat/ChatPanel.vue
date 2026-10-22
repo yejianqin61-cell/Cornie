@@ -104,6 +104,7 @@ function handleConfirmResolved() {
       ref="historyRef"
       :date="selectedDate"
       :transient-messages="transientMessages"
+      @confirm-resolved="handleConfirmResolved"
     />
     <div class="chat-panel-footer">
       <div v-if="sendError" class="chat-panel-error">{{ sendError }}</div>

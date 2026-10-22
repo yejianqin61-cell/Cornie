@@ -1,5 +1,5 @@
 import { apiPost } from './client.js'
 
-export function confirmAction(confirmId, action) {
-  return apiPost(`/api/confirm/${confirmId}`, { action })
+export function confirmAction(confirmId, decision) {
+  return apiPost(`/api/confirmations/${confirmId}/decision`, { decision })
 }

@@ -10,13 +10,16 @@ const props = defineProps({
 const emit = defineEmits(['resolved'])
 const processing = ref(false)
 const error = ref('')
+const status = ref(props.confirm.status || 'pending')
 
-async function act(action) {
+async function act(decision) {
+  if (processing.value || status.value !== 'pending') return
   processing.value = true
   error.value = ''
   try {
-    await confirmAction(props.confirm.id, action)
-    emit('resolved', { id: props.confirm.id, action })
+    const result = await confirmAction(props.confirm.id, decision)
+    status.value = result.confirmation?.status || (decision === 'approve' ? 'executed' : 'rejected')
+    emit('resolved', { id: props.confirm.id, decision, status: status.value })
   } catch (e) {
     error.value = e.message || '操作失败'
   } finally {
@@ -29,9 +32,10 @@ async function act(action) {
   <div class="confirm-card">
     <div class="confirm-card-message">{{ confirm.message || '确认执行此操作？' }}</div>
     <div class="confirm-card-actions">
-      <Button size="sm" :disabled="processing" @click="act('confirm')">确认</Button>
-      <Button size="sm" variant="neutral" :disabled="processing" @click="act('deny')">拒绝</Button>
+      <Button size="sm" :disabled="processing || status !== 'pending'" @click="act('approve')">确认</Button>
+      <Button size="sm" variant="neutral" :disabled="processing || status !== 'pending'" @click="act('reject')">拒绝</Button>
     </div>
+    <div v-if="status !== 'pending'" class="confirm-card-status">{{ status === 'executed' ? '已执行' : '已拒绝' }}</div>
     <div v-if="error" class="confirm-card-error">{{ error }}</div>
   </div>
 </template>
@@ -60,5 +64,11 @@ async function act(action) {
   margin-top: 0.5rem;
   font-size: 0.7rem;
   color: var(--nb-danger, #d32f2f);
+}
+
+.confirm-card-status {
+  margin-top: 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 700;
 }
 </style>

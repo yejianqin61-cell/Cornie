@@ -10,6 +10,8 @@ const props = defineProps({
   transientMessages: { type: Array, default: () => [] },
 })
 
+defineEmits(['confirmResolved'])
+
 const messages = ref([])
 const loading = ref(false)
 const error = ref('')
@@ -51,11 +53,13 @@ defineExpose({ refresh: load })
         v-for="msg in messages"
         :key="msg.id"
         :message="msg"
+        @confirm-resolved="$emit('confirmResolved', $event)"
       />
       <MessageRow
         v-for="msg in transientMessages"
         :key="msg.id"
         :message="msg"
+        @confirm-resolved="$emit('confirmResolved', $event)"
       />
     </div>
   </div>
