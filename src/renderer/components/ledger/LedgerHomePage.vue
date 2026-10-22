@@ -17,6 +17,7 @@ const error = ref('')
 const showForm = ref(false)
 const editTarget = ref(null)
 const deleteTarget = ref(null)
+const deleteError = ref('')
 const filterType = ref('all')
 const filterMonth = ref(new Date().toISOString().slice(0, 7))
 const saving = ref(false)
@@ -108,6 +109,7 @@ async function onSave(data) {
 
 function confirmDelete(tx) {
   deleteTarget.value = tx
+  deleteError.value = ''
 }
 
 async function onDelete() {
@@ -115,8 +117,11 @@ async function onDelete() {
   try {
     await deleteEntry(deleteTarget.value.id)
     deleteTarget.value = null
+    deleteError.value = ''
     fetchEntries()
-  } catch { /* ignore */ }
+  } catch (e) {
+    deleteError.value = e.message || '删除失败，请重新确认'
+  }
 }
 </script>
 
@@ -196,8 +201,9 @@ async function onDelete() {
       :open="!!deleteTarget"
       title="删除记录"
       :message="deleteTarget ? '确认删除「' + (deleteTarget.note || '无备注') + '」这条收支记录吗？' : ''"
+      :error="deleteError"
       :onConfirm="onDelete"
-      :onCancel="() => deleteTarget = null"
+      :onCancel="() => { deleteTarget = null; deleteError = '' }"
     />
   </div>
 </template>

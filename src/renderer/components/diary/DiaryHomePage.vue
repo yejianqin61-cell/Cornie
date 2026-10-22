@@ -20,6 +20,8 @@ const loading = ref(false)
 const entryError = ref('')
 const monthError = ref('')
 const regening = ref(false)
+const writeError = ref('')
+const retryWrite = ref(null)
 
 const monthKey = computed(() => `${year.value}-${String(month.value).padStart(2, '0')}`)
 
@@ -85,19 +87,29 @@ function nextMonth() {
 }
 
 async function saveUserText(text) {
+  writeError.value = ''
+  retryWrite.value = null
   try {
     const res = await upsertEntry(selectedDate.value, { userText: text })
     entry.value = res.entry
     fetchMonth()
-  } catch { /* ignore */ }
+  } catch (e) {
+    writeError.value = e.message || '保存失败'
+    retryWrite.value = () => saveUserText(text)
+  }
 }
 
 async function doRegenerate() {
   regening.value = true
+  writeError.value = ''
+  retryWrite.value = null
   try {
     const res = await regenerateCornie(selectedDate.value)
     entry.value = res.entry
-  } catch { /* ignore */ }
+  } catch (e) {
+    writeError.value = e.message || '生成失败'
+    retryWrite.value = doRegenerate
+  }
   regening.value = false
 }
 
@@ -130,6 +142,12 @@ const hasContent = computed(() => entry.value && (entry.value.userText || entry.
         <div v-else-if="entryError" class="diary-banner diary-banner--error">
           <span>{{ entryError }}</span>
           <Button variant="neutral" size="sm" @click="fetchEntry">
+            <RefreshCw :size="12" /> 重试
+          </Button>
+        </div>
+        <div v-if="writeError" class="diary-banner diary-banner--error">
+          <span>{{ writeError }}</span>
+          <Button variant="neutral" size="sm" @click="retryWrite">
             <RefreshCw :size="12" /> 重试
           </Button>
         </div>

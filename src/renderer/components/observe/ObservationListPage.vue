@@ -23,6 +23,7 @@ const view = ref('list')
 const formOpen = ref(false)
 const editingObservation = ref(null)
 const deleteTarget = ref(null)
+const deleteError = ref('')
 const saving = ref(false)
 const saveError = ref('')
 
@@ -102,6 +103,7 @@ async function onSave(formData) {
 
 function onDelete() {
   deleteTarget.value = detailObservation.value
+  deleteError.value = ''
 }
 
 async function confirmDelete() {
@@ -109,10 +111,11 @@ async function confirmDelete() {
   try {
     await deleteObservation(deleteTarget.value.id)
     deleteTarget.value = null
+    deleteError.value = ''
     if (view.value === 'detail') goBack()
     fetchList()
-  } catch {
-    // ignore
+  } catch (e) {
+    deleteError.value = e.message || '删除失败，请重新确认'
   }
 }
 </script>
@@ -187,8 +190,9 @@ async function confirmDelete() {
     <ObservationDeleteConfirm
       :open="!!deleteTarget"
       :title="deleteTarget?.title"
+      :error="deleteError"
       @confirm="confirmDelete"
-      @cancel="deleteTarget = null"
+      @cancel="deleteTarget = null; deleteError = ''"
     />
   </div>
 </template>

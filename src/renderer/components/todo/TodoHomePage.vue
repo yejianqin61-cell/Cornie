@@ -13,6 +13,9 @@ const loading = ref(false)
 const error = ref('')
 const submitting = ref(false)
 const submitError = ref('')
+const formResetKey = ref(0)
+const actionError = ref('')
+const retryAction = ref(null)
 const view = ref('open')
 
 const VIEWS = [
@@ -36,11 +39,22 @@ async function fetchTodos() {
 
 watch(view, fetchTodos, { immediate: true })
 
+function clearActionError() {
+  actionError.value = ''
+  retryAction.value = null
+}
+
+function showActionError(error, retry = null) {
+  actionError.value = error.message || '操作失败'
+  retryAction.value = retry
+}
+
 async function onCreate(title) {
   submitting.value = true
   submitError.value = ''
   try {
     await createTodo({ title })
+    formResetKey.value++
     fetchTodos()
   } catch (e) {
     submitError.value = e.message || '创建失败'
@@ -49,32 +63,47 @@ async function onCreate(title) {
 }
 
 async function onComplete(id) {
+  clearActionError()
   try {
     await completeTodo(id)
     fetchTodos()
-  } catch { /* ignore */ }
+  } catch (e) {
+    showActionError(e, () => onComplete(id))
+  }
 }
 
 async function onReopen(id) {
+  clearActionError()
   try {
     await reopenTodo(id)
     fetchTodos()
-  } catch { /* ignore */ }
+  } catch (e) {
+    showActionError(e, () => onReopen(id))
+  }
 }
 
 async function onDelete(id) {
+  clearActionError()
   try {
     await deleteTodo(id)
     fetchTodos()
-  } catch { /* ignore */ }
+  } catch (e) {
+    showActionError(e)
+  }
 }
 </script>
 
 <template>
   <div class="todo-home">
     <PageHeader title="待办" :icon="ListTodo" />
-    <TodoForm :submitting="submitting" @create="onCreate" />
+    <TodoForm :submitting="submitting" :resetKey="formResetKey" @create="onCreate" />
     <div v-if="submitError" class="todo-banner todo-banner--error">{{ submitError }}</div>
+    <div v-if="actionError" class="todo-banner todo-banner--error">
+      <span>{{ actionError }}</span>
+      <Button v-if="retryAction" variant="neutral" size="sm" @click="retryAction">
+        <RefreshCw :size="12" /> 重试
+      </Button>
+    </div>
     <div class="todo-filters">
       <Button
         v-for="v in VIEWS"

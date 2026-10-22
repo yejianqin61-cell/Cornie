@@ -13,6 +13,9 @@ const loading = ref(false)
 const error = ref('')
 const submitting = ref(false)
 const submitError = ref('')
+const formResetKey = ref(0)
+const actionError = ref('')
+const retryAction = ref(null)
 const view = ref('upcoming')
 
 const VIEWS = [
@@ -36,11 +39,22 @@ async function fetchSchedules() {
 
 watch(view, fetchSchedules, { immediate: true })
 
+function clearActionError() {
+  actionError.value = ''
+  retryAction.value = null
+}
+
+function showActionError(error, retry = null) {
+  actionError.value = error.message || '操作失败'
+  retryAction.value = retry
+}
+
 async function onCreate({ title, startAt }) {
   submitting.value = true
   submitError.value = ''
   try {
     await createSchedule({ title, startAt })
+    formResetKey.value++
     fetchSchedules()
   } catch (e) {
     submitError.value = e.message || '创建失败'
@@ -49,32 +63,47 @@ async function onCreate({ title, startAt }) {
 }
 
 async function onCancel(id) {
+  clearActionError()
   try {
     await cancelSchedule(id)
     fetchSchedules()
-  } catch { /* ignore */ }
+  } catch (e) {
+    showActionError(e, () => onCancel(id))
+  }
 }
 
 async function onRestore(id) {
+  clearActionError()
   try {
     await restoreSchedule(id)
     fetchSchedules()
-  } catch { /* ignore */ }
+  } catch (e) {
+    showActionError(e, () => onRestore(id))
+  }
 }
 
 async function onDelete(id) {
+  clearActionError()
   try {
     await deleteSchedule(id)
     fetchSchedules()
-  } catch { /* ignore */ }
+  } catch (e) {
+    showActionError(e)
+  }
 }
 </script>
 
 <template>
   <div class="sch-home">
     <PageHeader title="日程" :icon="Calendar" />
-    <ScheduleForm :submitting="submitting" @create="onCreate" />
+    <ScheduleForm :submitting="submitting" :resetKey="formResetKey" @create="onCreate" />
     <div v-if="submitError" class="sch-banner sch-banner--error">{{ submitError }}</div>
+    <div v-if="actionError" class="sch-banner sch-banner--error">
+      <span>{{ actionError }}</span>
+      <Button v-if="retryAction" variant="neutral" size="sm" @click="retryAction">
+        <RefreshCw :size="12" /> 重试
+      </Button>
+    </div>
     <div class="sch-filters">
       <Button
         v-for="v in VIEWS"

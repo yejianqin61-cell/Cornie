@@ -13,7 +13,6 @@ const emit = defineEmits(['save'])
 const draft = ref(props.text)
 const changed = ref(false)
 const saving = ref(false)
-const saveError = ref('')
 
 watch(() => props.text, (v) => {
   draft.value = v
@@ -28,13 +27,7 @@ function onInput(e) {
 async function save() {
   if (saving.value) return
   saving.value = true
-  saveError.value = ''
-  try {
-    emit('save', draft.value)
-    changed.value = false
-  } catch (e) {
-    saveError.value = e.message || '保存失败'
-  }
+  emit('save', draft.value)
   saving.value = false
 }
 </script>
@@ -55,7 +48,6 @@ async function save() {
         {{ saving ? '保存中...' : '保存' }}
       </Button>
     </div>
-    <div v-if="saveError" class="user-diary-error">{{ saveError }}</div>
   </div>
 </template>
 
@@ -101,12 +93,6 @@ async function save() {
 .user-diary-actions {
   display: flex;
   gap: 0.5rem;
-}
-
-.user-diary-error {
-  font-size: 0.7rem;
-  color: var(--nb-danger, #d32f2f);
-  font-weight: 600;
 }
 
 .spin {

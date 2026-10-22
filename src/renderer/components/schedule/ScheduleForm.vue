@@ -1,10 +1,11 @@
 <script setup>
 import { Plus, Loader2 } from '@lucide/vue'
 import { Button, Input } from 'neobrutalism-vue'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
 const props = defineProps({
   submitting: { type: Boolean, default: false },
+  resetKey: { type: Number, default: 0 },
 })
 
 const emit = defineEmits(['create'])
@@ -12,11 +13,14 @@ const emit = defineEmits(['create'])
 const title = ref('')
 const startAt = ref('')
 
+watch(() => props.resetKey, () => {
+  title.value = ''
+  startAt.value = ''
+})
+
 function submit() {
   if (!title.value.trim() || !startAt.value) return
   emit('create', { title: title.value.trim(), startAt: startAt.value })
-  title.value = ''
-  startAt.value = ''
 }
 </script>
 

@@ -6,6 +6,7 @@ defineProps({
   open: { type: Boolean, required: true },
   title: { type: String, required: true },
   message: { type: String, required: true },
+  error: { type: String, default: '' },
   onConfirm: { type: Function, required: true },
   onCancel: { type: Function, required: true },
 })
@@ -19,6 +20,7 @@ defineProps({
         <h3 class="confirm-dialog-title">{{ title }}</h3>
       </div>
       <p class="confirm-dialog-message">{{ message }}</p>
+      <p v-if="error" class="confirm-dialog-error">{{ error }}</p>
       <div class="confirm-dialog-actions">
         <Button variant="outline" size="sm" @click="onCancel">
           取消
@@ -70,6 +72,13 @@ defineProps({
   font-weight: 600;
   color: #555;
   line-height: 1.5;
+}
+
+.confirm-dialog-error {
+  margin: -8px 0 16px;
+  color: var(--nb-danger, #d32f2f);
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .confirm-dialog-actions {
