@@ -6,7 +6,8 @@
 
 ## 重置
 
-在单独的 Demo 数据目录调用 `loadDemoMemorySet({ baseDir })`。它只创建固定 ID 缺失的页面，重复调用不会增加页面数量。
+在单独的 Demo 数据目录运行
+`npm run load:demo-memory -- --base-dir <demo-directory>`。它只创建固定 ID 缺失的页面，重复调用不会增加页面数量。
 
 预置页包括：项目搭档林姐、咖啡偏好、作品集答辩事件，以及“作品集范围冲突”主题页。
 

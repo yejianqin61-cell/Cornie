@@ -14,6 +14,7 @@
     "lint": "eslint . && prettier --check electron scripts tests eslint.config.js vite.config.js vitest.config.js",
     "clean:tmp": "node scripts/cleanup-runtime-artifacts.mjs",
     "clean:root-tmp": "node scripts/cleanup-root-tmp-sqlite.mjs",
+    "load:demo-memory": "node scripts/load-demo-memory.mjs",
     "test:fast": "node scripts/run-tests.mjs fast",
     "test:integration": "node scripts/run-tests.mjs integration",
     "test:full": "node scripts/run-tests.mjs full",
