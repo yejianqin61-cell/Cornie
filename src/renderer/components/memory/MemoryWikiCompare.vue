@@ -3,6 +3,7 @@ defineProps({
   fromVersion: { type: Object, default: () => ({}) },
   toVersion: { type: Object, default: () => ({}) },
   diff: { type: Object, default: () => ({}) },
+  unavailable: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['close'])
@@ -17,7 +18,10 @@ const emit = defineEmits(['close'])
           {{ fromVersion.version }} → {{ toVersion.version }}
         </span>
       </div>
-      <div class="mw-compare-body">
+      <div v-if="unavailable" class="mw-compare-empty">
+        至少需要两个版本才能比较变更。
+      </div>
+      <div v-else class="mw-compare-body">
         <div class="mw-compare-section">
           <div class="mw-compare-label">{{ diff.summaryDiff || '摘要变更' }}</div>
           <div class="mw-compare-text">{{ diff.bodyDiff || diff.summaryDiff || '无差异' }}</div>
@@ -72,6 +76,14 @@ const emit = defineEmits(['close'])
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+.mw-compare-empty {
+  padding: 1rem;
+  border: 1.5px solid var(--nb-border);
+  border-radius: 0.5rem;
+  color: var(--nb-text-secondary);
+  font-size: 0.85rem;
 }
 
 .mw-compare-section {

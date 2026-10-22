@@ -14,6 +14,7 @@ import {
 } from '../../api/memory-wiki.js'
 
 const pages = ref([])
+const allPages = ref([])
 const loading = ref(false)
 const error = ref('')
 const selectedPage = ref(null)
@@ -35,10 +36,11 @@ async function fetchPages() {
   loading.value = true
   error.value = ''
   try {
-    const params = activeTopic.value ? { pageType: activeTopic.value } : {}
-    const res = await listPages(params)
-    pages.value = res.items || []
+    const res = await listPages({})
+    allPages.value = res.items || []
+    applyTopicFilter()
   } catch (e) {
+    allPages.value = []
     pages.value = []
     error.value = e.message || '加载失败'
   }
@@ -51,6 +53,7 @@ async function loadTopics() {
   try {
     const res = await listTopics()
     topics.value = res.items || []
+    applyTopicFilter()
   } catch { /* ignore */ }
 }
 
@@ -58,7 +61,17 @@ loadTopics()
 
 function filterByTopic(topic) {
   activeTopic.value = activeTopic.value === topic ? '' : topic
-  fetchPages()
+  applyTopicFilter()
+}
+
+function applyTopicFilter() {
+  if (!activeTopic.value) {
+    pages.value = [...allPages.value]
+    return
+  }
+  const topic = topics.value.find((item) => (item.normalizedKey || item.key) === activeTopic.value)
+  const pageIds = new Set(Array.isArray(topic?.memoryPageIds) ? topic.memoryPageIds : [])
+  pages.value = allPages.value.filter((page) => pageIds.has(page.pageId || page.id))
 }
 
 async function selectPage(pageId) {
@@ -87,6 +100,8 @@ async function openCompare() {
         fromVersion: versions[1],
         toVersion: versions[0],
       }
+    } else {
+      compareData.value = { unavailable: true }
     }
     compareOpen.value = true
   } catch { /* ignore */ }
@@ -119,17 +134,18 @@ function openEdit() {
 async function onSave(formData) {
   saving.value = true
   saveError.value = ''
+  const editedPageId = editorInitial.value?.pageId || ''
   try {
-    if (editorInitial.value?.pageId) {
-      await updatePage(editorInitial.value.pageId, formData)
+    if (editedPageId) {
+      await updatePage(editedPageId, formData)
     } else {
       await createPage(formData)
     }
     editorOpen.value = false
     editorInitial.value = {}
-    fetchPages()
-    if (selectedPage.value?.pageId === editorInitial.value.pageId) {
-      selectPage(editorInitial.value.pageId)
+    await fetchPages()
+    if (selectedPage.value?.pageId === editedPageId) {
+      await selectPage(editedPageId)
     }
   } catch (e) {
     saveError.value = e.message || '保存失败'
