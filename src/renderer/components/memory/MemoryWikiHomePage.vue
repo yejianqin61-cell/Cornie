@@ -11,7 +11,7 @@ import MemoryWikiEmptyState from './MemoryWikiEmptyState.vue'
 import {
   listPages, getPage, createPage, updatePage,
   listVersions, getVersionDiff, listTopics, listGovernance,
-  getGovernanceRequest, updateGovernanceStatus, applyGovernanceRequest,
+  getPageSourceTrace, getGovernanceRequest, updateGovernanceStatus, applyGovernanceRequest,
   archivePage, restorePage, rollbackPage, updatePageImportance,
 } from '../../api/memory-wiki.js'
 
@@ -83,8 +83,13 @@ function applyTopicFilter() {
 async function selectPage(pageId) {
   pageLoading.value = true
   try {
-    const [res, versionRes] = await Promise.all([getPage(pageId), listVersions(pageId)])
-    selectedPage.value = res.page
+    const [res, versionRes, traceRes] = await Promise.all([getPage(pageId), listVersions(pageId), getPageSourceTrace(pageId)])
+    const trace = traceRes.trace || {}
+    const sources = [
+      ...(trace.chatSources || []).map((item) => ({ label: item.exists ? `${item.title}：${item.preview}` : `${item.title}（来源已不可用）` })),
+      ...(trace.observationSources || []).map((item) => ({ label: item.exists ? `${item.title}：${item.preview}` : `${item.title}（来源已不可用）` })),
+    ]
+    selectedPage.value = { ...res.page, sources }
     selectedVersions.value = versionRes.items || []
   } catch {
     selectedPage.value = null

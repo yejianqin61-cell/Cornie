@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const api = vi.hoisted(() => ({
   listPages: vi.fn(),
   getPage: vi.fn(),
+  getPageSourceTrace: vi.fn(),
   createPage: vi.fn(),
   updatePage: vi.fn(),
   listVersions: vi.fn(),
@@ -47,6 +48,7 @@ beforeEach(() => {
     items: [{ normalizedKey: 'coffee', memoryPageIds: ['coffee-page'] }],
   })
   api.getPage.mockResolvedValue({ page: { pageId: 'coffee-page', summary: '新摘要' } })
+  api.getPageSourceTrace.mockResolvedValue({ trace: { chatSources: [], observationSources: [] } })
   api.updatePage.mockResolvedValue({ page: { pageId: 'coffee-page' } })
   api.listVersions.mockResolvedValue({ items: [] })
   api.getVersionDiff.mockResolvedValue({ diff: { summaryDiff: 'changed' } })
