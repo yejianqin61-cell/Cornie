@@ -395,7 +395,7 @@ async function applyDistilledIdentityUpdates(store, { baseDir, date, messageId, 
   return results
 }
 
-async function applyDistilledWikiRequests(memoryWiki, requests) {
+async function applyDistilledWikiRequests(memoryWiki, requests, { date, messageId }) {
   const results = []
 
   for (const request of requests) {
@@ -436,7 +436,10 @@ async function applyDistilledWikiRequests(memoryWiki, requests) {
           summary: request.summary,
           body: request.body,
           importance: normalizeImportance(request.importance) || 'medium',
-          ownerConfirmed: false
+          ownerConfirmed: false,
+          sourceRefs: date && messageId
+            ? [{ kind: 'chat', date, messageId, role: 'user' }]
+            : []
         })
         results.push({ action: 'created', wikiAction: 'create_page', pageId: created.pageId })
       } catch (error) {
@@ -493,7 +496,7 @@ async function executeDistillationEnvelope({ store, baseDir, date, userMessage, 
     userMessage,
     proposals: envelope.identity_updates
   })
-  const wikiRequests = await applyDistilledWikiRequests(memoryWiki, envelope.memory_wiki_requests)
+  const wikiRequests = await applyDistilledWikiRequests(memoryWiki, envelope.memory_wiki_requests, { date, messageId })
 
   return { observations, identityUpdates, wikiRequests }
 }

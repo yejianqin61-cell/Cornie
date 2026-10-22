@@ -1336,6 +1336,34 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
       if (!requestId) throw new Error('memory governance requestId is required')
       const request = await governanceStore.get(requestId)
       if (!request) throw new Error(`governance request not found: ${requestId}`)
+      if (normalizeString(request.queueSection) === 'memory_wiki_llm_proposals') {
+        if (normalizeString(request.requestType) !== 'memory_wiki_llm_proposal') {
+          throw new Error(`governance request is not an LLM memory proposal: ${requestId}`)
+        }
+        if (normalizeString(request.status) !== 'approved') {
+          throw new Error(`LLM memory proposal must be approved before applying: ${requestId}`)
+        }
+
+        const proposal = request.payload?.request
+        const action = normalizeString(proposal?.action)
+        if (!proposal || typeof proposal !== 'object') {
+          throw new Error(`LLM memory proposal is missing its request payload: ${requestId}`)
+        }
+
+        if (action === 'archive_page') {
+          return { request, action, page: await this.archive(proposal.pageId) }
+        }
+        if (action === 'delete_page') {
+          return { request, action, deleted: await this.delete(proposal.pageId) }
+        }
+        if (action === 'rollback_page') {
+          return { request, action, page: await this.rollback(proposal.pageId, proposal.versionId) }
+        }
+        if (action === 'merge_pages') {
+          return { request, action, result: await this.mergePages(proposal) }
+        }
+        throw new Error(`unsupported LLM memory proposal action: ${action || '<empty>'}`)
+      }
       if (normalizeString(request.queueSection) === 'observation_archive_candidates') {
         return applyObservationCompressionRequest(store, { baseDir, requestId })
       }
