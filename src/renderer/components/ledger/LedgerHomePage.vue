@@ -8,7 +8,7 @@ import ConfirmDialog from '../common/ConfirmDialog.vue'
 import LedgerTransactionList from './LedgerTransactionList.vue'
 import LedgerTransactionForm from './LedgerTransactionForm.vue'
 import LedgerMonthSummary from './LedgerMonthSummary.vue'
-import { listEntries, addExpense, addIncome, updateEntry, deleteEntry } from '../../api/ledger.js'
+import { listEntries, listLedgerCategories, addExpense, addIncome, updateEntry, deleteEntry } from '../../api/ledger.js'
 
 const transactions = ref([])
 const categories = ref([])
@@ -45,9 +45,12 @@ async function fetchEntries() {
   loading.value = true
   error.value = ''
   try {
-    const res = await listEntries({ month: filterMonth.value })
-    transactions.value = res.entries || res.transactions || []
-    categories.value = res.categories || []
+    const [entries, categoryResult] = await Promise.all([
+      listEntries({ from: `${filterMonth.value}-01`, to: `${filterMonth.value}-31` }),
+      listLedgerCategories(),
+    ])
+    transactions.value = entries.entries || []
+    categories.value = categoryResult.items || []
   } catch (e) {
     transactions.value = []
     categories.value = []
@@ -78,13 +81,21 @@ async function onSave(data) {
   saving.value = true
   saveError.value = ''
   try {
+    const category = categories.value.find((item) => item.id === data.categoryId)
+    const body = {
+      amount: data.amount,
+      categoryId: category?.id,
+      categoryName: category?.name,
+      item: data.note,
+      occurredAt: `${data.date}T12:00:00.000+08:00`,
+    }
     if (editTarget.value) {
-      await updateEntry(editTarget.value.id, data)
+      await updateEntry(editTarget.value.id, { ...body, type: data.type })
     } else {
       if (data.type === 'income') {
-        await addIncome(data)
+        await addIncome(body)
       } else {
-        await addExpense(data)
+        await addExpense(body)
       }
     }
     closeForm()

@@ -13,7 +13,7 @@ const props = defineProps({
 const emit = defineEmits(['save', 'cancel'])
 
 const type = ref(props.initialData?.type || 'expense')
-const category = ref(props.initialData?.category || '')
+const category = ref(props.initialData?.categoryId || props.initialData?.category || '')
 const amount = ref(props.initialData?.amount || '')
 const date = ref(props.initialData?.date || new Date().toISOString().slice(0, 10))
 const note = ref(props.initialData?.note || '')
@@ -26,7 +26,7 @@ function submit() {
   if (!amount.value || !category.value) return
   emit('save', {
     type: type.value,
-    category: category.value,
+    categoryId: category.value,
     amount: Number(amount.value),
     date: date.value,
     note: note.value,
@@ -78,11 +78,11 @@ function submit() {
         <div class="tx-form-categories">
           <button
             v-for="cat in filteredCategories"
-            :key="cat.name"
+            :key="cat.id || cat.name"
             class="tx-form-cat-btn"
-            :class="{ 'tx-form-cat-btn--active': category === cat.name }"
+            :class="{ 'tx-form-cat-btn--active': category === (cat.id || cat.name) }"
             :style="{ '--cat-color': cat.color }"
-            @click="category = cat.name"
+            @click="category = cat.id || cat.name"
           >
             <span class="tx-form-cat-dot"></span>
             {{ cat.name }}

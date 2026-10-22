@@ -1,12 +1,26 @@
 import { apiGet, apiPost, apiPut, apiDelete } from './client.js'
 
-export function listEntries(params = {}) {
+export async function listEntries(params = {}) {
   const qs = new URLSearchParams()
   for (const [k, v] of Object.entries(params)) {
     if (v !== undefined && v !== null && v !== '') qs.set(k, String(v))
   }
   const s = qs.toString()
-  return apiGet(`/api/ledger/entries${s ? `?${s}` : ''}`)
+  const result = await apiGet(`/api/ledger/entries${s ? `?${s}` : ''}`)
+  return {
+    ...result,
+    entries: (result.items || []).map((entry) => ({
+      ...entry,
+      category: entry.categoryName || '',
+      date: String(entry.occurredAt || '').slice(0, 10),
+      note: entry.item || '',
+    })),
+  }
+}
+
+export function listLedgerCategories({ type } = {}) {
+  const qs = type ? `?type=${encodeURIComponent(type)}` : ''
+  return apiGet(`/api/ledger/categories${qs}`)
 }
 
 export function getEntry(id) {
