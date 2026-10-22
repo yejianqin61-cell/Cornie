@@ -12,14 +12,14 @@ const emit = defineEmits(['complete', 'reopen', 'delete'])
 
 <template>
   <div class="todo-list">
-    <div v-for="item in items" :key="item.id" class="todo-item" :class="{ 'todo-item--done': item.completedAt }">
-      <span class="todo-item-check" :class="{ 'todo-item-check--done': item.completedAt }" />
+    <div v-for="item in items" :key="item.id" class="todo-item" :class="{ 'todo-item--done': item.status === 'done' }">
+      <span class="todo-item-check" :class="{ 'todo-item-check--done': item.status === 'done' }" />
       <span class="todo-item-title">{{ item.title }}</span>
       <div class="todo-item-actions">
-        <Button v-if="!item.completedAt" variant="neutral" size="icon" @click="$emit('complete', item.id)">
+        <Button v-if="item.status !== 'done'" variant="neutral" size="icon" @click="$emit('complete', item.id)">
           <Check :size="14" />
         </Button>
-        <Button v-if="item.completedAt" variant="neutral" size="icon" @click="$emit('reopen', item.id)">
+        <Button v-if="item.status === 'done'" variant="neutral" size="icon" @click="$emit('reopen', item.id)">
           <RotateCcw :size="14" />
         </Button>
         <Button variant="neutral" size="icon" @click="$emit('delete', item.id)">

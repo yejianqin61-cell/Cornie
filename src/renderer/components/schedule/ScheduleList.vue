@@ -19,18 +19,18 @@ function formatTime(t) {
 
 <template>
   <div class="sch-list">
-    <div v-for="item in items" :key="item.id" class="sch-item" :class="{ 'sch-item--cancelled': item.cancelledAt }">
+    <div v-for="item in items" :key="item.id" class="sch-item" :class="{ 'sch-item--cancelled': item.status === 'cancelled' }">
       <div class="sch-item-info">
-        <span class="sch-item-title" :class="{ 'sch-item-title--cancelled': item.cancelledAt }">
+        <span class="sch-item-title" :class="{ 'sch-item-title--cancelled': item.status === 'cancelled' }">
           {{ item.title }}
         </span>
         <span class="sch-item-time">{{ formatTime(item.startAt) }}</span>
       </div>
       <div class="sch-item-actions">
-        <Button v-if="!item.cancelledAt" variant="neutral" size="icon" @click="$emit('cancel', item.id)">
+        <Button v-if="item.status !== 'cancelled'" variant="neutral" size="icon" @click="$emit('cancel', item.id)">
           <XCircle :size="14" />
         </Button>
-        <Button v-if="item.cancelledAt" variant="neutral" size="icon" @click="$emit('restore', item.id)">
+        <Button v-if="item.status === 'cancelled'" variant="neutral" size="icon" @click="$emit('restore', item.id)">
           <RotateCcw :size="14" />
         </Button>
         <Button variant="neutral" size="icon" @click="$emit('delete', item.id)">
