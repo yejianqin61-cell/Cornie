@@ -1,8 +1,19 @@
-import { describe, it, expect } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { beforeEach, describe, it, expect, vi } from 'vitest'
+import { flushPromises, mount } from '@vue/test-utils'
 import TodoList from './TodoList.vue'
 import TodoEmptyState from './TodoEmptyState.vue'
 import TodoForm from './TodoForm.vue'
+import TodoHomePage from './TodoHomePage.vue'
+import { completeTodo, listTodos } from '../../api/todo.js'
+
+vi.mock('../../api/todo.js', () => ({
+  listTodos: vi.fn(),
+  createTodo: vi.fn(),
+  completeTodo: vi.fn(),
+  reopenTodo: vi.fn(),
+  deleteTodo: vi.fn(),
+  updateTodo: vi.fn(),
+}))
 
 describe('TodoList', () => {
   const items = [{ id: '1', title: '买菜', status: 'pending' }, { id: '2', title: '跑步', status: 'done' }]
@@ -61,5 +72,25 @@ describe('TodoForm', () => {
   it('shows submitting state', () => {
     const wrapper = mount(TodoForm, { props: { submitting: true } })
     expect(wrapper.text()).toContain('添加中')
+  })
+})
+
+describe('TodoHomePage write failures', () => {
+  beforeEach(() => {
+    listTodos.mockResolvedValue({ items: [{ id: '1', title: '买菜', status: 'pending' }] })
+    completeTodo.mockReset()
+  })
+
+  it('keeps the item and offers a retry when completion fails', async () => {
+    completeTodo.mockRejectedValueOnce(new Error('完成失败'))
+    const wrapper = mount(TodoHomePage)
+    await flushPromises()
+
+    await wrapper.findComponent(TodoList).vm.$emit('complete', '1')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('完成失败')
+    expect(wrapper.text()).toContain('重试')
+    expect(wrapper.text()).toContain('买菜')
   })
 })

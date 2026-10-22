@@ -1,8 +1,18 @@
-import { describe, it, expect } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { beforeEach, describe, it, expect, vi } from 'vitest'
+import { flushPromises, mount } from '@vue/test-utils'
 import ScheduleList from './ScheduleList.vue'
 import ScheduleEmptyState from './ScheduleEmptyState.vue'
 import ScheduleForm from './ScheduleForm.vue'
+import ScheduleHomePage from './ScheduleHomePage.vue'
+import { listSchedules, restoreSchedule } from '../../api/schedule.js'
+
+vi.mock('../../api/schedule.js', () => ({
+  listSchedules: vi.fn(),
+  createSchedule: vi.fn(),
+  cancelSchedule: vi.fn(),
+  restoreSchedule: vi.fn(),
+  deleteSchedule: vi.fn(),
+}))
 
 describe('ScheduleList', () => {
   const items = [
@@ -58,5 +68,26 @@ describe('ScheduleForm', () => {
   it('shows submitting state', () => {
     const wrapper = mount(ScheduleForm, { props: { submitting: true } })
     expect(wrapper.text()).toContain('添加中')
+  })
+})
+
+describe('ScheduleHomePage write failures', () => {
+  beforeEach(() => {
+    listSchedules.mockResolvedValue({
+      items: [{ id: '2', title: '已取消', startAt: '2026-09-16T14:00:00', status: 'cancelled' }],
+    })
+    restoreSchedule.mockReset()
+  })
+
+  it('shows a retry when restore fails', async () => {
+    restoreSchedule.mockRejectedValueOnce(new Error('恢复失败'))
+    const wrapper = mount(ScheduleHomePage)
+    await flushPromises()
+
+    await wrapper.findComponent(ScheduleList).vm.$emit('restore', '2')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('恢复失败')
+    expect(wrapper.text()).toContain('重试')
   })
 })
