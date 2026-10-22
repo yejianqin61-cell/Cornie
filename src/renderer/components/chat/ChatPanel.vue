@@ -25,9 +25,9 @@ async function loadDays() {
   daysLoading.value = true
   try {
     const res = await listChatDays()
-    days.value = (res.days || []).map(d => ({
-      date: d,
-      label: d === todayStr() ? '今天' : d.slice(5),
+    days.value = (res.entries || []).map((entry) => ({
+      date: entry.date,
+      label: entry.date === todayStr() ? '今天' : entry.date.slice(5),
     }))
     if (days.value.length > 0) selectedDate.value = days.value[days.value.length - 1].date
   } catch {
