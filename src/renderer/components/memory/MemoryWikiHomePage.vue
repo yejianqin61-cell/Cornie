@@ -12,6 +12,7 @@ import {
   listPages, getPage, createPage, updatePage,
   listVersions, getVersionDiff, listTopics, listGovernance,
   getGovernanceRequest, updateGovernanceStatus, applyGovernanceRequest,
+  archivePage, restorePage, rollbackPage, updatePageImportance,
 } from '../../api/memory-wiki.js'
 
 const pages = ref([])
@@ -20,6 +21,7 @@ const loading = ref(false)
 const error = ref('')
 const selectedPage = ref(null)
 const pageLoading = ref(false)
+const selectedVersions = ref([])
 const compareOpen = ref(false)
 const compareData = ref({})
 const editorOpen = ref(false)
@@ -81,12 +83,40 @@ function applyTopicFilter() {
 async function selectPage(pageId) {
   pageLoading.value = true
   try {
-    const res = await getPage(pageId)
+    const [res, versionRes] = await Promise.all([getPage(pageId), listVersions(pageId)])
     selectedPage.value = res.page
+    selectedVersions.value = versionRes.items || []
   } catch {
     selectedPage.value = null
+    selectedVersions.value = []
   }
   pageLoading.value = false
+}
+
+async function refreshSelectedPage() {
+  if (!selectedPage.value?.pageId) return
+  await fetchPages()
+  await selectPage(selectedPage.value.pageId)
+}
+
+async function runPageAction(action) {
+  if (!selectedPage.value?.pageId) return
+  try {
+    await action(selectedPage.value.pageId)
+    await refreshSelectedPage()
+  } catch (e) {
+    error.value = e.message || '记忆操作失败'
+  }
+}
+
+function archiveSelectedPage() { return runPageAction(archivePage) }
+function restoreSelectedPage() { return runPageAction(restorePage) }
+function updateSelectedImportance(importance) {
+  return runPageAction((pageId) => updatePageImportance(pageId, importance))
+}
+function rollbackSelectedPage(versionId) {
+  if (!versionId) return
+  return runPageAction((pageId) => rollbackPage(pageId, versionId))
 }
 
 async function openCompare() {
@@ -257,10 +287,14 @@ function goBack() {
         <MemoryWikiDetail
           v-else-if="selectedPage"
           :page="selectedPage"
-          :versions="[]"
+          :versions="selectedVersions"
           @back="goBack"
           @edit="openEdit"
           @compare="openCompare"
+          @archive="archiveSelectedPage"
+          @restore="restoreSelectedPage"
+          @rollback="rollbackSelectedPage"
+          @importance="updateSelectedImportance"
         />
         <MemoryWikiEmptyState v-else />
       </div>

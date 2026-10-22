@@ -1,4 +1,5 @@
 <script setup>
+import { ref } from 'vue'
 import { ArrowLeft, GitCompare, Pencil } from '@lucide/vue'
 import { Button } from 'neobrutalism-vue'
 import MemoryWikiSourceRef from './MemoryWikiSourceRef.vue'
@@ -9,7 +10,8 @@ defineProps({
   versions: { type: Array, default: () => [] },
 })
 
-const emit = defineEmits(['back', 'edit', 'compare'])
+const emit = defineEmits(['back', 'edit', 'compare', 'archive', 'restore', 'rollback', 'importance'])
+const selectedRollbackVersion = ref('')
 </script>
 
 <template>
@@ -27,6 +29,12 @@ const emit = defineEmits(['back', 'edit', 'compare'])
           <GitCompare :size="14" />
           历史
         </Button>
+        <Button v-if="page.status === 'archived'" variant="neutral" size="sm" @click="$emit('restore')">
+          恢复
+        </Button>
+        <Button v-else variant="neutral" size="sm" data-testid="memory-archive" @click="$emit('archive')">
+          归档
+        </Button>
       </div>
     </div>
 
@@ -38,6 +46,30 @@ const emit = defineEmits(['back', 'edit', 'compare'])
     </div>
 
     <div class="mw-detail-summary">{{ page.summary || '' }}</div>
+
+    <div class="mw-detail-controls">
+      <label>
+        重要性
+        <select data-testid="memory-importance" :value="page.importance || 'medium'" @change="$emit('importance', $event.target.value)">
+          <option value="low">low</option>
+          <option value="medium">medium</option>
+          <option value="high">high</option>
+          <option value="critical">critical</option>
+        </select>
+      </label>
+      <label v-if="versions.length">
+        回滚到版本
+        <select data-testid="memory-rollback-version" v-model="selectedRollbackVersion">
+          <option value="">选择版本</option>
+          <option v-for="version in versions" :key="version.versionId" :value="version.versionId">
+            {{ version.version || version.versionId }}
+          </option>
+        </select>
+      </label>
+      <Button v-if="versions.length" variant="neutral" size="sm" data-testid="memory-rollback" :disabled="!selectedRollbackVersion" @click="$emit('rollback', selectedRollbackVersion)">
+        回滚
+      </Button>
+    </div>
 
     <div class="mw-detail-body">{{ page.body || '' }}</div>
 
@@ -100,6 +132,10 @@ const emit = defineEmits(['back', 'edit', 'compare'])
   background: var(--nb-hover);
   border-radius: 0.5rem;
 }
+
+.mw-detail-controls { display: flex; gap: 0.5rem; align-items: end; flex-wrap: wrap; }
+.mw-detail-controls label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.72rem; font-weight: 700; }
+.mw-detail-controls select { border: 1.5px solid var(--nb-border); border-radius: 0.375rem; padding: 0.25rem; background: var(--nb-background); }
 
 .mw-detail-body {
   font-size: 0.9rem;
