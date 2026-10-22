@@ -11,6 +11,7 @@ import MemoryWikiEmptyState from './MemoryWikiEmptyState.vue'
 import {
   listPages, getPage, createPage, updatePage,
   listVersions, getVersionDiff, listTopics, listGovernance,
+  getGovernanceRequest, updateGovernanceStatus, applyGovernanceRequest,
 } from '../../api/memory-wiki.js'
 
 const pages = ref([])
@@ -31,6 +32,9 @@ const activeTopic = ref('')
 const governanceOpen = ref(false)
 const governanceItems = ref([])
 const governanceLoading = ref(false)
+const governanceSelected = ref(null)
+const governanceError = ref('')
+const governanceResult = ref(null)
 
 async function fetchPages() {
   loading.value = true
@@ -109,14 +113,56 @@ async function openCompare() {
 
 async function openGovernance() {
   governanceOpen.value = true
+  governanceSelected.value = null
+  governanceError.value = ''
+  governanceResult.value = null
+  await loadGovernance()
+}
+
+async function loadGovernance() {
   governanceLoading.value = true
   try {
     const res = await listGovernance()
     governanceItems.value = res.items || []
-  } catch {
+  } catch (e) {
     governanceItems.value = []
+    governanceError.value = e.message || '治理请求加载失败'
   }
   governanceLoading.value = false
+}
+
+async function selectGovernance(requestId) {
+  governanceError.value = ''
+  try {
+    const res = await getGovernanceRequest(requestId)
+    governanceSelected.value = res.item || null
+  } catch (e) {
+    governanceError.value = e.message || '治理详情加载失败'
+  }
+}
+
+async function decideGovernance(status) {
+  if (!governanceSelected.value?.requestId) return
+  governanceError.value = ''
+  try {
+    const res = await updateGovernanceStatus(governanceSelected.value.requestId, status)
+    governanceSelected.value = res.item || governanceSelected.value
+    await loadGovernance()
+  } catch (e) {
+    governanceError.value = e.message || '治理决定保存失败'
+  }
+}
+
+async function applyGovernance() {
+  if (governanceSelected.value?.status !== 'approved') return
+  governanceError.value = ''
+  try {
+    const res = await applyGovernanceRequest(governanceSelected.value.requestId)
+    governanceResult.value = res.result || null
+    await loadGovernance()
+  } catch (e) {
+    governanceError.value = e.message || '治理请求应用失败'
+  }
 }
 
 function openNew() {
@@ -251,18 +297,38 @@ function goBack() {
         <div v-else-if="governanceItems.length === 0" class="mw-governance-empty">
           暂无治理请求
         </div>
-        <div v-else class="mw-governance-list">
-          <div
-            v-for="item in governanceItems"
-            :key="item.requestId"
-            class="mw-governance-item"
-          >
-            <div class="mw-governance-item-head">
-              <span class="mw-governance-item-type">{{ item.requestType }}</span>
-              <span class="mw-governance-item-status">{{ item.status }}</span>
-            </div>
-            <div class="mw-governance-item-id">{{ item.requestId }}</div>
+        <template v-else>
+          <div class="mw-governance-list">
+            <button
+              v-for="item in governanceItems"
+              :key="item.requestId"
+              class="mw-governance-item"
+              :class="{ 'mw-governance-item--active': governanceSelected?.requestId === item.requestId }"
+              @click="selectGovernance(item.requestId)"
+            >
+              <div class="mw-governance-item-head">
+                <span class="mw-governance-item-type">{{ item.requestType }}</span>
+                <span class="mw-governance-item-status">{{ item.status }}</span>
+              </div>
+              <div class="mw-governance-item-id">{{ item.requestId }}</div>
+            </button>
           </div>
+          <div v-if="governanceSelected" class="mw-governance-detail">
+            <div><strong>原因：</strong>{{ governanceSelected.reason || '未提供原因' }}</div>
+            <div><strong>证据：</strong></div>
+            <pre v-if="governanceSelected.evidence?.length">{{ JSON.stringify(governanceSelected.evidence, null, 2) }}</pre>
+            <div v-else class="mw-governance-empty">此请求没有附带证据。</div>
+            <div class="mw-governance-actions">
+              <Button v-if="governanceSelected.status === 'pending'" variant="neutral" size="sm" @click="decideGovernance('approved')">批准</Button>
+              <Button v-if="governanceSelected.status === 'pending'" variant="neutral" size="sm" @click="decideGovernance('rejected')">拒绝</Button>
+              <Button v-if="governanceSelected.status === 'approved'" variant="neutral" size="sm" @click="applyGovernance">应用</Button>
+            </div>
+          </div>
+          <pre v-if="governanceResult" class="mw-governance-result">{{ JSON.stringify(governanceResult, null, 2) }}</pre>
+        </template>
+        <div v-if="governanceError" class="mw-banner mw-banner--error">
+          <span>{{ governanceError }}</span>
+          <Button variant="neutral" size="sm" @click="loadGovernance">重试</Button>
         </div>
       </div>
     </div>
@@ -359,7 +425,8 @@ function goBack() {
 
 .mw-governance-list { display: flex; flex-direction: column; gap: 0.5rem; }
 
-.mw-governance-item { border: 2px solid #000; border-radius: 0.5rem; padding: 0.75rem; }
+.mw-governance-item { width: 100%; text-align: left; background: transparent; border: 2px solid #000; border-radius: 0.5rem; padding: 0.75rem; cursor: pointer; }
+.mw-governance-item--active { background: var(--nb-hover); }
 
 .mw-governance-item-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; }
 
@@ -368,4 +435,7 @@ function goBack() {
 .mw-governance-item-status { font-size: 0.65rem; padding: 1px 6px; border: 1.5px solid #000; border-radius: 99px; }
 
 .mw-governance-item-id { font-size: 0.7rem; color: var(--nb-text-secondary); word-break: break-all; }
+.mw-governance-detail { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem; font-size: 0.82rem; }
+.mw-governance-detail pre, .mw-governance-result { margin: 0; padding: 0.5rem; background: var(--nb-hover); border-radius: 0.5rem; white-space: pre-wrap; word-break: break-word; }
+.mw-governance-actions { display: flex; gap: 0.5rem; }
 </style>
