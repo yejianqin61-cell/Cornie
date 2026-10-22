@@ -251,12 +251,31 @@ async function requestDistillationEnvelope(messages, chatFn) {
 
 // ---------- 输入构建 ----------
 
-async function buildDistillationInput({ store, baseDir, date, history = [], userMessage }) {
+async function buildDistillationInput({ store, baseDir, date, history = [], userMessage, cornieMessage, messageId }) {
   const observation = createObservationService(store)
 
+  const currentUserText = normalizeString(userMessage)
+  const finalCornieText = normalizeString(cornieMessage)
+  const currentTurn = [
+    ...(currentUserText ? [{ role: 'user', content: currentUserText }] : []),
+    ...(finalCornieText ? [{ role: 'cornie', content: finalCornieText }] : [])
+  ]
+  const currentMessageId = normalizeString(messageId)
+  const allHistory = Array.isArray(history) ? history : []
+  const lastHistoryIndex = allHistory.length - 1
+  const historyWithoutCurrentUser = allHistory.filter((item, index) => {
+    if (currentMessageId) {
+      return normalizeString(item?.id) !== currentMessageId
+    }
+    return !(
+      index === lastHistoryIndex &&
+      normalizeString(item?.role) === 'user' &&
+      normalizeString(item?.content) === currentUserText
+    )
+  })
   const recentMessages = [
-    ...(Array.isArray(history) ? history.slice(-DISTILLATION_RECENT_MESSAGES) : []),
-    { role: 'user', content: userMessage }
+    ...historyWithoutCurrentUser.slice(-Math.max(0, DISTILLATION_RECENT_MESSAGES - currentTurn.length)),
+    ...currentTurn
   ]
 
   let todayObservations = []
@@ -519,7 +538,7 @@ export async function runMemoryDistillation({
   let envelope = null
   let llmError = null
   try {
-    const input = await buildDistillationInput({ store, baseDir, date, history, userMessage })
+    const input = await buildDistillationInput({ store, baseDir, date, history, userMessage, cornieMessage, messageId })
     const prompt = buildMemoryDistillationPrompt({
       date,
       recentMessages: input.recentMessages,
