@@ -216,4 +216,18 @@ describe('ChatHistoryPage scrolling', () => {
 
     expect(container.scrollTop).toBe(300)
   })
+
+  it('returns to the newest message when a refresh asks for the bottom', async () => {
+    const wrapper = mount(ChatHistoryPage, { props: { date: '2026-10-23', transientMessages: [] } })
+    await flushPromises()
+    const container = wrapper.find('.chat-history').element
+    setScrollMetrics(container, { scrollHeight: 1000 })
+    container.scrollTop = 300
+    container.dispatchEvent(new Event('scroll'))
+
+    await wrapper.vm.refresh({ bottom: true })
+    await flushPromises()
+
+    expect(container.scrollTop).toBe(1000)
+  })
 })
