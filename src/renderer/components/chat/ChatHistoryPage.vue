@@ -166,6 +166,7 @@ defineExpose({ refresh: (options) => load(options) })
       <MessageRow
         v-for="msg in messages"
         :key="msg.id"
+        v-memo="[msg.id, msg.text, msg.confirm?.status]"
         :message="msg"
         @confirm-resolved="$emit('confirmResolved', $event)"
       />

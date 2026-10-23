@@ -97,8 +97,6 @@ function openSettings() {
     <ScheduleHomePage v-else-if="activeModule === 'schedule'" />
 
     <template #status>
-      <span>记忆 12</span>
-      <span>观察 3</span>
       <span>v0.1.0</span>
     </template>
   </CornieLayout>
