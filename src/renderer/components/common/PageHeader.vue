@@ -1,6 +1,6 @@
 <script setup>
 defineProps({
-  icon: { type: Object, required: true },
+  icon: { type: [Object, Function], required: true },
   title: { type: String, required: true },
 })
 </script>

@@ -24,7 +24,14 @@ async function mountHome() {
   const wrapper = mount(MemoryWikiHomePage, {
     global: {
       stubs: {
-        PageHeader: true,
+        PageHeader: {
+          props: { icon: [Object, Function], title: String },
+          template: '<header><h1>{{ title }}</h1><slot name="actions" /></header>',
+        },
+        Button: {
+          props: { as: String, asChild: Boolean, variant: String, size: String },
+          template: '<button><slot /></button>',
+        },
         MemoryWikiTree: true,
         MemoryWikiDetail: true,
         MemoryWikiEditor: true,
