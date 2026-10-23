@@ -66,9 +66,23 @@ function encryptApiKey(value, secretStore) {
   return encrypted
 }
 
+function readPersistedApiKey(store, secretStore) {
+  const stored = normalizeString(getAppSetting(store, MODEL_SETTING_KEYS.apiKey))
+  if (!stored) return ''
+  if (stored.startsWith(SECURE_API_KEY_PREFIX)) {
+    return decryptApiKey(stored, secretStore)
+  }
+
+  // Upgrade values written by pre-safeStorage releases in the main process.
+  // The raw value is never accepted as a persisted format or copied to a new fallback store.
+  const encrypted = encryptApiKey(stored, secretStore)
+  setAppSetting(store, MODEL_SETTING_KEYS.apiKey, encrypted)
+  return stored
+}
+
 function readPersistedModelSettings(store, { secretStore } = {}) {
   return {
-    apiKey: decryptApiKey(getAppSetting(store, MODEL_SETTING_KEYS.apiKey), secretStore),
+    apiKey: readPersistedApiKey(store, secretStore),
     baseUrl: normalizeBaseUrl(getAppSetting(store, MODEL_SETTING_KEYS.baseUrl)),
     model: normalizeString(getAppSetting(store, MODEL_SETTING_KEYS.model)),
     timeoutMs: normalizeString(getAppSetting(store, MODEL_SETTING_KEYS.timeoutMs))

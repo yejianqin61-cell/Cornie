@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
-import { createSettingsService } from '../electron/backend/settings/service.js'
-import { getAppSetting } from '../electron/db.js'
+import { applyPersistedModelSettingsToEnv, createSettingsService } from '../electron/backend/settings/service.js'
+import { getAppSetting, setAppSetting } from '../electron/db.js'
 import { createServiceHarness } from '../tests/shared/service-harness.mjs'
 
 const rawKey = 'phase5-secret-key'
@@ -35,6 +35,12 @@ async function main() {
       () => createSettingsService(harness.store).saveModelSettings({ apiKey: 'must-fail' }),
       /secure|secret|safeStorage/i
     )
+
+    setAppSetting(harness.store, 'settings.model.deepseek.apiKey', rawKey)
+    applyPersistedModelSettingsToEnv(harness.store, { secretStore: secure })
+    const migrated = getAppSetting(harness.store, 'settings.model.deepseek.apiKey')
+    assert.match(migrated, /^safeStorage:v1:/)
+    assert.notEqual(migrated, rawKey)
     console.log('verify-phase5-secure-settings: passed')
   } finally {
     await harness.close()
