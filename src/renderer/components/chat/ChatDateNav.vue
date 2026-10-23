@@ -54,7 +54,8 @@ const emit = defineEmits(['select', 'prev', 'next'])
   align-items: center;
   gap: 0.25rem;
   padding: 0.5rem;
-  border-bottom: 2px solid var(--nb-border);
+  border-bottom: var(--nb-border-width) solid var(--nb-border);
+  background: var(--nb-background);
   overflow-x: auto;
 }
 
@@ -69,16 +70,16 @@ const emit = defineEmits(['select', 'prev', 'next'])
   font-size: 0.75rem;
   font-weight: 700;
   border: 2px solid var(--nb-border);
-  border-radius: 0.5rem;
-  background: #fff;
+  border-radius: var(--nb-radius);
+  background: var(--nb-background);
   cursor: pointer;
   white-space: nowrap;
   transition: background 0.1s;
 }
 
 .chat-date-nav-item--active {
-  background: #ffd100;
-  border-color: #000;
+  background: var(--nb-accent);
+  border-color: var(--nb-border);
 }
 
 .chat-date-nav-item:hover:not(:disabled) {

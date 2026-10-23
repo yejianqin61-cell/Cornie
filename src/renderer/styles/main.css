@@ -4,6 +4,19 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --nb-border: #000;
+  --nb-border-width: 3px;
+  --nb-radius: 0.5rem;
+  --nb-shadow: 4px 4px 0 0 #000;
+  --nb-background: #fff;
+  --nb-text: #1a1a1a;
+  --nb-accent: #ffd100;
+  --nb-hover: #efe9df;
+  --nb-text-secondary: #555;
+  --nb-danger: #d32f2f;
+}
+
 *,
 *::before,
 *::after {

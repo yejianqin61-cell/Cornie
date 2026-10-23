@@ -1,9 +1,12 @@
 import fs from 'node:fs'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..')
+
 function read(file) {
-  return fs.readFileSync(path.resolve(process.cwd(), file), 'utf8')
+  return fs.readFileSync(path.resolve(ROOT, file), 'utf8')
 }
 
 describe('design tokens', () => {

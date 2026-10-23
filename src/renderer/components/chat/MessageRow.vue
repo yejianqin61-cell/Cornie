@@ -50,7 +50,7 @@ function roleLetter(role) {
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  border: 2px solid #000;
+  border: 2px solid var(--nb-border);
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -66,16 +66,16 @@ function roleLetter(role) {
 }
 
 .msg-row-avatar--user {
-  background: #ffd100;
+  background: var(--nb-accent);
 }
 
 .msg-row-avatar--assistant {
-  background: #ffd100;
-  border-color: #000;
+  background: var(--nb-accent);
+  border-color: var(--nb-border);
 }
 
 .msg-row-avatar--system {
-  background: #ddd;
+  background: var(--nb-hover);
 }
 
 .msg-row-body {
@@ -89,34 +89,35 @@ function roleLetter(role) {
 }
 
 .msg-row-sender {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   font-weight: 700;
   margin-bottom: 0.15rem;
   color: var(--nb-text-secondary);
 }
 
 .msg-row-text {
-  font-size: 0.85rem;
-  line-height: 1.5;
+  font-size: 0.9rem;
+  line-height: 1.55;
   padding: 0.5rem 0.75rem;
-  border: 2px solid #000;
+  border: 2px solid var(--nb-border);
   border-radius: 0.75rem;
+  color: var(--nb-text);
   word-break: break-word;
 }
 
 .msg-row--user .msg-row-text {
-  background: #ffd100;
+  background: var(--nb-accent);
   border-bottom-right-radius: 0.25rem;
 }
 
 .msg-row--assistant .msg-row-text,
 .msg-row--system .msg-row-text {
-  background: #fff;
+  background: var(--nb-background);
   border-bottom-left-radius: 0.25rem;
 }
 
 .msg-row-time {
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   color: var(--nb-text-secondary);
   margin-top: 0.15rem;
 }

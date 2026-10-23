@@ -179,18 +179,20 @@ function handleConfirmResolved() {
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #f0f0f0;
+  background: var(--nb-background);
+  border: var(--nb-border-width) solid var(--nb-border);
+  box-shadow: var(--nb-shadow);
 }
 
 .chat-panel-footer {
   padding: 0.75rem;
-  border-top: 2px solid var(--nb-border);
-  background: #fff;
+  border-top: var(--nb-border-width) solid var(--nb-border);
+  background: var(--nb-background);
 }
 
 .chat-panel-error {
-  font-size: 0.7rem;
-  color: var(--nb-danger, #d32f2f);
+  font-size: 0.75rem;
+  color: var(--nb-danger);
   font-weight: 600;
   margin-bottom: 0.35rem;
 }
@@ -203,6 +205,22 @@ function handleConfirmResolved() {
 
 .chat-panel-input {
   flex: 1;
+  min-height: 2.75rem;
+  max-height: 9rem;
+  padding: 0.5rem 0.75rem;
+  border: 2px solid var(--nb-border);
+  border-radius: var(--nb-radius);
+  background: var(--nb-background);
+  color: var(--nb-text);
+  font: inherit;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.chat-panel-input:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--nb-accent);
 }
 
 .chat-panel-send {
