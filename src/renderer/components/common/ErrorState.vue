@@ -8,7 +8,7 @@ defineProps({
 </script>
 
 <template>
-  <div class="error-state">
+  <div class="error-state" role="alert">
     <AlertTriangle class="error-icon" :size="36" />
     <p class="error-text">{{ message }}</p>
     <button v-if="onRetry" class="error-retry" @click="onRetry">
@@ -29,14 +29,14 @@ defineProps({
 }
 
 .error-icon {
-  color: #d44;
+  color: var(--nb-danger);
 }
 
 .error-text {
   margin: 0;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 700;
-  color: #666;
+  color: var(--nb-text-secondary);
   text-align: center;
 }
 
@@ -45,16 +45,18 @@ defineProps({
   align-items: center;
   gap: 6px;
   padding: 6px 14px;
-  border: 3px solid #000;
-  background: #fff;
-  font-size: 12px;
+  border: var(--nb-border-width) solid var(--nb-border);
+  border-radius: var(--nb-radius);
+  background: var(--nb-background);
+  color: var(--nb-text);
+  font-size: 0.75rem;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 3px 3px 0 0 #000;
+  box-shadow: 3px 3px 0 0 var(--nb-border);
 }
 
 .error-retry:hover {
   transform: translate(1px, 1px);
-  box-shadow: 2px 2px 0 0 #000;
+  box-shadow: 2px 2px 0 0 var(--nb-border);
 }
 </style>

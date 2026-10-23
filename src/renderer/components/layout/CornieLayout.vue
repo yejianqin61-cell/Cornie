@@ -8,9 +8,9 @@ import CornieStatusBar from './CornieStatusBar.vue'
     <CornieTopBar />
     <div class="nb-layout-body">
       <slot name="sidebar" />
-      <div class="nb-layout-main">
+      <main class="nb-layout-main">
         <slot />
-      </div>
+      </main>
     </div>
     <CornieStatusBar>
       <slot name="status" />

@@ -7,7 +7,7 @@ defineProps({
 </script>
 
 <template>
-  <div class="loading-state">
+  <div class="loading-state" role="status">
     <Loader class="loading-icon" :size="24" />
     <p v-if="text" class="loading-text">{{ text }}</p>
   </div>
@@ -24,15 +24,15 @@ defineProps({
 }
 
 .loading-icon {
-  color: #999;
+  color: var(--nb-text-secondary);
   animation: spin 1s linear infinite;
 }
 
 .loading-text {
   margin: 0;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 700;
-  color: #999;
+  color: var(--nb-text-secondary);
 }
 
 @keyframes spin {

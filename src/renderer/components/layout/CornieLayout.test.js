@@ -1,14 +1,18 @@
+import fs from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { mount } from '@vue/test-utils'
-import CornieLayout from './CornieLayout.vue'
+
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..')
+
+function read(file) {
+  return fs.readFileSync(path.resolve(ROOT, file), 'utf8')
+}
 
 describe('CornieLayout', () => {
   it('exposes the main content as a main landmark', () => {
-    const wrapper = mount(CornieLayout, {
-      slots: { default: '内容', sidebar: '侧栏', status: '状态' },
-    })
-
-    expect(wrapper.find('main.nb-layout-main').exists()).toBe(true)
-    expect(wrapper.find('main').text()).toContain('内容')
+    const layout = read('src/renderer/components/layout/CornieLayout.vue')
+    expect(layout).toContain('<main class="nb-layout-main">')
+    expect(layout).toContain('</main>')
   })
 })

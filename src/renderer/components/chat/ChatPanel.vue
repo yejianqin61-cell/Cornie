@@ -207,6 +207,7 @@ function handleConfirmResolved() {
 
 <template>
   <div class="chat-panel">
+    <h1 class="nb-visually-hidden">对话</h1>
     <ChatDateNav
       :days="days"
       :selected="selectedDate"
@@ -226,6 +227,7 @@ function handleConfirmResolved() {
       ref="historyRef"
       :date="selectedDate"
       :transient-messages="transientMessages"
+      :is-today="selectedDate === todayStr()"
       @confirm-resolved="handleConfirmResolved"
       @retry="handleRetry"
     />
@@ -237,6 +239,7 @@ function handleConfirmResolved() {
           ref="inputEl"
           v-model="inputText"
           class="chat-panel-input"
+          aria-label="消息输入"
           placeholder="输入消息..."
           :maxlength="MAX_MESSAGE_LENGTH"
           rows="1"

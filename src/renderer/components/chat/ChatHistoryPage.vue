@@ -3,6 +3,8 @@ import { computed, nextTick, ref, watch } from 'vue'
 import { MessagesSquare } from '@lucide/vue'
 import MessageRow from './MessageRow.vue'
 import EmptyState from '../common/EmptyState.vue'
+import ErrorState from '../common/ErrorState.vue'
+import LoadingState from '../common/LoadingState.vue'
 import { getChatDay } from '../../api/chatlog.js'
 import { listConfirmations } from '../../api/confirm.js'
 
@@ -12,6 +14,7 @@ const MAX_MESSAGE_PAGES = 20
 const props = defineProps({
   date: { type: String, required: true },
   transientMessages: { type: Array, default: () => [] },
+  isToday: { type: Boolean, default: false },
 })
 
 defineEmits(['confirmResolved', 'retry'])
@@ -27,6 +30,8 @@ let loadToken = 0
 const visibleTransientMessages = computed(() =>
   props.transientMessages.filter((message) => !message.date || message.date === props.date)
 )
+
+const emptyText = computed(() => (props.isToday ? '今天还没有聊天记录' : '这一天没有聊天记录'))
 
 async function loadConfirmations() {
   try {
@@ -120,22 +125,17 @@ defineExpose({ refresh: (options) => load(options) })
 
 <template>
   <div ref="historyEl" class="chat-history" @scroll="updateScrollState">
-    <div v-if="loading && messages.length === 0 && visibleTransientMessages.length === 0" class="chat-history-loading">
-      <div class="chat-history-skeleton" v-for="n in 3" :key="n">
-        <div class="skeleton-avatar" />
-        <div class="skeleton-bubble" />
-      </div>
-    </div>
-    <div v-else-if="error" class="chat-history-error">
-      <span>{{ error }}</span>
-      <button class="chat-history-retry" @click="load">重试</button>
-    </div>
+    <LoadingState
+      v-if="loading && messages.length === 0 && visibleTransientMessages.length === 0"
+      text="正在加载对话"
+    />
+    <ErrorState v-else-if="error" :message="error" :on-retry="load" />
     <EmptyState
       v-else-if="messages.length === 0 && visibleTransientMessages.length === 0"
       :icon="MessagesSquare"
-      text="暂无消息"
+      :text="emptyText"
     />
-    <div v-else class="chat-history-messages">
+    <div v-else class="chat-history-messages" role="log" aria-live="polite" aria-relevant="additions">
       <MessageRow
         v-for="msg in messages"
         :key="msg.id"
@@ -184,65 +184,6 @@ defineExpose({ refresh: (options) => load(options) })
   font-weight: 700;
   cursor: pointer;
   box-shadow: 2px 2px 0 0 var(--nb-border);
-}
-
-.chat-history-loading,
-.chat-history-error {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  flex: 1;
-  gap: 1rem;
-}
-
-.chat-history-skeleton {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-  width: 100%;
-}
-
-.skeleton-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: var(--nb-border);
-  animation: pulse 1.5s infinite;
-}
-
-.skeleton-bubble {
-  height: 32px;
-  flex: 1;
-  max-width: 60%;
-  border-radius: 0.75rem;
-  background: var(--nb-border);
-  animation: pulse 1.5s infinite;
-}
-
-@keyframes pulse {
-  0%,
-  100% {
-    opacity: 0.4;
-  }
-  50% {
-    opacity: 0.8;
-  }
-}
-
-.chat-history-error {
-  color: var(--nb-danger, #d32f2f);
-  font-size: 0.85rem;
-  font-weight: 600;
-}
-
-.chat-history-retry {
-  border: 2px solid #000;
-  border-radius: 0.5rem;
-  background: #fff;
-  padding: 0.35rem 1rem;
-  font-weight: 700;
-  cursor: pointer;
 }
 
 .chat-history-messages {
