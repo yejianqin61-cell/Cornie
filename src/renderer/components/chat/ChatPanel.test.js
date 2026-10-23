@@ -87,6 +87,44 @@ describe('ChatPanel streaming send', () => {
     expect(wrapper.findComponent(ChatHistoryPage).props('transientMessages')).toEqual([])
   })
 
+  it('keeps confirmation and tool results on the transient assistant message', async () => {
+    let finishStream
+    let resolveRefresh
+    refresh.mockReturnValue(
+      new Promise((resolve) => {
+        resolveRefresh = resolve
+      })
+    )
+    api.sendMessageStreamed.mockImplementation(
+      (_request, _delta, onDone) =>
+        new Promise((resolve) => {
+          finishStream = () => {
+            onDone({
+              pendingConfirmation: { id: 'confirm-1', status: 'pending', confirmRequest: { reason: '需要确认' } },
+              toolExecution: { results: [{ tool_name: 'ledger.create_entry', ok: true, result: { id: 1 } }] },
+            })
+            resolve()
+          }
+        })
+    )
+    const wrapper = mountPanel()
+    await flushPromises()
+
+    await wrapper.find('textarea').setValue('记一笔')
+    await wrapper.find('.chat-panel-send').trigger('click')
+    await flushPromises()
+    finishStream()
+    await flushPromises()
+
+    const transient = wrapper.findComponent(ChatHistoryPage).props('transientMessages')
+    expect(transient[1].confirm.id).toBe('confirm-1')
+    expect(transient[1].toolResults).toHaveLength(1)
+
+    resolveRefresh()
+    await flushPromises()
+    expect(wrapper.findComponent(ChatHistoryPage).props('transientMessages')).toEqual([])
+  })
+
   it('cancels the active stream and restores the draft for retry', async () => {
     api.sendMessageStreamed.mockImplementation(
       (_request, _delta, _done, _error, { signal }) =>

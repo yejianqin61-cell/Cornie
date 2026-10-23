@@ -32,19 +32,19 @@ describe('MessageRow', () => {
 })
 
 describe('ToolResultPanel', () => {
-  it('renders tool results', () => {
+  it('renders tool results using the backend shape', () => {
     const wrapper = mount(ToolResultPanel, {
-      props: { results: [{ tool: 'ledger', success: true, data: 'OK' }] },
+      props: { results: [{ tool_name: 'ledger.create_entry', ok: true, result: { id: 1, amount: 12 } }] },
     })
-    expect(wrapper.text()).toContain('ledger')
-    expect(wrapper.text()).toContain('OK')
+    expect(wrapper.text()).toContain('ledger.create_entry')
+    expect(wrapper.text()).toContain('"amount": 12')
   })
 
-  it('renders failed tool result', () => {
+  it('renders failed tool result error message', () => {
     const wrapper = mount(ToolResultPanel, {
-      props: { results: [{ tool: 'diary', success: false, error: '失败' }] },
+      props: { results: [{ tool_name: 'diary', ok: false, error: { code: 'write_failed', message: '写入失败' } }] },
     })
-    expect(wrapper.text()).toContain('失败')
+    expect(wrapper.text()).toContain('写入失败')
   })
 
   it('renders nothing with empty results', () => {
@@ -56,11 +56,18 @@ describe('ToolResultPanel', () => {
 })
 
 describe('ConfirmCard', () => {
-  it('renders confirm message', () => {
+  it('renders the backend reason', () => {
     const wrapper = mount(ConfirmCard, {
-      props: { confirm: { id: 'c1', message: '确认删除？' } },
+      props: {
+        confirm: {
+          id: 'c1',
+          status: 'pending',
+          confirmRequest: { reason: '确认删除？', toolName: 'ledger.delete_entry' },
+        },
+      },
     })
     expect(wrapper.text()).toContain('确认删除？')
+    expect(wrapper.text()).toContain('ledger.delete_entry')
     expect(wrapper.text()).toContain('确认')
     expect(wrapper.text()).toContain('拒绝')
   })

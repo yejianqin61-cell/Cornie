@@ -2,13 +2,16 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 
 const api = vi.hoisted(() => ({ getChatDay: vi.fn() }))
+const confirmApi = vi.hoisted(() => ({ listConfirmations: vi.fn() }))
 vi.mock('../../api/chatlog.js', () => ({ getChatDay: api.getChatDay }))
+vi.mock('../../api/confirm.js', () => ({ listConfirmations: confirmApi.listConfirmations }))
 
 import ChatHistoryPage from './ChatHistoryPage.vue'
 
 describe('ChatHistoryPage transient visibility', () => {
   beforeEach(() => {
     api.getChatDay.mockReset().mockResolvedValue({ messages: [] })
+    confirmApi.listConfirmations.mockReset().mockResolvedValue({ confirmations: [] })
   })
 
   it('renders transient messages while persisted history is empty', async () => {
@@ -76,5 +79,28 @@ describe('ChatHistoryPage transient visibility', () => {
     await wrapper.vm.refresh()
 
     expect(container.scrollTop).toBe(720)
+  })
+
+  it('attaches a pending confirmation to its conversation message', async () => {
+    api.getChatDay.mockResolvedValue({
+      messages: [{ id: 'm1', role: 'cornie', text: '需要你确认', createdAt: 1 }],
+      pagination: { hasMore: false, nextCursor: null },
+    })
+    confirmApi.listConfirmations.mockResolvedValue({
+      confirmations: [
+        {
+          id: 'confirm-1',
+          conversationMessageId: 'm1',
+          status: 'pending',
+          confirmRequest: { reason: '确认记账', toolName: 'ledger.create_entry' },
+        },
+      ],
+    })
+    const wrapper = mount(ChatHistoryPage, { props: { date: '2026-10-23', transientMessages: [] } })
+    await flushPromises()
+
+    expect(confirmApi.listConfirmations).toHaveBeenCalledWith('2026-10-23')
+    expect(wrapper.text()).toContain('确认记账')
+    expect(wrapper.findComponent({ name: 'ConfirmCard' }).exists()).toBe(true)
   })
 })
