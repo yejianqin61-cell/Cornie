@@ -158,9 +158,7 @@ describe('ChatPanel streaming send', () => {
 
     const failed = wrapper.findComponent(ChatHistoryPage).props('transientMessages')
     expect(failed).toHaveLength(1)
-    expect(failed[0]).toEqual(
-      expect.objectContaining({ role: 'user', text: '会失败的消息', status: 'failed' })
-    )
+    expect(failed[0]).toEqual(expect.objectContaining({ role: 'user', text: '会失败的消息', status: 'failed' }))
     expect(wrapper.find('.chat-panel-error').text()).toContain('网络断了')
 
     api.sendMessageStreamed.mockImplementation((_request, _delta, onDone) => Promise.resolve().then(() => onDone({})))
