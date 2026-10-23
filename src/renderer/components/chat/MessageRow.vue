@@ -1,6 +1,7 @@
 <script setup>
 import ToolResultPanel from './ToolResultPanel.vue'
 import ConfirmCard from './ConfirmCard.vue'
+import MessageBody from './MessageBody.vue'
 
 defineProps({
   message: { type: Object, required: true },
@@ -27,7 +28,7 @@ function roleLetter(role) {
       <div class="msg-row-sender">
         {{ message.role === 'user' ? '我' : message.role === 'assistant' ? 'Cornie' : '系统' }}
       </div>
-      <div class="msg-row-text">{{ message.text }}</div>
+      <div class="msg-row-text"><MessageBody :text="message.text" /></div>
       <ToolResultPanel v-if="message.toolResults?.length" :results="message.toolResults" />
       <ConfirmCard v-if="message.confirm" :confirm="message.confirm" @resolved="$emit('confirmResolved', $event)" />
       <div v-if="message.time" class="msg-row-time">{{ message.time }}</div>
