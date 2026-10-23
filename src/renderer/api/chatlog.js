@@ -1,4 +1,4 @@
-import { apiGet, apiDelete } from './client.js'
+import { apiGet } from './client.js'
 
 export function listChatDays({ month } = {}) {
   const query = month ? `?month=${encodeURIComponent(month)}` : ''
@@ -22,6 +22,6 @@ export async function getChatDay(date, { cursor, limit } = {}) {
   }
 }
 
-export function deleteChatDay(date) {
-  return apiDelete(`/api/conversations/${date}`)
+export function exportChatDay(date) {
+  return apiGet(`/api/chatlogs/${date}/export`)
 }

@@ -5,7 +5,7 @@ import MessageRow from './MessageRow.vue'
 import EmptyState from '../common/EmptyState.vue'
 import ErrorState from '../common/ErrorState.vue'
 import LoadingState from '../common/LoadingState.vue'
-import { getChatDay } from '../../api/chatlog.js'
+import { getChatDay, exportChatDay } from '../../api/chatlog.js'
 import { listConfirmations } from '../../api/confirm.js'
 
 const MESSAGE_PAGE_SIZE = 100
@@ -22,6 +22,8 @@ defineEmits(['confirmResolved', 'retry'])
 const messages = ref([])
 const loading = ref(false)
 const error = ref('')
+const exporting = ref(false)
+const exportError = ref('')
 const historyEl = ref(null)
 const stickToBottom = ref(true)
 const savedPositions = new Map()
@@ -32,6 +34,26 @@ const visibleTransientMessages = computed(() =>
 )
 
 const emptyText = computed(() => (props.isToday ? '今天还没有聊天记录' : '这一天没有聊天记录'))
+
+async function exportDay() {
+  if (exporting.value) return
+  exporting.value = true
+  exportError.value = ''
+  try {
+    const result = await exportChatDay(props.date)
+    const blob = new Blob([result.content || ''], { type: result.contentType || 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = result.filename || `chatlog-${props.date}.json`
+    link.click()
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    exportError.value = e.message || '导出失败'
+  } finally {
+    exporting.value = false
+  }
+}
 
 async function loadConfirmations() {
   try {
@@ -136,6 +158,11 @@ defineExpose({ refresh: (options) => load(options) })
       :text="emptyText"
     />
     <div v-else class="chat-history-messages" role="log" aria-live="polite" aria-relevant="additions">
+      <div class="chat-history-summary">
+        <span class="chat-history-summary-count">{{ messages.length }} 条消息</span>
+        <span v-if="exportError" class="chat-history-export-error">{{ exportError }}</span>
+        <button class="chat-history-export" :disabled="exporting" @click="exportDay">导出</button>
+      </div>
       <MessageRow
         v-for="msg in messages"
         :key="msg.id"
@@ -189,5 +216,31 @@ defineExpose({ refresh: (options) => load(options) })
 .chat-history-messages {
   display: flex;
   flex-direction: column;
+}
+
+.chat-history-summary {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0 0 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--nb-text-secondary);
+}
+
+.chat-history-export {
+  padding: 0.15rem 0.6rem;
+  border: 2px solid var(--nb-border);
+  border-radius: var(--nb-radius);
+  background: var(--nb-background);
+  color: var(--nb-text);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.chat-history-export-error {
+  color: var(--nb-danger);
 }
 </style>
