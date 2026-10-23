@@ -92,6 +92,7 @@ async function handleSend() {
       { signal: controller.signal }
     )
     if (streamError) throw streamError
+    await loadDays()
     if (historyRef.value?.refresh) await historyRef.value.refresh()
     transientMessages.value = []
   } catch (e) {

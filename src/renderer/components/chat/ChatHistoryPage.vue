@@ -37,7 +37,7 @@ defineExpose({ refresh: load })
 
 <template>
   <div class="chat-history">
-    <div v-if="loading" class="chat-history-loading">
+    <div v-if="loading && messages.length === 0 && transientMessages.length === 0" class="chat-history-loading">
       <div class="chat-history-skeleton" v-for="n in 3" :key="n">
         <div class="skeleton-avatar" />
         <div class="skeleton-bubble" />
@@ -47,7 +47,7 @@ defineExpose({ refresh: load })
       <span>{{ error }}</span>
       <button class="chat-history-retry" @click="load">重试</button>
     </div>
-    <EmptyState v-else-if="messages.length === 0" :icon="MessagesSquare" text="暂无消息" />
+    <EmptyState v-else-if="messages.length === 0 && transientMessages.length === 0" :icon="MessagesSquare" text="暂无消息" />
     <div v-else class="chat-history-messages">
       <MessageRow
         v-for="msg in messages"
