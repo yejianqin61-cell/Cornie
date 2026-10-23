@@ -59,6 +59,12 @@ beforeEach(() => {
 })
 
 describe('MemoryWikiHomePage', () => {
+  it('identifies the memory workspace for assistive technologies', async () => {
+    const wrapper = await mountHome()
+
+    expect(wrapper.get('.mw-home').attributes('aria-label')).toBe('记忆工作区')
+  })
+
   it('filters already-loaded pages by topic page IDs instead of page type', async () => {
     const wrapper = await mountHome()
 
