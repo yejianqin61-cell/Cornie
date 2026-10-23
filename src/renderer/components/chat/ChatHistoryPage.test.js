@@ -104,3 +104,69 @@ describe('ChatHistoryPage transient visibility', () => {
     expect(wrapper.findComponent({ name: 'ConfirmCard' }).exists()).toBe(true)
   })
 })
+
+function setScrollMetrics(element, { scrollHeight, clientHeight = 100 }) {
+  Object.defineProperty(element, 'scrollHeight', { configurable: true, value: scrollHeight })
+  Object.defineProperty(element, 'clientHeight', { configurable: true, value: clientHeight })
+}
+
+describe('ChatHistoryPage scrolling', () => {
+  beforeEach(() => {
+    api.getChatDay.mockReset().mockResolvedValue({
+      messages: [{ id: 'm1', role: 'user', text: '历史消息', createdAt: 1 }],
+      pagination: { hasMore: false, nextCursor: null },
+    })
+    confirmApi.listConfirmations.mockReset().mockResolvedValue({ confirmations: [] })
+  })
+
+  it('follows new transient messages while the reader is at the bottom', async () => {
+    const wrapper = mount(ChatHistoryPage, { props: { date: '2026-10-23', transientMessages: [] } })
+    await flushPromises()
+    const container = wrapper.find('.chat-history').element
+    setScrollMetrics(container, { scrollHeight: 1000 })
+    container.scrollTop = 900
+    container.dispatchEvent(new Event('scroll'))
+
+    await wrapper.setProps({ transientMessages: [{ id: 't1', role: 'user', text: '新消息' }] })
+    await flushPromises()
+
+    expect(container.scrollTop).toBe(1000)
+  })
+
+  it('stops following after the reader scrolls up and offers a jump back', async () => {
+    const wrapper = mount(ChatHistoryPage, { props: { date: '2026-10-23', transientMessages: [] } })
+    await flushPromises()
+    const container = wrapper.find('.chat-history').element
+    setScrollMetrics(container, { scrollHeight: 1000 })
+    container.scrollTop = 0
+    container.dispatchEvent(new Event('scroll'))
+
+    await wrapper.setProps({ transientMessages: [{ id: 't1', role: 'user', text: '新消息' }] })
+    await flushPromises()
+
+    expect(container.scrollTop).toBe(0)
+    const jump = wrapper.find('.chat-history-jump')
+    expect(jump.exists()).toBe(true)
+    await jump.trigger('click')
+    expect(container.scrollTop).toBe(1000)
+  })
+
+  it('restores the scroll position per day when switching back', async () => {
+    const wrapper = mount(ChatHistoryPage, { props: { date: '2026-10-23', transientMessages: [] } })
+    await flushPromises()
+    const container = wrapper.find('.chat-history').element
+    setScrollMetrics(container, { scrollHeight: 1000 })
+    container.scrollTop = 300
+    container.dispatchEvent(new Event('scroll'))
+
+    await wrapper.setProps({ date: '2026-10-22' })
+    await flushPromises()
+    container.scrollTop = 500
+    container.dispatchEvent(new Event('scroll'))
+
+    await wrapper.setProps({ date: '2026-10-23' })
+    await flushPromises()
+
+    expect(container.scrollTop).toBe(300)
+  })
+})
