@@ -1,5 +1,6 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { getHealth } from './api/model.js'
 import CornieLayout from './components/layout/CornieLayout.vue'
 import CornieSidebarItem from './components/layout/CornieSidebarItem.vue'
 import ChatPanel from './components/chat/ChatPanel.vue'
@@ -13,6 +14,24 @@ import SettingsPage from './components/settings/SettingsPage.vue'
 
 const activeModule = ref('chat')
 const settingsOpen = ref(false)
+const apiReady = ref(false)
+const apiError = ref('')
+let retryTimer = null
+
+async function waitForApi() {
+  try {
+    const health = await getHealth()
+    if (!health?.ok || !health?.ready) throw new Error('API not ready')
+    apiReady.value = true
+    apiError.value = ''
+  } catch {
+    apiError.value = '正在等待本地服务启动…'
+    retryTimer = setTimeout(waitForApi, 500)
+  }
+}
+
+onMounted(waitForApi)
+onUnmounted(() => clearTimeout(retryTimer))
 
 const greeting = computed(() => {
   const h = new Date().getHours()
@@ -45,7 +64,7 @@ function openSettings() {
 </script>
 
 <template>
-  <CornieLayout>
+  <CornieLayout v-if="apiReady">
     <template #sidebar>
       <div class="dashboard-sidebar">
         <div class="dashboard-avatar">
@@ -83,6 +102,12 @@ function openSettings() {
       <span>v0.1.0</span>
     </template>
   </CornieLayout>
+  <main v-else class="startup-gate" aria-live="polite">
+    <div class="startup-card">
+      <strong>Cornie 正在启动</strong>
+      <span>{{ apiError }}</span>
+    </div>
+  </main>
 </template>
 
 <style scoped>
@@ -127,5 +152,21 @@ function openSettings() {
 .dashboard-nav-bottom {
   margin-top: auto;
   border-top: 3px solid #000;
+}
+
+.startup-gate {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: #0b1020;
+}
+
+.startup-card {
+  display: grid;
+  gap: 8px;
+  padding: 24px;
+  background: #fff;
+  border: 3px solid #000;
+  box-shadow: 6px 6px 0 #000;
 }
 </style>

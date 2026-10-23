@@ -35,11 +35,11 @@ export async function createServer({ store, baseDir = process.cwd(), conversatio
   app.use(express.json({ limit: '1mb' }))
   applyPersistedModelSettingsToEnv(store)
 
-  // 开发期：渲染进程(vite:5173) -> 本地 API(5174) 需要 CORS
-  // 打包后建议改为走 preload/IPC 或同源 scheme，届时可移除此段
+  // 开发期页面来自 vite，打包态页面来自 file://（浏览器 Origin 为 null）。
+  // API 仍只绑定回环地址，允许的来源只覆盖 Cornie 自己的本地页面。
   app.use((req, res, next) => {
     const origin = req.headers.origin
-    if (origin === 'http://127.0.0.1:5173') {
+    if (origin === 'http://127.0.0.1:5173' || origin === 'http://localhost:5173' || origin === 'null') {
       res.setHeader('Access-Control-Allow-Origin', origin)
       res.setHeader('Vary', 'Origin')
       res.setHeader('Access-Control-Allow-Methods', 'GET,PUT,POST,DELETE,OPTIONS')
@@ -53,6 +53,7 @@ export async function createServer({ store, baseDir = process.cwd(), conversatio
   app.get('/api/health', (_req, res) =>
     res.json({
       ok: true,
+      ready: true,
       version: 1
     })
   )

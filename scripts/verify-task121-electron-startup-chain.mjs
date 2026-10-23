@@ -24,11 +24,11 @@ async function main() {
   assert.match(mainProcess, /createMainWindow\(/, 'main.js should define main window creation')
   assert.match(mainProcess, /createCornieWindow\(/, 'main.js should define cornie window creation')
   assert.match(mainProcess, /startLocalApi\(/, 'main.js should start local API')
-  assert.match(mainProcess, /api\.listen\(5174,\s*'127\.0\.0\.1'\)/, 'local API should listen on 5174')
+  assert.match(mainProcess, /api\.listen\(LOCAL_API_PORT,\s*LOCAL_API_HOST\)/, 'local API should listen on the loopback API port')
   assert.match(mainProcess, /loadURL\('http:\/\/127\.0\.0\.1:5173'\)/, 'main window should load renderer dev URL')
   assert.match(mainProcess, /loadURL\('http:\/\/127\.0\.0\.1:5173\/cornie\.html'\)/, 'cornie window should load cornie dev URL')
 
-  assert.match(server, /createServer\s*\(\{\s*store\s*\}\)/, 'server factory should exist')
+  assert.match(server, /createServer\s*\(\{\s*store\b/, 'server factory should exist')
   assert.match(server, /app\.get\('\/api\/health'/, 'server should expose health endpoint')
   assert.match(preload, /contextBridge\.exposeInMainWorld\('cornieDesktop'/, 'preload should expose cornieDesktop bridge')
 

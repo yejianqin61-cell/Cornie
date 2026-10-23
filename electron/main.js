@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, screen } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, screen } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -11,6 +11,8 @@ const __dirname = path.dirname(__filename)
 
 const isDev = !app.isPackaged
 const DEFAULT_CORNIE_ALWAYS_ON_TOP = false
+const LOCAL_API_HOST = '127.0.0.1'
+const LOCAL_API_PORT = 5174
 
 let mainWindow = null
 let cornieWindow = null
@@ -116,11 +118,24 @@ async function startLocalApi() {
   store = await openDb(dbPath)
   const api = await createServer({ store, baseDir: resolveMemoryBaseDir() })
 
-  serverInstance = api.listen(5174, '127.0.0.1')
+  serverInstance = await new Promise((resolve, reject) => {
+    const server = api.listen(LOCAL_API_PORT, LOCAL_API_HOST)
+    server.once('listening', () => resolve(server))
+    server.once('error', reject)
+  })
 }
 
 app.whenReady().then(async () => {
-  await startLocalApi()
+  try {
+    await startLocalApi()
+  } catch (error) {
+    const detail = error?.code === 'EADDRINUSE'
+      ? `本地 API 端口 ${LOCAL_API_PORT} 已被占用，请关闭占用该端口的程序后重试。`
+      : `本地 API 启动失败：${error?.message ?? String(error)}`
+    dialog.showErrorBox('Cornie 无法启动', detail)
+    app.quit()
+    return
+  }
   mainWindow = createMainWindow()
   cornieWindow = createCornieWindow()
 
