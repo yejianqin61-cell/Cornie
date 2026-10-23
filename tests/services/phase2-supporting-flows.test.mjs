@@ -10,6 +10,7 @@ import { getEntry, upsertEntry } from '../../src/renderer/api/diary.js'
 import { createObservation, deleteObservation, getObservation } from '../../src/renderer/api/observation.js'
 import { clearModelSettings, getModelSettings, saveModelSettings } from '../../src/renderer/api/settings.js'
 import { assert, createServiceHarness } from '../shared/service-harness.mjs'
+import { createTestSecretStore } from '../shared/secret-store.mjs'
 
 const API_BASE = 'http://127.0.0.1:5174'
 
@@ -18,7 +19,7 @@ async function withApi(store, fn) {
   app.use(express.json())
   app.use('/api', diaryRoutes({ diary: diaryService(store) }))
   app.use('/api', observationRoutes({ store }))
-  app.use('/api', settingsRoutes({ settings: createSettingsService(store) }))
+  app.use('/api', settingsRoutes({ settings: createSettingsService(store, { secretStore: createTestSecretStore() }) }))
   app.use((_req, res) => res.status(404).json({ error: 'route not found' }))
   app.use(jsonErrorHandler)
 

@@ -30,10 +30,10 @@ import { applyPersistedModelSettingsToEnv, createSettingsService } from './backe
 import { settingsRoutes } from './backend/settings/routes.js'
 import { listTelemetryRecords } from './backend/agent/telemetryStore.js'
 
-export async function createServer({ store, baseDir = process.cwd(), conversationOptions = {} }) {
+export async function createServer({ store, baseDir = process.cwd(), conversationOptions = {}, secretStore } = {}) {
   const app = express()
   app.use(express.json({ limit: '1mb' }))
-  applyPersistedModelSettingsToEnv(store)
+  applyPersistedModelSettingsToEnv(store, { secretStore })
 
   // 开发期页面来自 vite，打包态页面来自 file://（浏览器 Origin 为 null）。
   // API 仍只绑定回环地址，允许的来源只覆盖 Cornie 自己的本地页面。
@@ -82,7 +82,7 @@ export async function createServer({ store, baseDir = process.cwd(), conversatio
   const schedule = createScheduleService(store)
   app.use('/api', scheduleRoutes({ schedule }))
 
-  const settings = createSettingsService(store)
+  const settings = createSettingsService(store, { secretStore })
   app.use('/api', settingsRoutes({ settings }))
 
   app.use('/api', observationRoutes({ store }))

@@ -1,11 +1,12 @@
 import { createServer } from '../../electron/server.js'
 import { clearTools } from '../../electron/backend/tools/registry.js'
 import { assert, createServiceHarness } from '../shared/service-harness.mjs'
+import { createTestSecretStore } from '../shared/secret-store.mjs'
 
 const DATE = '2026-10-22'
 
 async function withServer(harness, run) {
-  const app = await createServer({ store: harness.store, baseDir: harness.baseDir })
+  const app = await createServer({ store: harness.store, baseDir: harness.baseDir, secretStore: createTestSecretStore() })
   const server = app.listen(0, '127.0.0.1')
   await new Promise((resolve) => server.once('listening', resolve))
   try {

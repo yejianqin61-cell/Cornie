@@ -7,6 +7,7 @@ const MODEL_SETTING_KEYS = {
   model: 'settings.model.deepseek.model',
   timeoutMs: 'settings.model.deepseek.timeoutMs'
 }
+const SECURE_API_KEY_PREFIX = 'safeStorage:v1:'
 
 const INITIAL_MODEL_ENV = {
   apiKey: process.env.DEEPSEEK_API_KEY ?? '',
@@ -42,9 +43,32 @@ function maskApiKey(apiKey) {
   return `${normalized.slice(0, 4)}***${normalized.slice(-4)}`
 }
 
-function readPersistedModelSettings(store) {
+function decryptApiKey(value, secretStore) {
+  const stored = normalizeString(value)
+  if (!stored) return ''
+  if (!stored.startsWith(SECURE_API_KEY_PREFIX)) {
+    throw new Error('stored API key is not protected by safeStorage')
+  }
+  if (!secretStore || typeof secretStore.decrypt !== 'function') {
+    throw new Error('secure API key storage is unavailable')
+  }
+  return normalizeString(secretStore.decrypt(stored))
+}
+
+function encryptApiKey(value, secretStore) {
+  if (!secretStore || typeof secretStore.encrypt !== 'function') {
+    throw new Error('secure API key storage is unavailable')
+  }
+  const encrypted = normalizeString(secretStore.encrypt(value))
+  if (!encrypted.startsWith(SECURE_API_KEY_PREFIX) || encrypted === value) {
+    throw new Error('secure API key storage returned an invalid value')
+  }
+  return encrypted
+}
+
+function readPersistedModelSettings(store, { secretStore } = {}) {
   return {
-    apiKey: normalizeString(getAppSetting(store, MODEL_SETTING_KEYS.apiKey)),
+    apiKey: decryptApiKey(getAppSetting(store, MODEL_SETTING_KEYS.apiKey), secretStore),
     baseUrl: normalizeBaseUrl(getAppSetting(store, MODEL_SETTING_KEYS.baseUrl)),
     model: normalizeString(getAppSetting(store, MODEL_SETTING_KEYS.model)),
     timeoutMs: normalizeString(getAppSetting(store, MODEL_SETTING_KEYS.timeoutMs))
@@ -78,10 +102,10 @@ function resetModelEnvToInitial() {
   setEnvValue('DEEPSEEK_TIMEOUT_MS', INITIAL_MODEL_ENV.timeoutMs)
 }
 
-export function applyPersistedModelSettingsToEnv(store) {
+export function applyPersistedModelSettingsToEnv(store, { secretStore } = {}) {
   resetModelEnvToInitial()
 
-  const persisted = readPersistedModelSettings(store)
+  const persisted = readPersistedModelSettings(store, { secretStore })
   if (!process.env.DEEPSEEK_API_KEY && persisted.apiKey) {
     process.env.DEEPSEEK_API_KEY = persisted.apiKey
   }
@@ -101,10 +125,10 @@ export function applyPersistedModelSettingsToEnv(store) {
   }
 }
 
-export function createSettingsService(store) {
+export function createSettingsService(store, { secretStore } = {}) {
   return {
     getModelSettings() {
-      const persisted = readPersistedModelSettings(store)
+      const persisted = readPersistedModelSettings(store, { secretStore })
       return {
         ...buildModelSettingsSummary(persisted),
         source: persisted.apiKey ? 'persisted' : 'empty'
@@ -121,7 +145,7 @@ export function createSettingsService(store) {
       const model = normalizeString(input.model)
       const timeoutMs = normalizeTimeout(input.timeoutMs)
 
-      setAppSetting(store, MODEL_SETTING_KEYS.apiKey, apiKey)
+      setAppSetting(store, MODEL_SETTING_KEYS.apiKey, encryptApiKey(apiKey, secretStore))
       if (baseUrl) setAppSetting(store, MODEL_SETTING_KEYS.baseUrl, baseUrl)
       else deleteAppSetting(store, MODEL_SETTING_KEYS.baseUrl)
 
@@ -131,7 +155,7 @@ export function createSettingsService(store) {
       if (timeoutMs) setAppSetting(store, MODEL_SETTING_KEYS.timeoutMs, timeoutMs)
       else deleteAppSetting(store, MODEL_SETTING_KEYS.timeoutMs)
 
-      applyPersistedModelSettingsToEnv(store)
+      applyPersistedModelSettingsToEnv(store, { secretStore })
       return this.getModelSettings()
     },
 
@@ -140,7 +164,7 @@ export function createSettingsService(store) {
       deleteAppSetting(store, MODEL_SETTING_KEYS.baseUrl)
       deleteAppSetting(store, MODEL_SETTING_KEYS.model)
       deleteAppSetting(store, MODEL_SETTING_KEYS.timeoutMs)
-      applyPersistedModelSettingsToEnv(store)
+      applyPersistedModelSettingsToEnv(store, { secretStore })
       return this.getModelSettings()
     }
   }

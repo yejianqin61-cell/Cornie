@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, screen } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain, safeStorage, screen } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -13,6 +13,23 @@ const isDev = !app.isPackaged
 const DEFAULT_CORNIE_ALWAYS_ON_TOP = false
 const LOCAL_API_HOST = '127.0.0.1'
 const LOCAL_API_PORT = 5174
+const secureApiKeyStore = {
+  encrypt(value) {
+    if (!safeStorage.isEncryptionAvailable()) {
+      throw new Error('system secure storage is unavailable')
+    }
+    return `safeStorage:v1:${safeStorage.encryptString(value).toString('base64')}`
+  },
+  decrypt(value) {
+    if (!safeStorage.isEncryptionAvailable()) {
+      throw new Error('system secure storage is unavailable')
+    }
+    if (!String(value).startsWith('safeStorage:v1:')) {
+      throw new Error('stored API key is not protected by safeStorage')
+    }
+    return safeStorage.decryptString(Buffer.from(String(value).slice('safeStorage:v1:'.length), 'base64'))
+  }
+}
 
 let mainWindow = null
 let cornieWindow = null
@@ -116,7 +133,7 @@ function resolveMemoryBaseDir() {
 async function startLocalApi() {
   const dbPath = path.join(app.getPath('userData'), 'cornie.sqlite3')
   store = await openDb(dbPath)
-  const api = await createServer({ store, baseDir: resolveMemoryBaseDir() })
+  const api = await createServer({ store, baseDir: resolveMemoryBaseDir(), secretStore: secureApiKeyStore })
 
   serverInstance = await new Promise((resolve, reject) => {
     const server = api.listen(LOCAL_API_PORT, LOCAL_API_HOST)
