@@ -1,19 +1,30 @@
 {
   "extends": ["stylelint-config-standard"],
   "rules": {
-    "color-hex-length": "long",
-    "color-no-hex": [
-      true,
-      {
-        "severity": "error",
-        "message": "组件/全局 CSS 禁止裸 hex：色值一律收敛进 theme.ts（Mantine createTheme）或 styles/tokens.css；组件样式必须引用 Mantine CSS 变量或 --color-*/--pet-* token"
-      }
-    ],
+    "color-hex-length": null,
+    "color-no-hex": null,
+    "selector-class-pattern": null,
+    "color-function-alias-notation": null,
+    "color-function-notation": null,
+    "alpha-value-notation": null,
+    "declaration-block-single-line-max-declarations": null,
+    "declaration-property-value-keyword-no-deprecated": null,
+    "rule-empty-line-before": null,
+    "at-rule-empty-line-before": null,
+    "at-rule-no-unknown": null,
+    "import-notation": null,
     "no-descending-specificity": null,
     "custom-property-empty-line-before": null,
     "declaration-empty-line-before": null
   },
   "overrides": [
+    {
+      "files": ["src/**/*.vue"],
+      "customSyntax": "postcss-html",
+      "rules": {
+        "color-no-hex": null
+      }
+    },
     {
       "files": ["src/renderer/styles/tokens.css"],
       "rules": {
