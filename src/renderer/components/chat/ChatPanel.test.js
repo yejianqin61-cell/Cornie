@@ -82,6 +82,8 @@ describe('ChatPanel streaming send', () => {
     finishStream()
     await flushPromises()
     expect(refresh).toHaveBeenCalledOnce()
+    expect(api.listChatDays).toHaveBeenCalledTimes(2)
+    expect(api.listChatDays.mock.invocationCallOrder[1]).toBeLessThan(refresh.mock.invocationCallOrder[0])
     expect(wrapper.findComponent(ChatHistoryPage).props('transientMessages')).toEqual([])
   })
 
