@@ -240,6 +240,12 @@ function openEdit() {
   editorOpen.value = true
 }
 
+function closeEditor() {
+  editorOpen.value = false
+  editorInitial.value = {}
+  saveError.value = ''
+}
+
 async function onSave(formData) {
   saving.value = true
   saveError.value = ''
@@ -335,11 +341,7 @@ function goBack() {
       :saving="saving"
       :saveError="saveError"
       @save="onSave"
-      @cancel="
-        editorOpen = false
-        editorInitial = {}
-        saveError = ''
-      "
+      @cancel="closeEditor"
     />
 
     <MemoryWikiCompare v-if="compareOpen" v-bind="compareData" @close="compareOpen = false" />
