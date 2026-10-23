@@ -149,6 +149,73 @@ function mountWithRealDateNav() {
   return mount(ChatPanel, { global: { stubs: { ChatHistoryPage } } })
 }
 
+function dispatchEnter(element, options = {}) {
+  const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true, ...options })
+  element.dispatchEvent(event)
+  return event
+}
+
+describe('ChatPanel composer', () => {
+  beforeEach(() => {
+    api.listChatDays.mockReset().mockResolvedValue({ entries: [{ date: '2026-10-23' }] })
+    api.sendMessageStreamed.mockReset()
+    refresh.mockReset()
+  })
+
+  it('does not send while an IME composition confirms with Enter', async () => {
+    const wrapper = mountPanel()
+    await flushPromises()
+    const textarea = wrapper.find('textarea')
+    await textarea.setValue('你好')
+
+    const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
+    Object.defineProperty(event, 'isComposing', { value: true })
+    textarea.element.dispatchEvent(event)
+    await flushPromises()
+
+    expect(api.sendMessageStreamed).not.toHaveBeenCalled()
+  })
+
+  it('does not send on Shift+Enter', async () => {
+    const wrapper = mountPanel()
+    await flushPromises()
+    await wrapper.find('textarea').setValue('多行草稿')
+
+    dispatchEnter(wrapper.find('textarea').element, { shiftKey: true })
+    await flushPromises()
+
+    expect(api.sendMessageStreamed).not.toHaveBeenCalled()
+  })
+
+  it('sends on plain Enter and keeps the textarea editable during the request', async () => {
+    api.sendMessageStreamed.mockImplementation(() => new Promise(() => {}))
+    const wrapper = mountPanel()
+    await flushPromises()
+    const textarea = wrapper.find('textarea')
+    await textarea.setValue('按回车发送')
+
+    dispatchEnter(textarea.element)
+    await flushPromises()
+
+    expect(api.sendMessageStreamed).toHaveBeenCalledOnce()
+    expect(textarea.element.disabled).toBe(false)
+  })
+
+  it('caps the message at 5000 characters and explains the limit', async () => {
+    const wrapper = mountPanel()
+    await flushPromises()
+    const textarea = wrapper.find('textarea')
+    expect(textarea.attributes('maxlength')).toBe('5000')
+
+    await textarea.setValue('x'.repeat(5001))
+    dispatchEnter(textarea.element)
+    await flushPromises()
+
+    expect(api.sendMessageStreamed).not.toHaveBeenCalled()
+    expect(wrapper.find('.chat-panel-error').text()).toContain('5000')
+  })
+})
+
 describe('ChatPanel default date', () => {
   beforeEach(() => {
     api.listChatDays.mockReset().mockResolvedValue({
