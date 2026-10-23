@@ -1,9 +1,12 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { nextTick, ref, watch } from 'vue'
 import { MessagesSquare } from '@lucide/vue'
 import MessageRow from './MessageRow.vue'
 import EmptyState from '../common/EmptyState.vue'
 import { getChatDay } from '../../api/chatlog.js'
+
+const MESSAGE_PAGE_SIZE = 100
+const MAX_MESSAGE_PAGES = 20
 
 const props = defineProps({
   date: { type: String, required: true },
@@ -15,19 +18,32 @@ defineEmits(['confirmResolved'])
 const messages = ref([])
 const loading = ref(false)
 const error = ref('')
+const historyEl = ref(null)
 
 async function load() {
   loading.value = true
   error.value = ''
   try {
-    const res = await getChatDay(props.date)
-    messages.value = res.messages || []
+    const collected = []
+    let cursor
+    let hasMore = true
+    let pages = 0
+    while (hasMore && pages < MAX_MESSAGE_PAGES) {
+      const res = await getChatDay(props.date, { cursor, limit: MESSAGE_PAGE_SIZE })
+      collected.push(...(res.messages || []))
+      hasMore = Boolean(res.pagination?.hasMore)
+      cursor = res.pagination?.nextCursor ?? undefined
+      pages += 1
+    }
+    messages.value = collected
   } catch (e) {
     error.value = e.message || '加载失败'
     messages.value = []
   } finally {
     loading.value = false
   }
+  await nextTick()
+  if (historyEl.value) historyEl.value.scrollTop = historyEl.value.scrollHeight
 }
 
 watch(() => props.date, load, { immediate: true })
@@ -36,7 +52,7 @@ defineExpose({ refresh: load })
 </script>
 
 <template>
-  <div class="chat-history">
+  <div ref="historyEl" class="chat-history">
     <div v-if="loading && messages.length === 0 && transientMessages.length === 0" class="chat-history-loading">
       <div class="chat-history-skeleton" v-for="n in 3" :key="n">
         <div class="skeleton-avatar" />
