@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 
-const api = vi.hoisted(() => ({ getChatDay: vi.fn() }))
+const api = vi.hoisted(() => ({ getChatDay: vi.fn(), exportChatDay: vi.fn() }))
 const confirmApi = vi.hoisted(() => ({ listConfirmations: vi.fn() }))
-vi.mock('../../api/chatlog.js', () => ({ getChatDay: api.getChatDay }))
+vi.mock('../../api/chatlog.js', () => ({ getChatDay: api.getChatDay, exportChatDay: api.exportChatDay }))
 vi.mock('../../api/confirm.js', () => ({ listConfirmations: confirmApi.listConfirmations }))
 
 import ChatHistoryPage from './ChatHistoryPage.vue'
@@ -11,6 +11,7 @@ import ChatHistoryPage from './ChatHistoryPage.vue'
 describe('ChatHistoryPage transient visibility', () => {
   beforeEach(() => {
     api.getChatDay.mockReset().mockResolvedValue({ messages: [] })
+    api.exportChatDay.mockReset().mockResolvedValue({})
     confirmApi.listConfirmations.mockReset().mockResolvedValue({ confirmations: [] })
   })
 
@@ -92,6 +93,48 @@ describe('ChatHistoryPage transient visibility', () => {
     const wrapper = mount(ChatHistoryPage, { props: { date: '2026-10-23', transientMessages: [] } })
 
     expect(wrapper.find('[role="status"]').exists()).toBe(true)
+  })
+
+  it('shows a day summary with the message count', async () => {
+    api.getChatDay.mockResolvedValue({
+      messages: [
+        { id: 'm1', role: 'user', text: '一', createdAt: 1 },
+        { id: 'm2', role: 'cornie', text: '二', createdAt: 2 },
+        { id: 'm3', role: 'user', text: '三', createdAt: 3 },
+      ],
+      pagination: { hasMore: false, nextCursor: null },
+    })
+    const wrapper = mount(ChatHistoryPage, { props: { date: '2026-10-23', transientMessages: [] } })
+    await flushPromises()
+
+    expect(wrapper.find('.chat-history-summary').text()).toContain('3 条消息')
+  })
+
+  it('downloads the day export with the server filename', async () => {
+    const downloads = []
+    URL.createObjectURL = vi.fn(() => 'blob:chatlog')
+    URL.revokeObjectURL = vi.fn()
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function () {
+      downloads.push(this.download)
+    })
+    api.exportChatDay.mockResolvedValue({
+      filename: 'chatlog-2026-10-23.json',
+      content: '{"messages":[]}',
+      contentType: 'application/json; charset=utf-8',
+    })
+    api.getChatDay.mockResolvedValue({
+      messages: [{ id: 'm1', role: 'user', text: '一', createdAt: 1 }],
+      pagination: { hasMore: false, nextCursor: null },
+    })
+    const wrapper = mount(ChatHistoryPage, { props: { date: '2026-10-23', transientMessages: [] } })
+    await flushPromises()
+
+    await wrapper.find('.chat-history-export').trigger('click')
+    await flushPromises()
+
+    expect(api.exportChatDay).toHaveBeenCalledWith('2026-10-23')
+    expect(downloads).toEqual(['chatlog-2026-10-23.json'])
+    expect(URL.revokeObjectURL).toHaveBeenCalled()
   })
 
   it('loads every page and keeps the newest message', async () => {

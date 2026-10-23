@@ -3,6 +3,8 @@ import { apiGet, apiPost, apiStream } from './client.js'
 import { listEntries as listDiaryEntries, getEntry } from './diary.js'
 import { sendMessage } from './conversation.js'
 import { getChatDay, listChatDays } from './chatlog.js'
+import * as chatlogApi from './chatlog.js'
+import * as conversationApi from './conversation.js'
 import { listEntries as listLedgerEntries } from './ledger.js'
 import { listObservations } from './observation.js'
 import { listPages } from './memory-wiki.js'
@@ -143,6 +145,12 @@ describe('api/chatlog', () => {
     await listChatDays({ month: '2026-09' })
 
     expect(String(fetch.mock.calls[0][0])).toContain('/api/chatlogs?month=2026-09')
+  })
+
+  it('drops the unused conversation and delete helpers', () => {
+    expect('deleteChatDay' in chatlogApi).toBe(false)
+    expect('getConversation' in conversationApi).toBe(false)
+    expect('deleteConversation' in conversationApi).toBe(false)
   })
 })
 
