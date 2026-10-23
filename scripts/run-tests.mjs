@@ -18,7 +18,9 @@ const modeDirectories = {
     'services',
     'tools',
     'orchestrator',
-    'memory-governance'
+    'memory-governance',
+    'architecture',
+    'tooling'
   ]
 }
 
@@ -54,6 +56,20 @@ function runNodeScript(scriptPath) {
   }
 }
 
+function runShellCommand(command, label) {
+  const result = spawnSync(command, {
+    cwd: repoRoot,
+    stdio: 'inherit',
+    shell: true
+  })
+
+  if (result.status !== 0) {
+    if (result.error) console.error(result.error)
+    console.error(`[tests:${mode}] ${label} failed`)
+    process.exit(result.status ?? 1)
+  }
+}
+
 // T-01：fast/full 档在测试前先过 lint 门禁（ESLint + Prettier + Stylelint）。
 // Windows 上 .cmd 无法被 spawnSync 直接启动（EINVAL），须走 shell。
 if (mode !== 'integration') {
@@ -68,6 +84,11 @@ if (mode !== 'integration') {
     console.error('[tests:' + mode + '] lint gate failed')
     process.exit(lintResult.status ?? 1)
   }
+}
+
+if (mode === 'full') {
+  console.log('\n[tests:full] running frontend Vitest suite')
+  runShellCommand('npm run test:frontend', 'frontend test suite')
 }
 
 const directories = modeDirectories[mode]

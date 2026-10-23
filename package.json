@@ -18,6 +18,7 @@
     "test:fast": "node scripts/run-tests.mjs fast",
     "test:integration": "node scripts/run-tests.mjs integration",
     "test:full": "node scripts/run-tests.mjs full",
+    "test:frontend": "vitest run --run",
     "verify:category": "node scripts/verify-category-flow.mjs",
     "verify:ledger-tools": "node scripts/verify-ledger-tools.mjs",
     "verify:task048-tools": "node scripts/verify-task048-tools.mjs",
