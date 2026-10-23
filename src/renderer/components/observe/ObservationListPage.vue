@@ -86,6 +86,12 @@ function openNew() {
   formOpen.value = true
 }
 
+function closeForm() {
+  formOpen.value = false
+  editingObservation.value = null
+  saveError.value = ''
+}
+
 async function onSave(formData) {
   saving.value = true
   saveError.value = ''
@@ -106,6 +112,11 @@ async function onSave(formData) {
 
 function onDelete() {
   deleteTarget.value = detailObservation.value
+  deleteError.value = ''
+}
+
+function closeDeleteConfirm() {
+  deleteTarget.value = null
   deleteError.value = ''
 }
 
@@ -176,11 +187,7 @@ async function confirmDelete() {
       :saving="saving"
       :saveError="saveError"
       @save="onSave"
-      @cancel="
-        formOpen = false
-        editingObservation = null
-        saveError = ''
-      "
+      @cancel="closeForm"
     />
 
     <ObservationDeleteConfirm
@@ -188,10 +195,7 @@ async function confirmDelete() {
       :title="deleteTarget?.title"
       :error="deleteError"
       @confirm="confirmDelete"
-      @cancel="
-        deleteTarget = null
-        deleteError = ''
-      "
+      @cancel="closeDeleteConfirm"
     />
   </div>
 </template>
