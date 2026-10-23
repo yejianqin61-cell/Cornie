@@ -63,7 +63,9 @@ describe('api/client stream', () => {
   it('resolves when the stream ends with a done event', async () => {
     globalThis.fetch = vi
       .fn()
-      .mockResolvedValue(streamResponse(['data: {"kind":"delta","text":"你"}\n\n', 'data: {"kind":"done","result":{"ok":true}}\n\n']))
+      .mockResolvedValue(
+        streamResponse(['data: {"kind":"delta","text":"你"}\n\n', 'data: {"kind":"done","result":{"ok":true}}\n\n'])
+      )
     const onDelta = vi.fn()
     const onDone = vi.fn()
 
@@ -76,13 +78,27 @@ describe('api/client stream', () => {
   it('rejects when the stream ends without a done event', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue(streamResponse(['data: {"kind":"delta","text":"半句"}\n\n']))
 
-    await expect(apiStream('/stream', {}, () => {}, () => {})).rejects.toThrow('中断')
+    await expect(
+      apiStream(
+        '/stream',
+        {},
+        () => {},
+        () => {}
+      )
+    ).rejects.toThrow('中断')
   })
 
   it('rejects when the server sends an error event', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue(streamResponse(['data: {"kind":"error","error":"模型不可用"}\n\n']))
 
-    await expect(apiStream('/stream', {}, () => {}, () => {})).rejects.toThrow('模型不可用')
+    await expect(
+      apiStream(
+        '/stream',
+        {},
+        () => {},
+        () => {}
+      )
+    ).rejects.toThrow('模型不可用')
   })
 })
 
