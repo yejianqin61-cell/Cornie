@@ -12,5 +12,8 @@ for (const heading of ['## 模块边界', '## 错误模型', '## 业务链复用
 assert(document.includes('renderer API'), 'expected renderer API boundary to be documented')
 assert(document.includes('HttpError'), 'expected structured HTTP error model to be documented')
 assert(document.includes('不新增平行服务'), 'expected reuse rule to prohibit parallel services')
+for (const chain of ['聊天链：conversation、chatlog、confirm', '日常业务链：ledger、todo、schedule', '记忆演示链：memory-wiki、governance']) {
+  assert(document.includes(chain), `expected business chain reuse map to include ${chain}`)
+}
 
 console.log('tests/architecture/phase4-architecture-boundaries.test.mjs: passed 1/1')
