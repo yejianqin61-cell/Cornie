@@ -1,0 +1,1945 @@
+{
+  "steps": {
+    "00-fresh": {
+      "url": "http://127.0.0.1:5198/index.html?run=batchc",
+      "days": [
+        {
+          "text": "今天",
+          "active": true,
+          "disabled": false
+        }
+      ],
+      "messageCount": 0,
+      "firstMessage": "",
+      "lastMessage": "",
+      "assistantText": null,
+      "userBubble": null,
+      "userAvatars": {
+        "total": 0,
+        "empty": 0
+      },
+      "times": 0,
+      "confirmCards": 0,
+      "toolPanels": 0,
+      "errorVisible": false,
+      "errorText": "",
+      "emptyVisible": true,
+      "skeletonVisible": false,
+      "tokens": {
+        "border": "#000",
+        "background": "#fff",
+        "text": "#1a1a1a",
+        "accent": "#ffd100",
+        "hover": "#efe9df",
+        "textSecondary": "#555",
+        "danger": "#d32f2f"
+      },
+      "dateNavBorderColor": "rgb(0, 0, 0)",
+      "layout": {
+        "viewport": {
+          "w": 1100,
+          "h": 720
+        },
+        "body": {
+          "scrollHeight": 720,
+          "clientHeight": 720
+        },
+        "main": {
+          "scrollHeight": 660,
+          "clientHeight": 660,
+          "scrollTop": 0,
+          "overflowY": "auto",
+          "padding": "16px"
+        },
+        "history": {
+          "scrollTop": 0,
+          "scrollHeight": 472,
+          "clientHeight": 472,
+          "atBottom": true
+        },
+        "footer": {
+          "x": 139,
+          "y": 578,
+          "w": 942,
+          "h": 95,
+          "bottom": 673
+        },
+        "chatPanel": {
+          "x": 136,
+          "y": 48,
+          "w": 948,
+          "h": 628,
+          "bottom": 676
+        },
+        "statusBar": {
+          "x": 0,
+          "y": 692,
+          "w": 1100,
+          "h": 28,
+          "bottom": 720
+        },
+        "composerVisible": true
+      },
+      "sendButton": {
+        "rect": {
+          "x": 1033,
+          "y": 601,
+          "w": 36,
+          "h": 36,
+          "bottom": 637
+        },
+        "bg": "rgb(220, 38, 38)",
+        "border": "3px solid rgb(220, 38, 38)",
+        "padding": "0px",
+        "radius": "0px",
+        "disabled": true,
+        "classes": "neobrutalism-button inline-flex items-center justify-center whitespace-nowrap font-bold uppercase tracking-wide transition-all duration-100 ease-in-out outline-none overflow-visible neobrutalism-button-primary app-button-icon chat-panel-send",
+        "ariaLabel": "发送消息"
+      },
+      "cancelButton": null,
+      "textarea": {
+        "rect": {
+          "x": 151,
+          "y": 593,
+          "w": 874,
+          "h": 44,
+          "bottom": 637
+        },
+        "resize": "vertical",
+        "fontSize": "14.4px",
+        "lineHeight": "21.6px",
+        "border": "2px solid rgb(0, 0, 0)",
+        "bg": "rgb(255, 255, 255)",
+        "disabled": false,
+        "placeholder": "输入消息...",
+        "maxLength": 5000
+      },
+      "focusables": {
+        "total": 10,
+        "unnamed": 0,
+        "unnamedSamples": []
+      },
+      "smallFontCount": 0,
+      "statusBarText": "v0.1.0",
+      "greeting": "夜深了",
+      "topbarButtons": [],
+      "audit": {
+        "flashes": [],
+        "events": [
+          {
+            "at": 19,
+            "kind": "dom-content-loaded",
+            "text": ""
+          },
+          {
+            "at": 79,
+            "kind": "empty-state",
+            "text": "今天还没有聊天记录"
+          }
+        ],
+        "consoleErrors": []
+      },
+      "shot": "00-fresh.png",
+      "bytes": 30595
+    },
+    "00a-fresh-streaming": {
+      "url": "http://127.0.0.1:5198/index.html?run=batchc",
+      "days": [
+        {
+          "text": "今天",
+          "active": true,
+          "disabled": false
+        }
+      ],
+      "messageCount": 2,
+      "firstMessage": "第一次打开就发一条消息，看看会不会出现在历史里。",
+      "lastMessage": "我听到啦，主人。\n这句话是流",
+      "assistantText": {
+        "whiteSpace": "normal",
+        "lineHeight": "22.32px",
+        "height": 65,
+        "lines": 3
+      },
+      "userBubble": {
+        "bg": "rgb(255, 209, 0)",
+        "whiteSpace": "normal"
+      },
+      "userAvatars": {
+        "total": 1,
+        "empty": 1
+      },
+      "times": 0,
+      "confirmCards": 0,
+      "toolPanels": 0,
+      "errorVisible": false,
+      "errorText": "",
+      "emptyVisible": false,
+      "skeletonVisible": false,
+      "tokens": {
+        "border": "#000",
+        "background": "#fff",
+        "text": "#1a1a1a",
+        "accent": "#ffd100",
+        "hover": "#efe9df",
+        "textSecondary": "#555",
+        "danger": "#d32f2f"
+      },
+      "dateNavBorderColor": "rgb(0, 0, 0)",
+      "layout": {
+        "viewport": {
+          "w": 1100,
+          "h": 720
+        },
+        "body": {
+          "scrollHeight": 720,
+          "clientHeight": 720
+        },
+        "main": {
+          "scrollHeight": 660,
+          "clientHeight": 660,
+          "scrollTop": 0,
+          "overflowY": "auto",
+          "padding": "16px"
+        },
+        "history": {
+          "scrollTop": 0,
+          "scrollHeight": 472,
+          "clientHeight": 472,
+          "atBottom": true
+        },
+        "footer": {
+          "x": 139,
+          "y": 578,
+          "w": 942,
+          "h": 95,
+          "bottom": 673
+        },
+        "chatPanel": {
+          "x": 136,
+          "y": 48,
+          "w": 948,
+          "h": 628,
+          "bottom": 676
+        },
+        "statusBar": {
+          "x": 0,
+          "y": 692,
+          "w": 1100,
+          "h": 28,
+          "bottom": 720
+        },
+        "composerVisible": true
+      },
+      "sendButton": {
+        "rect": {
+          "x": 989,
+          "y": 601,
+          "w": 36,
+          "h": 36,
+          "bottom": 637
+        },
+        "bg": "rgb(220, 38, 38)",
+        "border": "3px solid rgb(220, 38, 38)",
+        "padding": "0px",
+        "radius": "0px",
+        "disabled": true,
+        "classes": "neobrutalism-button inline-flex items-center justify-center whitespace-nowrap font-bold uppercase tracking-wide transition-all duration-100 ease-in-out outline-none overflow-visible neobrutalism-button-primary app-button-icon chat-panel-send",
+        "ariaLabel": "发送消息"
+      },
+      "cancelButton": "neobrutalism-button inline-flex items-center justify-center whitespace-nowrap font-bold uppercase tracking-wide transition-all duration-100 ease-in-out outline-none overflow-visible neobrutalism-button-outline app-button-icon chat-panel-cancel",
+      "textarea": {
+        "rect": {
+          "x": 151,
+          "y": 593,
+          "w": 830,
+          "h": 44,
+          "bottom": 637
+        },
+        "resize": "vertical",
+        "fontSize": "14.4px",
+        "lineHeight": "21.6px",
+        "border": "2px solid rgb(0, 0, 0)",
+        "bg": "rgb(255, 255, 255)",
+        "disabled": false,
+        "placeholder": "输入消息...",
+        "maxLength": 5000
+      },
+      "focusables": {
+        "total": 12,
+        "unnamed": 0,
+        "unnamedSamples": []
+      },
+      "smallFontCount": 0,
+      "statusBarText": "v0.1.0",
+      "greeting": "夜深了",
+      "topbarButtons": [],
+      "audit": {
+        "flashes": [],
+        "events": [
+          {
+            "at": 19,
+            "kind": "dom-content-loaded",
+            "text": ""
+          },
+          {
+            "at": 79,
+            "kind": "empty-state",
+            "text": "今天还没有聊天记录"
+          },
+          {
+            "at": 1499,
+            "kind": "history-rendered",
+            "text": "3"
+          }
+        ],
+        "consoleErrors": []
+      },
+      "shot": "00a-fresh-streaming.png",
+      "bytes": 38425
+    },
+    "00b-fresh-after-send": {
+      "url": "http://127.0.0.1:5198/index.html?run=batchc",
+      "days": [
+        {
+          "text": "今天",
+          "active": true,
+          "disabled": false
+        }
+      ],
+      "messageCount": 2,
+      "firstMessage": "第一次打开就发一条消息，看看会不会出现在历史里。",
+      "lastMessage": "我听到啦，主人。\n这句话是流式说出来的第二行，用来检查换行和滚动。",
+      "assistantText": {
+        "whiteSpace": "normal",
+        "lineHeight": "22.32px",
+        "height": 65,
+        "lines": 3
+      },
+      "userBubble": {
+        "bg": "rgb(255, 209, 0)",
+        "whiteSpace": "normal"
+      },
+      "userAvatars": {
+        "total": 1,
+        "empty": 1
+      },
+      "times": 0,
+      "confirmCards": 0,
+      "toolPanels": 0,
+      "errorVisible": false,
+      "errorText": "",
+      "emptyVisible": false,
+      "skeletonVisible": false,
+      "tokens": {
+        "border": "#000",
+        "background": "#fff",
+        "text": "#1a1a1a",
+        "accent": "#ffd100",
+        "hover": "#efe9df",
+        "textSecondary": "#555",
+        "danger": "#d32f2f"
+      },
+      "dateNavBorderColor": "rgb(0, 0, 0)",
+      "layout": {
+        "viewport": {
+          "w": 1100,
+          "h": 720
+        },
+        "body": {
+          "scrollHeight": 720,
+          "clientHeight": 720
+        },
+        "main": {
+          "scrollHeight": 660,
+          "clientHeight": 660,
+          "scrollTop": 0,
+          "overflowY": "auto",
+          "padding": "16px"
+        },
+        "history": {
+          "scrollTop": 0,
+          "scrollHeight": 472,
+          "clientHeight": 472,
+          "atBottom": true
+        },
+        "footer": {
+          "x": 139,
+          "y": 578,
+          "w": 942,
+          "h": 95,
+          "bottom": 673
+        },
+        "chatPanel": {
+          "x": 136,
+          "y": 48,
+          "w": 948,
+          "h": 628,
+          "bottom": 676
+        },
+        "statusBar": {
+          "x": 0,
+          "y": 692,
+          "w": 1100,
+          "h": 28,
+          "bottom": 720
+        },
+        "composerVisible": true
+      },
+      "sendButton": {
+        "rect": {
+          "x": 1033,
+          "y": 601,
+          "w": 36,
+          "h": 36,
+          "bottom": 637
+        },
+        "bg": "rgb(220, 38, 38)",
+        "border": "3px solid rgb(220, 38, 38)",
+        "padding": "0px",
+        "radius": "0px",
+        "disabled": true,
+        "classes": "neobrutalism-button inline-flex items-center justify-center whitespace-nowrap font-bold uppercase tracking-wide transition-all duration-100 ease-in-out outline-none overflow-visible neobrutalism-button-primary app-button-icon chat-panel-send",
+        "ariaLabel": "发送消息"
+      },
+      "cancelButton": null,
+      "textarea": {
+        "rect": {
+          "x": 151,
+          "y": 593,
+          "w": 874,
+          "h": 44,
+          "bottom": 637
+        },
+        "resize": "vertical",
+        "fontSize": "14.4px",
+        "lineHeight": "21.6px",
+        "border": "2px solid rgb(0, 0, 0)",
+        "bg": "rgb(255, 255, 255)",
+        "disabled": false,
+        "placeholder": "输入消息...",
+        "maxLength": 5000
+      },
+      "focusables": {
+        "total": 11,
+        "unnamed": 0,
+        "unnamedSamples": []
+      },
+      "smallFontCount": 0,
+      "statusBarText": "v0.1.0",
+      "greeting": "夜深了",
+      "topbarButtons": [],
+      "audit": {
+        "flashes": [],
+        "events": [
+          {
+            "at": 19,
+            "kind": "dom-content-loaded",
+            "text": ""
+          },
+          {
+            "at": 79,
+            "kind": "empty-state",
+            "text": "今天还没有聊天记录"
+          },
+          {
+            "at": 1499,
+            "kind": "history-rendered",
+            "text": "3"
+          }
+        ],
+        "consoleErrors": []
+      },
+      "shot": "00b-fresh-after-send.png",
+      "bytes": 40132
+    },
+    "01-open-default": {
+      "url": "http://127.0.0.1:5198/index.html?run=batchc",
+      "days": [
+        {
+          "text": "10月14日",
+          "active": false,
+          "disabled": false
+        },
+        {
+          "text": "10月18日",
+          "active": false,
+          "disabled": false
+        },
+        {
+          "text": "昨天",
+          "active": false,
+          "disabled": false
+        },
+        {
+          "text": "今天",
+          "active": true,
+          "disabled": false
+        }
+      ],
+      "messageCount": 2,
+      "firstMessage": "今天有点累，陪我聊两句吧。\n顺便帮我记一下明天要交房租。",
+      "lastMessage": "好呀，那我们就慢慢说。房租这件事我先替你记着：明天要交房租。金额：待你补充方式：",
+      "assistantText": {
+        "whiteSpace": "normal",
+        "lineHeight": "22.32px",
+        "height": 156,
+        "lines": 7
+      },
+      "userBubble": {
+        "bg": "rgb(255, 209, 0)",
+        "whiteSpace": "normal"
+      },
+      "userAvatars": {
+        "total": 1,
+        "empty": 1
+      },
+      "times": 0,
+      "confirmCards": 1,
+      "toolPanels": 0,
+      "errorVisible": false,
+      "errorText": "",
+      "emptyVisible": false,
+      "skeletonVisible": false,
+      "tokens": {
+        "border": "#000",
+        "background": "#fff",
+        "text": "#1a1a1a",
+        "accent": "#ffd100",
+        "hover": "#efe9df",
+        "textSecondary": "#555",
+        "danger": "#d32f2f"
+      },
+      "dateNavBorderColor": "rgb(0, 0, 0)",
+      "layout": {
+        "viewport": {
+          "w": 1100,
+          "h": 720
+        },
+        "body": {
+          "scrollHeight": 720,
+          "clientHeight": 720
+        },
+        "main": {
+          "scrollHeight": 660,
+          "clientHeight": 660,
+          "scrollTop": 0,
+          "overflowY": "auto",
+          "padding": "16px"
+        },
+        "history": {
+          "scrollTop": 90,
+          "scrollHeight": 562,
+          "clientHeight": 472,
+          "atBottom": true
+        },
+        "footer": {
+          "x": 139,
+          "y": 578,
+          "w": 942,
+          "h": 95,
+          "bottom": 673
+        },
+        "chatPanel": {
+          "x": 136,
+          "y": 48,
+          "w": 948,
+          "h": 628,
+          "bottom": 676
+        },
+        "statusBar": {
+          "x": 0,
+          "y": 692,
+          "w": 1100,
+          "h": 28,
+          "bottom": 720
+        },
+        "composerVisible": true
+      },
+      "sendButton": {
+        "rect": {
+          "x": 1033,
+          "y": 601,
+          "w": 36,
+          "h": 36,
+          "bottom": 637
+        },
+        "bg": "rgb(220, 38, 38)",
+        "border": "3px solid rgb(220, 38, 38)",
+        "padding": "0px",
+        "radius": "0px",
+        "disabled": true,
+        "classes": "neobrutalism-button inline-flex items-center justify-center whitespace-nowrap font-bold uppercase tracking-wide transition-all duration-100 ease-in-out outline-none overflow-visible neobrutalism-button-primary app-button-icon chat-panel-send",
+        "ariaLabel": "发送消息"
+      },
+      "cancelButton": null,
+      "textarea": {
+        "rect": {
+          "x": 151,
+          "y": 593,
+          "w": 874,
+          "h": 44,
+          "bottom": 637
+        },
+        "resize": "vertical",
+        "fontSize": "14.4px",
+        "lineHeight": "21.6px",
+        "border": "2px solid rgb(0, 0, 0)",
+        "bg": "rgb(255, 255, 255)",
+        "disabled": false,
+        "placeholder": "输入消息...",
+        "maxLength": 5000
+      },
+      "focusables": {
+        "total": 17,
+        "unnamed": 0,
+        "unnamedSamples": []
+      },
+      "smallFontCount": 2,
+      "statusBarText": "v0.1.0",
+      "greeting": "夜深了",
+      "topbarButtons": [],
+      "audit": {
+        "flashes": [],
+        "events": [
+          {
+            "at": 12,
+            "kind": "dom-content-loaded",
+            "text": ""
+          },
+          {
+            "at": 61,
+            "kind": "history-rendered",
+            "text": "3"
+          }
+        ],
+        "consoleErrors": []
+      },
+      "shot": "01-open-default.png",
+      "bytes": 51134
+    },
+    "02-today": {
+      "url": "http://127.0.0.1:5198/index.html?run=batchc",
+      "days": [
+        {
+          "text": "10月14日",
+          "active": false,
+          "disabled": false
+        },
+        {
+          "text": "10月18日",
+          "active": false,
+          "disabled": false
+        },
+        {
+          "text": "昨天",
+          "active": false,
+          "disabled": false
+        },
+        {
+          "text": "今天",
+          "active": true,
+          "disabled": false
+        }
+      ],
+      "messageCount": 2,
+      "firstMessage": "今天有点累，陪我聊两句吧。\n顺便帮我记一下明天要交房租。",
+      "lastMessage": "好呀，那我们就慢慢说。房租这件事我先替你记着：明天要交房租。金额：待你补充方式：",
+      "assistantText": {
+        "whiteSpace": "normal",
+        "lineHeight": "22.32px",
+        "height": 156,
+        "lines": 7
+      },
+      "userBubble": {
+        "bg": "rgb(255, 209, 0)",
+        "whiteSpace": "normal"
+      },
+      "userAvatars": {
+        "total": 1,
+        "empty": 1
+      },
+      "times": 0,
+      "confirmCards": 1,
+      "toolPanels": 0,
+      "errorVisible": false,
+      "errorText": "",
+      "emptyVisible": false,
+      "skeletonVisible": false,
+      "tokens": {
+        "border": "#000",
+        "background": "#fff",
+        "text": "#1a1a1a",
+        "accent": "#ffd100",
+        "hover": "#efe9df",
+        "textSecondary": "#555",
+        "danger": "#d32f2f"
+      },
+      "dateNavBorderColor": "rgb(0, 0, 0)",
+      "layout": {
+        "viewport": {
+          "w": 1100,
+          "h": 720
+        },
+        "body": {
+          "scrollHeight": 720,
+          "clientHeight": 720
+        },
+        "main": {
+          "scrollHeight": 660,
+          "clientHeight": 660,
+          "scrollTop": 0,
+          "overflowY": "auto",
+          "padding": "16px"
+        },
+        "history": {
+          "scrollTop": 90,
+          "scrollHeight": 562,
+          "clientHeight": 472,
+          "atBottom": true
+        },
+        "footer": {
+          "x": 139,
+          "y": 578,
+          "w": 942,
+          "h": 95,
+          "bottom": 673
+        },
+        "chatPanel": {
+          "x": 136,
+          "y": 48,
+          "w": 948,
+          "h": 628,
+          "bottom": 676
+        },
+        "statusBar": {
+          "x": 0,
+          "y": 692,
+          "w": 1100,
+          "h": 28,
+          "bottom": 720
+        },
+        "composerVisible": true
+      },
+      "sendButton": {
+        "rect": {
+          "x": 1033,
+          "y": 601,
+          "w": 36,
+          "h": 36,
+          "bottom": 637
+        },
+        "bg": "rgb(220, 38, 38)",
+        "border": "3px solid rgb(220, 38, 38)",
+        "padding": "0px",
+        "radius": "0px",
+        "disabled": true,
+        "classes": "neobrutalism-button inline-flex items-center justify-center whitespace-nowrap font-bold uppercase tracking-wide transition-all duration-100 ease-in-out outline-none overflow-visible neobrutalism-button-primary app-button-icon chat-panel-send",
+        "ariaLabel": "发送消息"
+      },
+      "cancelButton": null,
+      "textarea": {
+        "rect": {
+          "x": 151,
+          "y": 593,
+          "w": 874,
+          "h": 44,
+          "bottom": 637
+        },
+        "resize": "vertical",
+        "fontSize": "14.4px",
+        "lineHeight": "21.6px",
+        "border": "2px solid rgb(0, 0, 0)",
+        "bg": "rgb(255, 255, 255)",
+        "disabled": false,
+        "placeholder": "输入消息...",
+        "maxLength": 5000
+      },
+      "focusables": {
+        "total": 17,
+        "unnamed": 0,
+        "unnamedSamples": []
+      },
+      "smallFontCount": 2,
+      "statusBarText": "v0.1.0",
+      "greeting": "夜深了",
+      "topbarButtons": [],
+      "audit": {
+        "flashes": [],
+        "events": [
+          {
+            "at": 12,
+            "kind": "dom-content-loaded",
+            "text": ""
+          },
+          {
+            "at": 61,
+            "kind": "history-rendered",
+            "text": "3"
+          }
+        ],
+        "consoleErrors": []
+      },
+      "shot": "02-today.png",
+      "bytes": 51134
+    },
+    "03-streaming": {
+      "url": "http://127.0.0.1:5198/index.html?run=batchc",
+      "days": [
+        {
+          "text": "10月14日",
+          "active": false,
+          "disabled": false
+        },
+        {
+          "text": "10月18日",
+          "active": false,
+          "disabled": false
+        },
+        {
+          "text": "昨天",
+          "active": false,
+          "disabled": false
+        },
+        {
+          "text": "今天",
+          "active": true,
+          "disabled": false
+        }
+      ],
+      "messageCount": 4,
+      "firstMessage": "今天有点累，陪我聊两句吧。\n顺便帮我记一下明天要交房租。",
+      "lastMessage": "我听到啦，主人。\n这句话是流",
+      "assistantText": {
+        "whiteSpace": "normal",
+        "lineHeight": "22.32px",
+        "height": 156,
+        "lines": 7
+      },
+      "userBubble": {
+        "bg": "rgb(255, 209, 0)",
+        "whiteSpace": "normal"
+      },
+      "userAvatars": {
+        "total": 2,
+        "empty": 2
+      },
+      "times": 0,
+      "confirmCards": 1,
+      "toolPanels": 0,
+      "errorVisible": false,
+      "errorText": "",
+      "emptyVisible": false,
+      "skeletonVisible": false,
+      "tokens": {
+        "border": "#000",
+        "background": "#fff",
+        "text": "#1a1a1a",
+        "accent": "#ffd100",
+        "hover": "#efe9df",
+        "textSecondary": "#555",
+        "danger": "#d32f2f"
+      },
+      "dateNavBorderColor": "rgb(0, 0, 0)",
+      "layout": {
+        "viewport": {
+          "w": 1100,
+          "h": 720
+        },
+        "body": {
+          "scrollHeight": 720,
+          "clientHeight": 720
+        },
+        "main": {
+          "scrollHeight": 660,
+          "clientHeight": 660,
+          "scrollTop": 0,
+          "overflowY": "auto",
+          "padding": "16px"
+        },
+        "history": {
+          "scrollTop": 276,
+          "scrollHeight": 748,
+          "clientHeight": 472,
+          "atBottom": true
+        },
+        "footer": {
+          "x": 139,
+          "y": 578,
+          "w": 942,
+          "h": 95,
+          "bottom": 673
+        },
+        "chatPanel": {
+          "x": 136,
+          "y": 48,
+          "w": 948,
+          "h": 628,
+          "bottom": 676
+        },
+        "statusBar": {
+          "x": 0,
+          "y": 692,
+          "w": 1100,
+          "h": 28,
+          "bottom": 720
+        },
+        "composerVisible": true
+      },
+      "sendButton": {
+        "rect": {
+          "x": 989,
+          "y": 601,
+          "w": 36,
+          "h": 36,
+          "bottom": 637
+        },
+        "bg": "rgb(220, 38, 38)",
+        "border": "3px solid rgb(220, 38, 38)",
+        "padding": "0px",
+        "radius": "0px",
+        "disabled": true,
+        "classes": "neobrutalism-button inline-flex items-center justify-center whitespace-nowrap font-bold uppercase tracking-wide transition-all duration-100 ease-in-out outline-none overflow-visible neobrutalism-button-primary app-button-icon chat-panel-send",
+        "ariaLabel": "发送消息"
+      },
+      "cancelButton": "neobrutalism-button inline-flex items-center justify-center whitespace-nowrap font-bold uppercase tracking-wide transition-all duration-100 ease-in-out outline-none overflow-visible neobrutalism-button-outline app-button-icon chat-panel-cancel",
+      "textarea": {
+        "rect": {
+          "x": 151,
+          "y": 593,
+          "w": 830,
+          "h": 44,
+          "bottom": 637
+        },
+        "resize": "vertical",
+        "fontSize": "14.4px",
+        "lineHeight": "21.6px",
+        "border": "2px solid rgb(0, 0, 0)",
+        "bg": "rgb(255, 255, 255)",
+        "disabled": false,
+        "placeholder": "输入消息...",
+        "maxLength": 5000
+      },
+      "focusables": {
+        "total": 18,
+        "unnamed": 0,
+        "unnamedSamples": []
+      },
+      "smallFontCount": 2,
+      "statusBarText": "v0.1.0",
+      "greeting": "夜深了",
+      "topbarButtons": [],
+      "audit": {
+        "flashes": [],
+        "events": [
+          {
+            "at": 12,
+            "kind": "dom-content-loaded",
+            "text": ""
+          },
+          {
+            "at": 61,
+            "kind": "history-rendered",
+            "text": "3"
+          },
+          {
+            "at": 3195,
+            "kind": "history-rendered",
+            "text": "5"
+          }
+        ],
+        "consoleErrors": []
+      },
+      "shot": "03-streaming.png",
+      "bytes": 47865
+    },
+    "04-after-send": {
+      "url": "http://127.0.0.1:5198/index.html?run=batchc",
+      "days": [
+        {
+          "text": "10月14日",
+          "active": false,
+          "disabled": false
+        },
+        {
+          "text": "10月18日",
+          "active": false,
+          "disabled": false
+        },
+        {
+          "text": "昨天",
+          "active": false,
+          "disabled": false
+        },
+        {
+          "text": "今天",
+          "active": true,
+          "disabled": false
+        }
+      ],
+      "messageCount": 4,
+      "firstMessage": "今天有点累，陪我聊两句吧。\n顺便帮我记一下明天要交房租。",
+      "lastMessage": "我听到啦，主人。\n这句话是流式说出来的第二行，用来检查换行和滚动。",
+      "assistantText": {
+        "whiteSpace": "normal",
+        "lineHeight": "22.32px",
+        "height": 156,
+        "lines": 7
+      },
+      "userBubble": {
+        "bg": "rgb(255, 209, 0)",
+        "whiteSpace": "normal"
+      },
+      "userAvatars": {
+        "total": 2,
+        "empty": 2
+      },
+      "times": 0,
+      "confirmCards": 1,
+      "toolPanels": 0,
+      "errorVisible": false,
+      "errorText": "",
+      "emptyVisible": false,
+      "skeletonVisible": false,
+      "tokens": {
+        "border": "#000",
+        "background": "#fff",
+        "text": "#1a1a1a",
+        "accent": "#ffd100",
+        "hover": "#efe9df",
+        "textSecondary": "#555",
+        "danger": "#d32f2f"
+      },
+      "dateNavBorderColor": "rgb(0, 0, 0)",
+      "layout": {
+        "viewport": {
+          "w": 1100,
+          "h": 720
+        },
+        "body": {
+          "scrollHeight": 720,
+          "clientHeight": 720
+        },
+        "main": {
+          "scrollHeight": 660,
+          "clientHeight": 660,
+          "scrollTop": 0,
+          "overflowY": "auto",
+          "padding": "16px"
+        },
+        "history": {
+          "scrollTop": 276,
+          "scrollHeight": 748,
+          "clientHeight": 472,
+          "atBottom": true
+        },
+        "footer": {
+          "x": 139,
+          "y": 578,
+          "w": 942,
+          "h": 95,
+          "bottom": 673
+        },
+        "chatPanel": {
+          "x": 136,
+          "y": 48,
+          "w": 948,
+          "h": 628,
+          "bottom": 676
+        },
+        "statusBar": {
+          "x": 0,
+          "y": 692,
+          "w": 1100,
+          "h": 28,
+          "bottom": 720
+        },
+        "composerVisible": true
+      },
+      "sendButton": {
+        "rect": {
+          "x": 1033,
+          "y": 601,
+          "w": 36,
+          "h": 36,
+          "bottom": 637
+        },
+        "bg": "rgb(220, 38, 38)",
+        "border": "3px solid rgb(220, 38, 38)",
+        "padding": "0px",
+        "radius": "0px",
+        "disabled": true,
+        "classes": "neobrutalism-button inline-flex items-center justify-center whitespace-nowrap font-bold uppercase tracking-wide transition-all duration-100 ease-in-out outline-none overflow-visible neobrutalism-button-primary app-button-icon chat-panel-send",
+        "ariaLabel": "发送消息"
+      },
+      "cancelButton": null,
+      "textarea": {
+        "rect": {
+          "x": 151,
+          "y": 593,
+          "w": 874,
+          "h": 44,
+          "bottom": 637
+        },
+        "resize": "vertical",
+        "fontSize": "14.4px",
+        "lineHeight": "21.6px",
+        "border": "2px solid rgb(0, 0, 0)",
+        "bg": "rgb(255, 255, 255)",
+        "disabled": false,
+        "placeholder": "输入消息...",
+        "maxLength": 5000
+      },
+      "focusables": {
+        "total": 17,
+        "unnamed": 0,
+        "unnamedSamples": []
+      },
+      "smallFontCount": 2,
+      "statusBarText": "v0.1.0",
+      "greeting": "夜深了",
+      "topbarButtons": [],
+      "audit": {
+        "flashes": [],
+        "events": [
+          {
+            "at": 12,
+            "kind": "dom-content-loaded",
+            "text": ""
+          },
+          {
+            "at": 61,
+            "kind": "history-rendered",
+            "text": "3"
+          },
+          {
+            "at": 3195,
+            "kind": "history-rendered",
+            "text": "5"
+          }
+        ],
+        "consoleErrors": []
+      },
+      "shot": "04-after-send.png",
+      "bytes": 49339
+    },
+    "05-long-open": {
+      "url": "http://127.0.0.1:5198/index.html?run=batchc",
+      "days": [
+        {
+          "text": "10月14日",
+          "active": true,
+          "disabled": false
+        },
+        {
+          "text": "10月18日",
+          "active": false,
+          "disabled": false
+        },
+        {
+          "text": "昨天",
+          "active": false,
+          "disabled": false
+        },
+        {
+          "text": "今天",
+          "active": false,
+          "disabled": false
+        }
+      ],
+      "messageCount": 120,
+      "firstMessage": "第 1 条用户消息：这是一段用于检查长对话阅读体验的文字。",
+      "lastMessage": "第 120 条回复：这是一段用于检查长对话阅读体验的文字，长度稍微再长一点点。",
+      "assistantText": {
+        "whiteSpace": "normal",
+        "lineHeight": "22.32px",
+        "height": 42,
+        "lines": 2
+      },
+      "userBubble": {
+        "bg": "rgb(255, 209, 0)",
+        "whiteSpace": "normal"
+      },
+      "userAvatars": {
+        "total": 60,
+        "empty": 60
+      },
+      "times": 0,
+      "confirmCards": 0,
+      "toolPanels": 0,
+      "errorVisible": false,
+      "errorText": "",
+      "emptyVisible": false,
+      "skeletonVisible": false,
+      "tokens": {
+        "border": "#000",
+        "background": "#fff",
+        "text": "#1a1a1a",
+        "accent": "#ffd100",
+        "hover": "#efe9df",
+        "textSecondary": "#555",
+        "danger": "#d32f2f"
+      },
+      "dateNavBorderColor": "rgb(0, 0, 0)",
+      "layout": {
+        "viewport": {
+          "w": 1100,
+          "h": 720
+        },
+        "body": {
+          "scrollHeight": 720,
+          "clientHeight": 720
+        },
+        "main": {
+          "scrollHeight": 660,
+          "clientHeight": 660,
+          "scrollTop": 0,
+          "overflowY": "auto",
+          "padding": "16px"
+        },
+        "history": {
+          "scrollTop": 9416,
+          "scrollHeight": 9888,
+          "clientHeight": 472,
+          "atBottom": true
+        },
+        "footer": {
+          "x": 139,
+          "y": 578,
+          "w": 942,
+          "h": 95,
+          "bottom": 673
+        },
+        "chatPanel": {
+          "x": 136,
+          "y": 48,
+          "w": 948,
+          "h": 628,
+          "bottom": 676
+        },
+        "statusBar": {
+          "x": 0,
+          "y": 692,
+          "w": 1100,
+          "h": 28,
+          "bottom": 720
+        },
+        "composerVisible": true
+      },
+      "sendButton": {
+        "rect": {
+          "x": 1033,
+          "y": 601,
+          "w": 36,
+          "h": 36,
+          "bottom": 637
+        },
+        "bg": "rgb(220, 38, 38)",
+        "border": "3px solid rgb(220, 38, 38)",
+        "padding": "0px",
+        "radius": "0px",
+        "disabled": true,
+        "classes": "neobrutalism-button inline-flex items-center justify-center whitespace-nowrap font-bold uppercase tracking-wide transition-all duration-100 ease-in-out outline-none overflow-visible neobrutalism-button-primary app-button-icon chat-panel-send",
+        "ariaLabel": "发送消息"
+      },
+      "cancelButton": null,
+      "textarea": {
+        "rect": {
+          "x": 151,
+          "y": 593,
+          "w": 874,
+          "h": 44,
+          "bottom": 637
+        },
+        "resize": "vertical",
+        "fontSize": "14.4px",
+        "lineHeight": "21.6px",
+        "border": "2px solid rgb(0, 0, 0)",
+        "bg": "rgb(255, 255, 255)",
+        "disabled": false,
+        "placeholder": "输入消息...",
+        "maxLength": 5000
+      },
+      "focusables": {
+        "total": 16,
+        "unnamed": 0,
+        "unnamedSamples": []
+      },
+      "smallFontCount": 0,
+      "statusBarText": "v0.1.0",
+      "greeting": "夜深了",
+      "topbarButtons": [],
+      "audit": {
+        "flashes": [],
+        "events": [
+          {
+            "at": 12,
+            "kind": "dom-content-loaded",
+            "text": ""
+          },
+          {
+            "at": 61,
+            "kind": "history-rendered",
+            "text": "3"
+          },
+          {
+            "at": 3195,
+            "kind": "history-rendered",
+            "text": "5"
+          },
+          {
+            "at": 7506,
+            "kind": "history-rendered",
+            "text": "121"
+          }
+        ],
+        "consoleErrors": []
+      },
+      "shot": "05-long-open.png",
+      "bytes": 63070,
+      "visibility": {
+        "historyTop": 106,
+        "historyBottom": 578,
+        "lastRowTop": 484,
+        "lastRowBottom": 566,
+        "lastRowVisible": true,
+        "rows": 120,
+        "scrollTop": 9416,
+        "scrollHeight": 9888,
+        "clientHeight": 472,
+        "atBottom": true
+      }
+    },
+    "06-long-streaming": {
+      "url": "http://127.0.0.1:5198/index.html?run=batchc",
+      "days": [
+        {
+          "text": "10月14日",
+          "active": true,
+          "disabled": false
+        },
+        {
+          "text": "10月18日",
+          "active": false,
+          "disabled": false
+        },
+        {
+          "text": "昨天",
+          "active": false,
+          "disabled": false
+        },
+        {
+          "text": "今天",
+          "active": false,
+          "disabled": false
+        }
+      ],
+      "messageCount": 122,
+      "firstMessage": "第 1 条用户消息：这是一段用于检查长对话阅读体验的文字。",
+      "lastMessage": "我听到啦，主人。\n这句话是流式",
+      "assistantText": {
+        "whiteSpace": "normal",
+        "lineHeight": "22.32px",
+        "height": 42,
+        "lines": 2
+      },
+      "userBubble": {
+        "bg": "rgb(255, 209, 0)",
+        "whiteSpace": "normal"
+      },
+      "userAvatars": {
+        "total": 61,
+        "empty": 61
+      },
+      "times": 0,
+      "confirmCards": 0,
+      "toolPanels": 0,
+      "errorVisible": false,
+      "errorText": "",
+      "emptyVisible": false,
+      "skeletonVisible": false,
+      "tokens": {
+        "border": "#000",
+        "background": "#fff",
+        "text": "#1a1a1a",
+        "accent": "#ffd100",
+        "hover": "#efe9df",
+        "textSecondary": "#555",
+        "danger": "#d32f2f"
+      },
+      "dateNavBorderColor": "rgb(0, 0, 0)",
+      "layout": {
+        "viewport": {
+          "w": 1100,
+          "h": 720
+        },
+        "body": {
+          "scrollHeight": 720,
+          "clientHeight": 720
+        },
+        "main": {
+          "scrollHeight": 660,
+          "clientHeight": 660,
+          "scrollTop": 0,
+          "overflowY": "auto",
+          "padding": "16px"
+        },
+        "history": {
+          "scrollTop": 9602,
+          "scrollHeight": 10074,
+          "clientHeight": 472,
+          "atBottom": true
+        },
+        "footer": {
+          "x": 139,
+          "y": 578,
+          "w": 942,
+          "h": 95,
+          "bottom": 673
+        },
+        "chatPanel": {
+          "x": 136,
+          "y": 48,
+          "w": 948,
+          "h": 628,
+          "bottom": 676
+        },
+        "statusBar": {
+          "x": 0,
+          "y": 692,
+          "w": 1100,
+          "h": 28,
+          "bottom": 720
+        },
+        "composerVisible": true
+      },
+      "sendButton": {
+        "rect": {
+          "x": 989,
+          "y": 601,
+          "w": 36,
+          "h": 36,
+          "bottom": 637
+        },
+        "bg": "rgb(220, 38, 38)",
+        "border": "3px solid rgb(220, 38, 38)",
+        "padding": "0px",
+        "radius": "0px",
+        "disabled": true,
+        "classes": "neobrutalism-button inline-flex items-center justify-center whitespace-nowrap font-bold uppercase tracking-wide transition-all duration-100 ease-in-out outline-none overflow-visible neobrutalism-button-primary app-button-icon chat-panel-send",
+        "ariaLabel": "发送消息"
+      },
+      "cancelButton": "neobrutalism-button inline-flex items-center justify-center whitespace-nowrap font-bold uppercase tracking-wide transition-all duration-100 ease-in-out outline-none overflow-visible neobrutalism-button-outline app-button-icon chat-panel-cancel",
+      "textarea": {
+        "rect": {
+          "x": 151,
+          "y": 593,
+          "w": 830,
+          "h": 44,
+          "bottom": 637
+        },
+        "resize": "vertical",
+        "fontSize": "14.4px",
+        "lineHeight": "21.6px",
+        "border": "2px solid rgb(0, 0, 0)",
+        "bg": "rgb(255, 255, 255)",
+        "disabled": false,
+        "placeholder": "输入消息...",
+        "maxLength": 5000
+      },
+      "focusables": {
+        "total": 17,
+        "unnamed": 0,
+        "unnamedSamples": []
+      },
+      "smallFontCount": 0,
+      "statusBarText": "v0.1.0",
+      "greeting": "夜深了",
+      "topbarButtons": [],
+      "audit": {
+        "flashes": [],
+        "events": [
+          {
+            "at": 12,
+            "kind": "dom-content-loaded",
+            "text": ""
+          },
+          {
+            "at": 61,
+            "kind": "history-rendered",
+            "text": "3"
+          },
+          {
+            "at": 3195,
+            "kind": "history-rendered",
+            "text": "5"
+          },
+          {
+            "at": 7506,
+            "kind": "history-rendered",
+            "text": "121"
+          },
+          {
+            "at": 8533,
+            "kind": "history-rendered",
+            "text": "123"
+          }
+        ],
+        "consoleErrors": []
+      },
+      "shot": "06-long-streaming.png",
+      "bytes": 57090
+    },
+    "07-long-after-send": {
+      "url": "http://127.0.0.1:5198/index.html?run=batchc",
+      "days": [
+        {
+          "text": "10月14日",
+          "active": true,
+          "disabled": false
+        },
+        {
+          "text": "10月18日",
+          "active": false,
+          "disabled": false
+        },
+        {
+          "text": "昨天",
+          "active": false,
+          "disabled": false
+        },
+        {
+          "text": "今天",
+          "active": false,
+          "disabled": false
+        }
+      ],
+      "messageCount": 122,
+      "firstMessage": "第 1 条用户消息：这是一段用于检查长对话阅读体验的文字。",
+      "lastMessage": "我听到啦，主人。\n这句话是流式说出来的第二行，用来检查换行和滚动。",
+      "assistantText": {
+        "whiteSpace": "normal",
+        "lineHeight": "22.32px",
+        "height": 42,
+        "lines": 2
+      },
+      "userBubble": {
+        "bg": "rgb(255, 209, 0)",
+        "whiteSpace": "normal"
+      },
+      "userAvatars": {
+        "total": 61,
+        "empty": 61
+      },
+      "times": 0,
+      "confirmCards": 0,
+      "toolPanels": 0,
+      "errorVisible": false,
+      "errorText": "",
+      "emptyVisible": false,
+      "skeletonVisible": false,
+      "tokens": {
+        "border": "#000",
+        "background": "#fff",
+        "text": "#1a1a1a",
+        "accent": "#ffd100",
+        "hover": "#efe9df",
+        "textSecondary": "#555",
+        "danger": "#d32f2f"
+      },
+      "dateNavBorderColor": "rgb(0, 0, 0)",
+      "layout": {
+        "viewport": {
+          "w": 1100,
+          "h": 720
+        },
+        "body": {
+          "scrollHeight": 720,
+          "clientHeight": 720
+        },
+        "main": {
+          "scrollHeight": 660,
+          "clientHeight": 660,
+          "scrollTop": 0,
+          "overflowY": "auto",
+          "padding": "16px"
+        },
+        "history": {
+          "scrollTop": 9602,
+          "scrollHeight": 10074,
+          "clientHeight": 472,
+          "atBottom": true
+        },
+        "footer": {
+          "x": 139,
+          "y": 578,
+          "w": 942,
+          "h": 95,
+          "bottom": 673
+        },
+        "chatPanel": {
+          "x": 136,
+          "y": 48,
+          "w": 948,
+          "h": 628,
+          "bottom": 676
+        },
+        "statusBar": {
+          "x": 0,
+          "y": 692,
+          "w": 1100,
+          "h": 28,
+          "bottom": 720
+        },
+        "composerVisible": true
+      },
+      "sendButton": {
+        "rect": {
+          "x": 1033,
+          "y": 601,
+          "w": 36,
+          "h": 36,
+          "bottom": 637
+        },
+        "bg": "rgb(220, 38, 38)",
+        "border": "3px solid rgb(220, 38, 38)",
+        "padding": "0px",
+        "radius": "0px",
+        "disabled": true,
+        "classes": "neobrutalism-button inline-flex items-center justify-center whitespace-nowrap font-bold uppercase tracking-wide transition-all duration-100 ease-in-out outline-none overflow-visible neobrutalism-button-primary app-button-icon chat-panel-send",
+        "ariaLabel": "发送消息"
+      },
+      "cancelButton": null,
+      "textarea": {
+        "rect": {
+          "x": 151,
+          "y": 593,
+          "w": 874,
+          "h": 44,
+          "bottom": 637
+        },
+        "resize": "vertical",
+        "fontSize": "14.4px",
+        "lineHeight": "21.6px",
+        "border": "2px solid rgb(0, 0, 0)",
+        "bg": "rgb(255, 255, 255)",
+        "disabled": false,
+        "placeholder": "输入消息...",
+        "maxLength": 5000
+      },
+      "focusables": {
+        "total": 16,
+        "unnamed": 0,
+        "unnamedSamples": []
+      },
+      "smallFontCount": 0,
+      "statusBarText": "v0.1.0",
+      "greeting": "夜深了",
+      "topbarButtons": [],
+      "audit": {
+        "flashes": [],
+        "events": [
+          {
+            "at": 12,
+            "kind": "dom-content-loaded",
+            "text": ""
+          },
+          {
+            "at": 61,
+            "kind": "history-rendered",
+            "text": "3"
+          },
+          {
+            "at": 3195,
+            "kind": "history-rendered",
+            "text": "5"
+          },
+          {
+            "at": 7506,
+            "kind": "history-rendered",
+            "text": "121"
+          },
+          {
+            "at": 8533,
+            "kind": "history-rendered",
+            "text": "123"
+          }
+        ],
+        "consoleErrors": []
+      },
+      "shot": "07-long-after-send.png",
+      "bytes": 58732,
+      "visibility": {
+        "lastRowVisible": true,
+        "rows": 122,
+        "scrollTop": 9602,
+        "scrollHeight": 10074,
+        "clientHeight": 472,
+        "atBottom": true
+      }
+    },
+    "08-arrow-prev": {
+      "url": "http://127.0.0.1:5198/index.html?run=batchc",
+      "days": [
+        {
+          "text": "10月14日",
+          "active": true,
+          "disabled": false
+        },
+        {
+          "text": "10月18日",
+          "active": false,
+          "disabled": false
+        },
+        {
+          "text": "昨天",
+          "active": false,
+          "disabled": false
+        },
+        {
+          "text": "今天",
+          "active": false,
+          "disabled": false
+        }
+      ],
+      "messageCount": 122,
+      "firstMessage": "第 1 条用户消息：这是一段用于检查长对话阅读体验的文字。",
+      "lastMessage": "我听到啦，主人。\n这句话是流式说出来的第二行，用来检查换行和滚动。",
+      "assistantText": {
+        "whiteSpace": "normal",
+        "lineHeight": "22.32px",
+        "height": 42,
+        "lines": 2
+      },
+      "userBubble": {
+        "bg": "rgb(255, 209, 0)",
+        "whiteSpace": "normal"
+      },
+      "userAvatars": {
+        "total": 61,
+        "empty": 61
+      },
+      "times": 0,
+      "confirmCards": 0,
+      "toolPanels": 0,
+      "errorVisible": false,
+      "errorText": "",
+      "emptyVisible": false,
+      "skeletonVisible": false,
+      "tokens": {
+        "border": "#000",
+        "background": "#fff",
+        "text": "#1a1a1a",
+        "accent": "#ffd100",
+        "hover": "#efe9df",
+        "textSecondary": "#555",
+        "danger": "#d32f2f"
+      },
+      "dateNavBorderColor": "rgb(0, 0, 0)",
+      "layout": {
+        "viewport": {
+          "w": 1100,
+          "h": 720
+        },
+        "body": {
+          "scrollHeight": 720,
+          "clientHeight": 720
+        },
+        "main": {
+          "scrollHeight": 660,
+          "clientHeight": 660,
+          "scrollTop": 0,
+          "overflowY": "auto",
+          "padding": "16px"
+        },
+        "history": {
+          "scrollTop": 9602,
+          "scrollHeight": 10074,
+          "clientHeight": 472,
+          "atBottom": true
+        },
+        "footer": {
+          "x": 139,
+          "y": 578,
+          "w": 942,
+          "h": 95,
+          "bottom": 673
+        },
+        "chatPanel": {
+          "x": 136,
+          "y": 48,
+          "w": 948,
+          "h": 628,
+          "bottom": 676
+        },
+        "statusBar": {
+          "x": 0,
+          "y": 692,
+          "w": 1100,
+          "h": 28,
+          "bottom": 720
+        },
+        "composerVisible": true
+      },
+      "sendButton": {
+        "rect": {
+          "x": 1033,
+          "y": 601,
+          "w": 36,
+          "h": 36,
+          "bottom": 637
+        },
+        "bg": "rgb(220, 38, 38)",
+        "border": "3px solid rgb(220, 38, 38)",
+        "padding": "0px",
+        "radius": "0px",
+        "disabled": true,
+        "classes": "neobrutalism-button inline-flex items-center justify-center whitespace-nowrap font-bold uppercase tracking-wide transition-all duration-100 ease-in-out outline-none overflow-visible neobrutalism-button-primary app-button-icon chat-panel-send",
+        "ariaLabel": "发送消息"
+      },
+      "cancelButton": null,
+      "textarea": {
+        "rect": {
+          "x": 151,
+          "y": 593,
+          "w": 874,
+          "h": 44,
+          "bottom": 637
+        },
+        "resize": "vertical",
+        "fontSize": "14.4px",
+        "lineHeight": "21.6px",
+        "border": "2px solid rgb(0, 0, 0)",
+        "bg": "rgb(255, 255, 255)",
+        "disabled": false,
+        "placeholder": "输入消息...",
+        "maxLength": 5000
+      },
+      "focusables": {
+        "total": 16,
+        "unnamed": 0,
+        "unnamedSamples": []
+      },
+      "smallFontCount": 0,
+      "statusBarText": "v0.1.0",
+      "greeting": "夜深了",
+      "topbarButtons": [],
+      "audit": {
+        "flashes": [],
+        "events": [
+          {
+            "at": 12,
+            "kind": "dom-content-loaded",
+            "text": ""
+          },
+          {
+            "at": 61,
+            "kind": "history-rendered",
+            "text": "3"
+          },
+          {
+            "at": 3195,
+            "kind": "history-rendered",
+            "text": "5"
+          },
+          {
+            "at": 7506,
+            "kind": "history-rendered",
+            "text": "121"
+          },
+          {
+            "at": 8533,
+            "kind": "history-rendered",
+            "text": "123"
+          }
+        ],
+        "consoleErrors": []
+      },
+      "shot": "08-arrow-prev.png",
+      "bytes": 58732
+    }
+  },
+  "console": [],
+  "freshAudit": {
+    "flashes": [],
+    "events": [
+      {
+        "at": 19,
+        "kind": "dom-content-loaded",
+        "text": ""
+      },
+      {
+        "at": 79,
+        "kind": "empty-state",
+        "text": "今天还没有聊天记录"
+      }
+    ]
+  },
+  "freshSend": {
+    "rows": 2,
+    "days": [
+      "今天"
+    ],
+    "emptyVisible": false,
+    "activeDay": "今天"
+  },
+  "arrowTest": {
+    "before": "10月14日",
+    "buttonCount": 7,
+    "arrowCount": 3,
+    "arrows": [
+      {
+        "text": "",
+        "title": null,
+        "aria": "前一天",
+        "disabled": true,
+        "cls": "neobrutalism-button inline-flex items-center justify-center whitespace-nowrap font-bold uppercase tracking-wide transition-all duration-100 ease-in-out outline-none overflow-visible neobrutalism-button-outline app-button-icon"
+      },
+      {
+        "text": "今天",
+        "title": null,
+        "aria": "回到今天",
+        "disabled": false,
+        "cls": "neobrutalism-button inline-flex items-center justify-center whitespace-nowrap font-bold uppercase tracking-wide transition-all duration-100 ease-in-out outline-none overflow-visible neobrutalism-button-outline neobrutalism-button-sm"
+      },
+      {
+        "text": "",
+        "title": null,
+        "aria": "后一天",
+        "disabled": false,
+        "cls": "neobrutalism-button inline-flex items-center justify-center whitespace-nowrap font-bold uppercase tracking-wide transition-all duration-100 ease-in-out outline-none overflow-visible neobrutalism-button-outline app-button-icon"
+      }
+    ],
+    "navHTML": "<div data-v-d94e82e1=\"\" data-v-ac65135f=\"\" class=\"chat-date-nav\"><button data-v-26436191=\"\" data-v-d94e82e1=\"\" aria-label=\"前一天\" type=\"button\" class=\"neobrutalism-button inline-flex items-center justify-center whitespace-nowrap font-bold uppercase tracking-wide transition-all duration-100 ease-in-out outline-none overflow-visible neobrutalism-button-outline app-button-icon\" disabled=\"\"><svg data-v-d94e82e1=\"\" xmlns=\"http://www.w3.org/2000/svg\" width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-chevron-left\" aria-hidden=\"true\"><path d=\"m15 18-6-6 6-6\"></path></svg></button><div data-v",
+    "afterPrev": "10月14日"
+  },
+  "finalAudit": {
+    "flashes": [],
+    "events": [
+      {
+        "at": 12,
+        "kind": "dom-content-loaded",
+        "text": ""
+      },
+      {
+        "at": 61,
+        "kind": "history-rendered",
+        "text": "3"
+      },
+      {
+        "at": 3195,
+        "kind": "history-rendered",
+        "text": "5"
+      },
+      {
+        "at": 7506,
+        "kind": "history-rendered",
+        "text": "121"
+      },
+      {
+        "at": 8533,
+        "kind": "history-rendered",
+        "text": "123"
+      }
+    ]
+  }
+}
