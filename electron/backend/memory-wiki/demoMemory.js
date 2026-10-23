@@ -55,3 +55,17 @@ export async function loadDemoMemorySet({ baseDir, store } = {}) {
 
   return { createdCount, pageIds: DEMO_PAGES.map((page) => page.pageId) }
 }
+
+export async function resetDemoMemorySet({ baseDir, store } = {}) {
+  if (!baseDir) throw new Error('demo memory baseDir is required')
+  const memoryWiki = await createMemoryWikiService({ baseDir, store })
+  let deletedCount = 0
+
+  for (const page of DEMO_PAGES) {
+    if (await memoryWiki.delete(page.pageId)) {
+      deletedCount += 1
+    }
+  }
+
+  return { deletedCount, pageIds: DEMO_PAGES.map((page) => page.pageId) }
+}
