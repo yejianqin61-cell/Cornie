@@ -13,6 +13,9 @@ const sending = ref(false)
 const sendError = ref('')
 const transientMessages = ref([])
 const activeRequest = ref(null)
+const inputEl = ref(null)
+
+const MAX_MESSAGE_LENGTH = 5000
 
 const days = ref([])
 const selectedDate = ref('')
@@ -68,6 +71,10 @@ loadDays()
 async function handleSend() {
   const text = inputText.value.trim()
   if (!text || sending.value) return
+  if (text.length > MAX_MESSAGE_LENGTH) {
+    sendError.value = `消息太长（上限 ${MAX_MESSAGE_LENGTH} 字）`
+    return
+  }
   const controller = new AbortController()
   sending.value = true
   sendError.value = ''
@@ -108,7 +115,27 @@ async function handleSend() {
   } finally {
     activeRequest.value = null
     sending.value = false
+    nextTick(syncInputHeight)
   }
+}
+
+function syncInputHeight() {
+  const el = inputEl.value
+  if (!el) return
+  if (!inputText.value) {
+    el.style.height = ''
+    return
+  }
+  el.style.height = 'auto'
+  el.style.height = `${Math.min(el.scrollHeight || 0, 144)}px`
+}
+
+function onInputKeydown(event) {
+  if (event.key !== 'Enter') return
+  if (event.isComposing || event.keyCode === 229) return
+  if (event.shiftKey) return
+  event.preventDefault()
+  handleSend()
 }
 
 function cancelSend() {
@@ -142,12 +169,14 @@ function handleConfirmResolved() {
       <div v-if="sendError" class="chat-panel-error">{{ sendError }}</div>
       <div class="chat-panel-input-row">
         <textarea
+          ref="inputEl"
           v-model="inputText"
           class="chat-panel-input"
           placeholder="输入消息..."
-          :disabled="sending"
-          rows="2"
-          @keydown.enter.exact="handleSend"
+          :maxlength="MAX_MESSAGE_LENGTH"
+          rows="1"
+          @input="syncInputHeight"
+          @keydown="onInputKeydown"
         />
         <AppButton
           class="chat-panel-send"
@@ -169,6 +198,12 @@ function handleConfirmResolved() {
         >
           <X :size="16" />
         </AppButton>
+      </div>
+      <div class="chat-panel-meta">
+        <span class="chat-panel-hint">Enter 发送 · Shift+Enter 换行</span>
+        <span v-if="inputText.length > MAX_MESSAGE_LENGTH * 0.9" class="chat-panel-count">
+          {{ inputText.length }} / {{ MAX_MESSAGE_LENGTH }}
+        </span>
       </div>
     </div>
   </div>
@@ -225,6 +260,19 @@ function handleConfirmResolved() {
 
 .chat-panel-send {
   flex-shrink: 0;
+}
+
+.chat-panel-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--nb-text-secondary);
+}
+
+.chat-panel-count {
+  font-weight: 700;
 }
 
 .spin {
