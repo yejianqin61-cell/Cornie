@@ -37,4 +37,10 @@ describe('design tokens', () => {
     expect(read('src/renderer/components/chat/ChatDateNav.vue')).toContain('var(--nb-border)')
     expect(read('src/renderer/components/chat/MessageRow.vue')).toContain('var(--nb-accent)')
   })
+
+  it('provides a visible keyboard focus ring', () => {
+    const css = read('src/renderer/styles/main.css')
+    expect(css).toContain(':focus-visible')
+    expect(css).toContain('outline')
+  })
 })

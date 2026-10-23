@@ -51,6 +51,49 @@ describe('ChatHistoryPage transient visibility', () => {
     expect(wrapper.findAll('.msg-row')).toHaveLength(0)
   })
 
+  it('reuses the shared error state and retries the load', async () => {
+    api.getChatDay.mockRejectedValueOnce(new Error('加载失败'))
+    const wrapper = mount(ChatHistoryPage, { props: { date: '2026-10-23', transientMessages: [] } })
+    await flushPromises()
+
+    expect(wrapper.findComponent({ name: 'ErrorState' }).exists()).toBe(true)
+    expect(wrapper.text()).toContain('加载失败')
+    await wrapper.find('.error-retry').trigger('click')
+    await flushPromises()
+    expect(api.getChatDay).toHaveBeenCalledTimes(2)
+  })
+
+  it('distinguishes today from a past day with no messages', async () => {
+    api.getChatDay.mockResolvedValue({ messages: [], pagination: { hasMore: false, nextCursor: null } })
+    const today = mount(ChatHistoryPage, { props: { date: '2026-10-23', transientMessages: [], isToday: true } })
+    await flushPromises()
+    expect(today.text()).toContain('今天还没有聊天记录')
+
+    const past = mount(ChatHistoryPage, { props: { date: '2026-10-22', transientMessages: [], isToday: false } })
+    await flushPromises()
+    expect(past.text()).toContain('这一天没有聊天记录')
+  })
+
+  it('marks the message list as a live log', async () => {
+    api.getChatDay.mockResolvedValue({
+      messages: [{ id: 'm1', role: 'user', text: '你好', createdAt: 1 }],
+      pagination: { hasMore: false, nextCursor: null },
+    })
+    const wrapper = mount(ChatHistoryPage, { props: { date: '2026-10-23', transientMessages: [] } })
+    await flushPromises()
+
+    const log = wrapper.find('.chat-history-messages')
+    expect(log.attributes('role')).toBe('log')
+    expect(log.attributes('aria-live')).toBe('polite')
+  })
+
+  it('announces the loading state', async () => {
+    api.getChatDay.mockImplementation(() => new Promise(() => {}))
+    const wrapper = mount(ChatHistoryPage, { props: { date: '2026-10-23', transientMessages: [] } })
+
+    expect(wrapper.find('[role="status"]').exists()).toBe(true)
+  })
+
   it('loads every page and keeps the newest message', async () => {
     api.getChatDay
       .mockResolvedValueOnce({
