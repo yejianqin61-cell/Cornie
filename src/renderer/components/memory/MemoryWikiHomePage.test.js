@@ -59,6 +59,18 @@ beforeEach(() => {
 })
 
 describe('MemoryWikiHomePage', () => {
+  it('mounts without Vue runtime warnings', async () => {
+    const warnings = []
+    const warn = vi.spyOn(console, 'warn').mockImplementation((...args) => warnings.push(args.join(' ')))
+
+    try {
+      await mountHome()
+      expect(warnings.filter((message) => message.includes('[Vue warn]'))).toEqual([])
+    } finally {
+      warn.mockRestore()
+    }
+  })
+
   it('identifies the memory workspace for assistive technologies', async () => {
     const wrapper = await mountHome()
 
