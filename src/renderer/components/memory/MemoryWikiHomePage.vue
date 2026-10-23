@@ -240,7 +240,7 @@ function goBack() {
 </script>
 
 <template>
-  <div class="mw-home">
+  <div class="mw-home" aria-label="记忆工作区">
     <div class="mw-toolbar">
       <PageHeader title="记忆" :icon="Brain" />
       <div class="mw-toolbar-actions">
