@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import { randomUUID } from 'node:crypto'
 import initSqlJs from 'sql.js'
+import { atomicWriteFileSync } from './backend/persistence/atomicWrite.js'
 
 function ensureMetaTable(db) {
   db.run(`
@@ -322,7 +323,7 @@ export async function openDb(dbPath) {
 
   function persist() {
     const data = db.export()
-    fs.writeFileSync(dbPath, Buffer.from(data))
+    atomicWriteFileSync(dbPath, Buffer.from(data))
   }
 
   persist()

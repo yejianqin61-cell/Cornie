@@ -3,6 +3,7 @@ import path from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { resolveMemoryWikiRoot } from './constants.js'
 import { createSingleWriterQueue } from './writeQueue.js'
+import { atomicWriteFile } from '../persistence/atomicWrite.js'
 
 const GOVERNANCE_SEGMENTS = ['governance']
 const GOVERNANCE_FILENAME = 'review-queue.json'
@@ -92,7 +93,7 @@ export async function createMemoryWikiGovernanceStore(baseDir) {
   }
 
   async function writeAll(items) {
-    await fs.writeFile(filePath, JSON.stringify(items, null, 2), 'utf8')
+    await atomicWriteFile(filePath, JSON.stringify(items, null, 2))
   }
 
   return {

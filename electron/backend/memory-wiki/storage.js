@@ -1,6 +1,5 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import { randomUUID } from 'node:crypto'
 import {
   resolveMemoryWikiIndexRoot,
   resolveMemoryWikiPagesRoot,
@@ -8,6 +7,7 @@ import {
 } from './constants.js'
 import { createPageModel } from './pageModel.js'
 import { createSingleWriterQueue } from './writeQueue.js'
+import { atomicWriteFile } from '../persistence/atomicWrite.js'
 
 const FRONTMATTER_BOUNDARY = '---'
 const PAGE_INDEX_FILENAME = 'page-index.json'
@@ -292,9 +292,7 @@ async function ensureFileDoesNotExist(filePath) {
 
 async function writePageFile(filePath, content) {
   await fs.mkdir(path.dirname(filePath), { recursive: true })
-  const tempFilePath = `${filePath}.${randomUUID()}.tmp`
-  await fs.writeFile(tempFilePath, content, 'utf8')
-  await fs.rename(tempFilePath, filePath)
+  await atomicWriteFile(filePath, content)
 }
 
 export async function createMemoryWikiStorage(baseDir) {
@@ -314,7 +312,7 @@ export async function createMemoryWikiStorage(baseDir) {
   }
 
   async function writePageIndex(indexMap) {
-    await fs.writeFile(pageIndexPath, JSON.stringify(indexMap, null, 2), 'utf8')
+    await atomicWriteFile(pageIndexPath, JSON.stringify(indexMap, null, 2))
   }
 
   async function upsertPageIndexEntry(page) {

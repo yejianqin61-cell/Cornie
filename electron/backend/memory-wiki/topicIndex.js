@@ -2,6 +2,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { resolveMemoryWikiIndexRoot } from './constants.js'
 import { createSingleWriterQueue } from './writeQueue.js'
+import { atomicWriteFile } from '../persistence/atomicWrite.js'
 
 const KEYWORD_INDEX_FILENAME = 'keyword-index.json'
 
@@ -138,7 +139,7 @@ export async function createTopicIndexStore(baseDir) {
   }
 
   async function writeIndexMap(indexMap) {
-    await fs.writeFile(filePath, JSON.stringify(indexMap, null, 2), 'utf8')
+    await atomicWriteFile(filePath, JSON.stringify(indexMap, null, 2))
   }
 
   // 462：读改写整体入队的变更助手（linkPage/unlinkPage/addDateRef 等共用）。
