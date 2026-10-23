@@ -14,10 +14,13 @@ const draft = ref(props.text)
 const changed = ref(false)
 const saving = ref(false)
 
-watch(() => props.text, (v) => {
-  draft.value = v
-  changed.value = false
-})
+watch(
+  () => props.text,
+  (v) => {
+    draft.value = v
+    changed.value = false
+  }
+)
 
 function onInput(e) {
   draft.value = e.target.value
@@ -100,6 +103,8 @@ async function save() {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

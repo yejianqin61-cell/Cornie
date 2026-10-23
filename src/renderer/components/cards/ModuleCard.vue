@@ -12,12 +12,7 @@ defineProps({
 <template>
   <div class="nb-module-card">
     <div class="nb-module-card-head">
-      <component
-        v-if="icon"
-        :is="icon"
-        class="nb-module-card-icon"
-        :size="22"
-      />
+      <component v-if="icon" :is="icon" class="nb-module-card-icon" :size="22" />
       <h3 class="nb-module-card-title">{{ title }}</h3>
       <Badge v-if="badge" :variant="badgeVariant" class="nb-module-card-badge">
         {{ badge }}
@@ -43,7 +38,9 @@ defineProps({
   border: 3px solid #000;
   box-shadow: 4px 4px 0 0 #000;
   height: 100%;
-  transition: transform 0.1s, box-shadow 0.1s;
+  transition:
+    transform 0.1s,
+    box-shadow 0.1s;
 }
 
 .nb-module-card:hover {

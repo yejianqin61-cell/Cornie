@@ -10,5 +10,7 @@ import EmptyState from '../common/EmptyState.vue'
 </template>
 
 <style scoped>
-.obs-empty { padding: 2rem 1rem; }
+.obs-empty {
+  padding: 2rem 1rem;
+}
 </style>

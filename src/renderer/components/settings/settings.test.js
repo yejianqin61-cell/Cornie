@@ -41,7 +41,7 @@ describe('ModelSettings', () => {
       },
     })
     const btns = wrapper.findAllComponents({ name: 'Button' })
-    const saveBtn = btns.find(b => b.text().includes('保存'))
+    const saveBtn = btns.find((b) => b.text().includes('保存'))
     expect(saveBtn).toBeTruthy()
   })
 })

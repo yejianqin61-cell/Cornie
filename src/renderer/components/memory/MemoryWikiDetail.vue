@@ -29,9 +29,7 @@ const selectedRollbackVersion = ref('')
           <GitCompare :size="14" />
           历史
         </Button>
-        <Button v-if="page.status === 'archived'" variant="neutral" size="sm" @click="$emit('restore')">
-          恢复
-        </Button>
+        <Button v-if="page.status === 'archived'" variant="neutral" size="sm" @click="$emit('restore')"> 恢复 </Button>
         <Button v-else variant="neutral" size="sm" data-testid="memory-archive" @click="$emit('archive')">
           归档
         </Button>
@@ -50,7 +48,11 @@ const selectedRollbackVersion = ref('')
     <div class="mw-detail-controls">
       <label>
         重要性
-        <select data-testid="memory-importance" :value="page.importance || 'medium'" @change="$emit('importance', $event.target.value)">
+        <select
+          data-testid="memory-importance"
+          :value="page.importance || 'medium'"
+          @change="$emit('importance', $event.target.value)"
+        >
           <option value="low">low</option>
           <option value="medium">medium</option>
           <option value="high">high</option>
@@ -66,7 +68,14 @@ const selectedRollbackVersion = ref('')
           </option>
         </select>
       </label>
-      <Button v-if="versions.length" variant="neutral" size="sm" data-testid="memory-rollback" :disabled="!selectedRollbackVersion" @click="$emit('rollback', selectedRollbackVersion)">
+      <Button
+        v-if="versions.length"
+        variant="neutral"
+        size="sm"
+        data-testid="memory-rollback"
+        :disabled="!selectedRollbackVersion"
+        @click="$emit('rollback', selectedRollbackVersion)"
+      >
         回滚
       </Button>
     </div>
@@ -133,9 +142,25 @@ const selectedRollbackVersion = ref('')
   border-radius: 0.5rem;
 }
 
-.mw-detail-controls { display: flex; gap: 0.5rem; align-items: end; flex-wrap: wrap; }
-.mw-detail-controls label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.72rem; font-weight: 700; }
-.mw-detail-controls select { border: 1.5px solid var(--nb-border); border-radius: 0.375rem; padding: 0.25rem; background: var(--nb-background); }
+.mw-detail-controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: end;
+  flex-wrap: wrap;
+}
+.mw-detail-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.mw-detail-controls select {
+  border: 1.5px solid var(--nb-border);
+  border-radius: 0.375rem;
+  padding: 0.25rem;
+  background: var(--nb-background);
+}
 
 .mw-detail-body {
   font-size: 0.9rem;

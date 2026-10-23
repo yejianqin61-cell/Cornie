@@ -1,14 +1,5 @@
 <script setup>
-import {
-  MessageCircle,
-  BookOpen,
-  Brain,
-  ScanEye,
-  Receipt,
-  CheckSquare,
-  CalendarDays,
-  Settings,
-} from '@lucide/vue'
+import { MessageCircle, BookOpen, Brain, ScanEye, Receipt, CheckSquare, CalendarDays, Settings } from '@lucide/vue'
 
 defineProps({
   icon: { type: String, required: true },
@@ -29,11 +20,7 @@ const iconMap = {
 </script>
 
 <template>
-  <button
-    class="nb-sidebar-item"
-    :class="{ 'nb-sidebar-item--active': active }"
-    :title="label"
-  >
+  <button class="nb-sidebar-item" :class="{ 'nb-sidebar-item--active': active }" :title="label">
     <component :is="iconMap[icon]" class="nb-sidebar-icon" :size="20" />
     <span class="nb-sidebar-label">{{ label }}</span>
   </button>

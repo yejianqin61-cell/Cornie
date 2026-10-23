@@ -24,14 +24,12 @@ function roleLetter(role) {
       </span>
     </div>
     <div class="msg-row-body">
-      <div class="msg-row-sender">{{ message.role === 'user' ? '我' : message.role === 'assistant' ? 'Cornie' : '系统' }}</div>
+      <div class="msg-row-sender">
+        {{ message.role === 'user' ? '我' : message.role === 'assistant' ? 'Cornie' : '系统' }}
+      </div>
       <div class="msg-row-text">{{ message.text }}</div>
       <ToolResultPanel v-if="message.toolResults?.length" :results="message.toolResults" />
-      <ConfirmCard
-        v-if="message.confirm"
-        :confirm="message.confirm"
-        @resolved="$emit('confirmResolved', $event)"
-      />
+      <ConfirmCard v-if="message.confirm" :confirm="message.confirm" @resolved="$emit('confirmResolved', $event)" />
       <div v-if="message.time" class="msg-row-time">{{ message.time }}</div>
     </div>
   </div>
@@ -68,11 +66,11 @@ function roleLetter(role) {
 }
 
 .msg-row-avatar--user {
-  background: #FFD100;
+  background: #ffd100;
 }
 
 .msg-row-avatar--assistant {
-  background: #FFD100;
+  background: #ffd100;
   border-color: #000;
 }
 
@@ -107,7 +105,7 @@ function roleLetter(role) {
 }
 
 .msg-row--user .msg-row-text {
-  background: #FFD100;
+  background: #ffd100;
   border-bottom-right-radius: 0.25rem;
 }
 

@@ -63,7 +63,7 @@ const emit = defineEmits(['select', 'prev', 'next'])
 }
 
 .chat-date-nav-item--active {
-  background: #FFD100;
+  background: #ffd100;
   border-color: #000;
 }
 

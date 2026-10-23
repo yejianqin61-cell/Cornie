@@ -125,12 +125,21 @@ function typeLabel(t) {
   animation: pulse 1.5s ease-in-out infinite;
 }
 
-.obs-detail-skeleton-line--short { width: 40%; }
-.obs-detail-skeleton-line--long { width: 100%; }
+.obs-detail-skeleton-line--short {
+  width: 40%;
+}
+.obs-detail-skeleton-line--long {
+  width: 100%;
+}
 
 @keyframes pulse {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.8; }
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.8;
+  }
 }
 
 .obs-detail-error {

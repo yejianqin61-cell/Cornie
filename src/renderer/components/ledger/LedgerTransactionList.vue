@@ -14,17 +14,13 @@ function formatDate(date) {
 }
 
 function findCategory(name, list) {
-  return list.find(c => c.name === name) || { name, color: '#999' }
+  return list.find((c) => c.name === name) || { name, color: '#999' }
 }
 </script>
 
 <template>
   <div class="tx-list">
-    <div
-      v-for="tx in transactions"
-      :key="tx.id"
-      class="tx-item"
-    >
+    <div v-for="tx in transactions" :key="tx.id" class="tx-item">
       <div class="tx-item-left">
         <LedgerCategoryTag
           :category="findCategory(tx.category, categories).name"
@@ -36,10 +32,7 @@ function findCategory(name, list) {
         </div>
       </div>
       <div class="tx-item-right">
-        <span
-          class="tx-item-amount"
-          :class="tx.type === 'income' ? 'tx-item-amount--in' : 'tx-item-amount--out'"
-        >
+        <span class="tx-item-amount" :class="tx.type === 'income' ? 'tx-item-amount--in' : 'tx-item-amount--out'">
           {{ tx.type === 'income' ? '+' : '-' }}{{ tx.amount }}
         </span>
         <button class="tx-item-action" title="编辑" @click="$emit('edit', tx)">

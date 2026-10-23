@@ -16,7 +16,10 @@ vi.mock('../../api/todo.js', () => ({
 }))
 
 describe('TodoList', () => {
-  const items = [{ id: '1', title: '买菜', status: 'pending' }, { id: '2', title: '跑步', status: 'done' }]
+  const items = [
+    { id: '1', title: '买菜', status: 'pending' },
+    { id: '2', title: '跑步', status: 'done' },
+  ]
 
   it('renders items', () => {
     const wrapper = mount(TodoList, { props: { items } })
@@ -27,7 +30,7 @@ describe('TodoList', () => {
   it('emits complete for open item', async () => {
     const wrapper = mount(TodoList, { props: { items } })
     const buttons = wrapper.findAllComponents({ name: 'Button' })
-    const checkBtn = buttons.find(b => b.props('size') === 'icon')
+    const checkBtn = buttons.find((b) => b.props('size') === 'icon')
     if (checkBtn) {
       await checkBtn.trigger('click')
       expect(wrapper.emitted('complete')).toBeTruthy()

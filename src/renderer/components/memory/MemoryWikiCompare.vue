@@ -14,13 +14,9 @@ const emit = defineEmits(['close'])
     <div class="mw-compare">
       <div class="mw-compare-header">
         <span class="mw-compare-title">版本对比</span>
-        <span class="mw-compare-versions">
-          {{ fromVersion.version }} → {{ toVersion.version }}
-        </span>
+        <span class="mw-compare-versions"> {{ fromVersion.version }} → {{ toVersion.version }} </span>
       </div>
-      <div v-if="unavailable" class="mw-compare-empty">
-        至少需要两个版本才能比较变更。
-      </div>
+      <div v-if="unavailable" class="mw-compare-empty">至少需要两个版本才能比较变更。</div>
       <div v-else class="mw-compare-body">
         <div class="mw-compare-section">
           <div class="mw-compare-label">{{ diff.summaryDiff || '摘要变更' }}</div>

@@ -19,9 +19,7 @@ const amount = ref(props.initialData?.amount || '')
 const date = ref(props.initialData?.date || singaporeDate())
 const note = ref(props.initialData?.note || '')
 
-const filteredCategories = computed(() =>
-  props.categories.filter(c => c.type === type.value)
-)
+const filteredCategories = computed(() => props.categories.filter((c) => c.type === type.value))
 
 function submit() {
   if (!amount.value || !category.value) return
@@ -64,14 +62,7 @@ function submit() {
 
       <div class="tx-form-field">
         <label class="tx-form-label">金额</label>
-        <input
-          v-model="amount"
-          type="number"
-          class="tx-form-input"
-          placeholder="0.00"
-          min="0"
-          step="0.01"
-        />
+        <input v-model="amount" type="number" class="tx-form-input" placeholder="0.00" min="0" step="0.01" />
       </div>
 
       <div class="tx-form-field">
@@ -98,18 +89,11 @@ function submit() {
 
       <div class="tx-form-field">
         <label class="tx-form-label">备注</label>
-        <input
-          v-model="note"
-          type="text"
-          class="tx-form-input"
-          placeholder="可选备注"
-        />
+        <input v-model="note" type="text" class="tx-form-input" placeholder="可选备注" />
       </div>
 
       <div class="tx-form-actions">
-        <Button variant="outline" size="sm" :disabled="saving" @click="$emit('cancel')">
-          取消
-        </Button>
+        <Button variant="outline" size="sm" :disabled="saving" @click="$emit('cancel')"> 取消 </Button>
         <Button variant="primary" size="sm" :disabled="saving" @click="submit">
           <Loader2 v-if="saving" :size="14" class="spin" />
           {{ saving ? '保存中...' : '保存' }}
@@ -124,7 +108,7 @@ function submit() {
 .tx-form-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.3);
+  background: rgba(0, 0, 0, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -270,6 +254,8 @@ function submit() {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

@@ -52,7 +52,7 @@ function selectScale(s) {
 .pet-settings-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.15);
+  background: rgba(0, 0, 0, 0.15);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -64,7 +64,7 @@ function selectScale(s) {
   border-radius: 12px;
   padding: 16px;
   min-width: 200px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   font-family: sans-serif;
 }
 .pet-settings-head {
@@ -96,7 +96,10 @@ function selectScale(s) {
   font-weight: 600;
   color: #555;
 }
-.pet-settings-scales { display: flex; gap: 4px; }
+.pet-settings-scales {
+  display: flex;
+  gap: 4px;
+}
 .pet-settings-scale {
   border: 1px solid #ccc;
   border-radius: 4px;
@@ -121,7 +124,10 @@ function selectScale(s) {
   position: relative;
   transition: background 0.2s;
 }
-.pet-settings-toggle-btn.on { background: #5b6eea; border-color: #5b6eea; }
+.pet-settings-toggle-btn.on {
+  background: #5b6eea;
+  border-color: #5b6eea;
+}
 .pet-settings-toggle-knob {
   position: absolute;
   top: 2px;
@@ -131,7 +137,9 @@ function selectScale(s) {
   border-radius: 50%;
   background: #fff;
   transition: left 0.2s;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
 }
-.pet-settings-toggle-btn.on .pet-settings-toggle-knob { left: 20px; }
+.pet-settings-toggle-btn.on .pet-settings-toggle-knob {
+  left: 20px;
+}
 </style>

@@ -11,34 +11,42 @@ let isDragging = false
 let dragStart = { x: 0, y: 0 }
 
 const PART_PATHS = {
-  body:     '/pic/body-removebg-preview.png',
-  head:     '/pic/head1-removebg-preview.png',
-  tail:     '/pic/tail1-removebg-preview.png',
-  ring:     '/pic/ring-removebg-preview.png',
-  leftEar:  '/pic/leftear-removebg-preview-copy.png',
+  body: '/pic/body-removebg-preview.png',
+  head: '/pic/head1-removebg-preview.png',
+  tail: '/pic/tail1-removebg-preview.png',
+  ring: '/pic/ring-removebg-preview.png',
+  leftEar: '/pic/leftear-removebg-preview-copy.png',
   rightEar: '/pic/rightear-removebg-preview.png',
-  eyeOpen:  '/pic/Avatar.png',
-  eyeHalf:  '/pic/halfclosedeye.png',
-  eyeClosed:'/pic/closedeye.png',
+  eyeOpen: '/pic/Avatar.png',
+  eyeHalf: '/pic/halfclosedeye.png',
+  eyeClosed: '/pic/closedeye.png',
 }
 
 const images = {}
 
 async function loadImages() {
   const entries = Object.entries(PART_PATHS)
-  await Promise.all(entries.map(([key, src]) => {
-    return new Promise((resolve) => {
-      const img = new Image()
-      img.onload = () => { images[key] = img; resolve() }
-      img.onerror = () => resolve()
-      img.src = src
+  await Promise.all(
+    entries.map(([key, src]) => {
+      return new Promise((resolve) => {
+        const img = new Image()
+        img.onload = () => {
+          images[key] = img
+          resolve()
+        }
+        img.onerror = () => resolve()
+        img.src = src
+      })
     })
-  }))
+  )
 }
 
 function drawPet(timestamp) {
   const canvas = canvasRef.value
-  if (!canvas || !images.body) { animFrame = requestAnimationFrame(drawPet); return }
+  if (!canvas || !images.body) {
+    animFrame = requestAnimationFrame(drawPet)
+    return
+  }
   const ctx = canvas.getContext('2d')
   const w = canvas.width
   const h = canvas.height
@@ -67,7 +75,7 @@ function drawPet(timestamp) {
     if (!img) return
     ctx.save()
     ctx.translate(dx + dw / 2, dy + dh / 2)
-    if (angle !== 0) ctx.rotate(angle * Math.PI / 180)
+    if (angle !== 0) ctx.rotate((angle * Math.PI) / 180)
     ctx.drawImage(img, ox, oy, sw, sh, -dw / 2, -dh / 2, dw, dh)
     ctx.restore()
   }
@@ -75,57 +83,133 @@ function drawPet(timestamp) {
   // tail
   if (images.tail) {
     const tailW = 60 * bodyScale
-    const tailH = images.tail.naturalHeight / images.tail.naturalWidth * tailW
-    drawPart(images.tail, 0, 0, images.tail.naturalWidth, images.tail.naturalHeight,
-      cx - 30 * bodyScale, cy + 20 * bodyScale, tailW, tailH, 15 + tailWag)
+    const tailH = (images.tail.naturalHeight / images.tail.naturalWidth) * tailW
+    drawPart(
+      images.tail,
+      0,
+      0,
+      images.tail.naturalWidth,
+      images.tail.naturalHeight,
+      cx - 30 * bodyScale,
+      cy + 20 * bodyScale,
+      tailW,
+      tailH,
+      15 + tailWag
+    )
   }
 
   // ring
   if (images.ring) {
     const ringW = 40 * bodyScale
-    const ringH = images.ring.naturalHeight / images.ring.naturalWidth * ringW
-    drawPart(images.ring, 0, 0, images.ring.naturalWidth, images.ring.naturalHeight,
-      cx - 5 * bodyScale, cy - 10 * bodyScale, ringW, ringH, -10)
+    const ringH = (images.ring.naturalHeight / images.ring.naturalWidth) * ringW
+    drawPart(
+      images.ring,
+      0,
+      0,
+      images.ring.naturalWidth,
+      images.ring.naturalHeight,
+      cx - 5 * bodyScale,
+      cy - 10 * bodyScale,
+      ringW,
+      ringH,
+      -10
+    )
   }
 
   // body
   if (images.body) {
     const bw = 120 * bodyScale
-    const bh = images.body.naturalHeight / images.body.naturalWidth * bw
-    drawPart(images.body, 0, 0, images.body.naturalWidth, images.body.naturalHeight,
-      cx - bw / 2, cy - bh / 2 + 20, bw, bh)
+    const bh = (images.body.naturalHeight / images.body.naturalWidth) * bw
+    drawPart(
+      images.body,
+      0,
+      0,
+      images.body.naturalWidth,
+      images.body.naturalHeight,
+      cx - bw / 2,
+      cy - bh / 2 + 20,
+      bw,
+      bh
+    )
   }
 
   // head
   if (images.head) {
     const headW = 90 * bodyScale
-    const headH = images.head.naturalHeight / images.head.naturalWidth * headW
-    drawPart(images.head, 0, 0, images.head.naturalWidth, images.head.naturalHeight,
-      cx - headW / 2, cy - 50 * bodyScale, headW, headH)
+    const headH = (images.head.naturalHeight / images.head.naturalWidth) * headW
+    drawPart(
+      images.head,
+      0,
+      0,
+      images.head.naturalWidth,
+      images.head.naturalHeight,
+      cx - headW / 2,
+      cy - 50 * bodyScale,
+      headW,
+      headH
+    )
   }
 
   // ears
   if (images.leftEar) {
     const earW = 25 * bodyScale
-    const earH = images.leftEar.naturalHeight / images.leftEar.naturalWidth * earW
-    drawPart(images.leftEar, 0, 0, images.leftEar.naturalWidth, images.leftEar.naturalHeight,
-      cx - 30 * bodyScale, cy - 95 * bodyScale, earW, earH, -10)
+    const earH = (images.leftEar.naturalHeight / images.leftEar.naturalWidth) * earW
+    drawPart(
+      images.leftEar,
+      0,
+      0,
+      images.leftEar.naturalWidth,
+      images.leftEar.naturalHeight,
+      cx - 30 * bodyScale,
+      cy - 95 * bodyScale,
+      earW,
+      earH,
+      -10
+    )
   }
   if (images.rightEar) {
     const earW = 25 * bodyScale
-    const earH = images.rightEar.naturalHeight / images.rightEar.naturalWidth * earW
-    drawPart(images.rightEar, 0, 0, images.rightEar.naturalWidth, images.rightEar.naturalHeight,
-      cx - 2 * bodyScale, cy - 95 * bodyScale, earW, earH, 10)
+    const earH = (images.rightEar.naturalHeight / images.rightEar.naturalWidth) * earW
+    drawPart(
+      images.rightEar,
+      0,
+      0,
+      images.rightEar.naturalWidth,
+      images.rightEar.naturalHeight,
+      cx - 2 * bodyScale,
+      cy - 95 * bodyScale,
+      earW,
+      earH,
+      10
+    )
   }
 
   // eyes
   if (eyeImg) {
     const eyeW = 14 * bodyScale
-    const eyeH = eyeImg.naturalHeight / eyeImg.naturalWidth * eyeW
-    drawPart(eyeImg, 0, 0, eyeImg.naturalWidth, eyeImg.naturalHeight,
-      cx - 17 * bodyScale, cy - 62 * bodyScale, eyeW, eyeH)
-    drawPart(eyeImg, 0, 0, eyeImg.naturalWidth, eyeImg.naturalHeight,
-      cx + 5 * bodyScale, cy - 62 * bodyScale, eyeW, eyeH)
+    const eyeH = (eyeImg.naturalHeight / eyeImg.naturalWidth) * eyeW
+    drawPart(
+      eyeImg,
+      0,
+      0,
+      eyeImg.naturalWidth,
+      eyeImg.naturalHeight,
+      cx - 17 * bodyScale,
+      cy - 62 * bodyScale,
+      eyeW,
+      eyeH
+    )
+    drawPart(
+      eyeImg,
+      0,
+      0,
+      eyeImg.naturalWidth,
+      eyeImg.naturalHeight,
+      cx + 5 * bodyScale,
+      cy - 62 * bodyScale,
+      eyeW,
+      eyeH
+    )
   }
 
   animFrame = requestAnimationFrame(drawPet)
@@ -186,5 +270,7 @@ onBeforeUnmount(() => {
   cursor: grab;
   -webkit-app-region: no-drag;
 }
-.cornie-canvas:active { cursor: grabbing; }
+.cornie-canvas:active {
+  cursor: grabbing;
+}
 </style>

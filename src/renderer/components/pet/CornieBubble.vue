@@ -20,7 +20,7 @@ defineProps({ text: { type: String, required: true } })
   padding: 6px 14px;
   max-width: 240px;
   white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   z-index: 20;
   animation: bubble-in 0.3s ease-out;
 }
@@ -31,7 +31,13 @@ defineProps({ text: { type: String, required: true } })
   font-family: sans-serif;
 }
 @keyframes bubble-in {
-  from { opacity: 0; transform: translateX(-50%) translateY(6px); }
-  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 </style>

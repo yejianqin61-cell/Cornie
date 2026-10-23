@@ -121,9 +121,7 @@ async function onDelete(id) {
     </div>
     <div v-else-if="error" class="sch-banner sch-banner--error">
       <span>{{ error }}</span>
-      <Button variant="neutral" size="sm" @click="fetchSchedules">
-        <RefreshCw :size="12" /> 重试
-      </Button>
+      <Button variant="neutral" size="sm" @click="fetchSchedules"> <RefreshCw :size="12" /> 重试 </Button>
     </div>
     <ScheduleList
       v-else-if="schedules.length > 0"
@@ -181,7 +179,12 @@ async function onDelete(id) {
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.8; }
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.8;
+  }
 }
 </style>

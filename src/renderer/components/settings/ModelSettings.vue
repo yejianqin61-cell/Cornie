@@ -39,7 +39,9 @@ async function save() {
   try {
     await saveModelSettings({ apiKey: apiKey.value, baseUrl: baseUrl.value, model: model.value })
     saveSuccess.value = true
-    setTimeout(() => { saveSuccess.value = false }, 2000)
+    setTimeout(() => {
+      saveSuccess.value = false
+    }, 2000)
   } catch (e) {
     saveError.value = e.message || '保存失败'
   }
@@ -57,7 +59,9 @@ async function clear() {
     baseUrl.value = ''
     model.value = ''
     saveSuccess.value = true
-    setTimeout(() => { saveSuccess.value = false }, 2000)
+    setTimeout(() => {
+      saveSuccess.value = false
+    }, 2000)
   } catch (e) {
     saveError.value = e.message || '清除失败'
   }
@@ -69,9 +73,7 @@ async function clear() {
   <SettingsSection title="DeepSeek 模型" description="配置 API 连接参数">
     <div v-if="loadError" class="model-banner model-banner--error">
       <span>{{ loadError }}</span>
-      <Button variant="neutral" size="sm" @click="load">
-        <RefreshCw :size="12" /> 重试
-      </Button>
+      <Button variant="neutral" size="sm" @click="load"> <RefreshCw :size="12" /> 重试 </Button>
     </div>
 
     <div v-if="loading" class="model-skeleton">
@@ -94,9 +96,7 @@ async function clear() {
     </div>
 
     <div v-if="saveError" class="model-banner model-banner--error">{{ saveError }}</div>
-    <div v-if="saveSuccess" class="model-banner model-banner--success">
-      <Check :size="14" /> 已保存
-    </div>
+    <div v-if="saveSuccess" class="model-banner model-banner--success"><Check :size="14" /> 已保存</div>
 
     <div class="model-actions">
       <Button :disabled="saving" @click="save">
@@ -168,12 +168,21 @@ async function clear() {
   animation: pulse 1.5s ease-in-out infinite;
 }
 
-.model-skeleton-line:nth-child(2) { width: 80%; }
-.model-skeleton-line:nth-child(3) { width: 60%; }
+.model-skeleton-line:nth-child(2) {
+  width: 80%;
+}
+.model-skeleton-line:nth-child(3) {
+  width: 60%;
+}
 
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
 }
 
 .spin {
@@ -181,6 +190,8 @@ async function clear() {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

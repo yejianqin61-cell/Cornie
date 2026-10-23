@@ -50,7 +50,7 @@ describe('LedgerTransactionForm', () => {
     await inputs[0].setValue('100')
     const catBtns = wrapper.findAll('.tx-form-cat-btn')
     await catBtns[0].trigger('click')
-    const saveBtn = wrapper.findAllComponents({ name: 'Button' }).find(b => b.text() === '保存')
+    const saveBtn = wrapper.findAllComponents({ name: 'Button' }).find((b) => b.text() === '保存')
     await saveBtn.trigger('click')
     expect(wrapper.emitted('save')).toBeTruthy()
     expect(wrapper.emitted('save')[0][0].amount).toBe(100)

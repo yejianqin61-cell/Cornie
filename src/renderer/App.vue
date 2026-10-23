@@ -63,12 +63,7 @@ function openSettings() {
           />
         </nav>
         <div class="dashboard-nav-bottom">
-          <CornieSidebarItem
-            icon="settings"
-            label="设置"
-            :active="settingsOpen"
-            @click="openSettings"
-          />
+          <CornieSidebarItem icon="settings" label="设置" :active="settingsOpen" @click="openSettings" />
         </div>
       </div>
     </template>

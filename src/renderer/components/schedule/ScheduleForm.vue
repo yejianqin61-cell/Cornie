@@ -13,10 +13,13 @@ const emit = defineEmits(['create'])
 const title = ref('')
 const startAt = ref('')
 
-watch(() => props.resetKey, () => {
-  title.value = ''
-  startAt.value = ''
-})
+watch(
+  () => props.resetKey,
+  () => {
+    title.value = ''
+    startAt.value = ''
+  }
+)
 
 function submit() {
   if (!title.value.trim() || !startAt.value) return
@@ -58,6 +61,8 @@ function submit() {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

@@ -14,11 +14,7 @@ defineProps({
       <span>引用了 {{ memories.length }} 条记忆</span>
     </div>
     <div class="memory-hint-list">
-      <div
-        v-for="(mem, i) in memories"
-        :key="i"
-        class="memory-hint-item"
-      >
+      <div v-for="(mem, i) in memories" :key="i" class="memory-hint-item">
         <span class="memory-hint-title">{{ mem.title }}</span>
         <span class="memory-hint-source">{{ mem.source }}</span>
         <p class="memory-hint-snippet">{{ mem.snippet }}</p>

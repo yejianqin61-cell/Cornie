@@ -10,8 +10,11 @@ import ObservationForm from './ObservationForm.vue'
 import ObservationDeleteConfirm from './ObservationDeleteConfirm.vue'
 import ObservationEmptyState from './ObservationEmptyState.vue'
 import {
-  listObservations, getObservation,
-  createObservation, updateObservation, deleteObservation,
+  listObservations,
+  getObservation,
+  createObservation,
+  updateObservation,
+  deleteObservation,
 } from '../../api/observation.js'
 
 const observations = ref([])
@@ -137,11 +140,7 @@ async function confirmDelete() {
               {{ t.label }}
             </Button>
           </div>
-          <Input
-            v-model="searchQuery"
-            placeholder="搜索..."
-            class="obs-search"
-          />
+          <Input v-model="searchQuery" placeholder="搜索..." class="obs-search" />
           <Button variant="neutral" size="sm" @click="openNew">
             <Plus :size="14" />
             新建
@@ -154,18 +153,11 @@ async function confirmDelete() {
       </div>
       <div v-else-if="error" class="obs-banner obs-banner--error">
         <span>{{ error }}</span>
-        <Button variant="neutral" size="sm" @click="fetchList">
-          <RefreshCw :size="12" /> 重试
-        </Button>
+        <Button variant="neutral" size="sm" @click="fetchList"> <RefreshCw :size="12" /> 重试 </Button>
       </div>
       <ObservationEmptyState v-else-if="observations.length === 0" />
       <div v-else class="obs-list-grid">
-        <ObservationCard
-          v-for="o in observations"
-          :key="o.id"
-          :observation="o"
-          @click="openDetail(o.id)"
-        />
+        <ObservationCard v-for="o in observations" :key="o.id" :observation="o" @click="openDetail(o.id)" />
       </div>
     </div>
 
@@ -184,7 +176,11 @@ async function confirmDelete() {
       :saving="saving"
       :saveError="saveError"
       @save="onSave"
-      @cancel="formOpen = false; editingObservation = null; saveError = ''"
+      @cancel="
+        formOpen = false
+        editingObservation = null
+        saveError = ''
+      "
     />
 
     <ObservationDeleteConfirm
@@ -192,7 +188,10 @@ async function confirmDelete() {
       :title="deleteTarget?.title"
       :error="deleteError"
       @confirm="confirmDelete"
-      @cancel="deleteTarget = null; deleteError = ''"
+      @cancel="
+        deleteTarget = null
+        deleteError = ''
+      "
     />
   </div>
 </template>
@@ -272,7 +271,12 @@ async function confirmDelete() {
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.8; }
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.8;
+  }
 }
 </style>

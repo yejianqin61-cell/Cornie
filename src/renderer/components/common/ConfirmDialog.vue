@@ -22,12 +22,8 @@ defineProps({
       <p class="confirm-dialog-message">{{ message }}</p>
       <p v-if="error" class="confirm-dialog-error">{{ error }}</p>
       <div class="confirm-dialog-actions">
-        <Button variant="outline" size="sm" @click="onCancel">
-          取消
-        </Button>
-        <Button variant="primary" size="sm" @click="onConfirm">
-          确认
-        </Button>
+        <Button variant="outline" size="sm" @click="onCancel"> 取消 </Button>
+        <Button variant="primary" size="sm" @click="onConfirm"> 确认 </Button>
       </div>
     </div>
   </div>
@@ -37,7 +33,7 @@ defineProps({
 .confirm-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.3);
+  background: rgba(0, 0, 0, 0.3);
   display: flex;
   align-items: center;
   justify-content: center;

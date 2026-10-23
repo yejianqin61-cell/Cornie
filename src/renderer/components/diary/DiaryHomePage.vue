@@ -67,10 +67,14 @@ async function fetchOnThisDay() {
 }
 
 watch(monthKey, fetchMonth, { immediate: true })
-watch(selectedDate, () => {
-  fetchEntry()
-  fetchOnThisDay()
-}, { immediate: true })
+watch(
+  selectedDate,
+  () => {
+    fetchEntry()
+    fetchOnThisDay()
+  },
+  { immediate: true }
+)
 
 function selectDay(date) {
   selectedDate.value = date
@@ -81,11 +85,21 @@ function selectDay(date) {
 }
 
 function prevMonth() {
-  if (month.value === 1) { year.value--; month.value = 12 } else { month.value-- }
+  if (month.value === 1) {
+    year.value--
+    month.value = 12
+  } else {
+    month.value--
+  }
 }
 
 function nextMonth() {
-  if (month.value === 12) { year.value++; month.value = 1 } else { month.value++ }
+  if (month.value === 12) {
+    year.value++
+    month.value = 1
+  } else {
+    month.value++
+  }
 }
 
 async function saveUserText(text) {
@@ -134,24 +148,18 @@ const hasContent = computed(() => entry.value && (entry.value.userText || entry.
         />
         <div v-if="monthError" class="diary-banner diary-banner--error">
           <span>{{ monthError }}</span>
-          <Button variant="neutral" size="sm" @click="fetchMonth">
-            <RefreshCw :size="12" /> 重试
-          </Button>
+          <Button variant="neutral" size="sm" @click="fetchMonth"> <RefreshCw :size="12" /> 重试 </Button>
         </div>
         <div v-if="loading" class="diary-skeleton">
           <div class="diary-skeleton-line" v-for="n in 4" :key="n" />
         </div>
         <div v-else-if="entryError" class="diary-banner diary-banner--error">
           <span>{{ entryError }}</span>
-          <Button variant="neutral" size="sm" @click="fetchEntry">
-            <RefreshCw :size="12" /> 重试
-          </Button>
+          <Button variant="neutral" size="sm" @click="fetchEntry"> <RefreshCw :size="12" /> 重试 </Button>
         </div>
         <div v-if="writeError" class="diary-banner diary-banner--error">
           <span>{{ writeError }}</span>
-          <Button variant="neutral" size="sm" @click="retryWrite">
-            <RefreshCw :size="12" /> 重试
-          </Button>
+          <Button variant="neutral" size="sm" @click="retryWrite"> <RefreshCw :size="12" /> 重试 </Button>
         </div>
         <DiaryCard
           v-else-if="hasContent"
@@ -160,12 +168,7 @@ const hasContent = computed(() => entry.value && (entry.value.userText || entry.
           @save="saveUserText"
           @regenerate="doRegenerate"
         />
-        <DiaryRegenerateBtn
-          v-else
-          :date="selectedDate"
-          :regenerating="regening"
-          @regenerate="doRegenerate"
-        />
+        <DiaryRegenerateBtn v-else :date="selectedDate" :regenerating="regening" @regenerate="doRegenerate" />
       </div>
       <div class="diary-sidebar">
         <div class="diary-sidebar-header">
@@ -173,11 +176,7 @@ const hasContent = computed(() => entry.value && (entry.value.userText || entry.
           <span>往年今日</span>
         </div>
         <div v-if="onThisDayItems.length === 0" class="diary-sidebar-empty">暂无往年今日</div>
-        <OnThisDayCard
-          v-for="item in onThisDayItems"
-          :key="item.year"
-          :item="item"
-        />
+        <OnThisDayCard v-for="item in onThisDayItems" :key="item.year" :item="item" />
       </div>
     </div>
   </div>
@@ -264,11 +263,20 @@ const hasContent = computed(() => entry.value && (entry.value.userText || entry.
   animation: pulse 1.5s infinite;
 }
 
-.diary-skeleton-line:nth-child(odd) { width: 80%; }
-.diary-skeleton-line:nth-child(even) { width: 60%; }
+.diary-skeleton-line:nth-child(odd) {
+  width: 80%;
+}
+.diary-skeleton-line:nth-child(even) {
+  width: 60%;
+}
 
 @keyframes pulse {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.8; }
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.8;
+  }
 }
 </style>

@@ -17,7 +17,9 @@ function showBubble(text) {
   bubbleText.value = text
   bubbleVisible.value = true
   clearTimeout(bubbleTimer)
-  bubbleTimer = setTimeout(() => { bubbleVisible.value = false }, 4000)
+  bubbleTimer = setTimeout(() => {
+    bubbleVisible.value = false
+  }, 4000)
 }
 
 function randomBubble() {
@@ -69,14 +71,8 @@ function onOpenMain() {
 
 <template>
   <div class="corne-app" :style="{ transform: `scale(${petScale})`, transformOrigin: 'top left' }">
-    <CornieBubble
-      v-if="bubbleVisible"
-      :text="bubbleText"
-    />
-    <CorniePet
-      :scale="petScale"
-      @dblclick="onOpenMain"
-    />
+    <CornieBubble v-if="bubbleVisible" :text="bubbleText" />
+    <CorniePet :scale="petScale" @dblclick="onOpenMain" />
     <PetSettings
       v-if="settingsVisible"
       :scale="petScale"
@@ -86,7 +82,12 @@ function onOpenMain() {
       @close="settingsVisible = false"
     />
     <button class="corne-settings-toggle" @click="toggleSettings" title="设置">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="3" />
+        <path
+          d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"
+        />
+      </svg>
     </button>
   </div>
 </template>
@@ -115,5 +116,7 @@ function onOpenMain() {
   opacity: 0;
   transition: opacity 0.2s;
 }
-.corne-app:hover .corne-settings-toggle { opacity: 1; }
+.corne-app:hover .corne-settings-toggle {
+  opacity: 1;
+}
 </style>

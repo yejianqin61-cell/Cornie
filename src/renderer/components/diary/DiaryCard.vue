@@ -13,18 +13,9 @@ import UserDiaryEditor from './UserDiaryEditor.vue'
 <template>
   <div class="diary-card">
     <div class="diary-card-columns">
-      <UserDiaryEditor
-        :text="entry.userText || ''"
-        :date="date"
-        @save="(v) => $emit('save', v)"
-      />
-      <CornieDiaryView
-        v-if="entry.cornieText"
-        :text="entry.cornieText"
-      />
-      <div v-else class="diary-card-no-cornie">
-        Cornie 还未写日记
-      </div>
+      <UserDiaryEditor :text="entry.userText || ''" :date="date" @save="(v) => $emit('save', v)" />
+      <CornieDiaryView v-if="entry.cornieText" :text="entry.cornieText" />
+      <div v-else class="diary-card-no-cornie">Cornie 还未写日记</div>
     </div>
   </div>
 </template>

@@ -27,19 +27,19 @@ const saveError = ref('')
 const filteredTransactions = computed(() => {
   let list = transactions.value
   if (filterMonth.value) {
-    list = list.filter(t => t.date && t.date.startsWith(filterMonth.value))
+    list = list.filter((t) => t.date && t.date.startsWith(filterMonth.value))
   }
   if (filterType.value !== 'all') {
-    list = list.filter(t => t.type === filterType.value)
+    list = list.filter((t) => t.type === filterType.value)
   }
   return list.sort((a, b) => (b.date || '').localeCompare(a.date || ''))
 })
 
 const monthlyStats = computed(() => {
   const month = filterMonth.value
-  const list = transactions.value.filter(t => t.date && t.date.startsWith(month))
-  const income = list.filter(t => t.type === 'income').reduce((s, t) => s + (Number(t.amount) || 0), 0)
-  const expense = list.filter(t => t.type === 'expense').reduce((s, t) => s + (Number(t.amount) || 0), 0)
+  const list = transactions.value.filter((t) => t.date && t.date.startsWith(month))
+  const income = list.filter((t) => t.type === 'income').reduce((s, t) => s + (Number(t.amount) || 0), 0)
+  const expense = list.filter((t) => t.type === 'expense').reduce((s, t) => s + (Number(t.amount) || 0), 0)
   return { income, expense }
 })
 
@@ -142,7 +142,11 @@ async function onDelete() {
         <div class="ledger-filters">
           <div class="ledger-filter-group">
             <button
-              v-for="opt in [{ k: 'all', l: '全部' }, { k: 'expense', l: '支出' }, { k: 'income', l: '收入' }]"
+              v-for="opt in [
+                { k: 'all', l: '全部' },
+                { k: 'expense', l: '支出' },
+                { k: 'income', l: '收入' },
+              ]"
               :key="opt.k"
               class="ledger-filter-btn"
               :class="{ 'ledger-filter-btn--active': filterType === opt.k }"
@@ -151,11 +155,7 @@ async function onDelete() {
               {{ opt.l }}
             </button>
           </div>
-          <input
-            v-model="filterMonth"
-            type="month"
-            class="ledger-month-picker"
-          />
+          <input v-model="filterMonth" type="month" class="ledger-month-picker" />
         </div>
 
         <div v-if="loading" class="ledger-skeleton">
@@ -163,9 +163,7 @@ async function onDelete() {
         </div>
         <div v-else-if="error" class="ledger-banner ledger-banner--error">
           <span>{{ error }}</span>
-          <Button variant="neutral" size="sm" @click="fetchEntries">
-            <RefreshCw :size="12" /> 重试
-          </Button>
+          <Button variant="neutral" size="sm" @click="fetchEntries"> <RefreshCw :size="12" /> 重试 </Button>
         </div>
         <div v-else-if="filteredTransactions.length === 0" class="ledger-empty-wrap">
           <EmptyState :icon="Receipt" text="暂无收支记录" />
@@ -180,11 +178,7 @@ async function onDelete() {
       </div>
 
       <div class="ledger-sidebar">
-        <LedgerMonthSummary
-          :month="filterMonth"
-          :income="monthlyStats.income"
-          :expense="monthlyStats.expense"
-        />
+        <LedgerMonthSummary :month="filterMonth" :income="monthlyStats.income" :expense="monthlyStats.expense" />
       </div>
     </div>
 
@@ -204,7 +198,12 @@ async function onDelete() {
       :message="deleteTarget ? '确认删除「' + (deleteTarget.note || '无备注') + '」这条收支记录吗？' : ''"
       :error="deleteError"
       :onConfirm="onDelete"
-      :onCancel="() => { deleteTarget = null; deleteError = '' }"
+      :onCancel="
+        () => {
+          deleteTarget = null
+          deleteError = ''
+        }
+      "
     />
   </div>
 </template>
@@ -316,7 +315,12 @@ async function onDelete() {
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.8; }
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.8;
+  }
 }
 </style>

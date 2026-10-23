@@ -33,7 +33,7 @@ describe('PetSettings', () => {
       props: { scale: 0.8, alwaysOnTop: false },
     })
     const scales = wrapper.findAll('.pet-settings-scale')
-    const active = scales.find(s => s.classes().includes('active'))
+    const active = scales.find((s) => s.classes().includes('active'))
     expect(active.text()).toBe('0.8x')
   })
 

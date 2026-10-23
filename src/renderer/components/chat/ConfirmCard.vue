@@ -33,7 +33,9 @@ async function act(decision) {
     <div class="confirm-card-message">{{ confirm.message || '确认执行此操作？' }}</div>
     <div class="confirm-card-actions">
       <Button size="sm" :disabled="processing || status !== 'pending'" @click="act('approve')">确认</Button>
-      <Button size="sm" variant="neutral" :disabled="processing || status !== 'pending'" @click="act('reject')">拒绝</Button>
+      <Button size="sm" variant="neutral" :disabled="processing || status !== 'pending'" @click="act('reject')"
+        >拒绝</Button
+      >
     </div>
     <div v-if="status !== 'pending'" class="confirm-card-status">{{ status === 'executed' ? '已执行' : '已拒绝' }}</div>
     <div v-if="error" class="confirm-card-error">{{ error }}</div>

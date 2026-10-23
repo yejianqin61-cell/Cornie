@@ -13,15 +13,22 @@ function formatTime(t) {
   if (!t) return ''
   return new Date(t).toLocaleString('zh-CN', {
     timeZone: SINGAPORE_TIME_ZONE,
-    month: 'numeric', day: 'numeric',
-    hour: '2-digit', minute: '2-digit',
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
   })
 }
 </script>
 
 <template>
   <div class="sch-list">
-    <div v-for="item in items" :key="item.id" class="sch-item" :class="{ 'sch-item--cancelled': item.status === 'cancelled' }">
+    <div
+      v-for="item in items"
+      :key="item.id"
+      class="sch-item"
+      :class="{ 'sch-item--cancelled': item.status === 'cancelled' }"
+    >
       <div class="sch-item-info">
         <span class="sch-item-title" :class="{ 'sch-item-title--cancelled': item.status === 'cancelled' }">
           {{ item.title }}

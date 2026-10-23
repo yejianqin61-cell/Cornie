@@ -98,8 +98,18 @@ function handleConfirmResolved() {
       :selected="selectedDate"
       :loading="daysLoading"
       @select="selectedDate = $event"
-      @prev="() => { const i = days.findIndex(d => d.date === selectedDate); if (i > 0) selectedDate = days[i - 1].date }"
-      @next="() => { const i = days.findIndex(d => d.date === selectedDate); if (i < days.length - 1) selectedDate = days[i + 1].date }"
+      @prev="
+        () => {
+          const i = days.findIndex((d) => d.date === selectedDate)
+          if (i > 0) selectedDate = days[i - 1].date
+        }
+      "
+      @next="
+        () => {
+          const i = days.findIndex((d) => d.date === selectedDate)
+          if (i < days.length - 1) selectedDate = days[i + 1].date
+        }
+      "
     />
     <ChatHistoryPage
       ref="historyRef"
@@ -118,22 +128,11 @@ function handleConfirmResolved() {
           rows="2"
           @keydown.enter.exact="handleSend"
         />
-        <Button
-          class="chat-panel-send"
-          size="icon"
-          :disabled="sending || !inputText.trim()"
-          @click="handleSend"
-        >
+        <Button class="chat-panel-send" size="icon" :disabled="sending || !inputText.trim()" @click="handleSend">
           <Loader2 v-if="sending" :size="16" class="spin" />
           <Send v-else :size="16" />
         </Button>
-        <Button
-          v-if="sending"
-          class="chat-panel-cancel"
-          size="icon"
-          variant="neutral"
-          @click="cancelSend"
-        >
+        <Button v-if="sending" class="chat-panel-cancel" size="icon" variant="neutral" @click="cancelSend">
           <X :size="16" />
         </Button>
       </div>
@@ -181,6 +180,8 @@ function handleConfirmResolved() {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

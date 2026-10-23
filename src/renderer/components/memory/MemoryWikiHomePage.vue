@@ -9,10 +9,22 @@ import MemoryWikiCompare from './MemoryWikiCompare.vue'
 import MemoryWikiEditor from './MemoryWikiEditor.vue'
 import MemoryWikiEmptyState from './MemoryWikiEmptyState.vue'
 import {
-  listPages, getPage, createPage, updatePage,
-  listVersions, getVersionDiff, listTopics, listGovernance,
-  getPageSourceTrace, getGovernanceRequest, updateGovernanceStatus, applyGovernanceRequest,
-  archivePage, restorePage, rollbackPage, updatePageImportance,
+  listPages,
+  getPage,
+  createPage,
+  updatePage,
+  listVersions,
+  getVersionDiff,
+  listTopics,
+  listGovernance,
+  getPageSourceTrace,
+  getGovernanceRequest,
+  updateGovernanceStatus,
+  applyGovernanceRequest,
+  archivePage,
+  restorePage,
+  rollbackPage,
+  updatePageImportance,
 } from '../../api/memory-wiki.js'
 
 const pages = ref([])
@@ -60,7 +72,9 @@ async function loadTopics() {
     const res = await listTopics()
     topics.value = res.items || []
     applyTopicFilter()
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 loadTopics()
@@ -83,11 +97,19 @@ function applyTopicFilter() {
 async function selectPage(pageId) {
   pageLoading.value = true
   try {
-    const [res, versionRes, traceRes] = await Promise.all([getPage(pageId), listVersions(pageId), getPageSourceTrace(pageId)])
+    const [res, versionRes, traceRes] = await Promise.all([
+      getPage(pageId),
+      listVersions(pageId),
+      getPageSourceTrace(pageId),
+    ])
     const trace = traceRes.trace || {}
     const sources = [
-      ...(trace.chatSources || []).map((item) => ({ label: item.exists ? `${item.title}：${item.preview}` : `${item.title}（来源已不可用）` })),
-      ...(trace.observationSources || []).map((item) => ({ label: item.exists ? `${item.title}：${item.preview}` : `${item.title}（来源已不可用）` })),
+      ...(trace.chatSources || []).map((item) => ({
+        label: item.exists ? `${item.title}：${item.preview}` : `${item.title}（来源已不可用）`,
+      })),
+      ...(trace.observationSources || []).map((item) => ({
+        label: item.exists ? `${item.title}：${item.preview}` : `${item.title}（来源已不可用）`,
+      })),
     ]
     selectedPage.value = { ...res.page, sources }
     selectedVersions.value = versionRes.items || []
@@ -114,8 +136,12 @@ async function runPageAction(action) {
   }
 }
 
-function archiveSelectedPage() { return runPageAction(archivePage) }
-function restoreSelectedPage() { return runPageAction(restorePage) }
+function archiveSelectedPage() {
+  return runPageAction(archivePage)
+}
+function restoreSelectedPage() {
+  return runPageAction(restorePage)
+}
 function updateSelectedImportance(importance) {
   return runPageAction((pageId) => updatePageImportance(pageId, importance))
 }
@@ -143,7 +169,9 @@ async function openCompare() {
       compareData.value = { unavailable: true }
     }
     compareOpen.value = true
-  } catch { /* ignore */ }
+  } catch {
+    /* ignore */
+  }
 }
 
 async function openGovernance() {
@@ -273,17 +301,11 @@ function goBack() {
     </div>
     <div v-else-if="error" class="mw-banner mw-banner--error">
       <span>{{ error }}</span>
-      <Button variant="neutral" size="sm" @click="fetchPages">
-        <RefreshCw :size="12" /> 重试
-      </Button>
+      <Button variant="neutral" size="sm" @click="fetchPages"> <RefreshCw :size="12" /> 重试 </Button>
     </div>
     <div v-else-if="pages.length > 0" class="mw-layout">
       <div class="mw-sidebar">
-        <MemoryWikiTree
-          :items="pages"
-          :activePageId="selectedPage?.pageId || selectedPage?.id"
-          @select="selectPage"
-        />
+        <MemoryWikiTree :items="pages" :activePageId="selectedPage?.pageId || selectedPage?.id" @select="selectPage" />
       </div>
       <div class="mw-main">
         <div v-if="pageLoading" class="mw-skeleton">
@@ -313,14 +335,14 @@ function goBack() {
       :saving="saving"
       :saveError="saveError"
       @save="onSave"
-      @cancel="editorOpen = false; editorInitial = {}; saveError = ''"
+      @cancel="
+        editorOpen = false
+        editorInitial = {}
+        saveError = ''
+      "
     />
 
-    <MemoryWikiCompare
-      v-if="compareOpen"
-      v-bind="compareData"
-      @close="compareOpen = false"
-    />
+    <MemoryWikiCompare v-if="compareOpen" v-bind="compareData" @close="compareOpen = false" />
 
     <div v-if="governanceOpen" class="mw-governance-overlay" @click.self="governanceOpen = false">
       <div class="mw-governance">
@@ -333,9 +355,7 @@ function goBack() {
         <div v-if="governanceLoading" class="mw-skeleton">
           <div class="mw-skeleton-line" v-for="n in 3" :key="n" />
         </div>
-        <div v-else-if="governanceItems.length === 0" class="mw-governance-empty">
-          暂无治理请求
-        </div>
+        <div v-else-if="governanceItems.length === 0" class="mw-governance-empty">暂无治理请求</div>
         <template v-else>
           <div class="mw-governance-list">
             <button
@@ -355,15 +375,37 @@ function goBack() {
           <div v-if="governanceSelected" class="mw-governance-detail">
             <div><strong>原因：</strong>{{ governanceSelected.reason || '未提供原因' }}</div>
             <div><strong>证据：</strong></div>
-            <pre v-if="governanceSelected.evidence?.length">{{ JSON.stringify(governanceSelected.evidence, null, 2) }}</pre>
+            <pre v-if="governanceSelected.evidence?.length">{{
+              JSON.stringify(governanceSelected.evidence, null, 2)
+            }}</pre>
             <div v-else class="mw-governance-empty">此请求没有附带证据。</div>
             <div class="mw-governance-actions">
-              <Button v-if="governanceSelected.status === 'pending'" variant="neutral" size="sm" @click="decideGovernance('approved')">批准</Button>
-              <Button v-if="governanceSelected.status === 'pending'" variant="neutral" size="sm" @click="decideGovernance('rejected')">拒绝</Button>
-              <Button v-if="governanceSelected.status === 'approved'" variant="neutral" size="sm" @click="applyGovernance">应用</Button>
+              <Button
+                v-if="governanceSelected.status === 'pending'"
+                variant="neutral"
+                size="sm"
+                @click="decideGovernance('approved')"
+                >批准</Button
+              >
+              <Button
+                v-if="governanceSelected.status === 'pending'"
+                variant="neutral"
+                size="sm"
+                @click="decideGovernance('rejected')"
+                >拒绝</Button
+              >
+              <Button
+                v-if="governanceSelected.status === 'approved'"
+                variant="neutral"
+                size="sm"
+                @click="applyGovernance"
+                >应用</Button
+              >
             </div>
           </div>
-          <pre v-if="governanceResult" class="mw-governance-result">{{ JSON.stringify(governanceResult, null, 2) }}</pre>
+          <pre v-if="governanceResult" class="mw-governance-result">{{
+            JSON.stringify(governanceResult, null, 2)
+          }}</pre>
         </template>
         <div v-if="governanceError" class="mw-banner mw-banner--error">
           <span>{{ governanceError }}</span>
@@ -448,33 +490,116 @@ function goBack() {
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.8; }
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.8;
+  }
 }
 
-.mw-governance-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; z-index: 100; }
+.mw-governance-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
 
-.mw-governance { background: var(--nb-background); border: 2px solid #000; border-radius: 0.75rem; padding: 1.25rem; width: 500px; max-width: 90vw; max-height: 70vh; overflow-y: auto; }
+.mw-governance {
+  background: var(--nb-background);
+  border: 2px solid #000;
+  border-radius: 0.75rem;
+  padding: 1.25rem;
+  width: 500px;
+  max-width: 90vw;
+  max-height: 70vh;
+  overflow-y: auto;
+}
 
-.mw-governance-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+.mw-governance-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
 
-.mw-governance-header h3 { font-size: 1.1rem; font-weight: 800; }
+.mw-governance-header h3 {
+  font-size: 1.1rem;
+  font-weight: 800;
+}
 
-.mw-governance-empty { font-size: 0.85rem; color: var(--nb-text-secondary); text-align: center; padding: 2rem 0; }
+.mw-governance-empty {
+  font-size: 0.85rem;
+  color: var(--nb-text-secondary);
+  text-align: center;
+  padding: 2rem 0;
+}
 
-.mw-governance-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.mw-governance-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
 
-.mw-governance-item { width: 100%; text-align: left; background: transparent; border: 2px solid #000; border-radius: 0.5rem; padding: 0.75rem; cursor: pointer; }
-.mw-governance-item--active { background: var(--nb-hover); }
+.mw-governance-item {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 2px solid #000;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  cursor: pointer;
+}
+.mw-governance-item--active {
+  background: var(--nb-hover);
+}
 
-.mw-governance-item-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; }
+.mw-governance-item-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
 
-.mw-governance-item-type { font-size: 0.75rem; font-weight: 700; }
+.mw-governance-item-type {
+  font-size: 0.75rem;
+  font-weight: 700;
+}
 
-.mw-governance-item-status { font-size: 0.65rem; padding: 1px 6px; border: 1.5px solid #000; border-radius: 99px; }
+.mw-governance-item-status {
+  font-size: 0.65rem;
+  padding: 1px 6px;
+  border: 1.5px solid #000;
+  border-radius: 99px;
+}
 
-.mw-governance-item-id { font-size: 0.7rem; color: var(--nb-text-secondary); word-break: break-all; }
-.mw-governance-detail { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 1rem; font-size: 0.82rem; }
-.mw-governance-detail pre, .mw-governance-result { margin: 0; padding: 0.5rem; background: var(--nb-hover); border-radius: 0.5rem; white-space: pre-wrap; word-break: break-word; }
-.mw-governance-actions { display: flex; gap: 0.5rem; }
+.mw-governance-item-id {
+  font-size: 0.7rem;
+  color: var(--nb-text-secondary);
+  word-break: break-all;
+}
+.mw-governance-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  font-size: 0.82rem;
+}
+.mw-governance-detail pre,
+.mw-governance-result {
+  margin: 0;
+  padding: 0.5rem;
+  background: var(--nb-hover);
+  border-radius: 0.5rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.mw-governance-actions {
+  display: flex;
+  gap: 0.5rem;
+}
 </style>

@@ -10,5 +10,7 @@ import EmptyState from '../common/EmptyState.vue'
 </template>
 
 <style scoped>
-.mw-empty { padding: 2rem 1rem; }
+.mw-empty {
+  padding: 2rem 1rem;
+}
 </style>

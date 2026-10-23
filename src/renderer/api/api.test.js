@@ -16,7 +16,7 @@ describe('api/client', () => {
   it('apiGet should call fetch with correct URL', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ data: 'test' })
+      json: () => Promise.resolve({ data: 'test' }),
     })
 
     const result = await apiGet('/test')
@@ -27,14 +27,17 @@ describe('api/client', () => {
   it('apiPost should send JSON body', async () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ id: 1 })
+      json: () => Promise.resolve({ id: 1 }),
     })
 
     const result = await apiPost('/items', { name: 'x' })
-    expect(fetch).toHaveBeenCalledWith(`${API_BASE}/items`, expect.objectContaining({
-      method: 'POST',
-      body: JSON.stringify({ name: 'x' })
-    }))
+    expect(fetch).toHaveBeenCalledWith(
+      `${API_BASE}/items`,
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ name: 'x' }),
+      })
+    )
     expect(result).toEqual({ id: 1 })
   })
 })

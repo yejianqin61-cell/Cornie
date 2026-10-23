@@ -57,9 +57,15 @@ defineProps({
   animation: pulse 1.5s infinite;
 }
 
-.cornie-diary-skeleton-line:nth-child(1) { width: 90%; }
-.cornie-diary-skeleton-line:nth-child(2) { width: 75%; }
-.cornie-diary-skeleton-line:nth-child(3) { width: 50%; }
+.cornie-diary-skeleton-line:nth-child(1) {
+  width: 90%;
+}
+.cornie-diary-skeleton-line:nth-child(2) {
+  width: 75%;
+}
+.cornie-diary-skeleton-line:nth-child(3) {
+  width: 50%;
+}
 
 .cornie-diary-error {
   font-size: 0.8rem;
@@ -68,7 +74,12 @@ defineProps({
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.8; }
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.8;
+  }
 }
 </style>

@@ -121,9 +121,7 @@ async function onDelete(id) {
     </div>
     <div v-else-if="error" class="todo-banner todo-banner--error">
       <span>{{ error }}</span>
-      <Button variant="neutral" size="sm" @click="fetchTodos">
-        <RefreshCw :size="12" /> 重试
-      </Button>
+      <Button variant="neutral" size="sm" @click="fetchTodos"> <RefreshCw :size="12" /> 重试 </Button>
     </div>
     <TodoList
       v-else-if="todos.length > 0"
@@ -182,7 +180,12 @@ async function onDelete(id) {
 }
 
 @keyframes pulse {
-  0%, 100% { opacity: 0.4; }
-  50% { opacity: 0.8; }
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.8;
+  }
 }
 </style>

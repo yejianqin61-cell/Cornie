@@ -83,10 +83,11 @@ describe('ChatPanel streaming send', () => {
   })
 
   it('cancels the active stream and restores the draft for retry', async () => {
-    api.sendMessageStreamed.mockImplementation((_request, _delta, _done, _error, { signal }) =>
-      new Promise((_resolve, reject) => {
-        signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true })
-      })
+    api.sendMessageStreamed.mockImplementation(
+      (_request, _delta, _done, _error, { signal }) =>
+        new Promise((_resolve, reject) => {
+          signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true })
+        })
     )
     const wrapper = mountPanel()
     await flushPromises()

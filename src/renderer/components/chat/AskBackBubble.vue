@@ -13,9 +13,7 @@ defineProps({
       <HelpCircle :size="14" />
     </div>
     <p class="askback-text">{{ text }}</p>
-    <button v-if="onReply" class="askback-action" @click="onReply">
-      回答
-    </button>
+    <button v-if="onReply" class="askback-action" @click="onReply">回答</button>
   </div>
 </template>
 
