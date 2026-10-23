@@ -45,7 +45,7 @@ function attachConfirmations(list, confirmations) {
   )
 }
 
-async function load() {
+async function load({ bottom = false } = {}) {
   const token = ++loadToken
   loading.value = true
   error.value = ''
@@ -73,7 +73,7 @@ async function load() {
     if (token === loadToken) loading.value = false
   }
   if (token !== loadToken) return
-  await restoreScroll()
+  await restoreScroll(bottom)
 }
 
 function updateScrollState() {
@@ -91,12 +91,12 @@ function scrollToBottom() {
   savedPositions.set(props.date, element.scrollTop)
 }
 
-async function restoreScroll() {
+async function restoreScroll(bottom = false) {
   await nextTick()
   const element = historyEl.value
   if (!element) return
   const saved = savedPositions.get(props.date)
-  element.scrollTop = saved === undefined ? element.scrollHeight : saved
+  element.scrollTop = bottom || saved === undefined ? element.scrollHeight : saved
   updateScrollState()
 }
 
@@ -109,9 +109,13 @@ watch(
   },
   { deep: true }
 )
-watch(() => props.date, load, { immediate: true })
+watch(
+  () => props.date,
+  () => load(),
+  { immediate: true }
+)
 
-defineExpose({ refresh: load })
+defineExpose({ refresh: (options) => load(options) })
 </script>
 
 <template>

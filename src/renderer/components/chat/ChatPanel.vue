@@ -139,7 +139,7 @@ async function handleSend() {
     notice.value = ''
     await loadDays()
     try {
-      if (historyRef.value?.refresh) await historyRef.value.refresh()
+      if (historyRef.value?.refresh) await historyRef.value.refresh({ bottom: true })
     } catch {
       notice.value = '历史刷新失败，稍后重试'
     }
@@ -151,7 +151,7 @@ async function handleSend() {
       notice.value = '已取消'
       await loadDays()
       try {
-        if (historyRef.value?.refresh) await historyRef.value.refresh()
+        if (historyRef.value?.refresh) await historyRef.value.refresh({ bottom: true })
       } catch {
         notice.value = '已取消，历史刷新失败'
       }
@@ -201,7 +201,7 @@ function cancelSend() {
 }
 
 function handleConfirmResolved() {
-  if (historyRef.value?.refresh) historyRef.value.refresh()
+  if (historyRef.value?.refresh) historyRef.value.refresh({ bottom: true })
 }
 </script>
 
