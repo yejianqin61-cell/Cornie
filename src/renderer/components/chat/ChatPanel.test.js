@@ -13,6 +13,7 @@ vi.mock('../../api/conversation.js', () => ({
   sendMessage: api.sendMessage,
   sendMessageStreamed: api.sendMessageStreamed,
 }))
+vi.mock('../../../../shared/local-date.js', () => ({ singaporeDate: () => '2026-10-23' }))
 
 import ChatPanel from './ChatPanel.vue'
 
@@ -39,7 +40,9 @@ function mountPanel() {
 
 describe('ChatPanel streaming send', () => {
   beforeEach(() => {
-    api.listChatDays.mockReset().mockResolvedValue({ entries: [{ date: '2026-10-22' }] })
+    api.listChatDays.mockReset().mockResolvedValue({
+      entries: [{ date: '2026-10-23' }, { date: '2026-10-22' }, { date: '2026-10-21' }],
+    })
     api.sendMessage.mockReset()
     api.sendMessageStreamed.mockReset()
     refresh.mockReset()
@@ -65,7 +68,7 @@ describe('ChatPanel streaming send', () => {
     await flushPromises()
 
     expect(api.sendMessageStreamed).toHaveBeenCalledWith(
-      { message: '你好', date: '2026-10-22' },
+      { message: '你好', date: '2026-10-23' },
       expect.any(Function),
       expect.any(Function),
       expect.any(Function),
@@ -99,5 +102,51 @@ describe('ChatPanel streaming send', () => {
 
     expect(wrapper.find('textarea').element.value).toBe('稍等')
     expect(wrapper.find('.chat-panel-error').exists()).toBe(false)
+  })
+})
+
+function mountWithRealDateNav() {
+  return mount(ChatPanel, { global: { stubs: { ChatHistoryPage } } })
+}
+
+describe('ChatPanel default date', () => {
+  beforeEach(() => {
+    api.listChatDays.mockReset().mockResolvedValue({
+      entries: [{ date: '2026-10-23' }, { date: '2026-10-22' }, { date: '2026-10-21' }],
+    })
+  })
+
+  it('opens today and lists days in ascending order', async () => {
+    const wrapper = mountWithRealDateNav()
+    await flushPromises()
+
+    expect(wrapper.findAll('.chat-date-nav-item').map((item) => item.text())).toEqual(['10-21', '10-22', '今天'])
+    expect(wrapper.find('.chat-date-nav-item--active').text()).toBe('今天')
+    expect(wrapper.findComponent(ChatHistoryPage).props('date')).toBe('2026-10-23')
+  })
+
+  it('adds today when the day list has no entry for today', async () => {
+    api.listChatDays.mockResolvedValue({ entries: [{ date: '2026-10-22' }] })
+    const wrapper = mountWithRealDateNav()
+    await flushPromises()
+
+    expect(wrapper.findAll('.chat-date-nav-item').map((item) => item.text())).toEqual(['10-22', '今天'])
+    expect(wrapper.find('.chat-date-nav-item--active').text()).toBe('今天')
+  })
+
+  it('disables the arrows at both ends of the range', async () => {
+    const wrapper = mountWithRealDateNav()
+    await flushPromises()
+
+    let arrows = wrapper.findAll('.chat-date-nav > button')
+    expect(arrows).toHaveLength(2)
+    expect(arrows[0].attributes('disabled')).toBeUndefined()
+    expect(arrows[1].attributes('disabled')).toBeDefined()
+
+    await wrapper.findAll('.chat-date-nav-item')[0].trigger('click')
+
+    arrows = wrapper.findAll('.chat-date-nav > button')
+    expect(arrows[0].attributes('disabled')).toBeDefined()
+    expect(arrows[1].attributes('disabled')).toBeUndefined()
   })
 })
