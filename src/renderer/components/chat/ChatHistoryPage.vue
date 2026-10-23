@@ -20,6 +20,8 @@ const messages = ref([])
 const loading = ref(false)
 const error = ref('')
 const historyEl = ref(null)
+const stickToBottom = ref(true)
+const savedPositions = new Map()
 
 async function loadConfirmations() {
   try {
@@ -60,9 +62,42 @@ async function load() {
   } finally {
     loading.value = false
   }
-  await nextTick()
-  if (historyEl.value) historyEl.value.scrollTop = historyEl.value.scrollHeight
+  await restoreScroll()
 }
+
+function updateScrollState() {
+  const element = historyEl.value
+  if (!element) return
+  stickToBottom.value = element.scrollHeight - element.scrollTop - element.clientHeight <= 24
+  if (element.scrollHeight > 0) savedPositions.set(props.date, element.scrollTop)
+}
+
+function scrollToBottom() {
+  const element = historyEl.value
+  if (!element) return
+  element.scrollTop = element.scrollHeight
+  stickToBottom.value = true
+  savedPositions.set(props.date, element.scrollTop)
+}
+
+async function restoreScroll() {
+  await nextTick()
+  const element = historyEl.value
+  if (!element) return
+  const saved = savedPositions.get(props.date)
+  element.scrollTop = saved === undefined ? element.scrollHeight : saved
+  updateScrollState()
+}
+
+watch(
+  () => props.transientMessages,
+  async () => {
+    if (!stickToBottom.value) return
+    await nextTick()
+    scrollToBottom()
+  },
+  { deep: true }
+)
 
 watch(() => props.date, load, { immediate: true })
 
@@ -70,7 +105,7 @@ defineExpose({ refresh: load })
 </script>
 
 <template>
-  <div ref="historyEl" class="chat-history">
+  <div ref="historyEl" class="chat-history" @scroll="updateScrollState">
     <div v-if="loading && messages.length === 0 && transientMessages.length === 0" class="chat-history-loading">
       <div class="chat-history-skeleton" v-for="n in 3" :key="n">
         <div class="skeleton-avatar" />
@@ -100,16 +135,40 @@ defineExpose({ refresh: load })
         @confirm-resolved="$emit('confirmResolved', $event)"
       />
     </div>
+    <button
+      v-if="!stickToBottom && messages.length + transientMessages.length > 0"
+      class="chat-history-jump"
+      @click="scrollToBottom"
+    >
+      回到最新
+    </button>
   </div>
 </template>
 
 <style scoped>
 .chat-history {
+  position: relative;
   flex: 1;
   overflow-y: auto;
   padding: 0.75rem;
   display: flex;
   flex-direction: column;
+}
+
+.chat-history-jump {
+  position: sticky;
+  bottom: 0.5rem;
+  align-self: center;
+  margin-top: 0.5rem;
+  padding: 0.3rem 0.9rem;
+  border: 2px solid var(--nb-border);
+  border-radius: var(--nb-radius);
+  background: var(--nb-accent);
+  color: var(--nb-text);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 2px 2px 0 0 var(--nb-border);
 }
 
 .chat-history-loading,
