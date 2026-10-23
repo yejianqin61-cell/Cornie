@@ -1,6 +1,6 @@
 <script setup>
 import { ChevronLeft, ChevronRight } from '@lucide/vue'
-import { Button } from 'neobrutalism-vue'
+import AppButton from '../common/AppButton.vue'
 
 defineProps({
   days: { type: Array, default: () => [] },
@@ -13,9 +13,9 @@ const emit = defineEmits(['select', 'prev', 'next'])
 
 <template>
   <div class="chat-date-nav">
-    <Button size="icon" variant="neutral" :disabled="loading" @click="$emit('prev')">
+    <AppButton size="icon" variant="neutral" aria-label="前一天" :disabled="loading" @click="$emit('prev')">
       <ChevronLeft :size="14" />
-    </Button>
+    </AppButton>
     <div class="chat-date-nav-list">
       <button
         v-for="d in days"
@@ -28,9 +28,9 @@ const emit = defineEmits(['select', 'prev', 'next'])
         {{ d.label }}
       </button>
     </div>
-    <Button size="icon" variant="neutral" :disabled="loading" @click="$emit('next')">
+    <AppButton size="icon" variant="neutral" aria-label="后一天" :disabled="loading" @click="$emit('next')">
       <ChevronRight :size="14" />
-    </Button>
+    </AppButton>
   </div>
 </template>
 

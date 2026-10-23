@@ -1,7 +1,7 @@
 <script setup>
 import { ref, nextTick } from 'vue'
 import { Send, Loader2, X } from '@lucide/vue'
-import { Button } from 'neobrutalism-vue'
+import AppButton from '../common/AppButton.vue'
 import ChatDateNav from './ChatDateNav.vue'
 import ChatHistoryPage from './ChatHistoryPage.vue'
 import { sendMessageStreamed } from '../../api/conversation.js'
@@ -128,13 +128,26 @@ function handleConfirmResolved() {
           rows="2"
           @keydown.enter.exact="handleSend"
         />
-        <Button class="chat-panel-send" size="icon" :disabled="sending || !inputText.trim()" @click="handleSend">
+        <AppButton
+          class="chat-panel-send"
+          size="icon"
+          aria-label="发送消息"
+          :disabled="sending || !inputText.trim()"
+          @click="handleSend"
+        >
           <Loader2 v-if="sending" :size="16" class="spin" />
           <Send v-else :size="16" />
-        </Button>
-        <Button v-if="sending" class="chat-panel-cancel" size="icon" variant="neutral" @click="cancelSend">
+        </AppButton>
+        <AppButton
+          v-if="sending"
+          class="chat-panel-cancel"
+          size="icon"
+          variant="neutral"
+          aria-label="取消生成"
+          @click="cancelSend"
+        >
           <X :size="16" />
-        </Button>
+        </AppButton>
       </div>
     </div>
   </div>

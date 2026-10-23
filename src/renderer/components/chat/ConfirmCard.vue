@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import { Button } from 'neobrutalism-vue'
+import AppButton from '../common/AppButton.vue'
 import { confirmAction } from '../../api/confirm.js'
 
 const props = defineProps({
@@ -32,9 +32,9 @@ async function act(decision) {
   <div class="confirm-card">
     <div class="confirm-card-message">{{ confirm.message || '确认执行此操作？' }}</div>
     <div class="confirm-card-actions">
-      <Button size="sm" :disabled="processing || status !== 'pending'" @click="act('approve')">确认</Button>
-      <Button size="sm" variant="neutral" :disabled="processing || status !== 'pending'" @click="act('reject')"
-        >拒绝</Button
+      <AppButton size="sm" :disabled="processing || status !== 'pending'" @click="act('approve')">确认</AppButton>
+      <AppButton size="sm" variant="neutral" :disabled="processing || status !== 'pending'" @click="act('reject')"
+        >拒绝</AppButton
       >
     </div>
     <div v-if="status !== 'pending'" class="confirm-card-status">{{ status === 'executed' ? '已执行' : '已拒绝' }}</div>

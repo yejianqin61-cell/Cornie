@@ -78,6 +78,8 @@ describe('ChatDateNav', () => {
     })
     expect(wrapper.text()).toContain('09-15')
     expect(wrapper.text()).toContain('今天')
+    expect(wrapper.findAll('div.neobrutalism-button')).toHaveLength(0)
+    expect(wrapper.findAll('button')).toHaveLength(4)
   })
 
   it('emits select on click', async () => {

@@ -28,6 +28,8 @@ describe('ConfirmCard', () => {
     })
 
     const buttons = wrapper.findAll('button')
+    expect(buttons).toHaveLength(2)
+    expect(wrapper.findAll('div.neobrutalism-button')).toHaveLength(0)
     await buttons[0].trigger('click')
     expect(api.confirmAction).toHaveBeenCalledWith('confirm-1', 'approve')
     expect(buttons[0].element.disabled).toBe(true)
