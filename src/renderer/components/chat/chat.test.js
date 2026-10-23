@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
+import { nextTick } from 'vue'
 import { mount } from '@vue/test-utils'
 import MessageRow from './MessageRow.vue'
 import ToolResultPanel from './ToolResultPanel.vue'
@@ -97,5 +98,15 @@ describe('ChatDateNav', () => {
     await btns[0].trigger('click')
     expect(wrapper.emitted('select')).toBeTruthy()
     expect(wrapper.emitted('select')[0][0]).toBe('2026-09-15')
+  })
+
+  it('scrolls the selected day into view', async () => {
+    const scrollIntoView = vi.fn()
+    Element.prototype.scrollIntoView = scrollIntoView
+    mount(ChatDateNav, { props: { days, selected: '2026-09-16' } })
+    await nextTick()
+
+    expect(scrollIntoView).toHaveBeenCalled()
+    delete Element.prototype.scrollIntoView
   })
 })

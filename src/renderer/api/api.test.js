@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { apiGet, apiPost } from './client.js'
 import { listEntries as listDiaryEntries, getEntry } from './diary.js'
 import { sendMessage } from './conversation.js'
-import { getChatDay } from './chatlog.js'
+import { getChatDay, listChatDays } from './chatlog.js'
 import { listEntries as listLedgerEntries } from './ledger.js'
 import { listObservations } from './observation.js'
 import { listPages } from './memory-wiki.js'
@@ -77,6 +77,13 @@ describe('api/chatlog', () => {
     expect(url).toContain('/api/chatlogs/2026-10-23?')
     expect(url).toContain('cursor=2')
     expect(url).toContain('limit=100')
+  })
+
+  it('forwards the month filter to the day list endpoint', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ entries: [] }) })
+    await listChatDays({ month: '2026-09' })
+
+    expect(String(fetch.mock.calls[0][0])).toContain('/api/chatlogs?month=2026-09')
   })
 })
 

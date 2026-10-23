@@ -155,6 +155,57 @@ function dispatchEnter(element, options = {}) {
   return event
 }
 
+describe('ChatPanel date navigation', () => {
+  const entries = [
+    { date: '2026-10-23' },
+    { date: '2026-10-22' },
+    { date: '2026-09-15' },
+    { date: '2025-12-31' },
+  ]
+
+  beforeEach(() => {
+    api.listChatDays.mockReset().mockResolvedValue({
+      entries,
+      availableMonths: ['2025-12', '2026-09', '2026-10'],
+    })
+  })
+
+  it('labels days relative to today and with absolute dates', async () => {
+    const wrapper = mountWithRealDateNav()
+    await flushPromises()
+
+    expect(wrapper.findAll('.chat-date-nav-item').map((item) => item.text())).toEqual([
+      '2025年12月31日',
+      '9月15日',
+      '昨天',
+      '今天',
+    ])
+  })
+
+  it('filters by month and omits today outside the current month', async () => {
+    const wrapper = mountWithRealDateNav()
+    await flushPromises()
+
+    await wrapper.find('.chat-date-nav-month').setValue('2026-09')
+    await flushPromises()
+
+    expect(api.listChatDays).toHaveBeenLastCalledWith({ month: '2026-09' })
+    expect(wrapper.findAll('.chat-date-nav-item').map((item) => item.text())).toEqual(['9月15日'])
+  })
+
+  it('returns to today from an older day and clears the month filter', async () => {
+    const wrapper = mountWithRealDateNav()
+    await flushPromises()
+
+    await wrapper.findAll('.chat-date-nav-item')[0].trigger('click')
+    await wrapper.find('[aria-label="回到今天"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('.chat-date-nav-item--active').text()).toBe('今天')
+    expect(api.listChatDays).toHaveBeenLastCalledWith({})
+  })
+})
+
 describe('ChatPanel composer', () => {
   beforeEach(() => {
     api.listChatDays.mockReset().mockResolvedValue({ entries: [{ date: '2026-10-23' }] })
