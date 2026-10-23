@@ -1,5 +1,5 @@
 <script setup>
-import { nextTick, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { MessagesSquare } from '@lucide/vue'
 import MessageRow from './MessageRow.vue'
 import EmptyState from '../common/EmptyState.vue'
@@ -14,7 +14,7 @@ const props = defineProps({
   transientMessages: { type: Array, default: () => [] },
 })
 
-defineEmits(['confirmResolved'])
+defineEmits(['confirmResolved', 'retry'])
 
 const messages = ref([])
 const loading = ref(false)
@@ -22,6 +22,11 @@ const error = ref('')
 const historyEl = ref(null)
 const stickToBottom = ref(true)
 const savedPositions = new Map()
+let loadToken = 0
+
+const visibleTransientMessages = computed(() =>
+  props.transientMessages.filter((message) => !message.date || message.date === props.date)
+)
 
 async function loadConfirmations() {
   try {
@@ -41,6 +46,7 @@ function attachConfirmations(list, confirmations) {
 }
 
 async function load() {
+  const token = ++loadToken
   loading.value = true
   error.value = ''
   try {
@@ -55,13 +61,18 @@ async function load() {
       cursor = res.pagination?.nextCursor ?? undefined
       pages += 1
     }
-    messages.value = attachConfirmations(collected, await loadConfirmations())
+    if (token !== loadToken) return
+    const attached = attachConfirmations(collected, await loadConfirmations())
+    if (token !== loadToken) return
+    messages.value = attached
   } catch (e) {
+    if (token !== loadToken) return
     error.value = e.message || '加载失败'
     messages.value = []
   } finally {
-    loading.value = false
+    if (token === loadToken) loading.value = false
   }
+  if (token !== loadToken) return
   await restoreScroll()
 }
 
@@ -98,7 +109,6 @@ watch(
   },
   { deep: true }
 )
-
 watch(() => props.date, load, { immediate: true })
 
 defineExpose({ refresh: load })
@@ -106,7 +116,7 @@ defineExpose({ refresh: load })
 
 <template>
   <div ref="historyEl" class="chat-history" @scroll="updateScrollState">
-    <div v-if="loading && messages.length === 0 && transientMessages.length === 0" class="chat-history-loading">
+    <div v-if="loading && messages.length === 0 && visibleTransientMessages.length === 0" class="chat-history-loading">
       <div class="chat-history-skeleton" v-for="n in 3" :key="n">
         <div class="skeleton-avatar" />
         <div class="skeleton-bubble" />
@@ -117,7 +127,7 @@ defineExpose({ refresh: load })
       <button class="chat-history-retry" @click="load">重试</button>
     </div>
     <EmptyState
-      v-else-if="messages.length === 0 && transientMessages.length === 0"
+      v-else-if="messages.length === 0 && visibleTransientMessages.length === 0"
       :icon="MessagesSquare"
       text="暂无消息"
     />
@@ -129,14 +139,15 @@ defineExpose({ refresh: load })
         @confirm-resolved="$emit('confirmResolved', $event)"
       />
       <MessageRow
-        v-for="msg in transientMessages"
+        v-for="msg in visibleTransientMessages"
         :key="msg.id"
         :message="msg"
         @confirm-resolved="$emit('confirmResolved', $event)"
+        @retry="$emit('retry', $event)"
       />
     </div>
     <button
-      v-if="!stickToBottom && messages.length + transientMessages.length > 0"
+      v-if="!stickToBottom && messages.length + visibleTransientMessages.length > 0"
       class="chat-history-jump"
       @click="scrollToBottom"
     >

@@ -8,7 +8,7 @@ defineProps({
   avatarSrc: { type: String, default: '' },
 })
 
-defineEmits(['confirmResolved'])
+defineEmits(['confirmResolved', 'retry'])
 
 function roleLetter(role) {
   if (role === 'user') return ''
@@ -29,6 +29,10 @@ function roleLetter(role) {
         {{ message.role === 'user' ? '我' : message.role === 'assistant' ? 'Cornie' : '系统' }}
       </div>
       <div class="msg-row-text"><MessageBody :text="message.text" /></div>
+      <div v-if="message.status === 'failed'" class="msg-row-failed">
+        <span>发送失败</span>
+        <button class="msg-row-retry" @click="$emit('retry', message)">重试</button>
+      </div>
       <ToolResultPanel v-if="message.toolResults?.length" :results="message.toolResults" />
       <ConfirmCard v-if="message.confirm" :confirm="message.confirm" @resolved="$emit('confirmResolved', $event)" />
       <div v-if="message.time" class="msg-row-time">{{ message.time }}</div>
@@ -121,5 +125,25 @@ function roleLetter(role) {
   font-size: 0.75rem;
   color: var(--nb-text-secondary);
   margin-top: 0.15rem;
+}
+
+.msg-row-failed {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--nb-danger);
+}
+
+.msg-row-retry {
+  padding: 0.1rem 0.5rem;
+  border: 2px solid var(--nb-border);
+  border-radius: var(--nb-radius);
+  background: var(--nb-background);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
 }
 </style>

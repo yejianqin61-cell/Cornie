@@ -11,6 +11,7 @@ import { singaporeDate } from '../../../../shared/local-date.js'
 const inputText = ref('')
 const sending = ref(false)
 const sendError = ref('')
+const notice = ref('')
 const transientMessages = ref([])
 const activeRequest = ref(null)
 const inputEl = ref(null)
@@ -109,9 +110,10 @@ async function handleSend() {
   sendError.value = ''
   inputText.value = ''
   activeRequest.value = controller
+  const requestDate = selectedDate.value
   transientMessages.value = [
-    { id: `pending-user-${Date.now()}`, role: 'user', text },
-    { id: `pending-assistant-${Date.now()}`, role: 'assistant', text: '' },
+    { id: `pending-user-${Date.now()}`, role: 'user', text, date: requestDate },
+    { id: `pending-assistant-${Date.now()}`, role: 'assistant', text: '', date: requestDate },
   ]
   try {
     let streamError = null
@@ -134,18 +136,45 @@ async function handleSend() {
       { signal: controller.signal }
     )
     if (streamError) throw streamError
+    notice.value = ''
     await loadDays()
-    if (historyRef.value?.refresh) await historyRef.value.refresh()
+    try {
+      if (historyRef.value?.refresh) await historyRef.value.refresh()
+    } catch {
+      notice.value = '历史刷新失败，稍后重试'
+    }
     transientMessages.value = []
   } catch (e) {
-    inputText.value = text
-    transientMessages.value = []
-    if (!controller.signal.aborted) sendError.value = e.message || '发送失败'
+    if (controller.signal.aborted) {
+      transientMessages.value = []
+      inputText.value = ''
+      notice.value = '已取消'
+      await loadDays()
+      try {
+        if (historyRef.value?.refresh) await historyRef.value.refresh()
+      } catch {
+        notice.value = '已取消，历史刷新失败'
+      }
+    } else {
+      const failedUser = transientMessages.value.find((message) => message.role === 'user')
+      transientMessages.value = failedUser ? [{ ...failedUser, status: 'failed' }] : []
+      inputText.value = text
+      sendError.value = e.message || '发送失败'
+    }
   } finally {
     activeRequest.value = null
     sending.value = false
     nextTick(syncInputHeight)
   }
+}
+
+function handleRetry(message) {
+  const text = typeof message === 'string' ? message : message?.text
+  if (!text || sending.value) return
+  sendError.value = ''
+  transientMessages.value = []
+  inputText.value = text
+  handleSend()
 }
 
 function syncInputHeight() {
@@ -198,9 +227,11 @@ function handleConfirmResolved() {
       :date="selectedDate"
       :transient-messages="transientMessages"
       @confirm-resolved="handleConfirmResolved"
+      @retry="handleRetry"
     />
     <div class="chat-panel-footer">
       <div v-if="sendError" class="chat-panel-error">{{ sendError }}</div>
+      <div v-if="notice" class="chat-panel-notice">{{ notice }}</div>
       <div class="chat-panel-input-row">
         <textarea
           ref="inputEl"
@@ -263,6 +294,13 @@ function handleConfirmResolved() {
   font-size: 0.75rem;
   color: var(--nb-danger);
   font-weight: 600;
+  margin-bottom: 0.35rem;
+}
+
+.chat-panel-notice {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--nb-text-secondary);
   margin-bottom: 0.35rem;
 }
 
