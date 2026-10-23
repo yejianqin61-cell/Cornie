@@ -85,7 +85,13 @@ async function handleSend() {
         const assistant = transientMessages.value.at(-1)
         if (assistant) assistant.text += delta
       },
-      () => {},
+      (result) => {
+        const assistant = transientMessages.value.at(-1)
+        if (!assistant) return
+        if (result?.pendingConfirmation) assistant.confirm = result.pendingConfirmation
+        const results = result?.toolExecution?.results
+        if (Array.isArray(results) && results.length > 0) assistant.toolResults = results
+      },
       (error) => {
         streamError = error
       },

@@ -4,6 +4,7 @@ import { MessagesSquare } from '@lucide/vue'
 import MessageRow from './MessageRow.vue'
 import EmptyState from '../common/EmptyState.vue'
 import { getChatDay } from '../../api/chatlog.js'
+import { listConfirmations } from '../../api/confirm.js'
 
 const MESSAGE_PAGE_SIZE = 100
 const MAX_MESSAGE_PAGES = 20
@@ -20,6 +21,23 @@ const loading = ref(false)
 const error = ref('')
 const historyEl = ref(null)
 
+async function loadConfirmations() {
+  try {
+    const res = await listConfirmations(props.date)
+    return Array.isArray(res?.confirmations) ? res.confirmations : []
+  } catch {
+    return []
+  }
+}
+
+function attachConfirmations(list, confirmations) {
+  if (confirmations.length === 0) return list
+  const byMessage = new Map(confirmations.map((item) => [item.conversationMessageId, item]))
+  return list.map((message) =>
+    byMessage.has(message.id) ? { ...message, confirm: byMessage.get(message.id) } : message
+  )
+}
+
 async function load() {
   loading.value = true
   error.value = ''
@@ -35,7 +53,7 @@ async function load() {
       cursor = res.pagination?.nextCursor ?? undefined
       pages += 1
     }
-    messages.value = collected
+    messages.value = attachConfirmations(collected, await loadConfirmations())
   } catch (e) {
     error.value = e.message || '加载失败'
     messages.value = []
@@ -63,7 +81,11 @@ defineExpose({ refresh: load })
       <span>{{ error }}</span>
       <button class="chat-history-retry" @click="load">重试</button>
     </div>
-    <EmptyState v-else-if="messages.length === 0 && transientMessages.length === 0" :icon="MessagesSquare" text="暂无消息" />
+    <EmptyState
+      v-else-if="messages.length === 0 && transientMessages.length === 0"
+      :icon="MessagesSquare"
+      text="暂无消息"
+    />
     <div v-else class="chat-history-messages">
       <MessageRow
         v-for="msg in messages"
