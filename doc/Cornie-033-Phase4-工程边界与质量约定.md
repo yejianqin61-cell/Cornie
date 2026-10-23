@@ -40,6 +40,18 @@ renderer API 将非成功响应转换为 `Error`，页面在用户动作边界�
 新增测试优先复用本地服务 harness 和真实 HTTP 契约，不访问外网。
 不新增平行服务、不新增平行错误类型、不用兼容层遮住契约漂移。
 
+## 业务链复用映射
+
+| 业务链 | 页面入口 | renderer API | 后端复用 |
+|---|---|---|---|
+| 聊天链：conversation、chatlog、confirm | `ChatPanel`、`ConfirmCard` | `conversation.js`、`chatlog.js`、`confirm.js` | conversation、chatlog、confirm |
+| 日常业务链：ledger、todo、schedule | 对应 HomePage 和表单 | `ledger.js`、`todo.js`、`schedule.js` | ledger、todo、schedule |
+| 记录链：diary、observation、settings | 日记、观察、设置页 | 对应 renderer API 模块 | diary、observation、settings |
+| 记忆演示链：memory-wiki、governance | `MemoryWikiHomePage` | `memory-wiki.js` | memory-wiki、governance |
+
+业务链只在页面组合已有 API，不把领域字段转换散落到模板。
+跨模块演示先复用各自的服务，再由真实契约测试证明组合顺序。
+
 ## 变更检查
 
 提交前必须确认：
