@@ -20,6 +20,8 @@ const MAX_MESSAGE_LENGTH = 5000
 const days = ref([])
 const selectedDate = ref('')
 const daysLoading = ref(false)
+const availableMonths = ref([])
+const monthFilter = ref('')
 
 const historyRef = ref(null)
 
@@ -27,29 +29,56 @@ function todayStr() {
   return singaporeDate()
 }
 
+function shiftDate(date, offset) {
+  const value = new Date(`${date}T00:00:00Z`)
+  value.setUTCDate(value.getUTCDate() + offset)
+  return value.toISOString().slice(0, 10)
+}
+
+function formatDayLabel(date, todayDate) {
+  if (date === todayDate) return '今天'
+  if (date === shiftDate(todayDate, -1)) return '昨天'
+  const [year, month, day] = date.split('-').map(Number)
+  if (String(year) === todayDate.slice(0, 4)) return `${month}月${day}日`
+  return `${year}年${month}月${day}日`
+}
+
 async function loadDays() {
   daysLoading.value = true
   const previous = selectedDate.value
   const todayDate = todayStr()
+  const currentMonth = todayDate.slice(0, 7)
+  const includeToday = !monthFilter.value || monthFilter.value === currentMonth
   try {
-    const res = await listChatDays()
+    const res = await listChatDays(monthFilter.value ? { month: monthFilter.value } : {})
+    availableMonths.value = res.availableMonths || []
     const dates = (res.entries || [])
       .map((entry) => entry.date)
       .filter(Boolean)
       .sort()
-    if (!dates.includes(todayDate)) dates.push(todayDate)
+    if (includeToday && !dates.includes(todayDate)) dates.push(todayDate)
     dates.sort()
-    days.value = dates.map((date) => ({
-      date,
-      label: date === todayDate ? '今天' : date.slice(5),
-    }))
-    selectedDate.value = days.value.some((day) => day.date === previous) ? previous : todayDate
+    days.value = dates.map((date) => ({ date, label: formatDayLabel(date, todayDate) }))
+    const fallback = includeToday ? todayDate : dates[dates.length - 1]
+    selectedDate.value = days.value.some((day) => day.date === previous) ? previous : fallback
+    if (!dates.includes(selectedDate.value)) selectedDate.value = fallback
   } catch {
     days.value = [{ date: todayDate, label: '今天' }]
     selectedDate.value = todayDate
   } finally {
     daysLoading.value = false
   }
+}
+
+function selectMonth(month) {
+  monthFilter.value = month
+  loadDays()
+}
+
+async function goToday() {
+  monthFilter.value = ''
+  await loadDays()
+  selectedDate.value = todayStr()
 }
 
 const selectedIndex = computed(() => days.value.findIndex((day) => day.date === selectedDate.value))
@@ -155,9 +184,14 @@ function handleConfirmResolved() {
       :loading="daysLoading"
       :prev-disabled="prevDisabled"
       :next-disabled="nextDisabled"
+      :months="availableMonths"
+      :selected-month="monthFilter"
+      :is-today="selectedDate === todayStr()"
       @select="selectedDate = $event"
       @prev="goPrev"
       @next="goNext"
+      @month="selectMonth"
+      @today="goToday"
     />
     <ChatHistoryPage
       ref="historyRef"

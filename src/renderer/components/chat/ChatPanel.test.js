@@ -156,17 +156,12 @@ function dispatchEnter(element, options = {}) {
 }
 
 describe('ChatPanel date navigation', () => {
-  const entries = [
-    { date: '2026-10-23' },
-    { date: '2026-10-22' },
-    { date: '2026-09-15' },
-    { date: '2025-12-31' },
-  ]
+  const entries = [{ date: '2026-10-23' }, { date: '2026-10-22' }, { date: '2026-09-15' }, { date: '2025-12-31' }]
 
   beforeEach(() => {
-    api.listChatDays.mockReset().mockResolvedValue({
-      entries,
-      availableMonths: ['2025-12', '2026-09', '2026-10'],
+    api.listChatDays.mockReset().mockImplementation((args = {}) => {
+      const filtered = args.month ? entries.filter((entry) => entry.date.startsWith(args.month)) : entries
+      return Promise.resolve({ entries: filtered, availableMonths: ['2025-12', '2026-09', '2026-10'] })
     })
   })
 
@@ -278,7 +273,7 @@ describe('ChatPanel default date', () => {
     const wrapper = mountWithRealDateNav()
     await flushPromises()
 
-    expect(wrapper.findAll('.chat-date-nav-item').map((item) => item.text())).toEqual(['10-21', '10-22', '今天'])
+    expect(wrapper.findAll('.chat-date-nav-item').map((item) => item.text())).toEqual(['10月21日', '昨天', '今天'])
     expect(wrapper.find('.chat-date-nav-item--active').text()).toBe('今天')
     expect(wrapper.findComponent(ChatHistoryPage).props('date')).toBe('2026-10-23')
   })
@@ -288,7 +283,7 @@ describe('ChatPanel default date', () => {
     const wrapper = mountWithRealDateNav()
     await flushPromises()
 
-    expect(wrapper.findAll('.chat-date-nav-item').map((item) => item.text())).toEqual(['10-22', '今天'])
+    expect(wrapper.findAll('.chat-date-nav-item').map((item) => item.text())).toEqual(['昨天', '今天'])
     expect(wrapper.find('.chat-date-nav-item--active').text()).toBe('今天')
   })
 
