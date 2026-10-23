@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { apiGet, apiPost } from './client.js'
 import { listEntries as listDiaryEntries, getEntry } from './diary.js'
 import { sendMessage } from './conversation.js'
+import { getChatDay } from './chatlog.js'
 import { listEntries as listLedgerEntries } from './ledger.js'
 import { listObservations } from './observation.js'
 import { listPages } from './memory-wiki.js'
@@ -61,6 +62,21 @@ describe('api/conversation', () => {
     globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ reply: 'hi' }) })
     const result = await sendMessage({ message: 'hello' })
     expect(result.reply).toBe('hi')
+  })
+})
+
+describe('api/chatlog', () => {
+  it('forwards cursor and limit to the day endpoint', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ messages: [], pagination: { hasMore: false, nextCursor: null } }),
+    })
+    await getChatDay('2026-10-23', { cursor: '2', limit: 100 })
+
+    const url = String(fetch.mock.calls[0][0])
+    expect(url).toContain('/api/chatlogs/2026-10-23?')
+    expect(url).toContain('cursor=2')
+    expect(url).toContain('limit=100')
   })
 })
 

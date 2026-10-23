@@ -34,4 +34,47 @@ describe('ChatHistoryPage transient visibility', () => {
     expect(wrapper.findAll('.msg-row')).toHaveLength(0)
     expect(wrapper.find('.empty-state').exists()).toBe(true)
   })
+
+  it('loads every page and keeps the newest message', async () => {
+    api.getChatDay
+      .mockResolvedValueOnce({
+        messages: [{ id: 'm1', role: 'user', text: '旧消息' }],
+        pagination: { hasMore: true, nextCursor: '1' },
+      })
+      .mockResolvedValueOnce({
+        messages: [{ id: 'm2', role: 'cornie', text: '新消息' }],
+        pagination: { hasMore: false, nextCursor: null },
+      })
+    const wrapper = mount(ChatHistoryPage, { props: { date: '2026-10-23', transientMessages: [] } })
+    await flushPromises()
+
+    expect(api.getChatDay).toHaveBeenCalledTimes(2)
+    expect(api.getChatDay).toHaveBeenNthCalledWith(1, '2026-10-23', { cursor: undefined, limit: 100 })
+    expect(api.getChatDay).toHaveBeenNthCalledWith(2, '2026-10-23', { cursor: '1', limit: 100 })
+    expect(wrapper.findAll('.msg-row')).toHaveLength(2)
+    expect(wrapper.text()).toContain('新消息')
+  })
+
+  it('stops at the page cap instead of looping forever', async () => {
+    api.getChatDay.mockResolvedValue({
+      messages: [{ id: 'm', role: 'user', text: '分页' }],
+      pagination: { hasMore: true, nextCursor: '1' },
+    })
+    mount(ChatHistoryPage, { props: { date: '2026-10-23', transientMessages: [] } })
+    await flushPromises()
+
+    expect(api.getChatDay).toHaveBeenCalledTimes(20)
+  })
+
+  it('scrolls the history container to the bottom after loading', async () => {
+    api.getChatDay.mockResolvedValue({ messages: [], pagination: { hasMore: false, nextCursor: null } })
+    const wrapper = mount(ChatHistoryPage, { props: { date: '2026-10-23', transientMessages: [] } })
+    await flushPromises()
+
+    const container = wrapper.find('.chat-history').element
+    Object.defineProperty(container, 'scrollHeight', { configurable: true, value: 720 })
+    await wrapper.vm.refresh()
+
+    expect(container.scrollTop).toBe(720)
+  })
 })
