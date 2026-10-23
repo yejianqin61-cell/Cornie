@@ -38,6 +38,19 @@ describe('ChatHistoryPage transient visibility', () => {
     expect(wrapper.find('.empty-state').exists()).toBe(true)
   })
 
+  it('ignores transient messages that belong to another day', async () => {
+    const wrapper = mount(ChatHistoryPage, {
+      props: {
+        date: '2026-10-23',
+        transientMessages: [{ id: 't1', role: 'user', text: '别的日期', date: '2026-10-22' }],
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.text()).not.toContain('别的日期')
+    expect(wrapper.findAll('.msg-row')).toHaveLength(0)
+  })
+
   it('loads every page and keeps the newest message', async () => {
     api.getChatDay
       .mockResolvedValueOnce({
@@ -102,6 +115,40 @@ describe('ChatHistoryPage transient visibility', () => {
     expect(confirmApi.listConfirmations).toHaveBeenCalledWith('2026-10-23')
     expect(wrapper.text()).toContain('确认记账')
     expect(wrapper.findComponent({ name: 'ConfirmCard' }).exists()).toBe(true)
+  })
+})
+
+describe('ChatHistoryPage request ordering', () => {
+  beforeEach(() => {
+    api.getChatDay.mockReset()
+    confirmApi.listConfirmations.mockReset().mockResolvedValue({ confirmations: [] })
+  })
+
+  it('keeps the last requested day when an older load resolves later', async () => {
+    let resolveFirst
+    api.getChatDay
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveFirst = resolve
+          })
+      )
+      .mockResolvedValueOnce({
+        messages: [{ id: 'new-one', role: 'user', text: '新日期', createdAt: 2 }],
+        pagination: { hasMore: false, nextCursor: null },
+      })
+    const wrapper = mount(ChatHistoryPage, { props: { date: '2026-10-23', transientMessages: [] } })
+
+    await wrapper.setProps({ date: '2026-10-22' })
+    await flushPromises()
+    resolveFirst({
+      messages: [{ id: 'old-one', role: 'user', text: '旧日期', createdAt: 1 }],
+      pagination: { hasMore: false, nextCursor: null },
+    })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('新日期')
+    expect(wrapper.text()).not.toContain('旧日期')
   })
 })
 

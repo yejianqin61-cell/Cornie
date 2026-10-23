@@ -30,6 +30,16 @@ describe('MessageRow', () => {
     expect(wrapper.text()).toContain('已连接')
     expect(wrapper.text()).toContain('系统')
   })
+
+  it('marks a failed message and emits retry', async () => {
+    const wrapper = mount(MessageRow, {
+      props: { message: { id: '4', role: 'user', text: '没发出去', status: 'failed' } },
+    })
+
+    expect(wrapper.text()).toContain('发送失败')
+    await wrapper.find('.msg-row-retry').trigger('click')
+    expect(wrapper.emitted('retry')).toBeTruthy()
+  })
 })
 
 describe('ToolResultPanel', () => {

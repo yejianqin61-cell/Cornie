@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { apiGet, apiPost } from './client.js'
+import { apiGet, apiPost, apiStream } from './client.js'
 import { listEntries as listDiaryEntries, getEntry } from './diary.js'
 import { sendMessage } from './conversation.js'
 import { getChatDay, listChatDays } from './chatlog.js'
@@ -40,6 +40,49 @@ describe('api/client', () => {
       })
     )
     expect(result).toEqual({ id: 1 })
+  })
+})
+
+function streamResponse(chunks) {
+  let index = 0
+  const encoder = new TextEncoder()
+  return {
+    ok: true,
+    body: {
+      getReader: () => ({
+        read: async () =>
+          index < chunks.length
+            ? { done: false, value: encoder.encode(chunks[index++]) }
+            : { done: true, value: undefined },
+      }),
+    },
+  }
+}
+
+describe('api/client stream', () => {
+  it('resolves when the stream ends with a done event', async () => {
+    globalThis.fetch = vi
+      .fn()
+      .mockResolvedValue(streamResponse(['data: {"kind":"delta","text":"你"}\n\n', 'data: {"kind":"done","result":{"ok":true}}\n\n']))
+    const onDelta = vi.fn()
+    const onDone = vi.fn()
+
+    await apiStream('/stream', {}, onDelta, onDone)
+
+    expect(onDelta).toHaveBeenCalledWith('你')
+    expect(onDone).toHaveBeenCalledWith({ ok: true })
+  })
+
+  it('rejects when the stream ends without a done event', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(streamResponse(['data: {"kind":"delta","text":"半句"}\n\n']))
+
+    await expect(apiStream('/stream', {}, () => {}, () => {})).rejects.toThrow('中断')
+  })
+
+  it('rejects when the server sends an error event', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue(streamResponse(['data: {"kind":"error","error":"模型不可用"}\n\n']))
+
+    await expect(apiStream('/stream', {}, () => {}, () => {})).rejects.toThrow('模型不可用')
   })
 })
 

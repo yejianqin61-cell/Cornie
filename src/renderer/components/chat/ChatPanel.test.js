@@ -21,6 +21,7 @@ const refresh = vi.fn()
 const ChatHistoryPage = defineComponent({
   name: 'ChatHistoryPage',
   props: { date: String, transientMessages: Array },
+  emits: ['retry', 'confirmResolved'],
   setup(_, { expose }) {
     expose({ refresh })
     return () => null
@@ -125,7 +126,7 @@ describe('ChatPanel streaming send', () => {
     expect(wrapper.findComponent(ChatHistoryPage).props('transientMessages')).toEqual([])
   })
 
-  it('cancels the active stream and restores the draft for retry', async () => {
+  it('cancels the active stream, refreshes history and explains the cancel', async () => {
     api.sendMessageStreamed.mockImplementation(
       (_request, _delta, _done, _error, { signal }) =>
         new Promise((_resolve, reject) => {
@@ -140,8 +141,48 @@ describe('ChatPanel streaming send', () => {
     await wrapper.find('.chat-panel-cancel').trigger('click')
     await flushPromises()
 
-    expect(wrapper.find('textarea').element.value).toBe('稍等')
+    expect(wrapper.find('textarea').element.value).toBe('')
     expect(wrapper.find('.chat-panel-error').exists()).toBe(false)
+    expect(wrapper.find('.chat-panel-notice').text()).toContain('已取消')
+    expect(refresh).toHaveBeenCalled()
+  })
+
+  it('keeps the failed message and resends it from the retry button', async () => {
+    api.sendMessageStreamed.mockRejectedValueOnce(new Error('网络断了'))
+    const wrapper = mountPanel()
+    await flushPromises()
+
+    await wrapper.find('textarea').setValue('会失败的消息')
+    await wrapper.find('.chat-panel-send').trigger('click')
+    await flushPromises()
+
+    const failed = wrapper.findComponent(ChatHistoryPage).props('transientMessages')
+    expect(failed).toHaveLength(1)
+    expect(failed[0]).toEqual(
+      expect.objectContaining({ role: 'user', text: '会失败的消息', status: 'failed' })
+    )
+    expect(wrapper.find('.chat-panel-error').text()).toContain('网络断了')
+
+    api.sendMessageStreamed.mockImplementation((_request, _delta, onDone) => Promise.resolve().then(() => onDone({})))
+    wrapper.findComponent(ChatHistoryPage).vm.$emit('retry', failed[0])
+    await flushPromises()
+
+    expect(api.sendMessageStreamed).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not report a refresh failure as a send failure', async () => {
+    api.sendMessageStreamed.mockImplementation((_request, _delta, onDone) => Promise.resolve().then(() => onDone({})))
+    refresh.mockRejectedValue(new Error('历史刷新失败'))
+    const wrapper = mountPanel()
+    await flushPromises()
+
+    await wrapper.find('textarea').setValue('已经发出去了')
+    await wrapper.find('.chat-panel-send').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.find('.chat-panel-error').exists()).toBe(false)
+    expect(wrapper.find('.chat-panel-notice').text()).toContain('历史刷新失败')
+    expect(wrapper.findComponent(ChatHistoryPage).props('transientMessages')).toEqual([])
   })
 })
 
