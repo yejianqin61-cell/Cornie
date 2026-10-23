@@ -1,5 +1,5 @@
 <script setup>
-import { ref, nextTick } from 'vue'
+import { computed, ref, nextTick } from 'vue'
 import { Send, Loader2, X } from '@lucide/vue'
 import AppButton from '../common/AppButton.vue'
 import ChatDateNav from './ChatDateNav.vue'
@@ -26,19 +26,41 @@ function todayStr() {
 
 async function loadDays() {
   daysLoading.value = true
+  const previous = selectedDate.value
+  const todayDate = todayStr()
   try {
     const res = await listChatDays()
-    days.value = (res.entries || []).map((entry) => ({
-      date: entry.date,
-      label: entry.date === todayStr() ? '今天' : entry.date.slice(5),
+    const dates = (res.entries || [])
+      .map((entry) => entry.date)
+      .filter(Boolean)
+      .sort()
+    if (!dates.includes(todayDate)) dates.push(todayDate)
+    dates.sort()
+    days.value = dates.map((date) => ({
+      date,
+      label: date === todayDate ? '今天' : date.slice(5),
     }))
-    if (days.value.length > 0) selectedDate.value = days.value[days.value.length - 1].date
+    selectedDate.value = days.value.some((day) => day.date === previous) ? previous : todayDate
   } catch {
-    days.value = [{ date: todayStr(), label: '今天' }]
-    selectedDate.value = todayStr()
+    days.value = [{ date: todayDate, label: '今天' }]
+    selectedDate.value = todayDate
   } finally {
     daysLoading.value = false
   }
+}
+
+const selectedIndex = computed(() => days.value.findIndex((day) => day.date === selectedDate.value))
+const prevDisabled = computed(() => daysLoading.value || selectedIndex.value <= 0)
+const nextDisabled = computed(() => daysLoading.value || selectedIndex.value >= days.value.length - 1)
+
+function goPrev() {
+  if (prevDisabled.value) return
+  selectedDate.value = days.value[selectedIndex.value - 1].date
+}
+
+function goNext() {
+  if (nextDisabled.value) return
+  selectedDate.value = days.value[selectedIndex.value + 1].date
 }
 
 loadDays()
@@ -97,19 +119,11 @@ function handleConfirmResolved() {
       :days="days"
       :selected="selectedDate"
       :loading="daysLoading"
+      :prev-disabled="prevDisabled"
+      :next-disabled="nextDisabled"
       @select="selectedDate = $event"
-      @prev="
-        () => {
-          const i = days.findIndex((d) => d.date === selectedDate)
-          if (i > 0) selectedDate = days[i - 1].date
-        }
-      "
-      @next="
-        () => {
-          const i = days.findIndex((d) => d.date === selectedDate)
-          if (i < days.length - 1) selectedDate = days[i + 1].date
-        }
-      "
+      @prev="goPrev"
+      @next="goNext"
     />
     <ChatHistoryPage
       ref="historyRef"

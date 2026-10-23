@@ -6,6 +6,8 @@ defineProps({
   days: { type: Array, default: () => [] },
   selected: { type: String, default: '' },
   loading: { type: Boolean, default: false },
+  prevDisabled: { type: Boolean, default: false },
+  nextDisabled: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['select', 'prev', 'next'])
@@ -13,7 +15,13 @@ const emit = defineEmits(['select', 'prev', 'next'])
 
 <template>
   <div class="chat-date-nav">
-    <AppButton size="icon" variant="neutral" aria-label="前一天" :disabled="loading" @click="$emit('prev')">
+    <AppButton
+      size="icon"
+      variant="neutral"
+      aria-label="前一天"
+      :disabled="loading || prevDisabled"
+      @click="$emit('prev')"
+    >
       <ChevronLeft :size="14" />
     </AppButton>
     <div class="chat-date-nav-list">
@@ -28,7 +36,13 @@ const emit = defineEmits(['select', 'prev', 'next'])
         {{ d.label }}
       </button>
     </div>
-    <AppButton size="icon" variant="neutral" aria-label="后一天" :disabled="loading" @click="$emit('next')">
+    <AppButton
+      size="icon"
+      variant="neutral"
+      aria-label="后一天"
+      :disabled="loading || nextDisabled"
+      @click="$emit('next')"
+    >
       <ChevronRight :size="14" />
     </AppButton>
   </div>
