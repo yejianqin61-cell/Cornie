@@ -59,7 +59,8 @@ async function testChatHistoryContract() {
       id: 'phase1-user',
       date: DATE,
       role: 'user',
-      content: '你好'
+      content: '你好',
+      requestId: 'phase1-request'
     })
     saveMessage(harness.store, {
       id: 'phase1-cornie',
@@ -73,6 +74,7 @@ async function testChatHistoryContract() {
       assert(days.entries.some((entry) => entry.date === DATE), 'expected chat date entry', days)
 
       const day = await getChatDay(DATE)
+      assert(day.messages[0].requestId === 'phase1-request', 'expected request id retained in history', day)
       assert(day.messages[1].text === '你好呀。', 'expected message content mapped to text', day)
       assert(day.messages[1].role === 'assistant', 'expected cornie mapped to assistant', day)
       assert(day.pagination?.total === 2, 'expected backend pagination preserved', day)
