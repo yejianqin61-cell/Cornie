@@ -56,6 +56,42 @@ async function testConversationDefaultDate() {
   }
 }
 
+async function testConversationStreamRequestId() {
+  const sent = []
+  const app = express()
+  app.use(express.json())
+  app.use(
+    '/api',
+    conversationRoutes({
+      conversation: {
+        sendMessage: async () => ({ ok: true }),
+        sendMessageStreamed: async (input, onDelta) => {
+          sent.push(input)
+          onDelta('回复')
+          return { ok: true }
+        },
+      },
+    })
+  )
+  app.use(jsonErrorHandler)
+
+  const server = app.listen(0, '127.0.0.1')
+  await new Promise((resolve) => server.once('listening', resolve))
+  const base = `http://127.0.0.1:${server.address().port}`
+  try {
+    await fetch(`${base}/api/conversations/stream`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: '携带标识', date: '2026-10-20', requestId: 'retry-request-1' }),
+    }).then((res) => res.text())
+
+    assert(sent[0]?.requestId === 'retry-request-1', 'expected request id forwarded to stream service', sent)
+  } finally {
+    await new Promise((resolve) => server.close(resolve))
+  }
+}
+
 testSingaporeDate()
 await testConversationDefaultDate()
-console.log('tests/services/phase2-local-date.test.mjs: passed 2/2')
+await testConversationStreamRequestId()
+console.log('tests/services/phase2-local-date.test.mjs: passed 3/3')

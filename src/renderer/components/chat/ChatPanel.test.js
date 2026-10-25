@@ -160,12 +160,15 @@ describe('ChatPanel streaming send', () => {
     expect(failed).toHaveLength(1)
     expect(failed[0]).toEqual(expect.objectContaining({ role: 'user', text: '会失败的消息', status: 'failed' }))
     expect(wrapper.find('.chat-panel-error').text()).toContain('网络断了')
+    const firstRequest = api.sendMessageStreamed.mock.calls[0][0]
+    expect(firstRequest.requestId).toEqual(expect.any(String))
 
     api.sendMessageStreamed.mockImplementation((_request, _delta, onDone) => Promise.resolve().then(() => onDone({})))
     wrapper.findComponent(ChatHistoryPage).vm.$emit('retry', failed[0])
     await flushPromises()
 
     expect(api.sendMessageStreamed).toHaveBeenCalledTimes(2)
+    expect(api.sendMessageStreamed.mock.calls[1][0].requestId).toBe(firstRequest.requestId)
   })
 
   it('does not report a refresh failure as a send failure', async () => {
