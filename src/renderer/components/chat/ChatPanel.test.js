@@ -69,7 +69,7 @@ describe('ChatPanel streaming send', () => {
     await flushPromises()
 
     expect(api.sendMessageStreamed).toHaveBeenCalledWith(
-      { message: '你好', date: '2026-10-23' },
+      expect.objectContaining({ message: '你好', date: '2026-10-23', requestId: expect.any(String) }),
       expect.any(Function),
       expect.any(Function),
       expect.any(Function),

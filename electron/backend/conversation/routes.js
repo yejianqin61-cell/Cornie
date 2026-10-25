@@ -1,7 +1,15 @@
 import { Router } from 'express'
 import { asyncHandler } from '../http/middleware.js'
+import { badRequest } from '../http/errors.js'
 import { requireISODate, requireString } from '../validators.js'
 import { singaporeDate } from '../../../shared/local-date.js'
+
+function optionalRequestId(value) {
+  if (value === undefined) return undefined
+  const requestId = requireString(value, 'requestId', { maxLen: 128 }).trim()
+  if (!requestId) throw badRequest('invalid requestId')
+  return requestId
+}
 
 export function conversationRoutes({ conversation, now = () => new Date() }) {
   const r = Router()
@@ -13,8 +21,9 @@ export function conversationRoutes({ conversation, now = () => new Date() }) {
       const date = req.body?.date
         ? requireISODate(req.body.date)
         : singaporeDate(now())
+      const requestId = optionalRequestId(req.body?.requestId)
 
-      const result = await conversation.sendMessage({ date, message })
+      const result = await conversation.sendMessage({ date, message, requestId })
       res.json(result)
     })
   )
@@ -28,6 +37,7 @@ export function conversationRoutes({ conversation, now = () => new Date() }) {
       const date = req.body?.date
         ? requireISODate(req.body.date)
         : singaporeDate(now())
+      const requestId = optionalRequestId(req.body?.requestId)
 
       res.setHeader('Content-Type', 'text/event-stream')
       res.setHeader('Cache-Control', 'no-cache')
@@ -60,7 +70,7 @@ export function conversationRoutes({ conversation, now = () => new Date() }) {
 
       try {
         const result = await conversation.sendMessageStreamed(
-          { date, message },
+          { date, message, requestId },
           (delta) => {
             safeWrite(`data: ${JSON.stringify({ kind: 'delta', text: delta })}\n\n`)
           },

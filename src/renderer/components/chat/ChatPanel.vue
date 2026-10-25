@@ -30,6 +30,10 @@ function todayStr() {
   return singaporeDate()
 }
 
+function createRequestId() {
+  return globalThis.crypto.randomUUID()
+}
+
 function shiftDate(date, offset) {
   const value = new Date(`${date}T00:00:00Z`)
   value.setUTCDate(value.getUTCDate() + offset)
@@ -98,7 +102,7 @@ function goNext() {
 
 loadDays()
 
-async function handleSend() {
+async function handleSend(requestId = createRequestId()) {
   const text = inputText.value.trim()
   if (!text || sending.value) return
   if (text.length > MAX_MESSAGE_LENGTH) {
@@ -112,13 +116,13 @@ async function handleSend() {
   activeRequest.value = controller
   const requestDate = selectedDate.value
   transientMessages.value = [
-    { id: `pending-user-${Date.now()}`, role: 'user', text, date: requestDate },
-    { id: `pending-assistant-${Date.now()}`, role: 'assistant', text: '', date: requestDate },
+    { id: `pending-user-${Date.now()}`, role: 'user', text, date: requestDate, requestId },
+    { id: `pending-assistant-${Date.now()}`, role: 'assistant', text: '', date: requestDate, requestId },
   ]
   try {
     let streamError = null
     await sendMessageStreamed(
-      { message: text, date: selectedDate.value },
+      { message: text, date: selectedDate.value, requestId },
       (delta) => {
         const assistant = transientMessages.value.at(-1)
         if (assistant) assistant.text += delta
@@ -171,10 +175,11 @@ async function handleSend() {
 function handleRetry(message) {
   const text = typeof message === 'string' ? message : message?.text
   if (!text || sending.value) return
+  const requestId = typeof message === 'string' ? undefined : message?.requestId
   sendError.value = ''
   transientMessages.value = []
   inputText.value = text
-  handleSend()
+  handleSend(requestId)
 }
 
 function syncInputHeight() {
@@ -251,7 +256,7 @@ function handleConfirmResolved() {
           size="icon"
           aria-label="发送消息"
           :disabled="sending || !inputText.trim()"
-          @click="handleSend"
+          @click="handleSend()"
         >
           <Loader2 v-if="sending" :size="16" class="spin" />
           <Send v-else :size="16" />

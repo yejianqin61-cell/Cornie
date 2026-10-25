@@ -5,12 +5,13 @@ export function conversationService(store, { baseDir = process.cwd(), chatFn, ch
   const orchestrator = createConversationOrchestrator(store, { baseDir, chatFn, chatStreamFn })
 
   return {
-    sendMessage: ({ date, message }) => orchestrator.runTurn({ date, message }),
+    sendMessage: ({ date, message, requestId }) => orchestrator.runTurn({ date, message, requestId }),
 
-    sendMessageStreamed: ({ date, message }, onDelta, { signal } = {}) =>
+    sendMessageStreamed: ({ date, message, requestId }, onDelta, { signal } = {}) =>
       orchestrator.runTurn({
         date,
         message,
+        requestId,
         streamFinalReply: true,
         onFinalDelta: onDelta,
         signal
