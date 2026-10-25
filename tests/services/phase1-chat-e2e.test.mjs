@@ -44,6 +44,21 @@ function createModelStub(entryId) {
   }
 }
 
+function createAbortableModelStub() {
+  let streamCount = 0
+  return {
+    chatFn: async () => ({ content: JSON.stringify({ type: 'reply', assistant_reply: '测试替身已完成。' }) }),
+    chatStreamFn: async (_request, onDelta, { signal } = {}) => {
+      streamCount += 1
+      onDelta(streamCount === 1 ? '第一段' : '重试回复')
+      if (streamCount > 1) return { content: '重试回复' }
+      return new Promise((_resolve, reject) => {
+        signal?.addEventListener('abort', () => reject(new Error('stream aborted')), { once: true })
+      })
+    },
+  }
+}
+
 async function testChatHistoryAndConfirmation() {
   const harness = await createServiceHarness('phase1-chat-e2e')
   try {
@@ -98,5 +113,40 @@ async function testChatHistoryAndConfirmation() {
   }
 }
 
+async function testRetryAfterDisconnectKeepsOneUserMessage() {
+  const harness = await createServiceHarness('phase1-chat-retry')
+  const requestId = 'retry-after-disconnect'
+  try {
+    clearTools()
+    await withServer(harness, createAbortableModelStub(), async (base) => {
+      const controller = new AbortController()
+      const first = await fetch(`${base}/conversations/stream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: DATE, message: '断流后重试', requestId }),
+        signal: controller.signal,
+      })
+      const reader = first.body.getReader()
+      await reader.read()
+      controller.abort()
+      await new Promise((resolve) => setTimeout(resolve, 100))
+
+      const retry = await fetch(`${base}/conversations/stream`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: DATE, message: '断流后重试', requestId }),
+      })
+      await retry.text()
+
+      const history = await fetch(`${base}/chatlogs/${DATE}`).then((res) => res.json())
+      const userMessages = history.messages.filter((message) => message.role === 'user')
+      assert(userMessages.length === 1, 'expected retry to keep one user message', history)
+    })
+  } finally {
+    await harness.close()
+  }
+}
+
 await testChatHistoryAndConfirmation()
-console.log('tests/services/phase1-chat-e2e.test.mjs: passed 1/1')
+await testRetryAfterDisconnectKeepsOneUserMessage()
+console.log('tests/services/phase1-chat-e2e.test.mjs: passed 2/2')
