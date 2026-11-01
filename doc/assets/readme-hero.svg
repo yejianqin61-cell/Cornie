@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 360" role="img" aria-labelledby="title desc">
+  <title id="title">Cornie — 让陪伴拥有记忆</title>
+  <desc id="desc">深色背景上，Cornie 的名字、产品宣言与由对话、记忆、行动组成的轨道图形。</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1420"/>
+      <stop offset="0.55" stop-color="#142332"/>
+      <stop offset="1" stop-color="#0a1820"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e7f3ce"/>
+      <stop offset="1" stop-color="#a5dcc6"/>
+    </linearGradient>
+    <pattern id="grid" width="28" height="28" patternUnits="userSpaceOnUse">
+      <path d="M28 0H0V28" fill="none" stroke="#8db8ae" stroke-opacity=".09"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="360" rx="22" fill="url(#background)"/>
+  <rect width="1200" height="360" rx="22" fill="url(#grid)"/>
+  <path d="M0 0H1200V360H0Z" fill="none" stroke="#b8d9cb" stroke-opacity=".18" stroke-width="2"/>
+  <path d="M59 71h31" stroke="#b8e4d1" stroke-width="3" stroke-linecap="round"/>
+  <text x="105" y="77" fill="#a9c6c1" font-family="Arial, sans-serif" font-size="17" letter-spacing="4">PERSONAL MEMORY · DESKTOP COMPANION</text>
+  <text x="58" y="183" fill="#f7f6ea" font-family="Arial, sans-serif" font-size="88" font-weight="700" letter-spacing="-4">Cornie<tspan fill="#b9e6cf">.</tspan></text>
+  <text x="62" y="235" fill="#e4eee8" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="29" font-weight="600" letter-spacing="2">让陪伴拥有记忆，让记忆可以被信任。</text>
+  <text x="62" y="281" fill="#9dbab5" font-family="Arial, sans-serif" font-size="17" letter-spacing="1.2">CONVERSATION  /  MEMORY  /  EVERYDAY LIFE</text>
+  <path d="M63 312h430" stroke="#b7dbcc" stroke-opacity=".28"/>
+  <circle cx="907" cy="178" r="133" fill="none" stroke="#9ccfc2" stroke-opacity=".22" stroke-width="1.5"/>
+  <circle cx="907" cy="178" r="95" fill="none" stroke="#9ccfc2" stroke-opacity=".38" stroke-width="1.5"/>
+  <circle cx="907" cy="178" r="55" fill="url(#accent)"/>
+  <path d="M880 164c11-18 42-18 53 0" fill="none" stroke="#173736" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="891" cy="184" r="4" fill="#173736"/>
+  <circle cx="924" cy="184" r="4" fill="#173736"/>
+  <path d="M899 199c5 5 12 5 17 0" fill="none" stroke="#173736" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="907" cy="45" r="6" fill="#eac888"/>
+  <circle cx="1001" cy="178" r="6" fill="#b9e6cf"/>
+  <circle cx="813" cy="178" r="6" fill="#b9e6cf"/>
+  <circle cx="950" cy="303" r="6" fill="#eac888"/>
+  <path d="M907 45l-94 133 137 125 51-125" fill="none" stroke="#b9e6cf" stroke-opacity=".32" stroke-width="2"/>
+  <rect x="762" y="48" width="114" height="35" rx="17" fill="#1e3a3e" stroke="#749e96"/>
+  <text x="819" y="71" text-anchor="middle" fill="#dceee4" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="15">对话</text>
+  <rect x="1003" y="117" width="114" height="35" rx="17" fill="#1e3a3e" stroke="#749e96"/>
+  <text x="1060" y="140" text-anchor="middle" fill="#dceee4" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="15">记忆</text>
+  <rect x="1003" y="246" width="114" height="35" rx="17" fill="#1e3a3e" stroke="#749e96"/>
+  <text x="1060" y="269" text-anchor="middle" fill="#dceee4" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif" font-size="15">行动</text>
+</svg>
