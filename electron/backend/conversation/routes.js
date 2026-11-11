@@ -46,7 +46,8 @@ export function conversationRoutes({ conversation, now = () => new Date() }) {
 
       const controller = new AbortController()
       let finished = false
-      req.on('close', () => {
+      // 新版 Node 中请求体读完后 req 不再可靠地触发 close；以响应连接关闭作为客户端断开信号。
+      res.on('close', () => {
         if (!finished) controller.abort()
       })
       const heartbeat = setInterval(() => {

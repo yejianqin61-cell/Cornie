@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { getMessagesByDate, saveMessage } from '../../db.js'
+import { getMessageByRequestId, getMessagesByDate, saveMessage } from '../../db.js'
 import { categoryDomainRegistry } from '../category/domainRegistry.js'
 import { buildConversationContext } from './contextBuilder.js'
 import { buildConversationPrompt, buildWriteIntentRecoveryPrompt } from './promptBuilder.js'
@@ -147,18 +147,41 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd(),
   const confirm = createConfirmService(store)
 
   return {
-    async runTurn({ date, message, streamFinalReply = false, onFinalDelta = null, signal = null }) {
+    async runTurn({ date, message, requestId, streamFinalReply = false, onFinalDelta = null, signal = null }) {
       const telemetry = createTurnTelemetry({
         source: 'conversation',
         date,
         message
       })
-      const userMessage = saveMessage(store, {
-        id: randomUUID(),
-        date,
-        role: 'user',
-        content: message
-      })
+      // 同一 requestId 的重试：用户消息只存一条；已有回复则直接回放，无回复则从该消息继续本轮。
+      const existingUserMessage = getMessageByRequestId(store, requestId)
+      if (existingUserMessage) {
+        const replayed = getMessagesByDate(store, existingUserMessage.date).find(
+          (item) => item.role === 'cornie' && item.createdAt >= existingUserMessage.createdAt
+        )
+        if (replayed) {
+          return {
+            userMessage: existingUserMessage,
+            cornieMessage: replayed,
+            toolExecution: { used: false, results: [] },
+            policyDecision: { decision: 'allow' },
+            pendingConfirmation: null,
+            interimReplies: [],
+            memoryDistillation: null,
+            telemetry: null,
+            replayed: true
+          }
+        }
+      }
+      const userMessage =
+        existingUserMessage ??
+        saveMessage(store, {
+          id: randomUUID(),
+          date,
+          role: 'user',
+          content: message,
+          requestId
+        })
 
       const history = getMessagesByDate(store, date)
       const context = await buildConversationContext(store, { date, baseDir })
@@ -363,6 +386,13 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd(),
         console.error('Conversation orchestrator error:', error)
         // BE-05：失败路径留痕（超时/断网/协议失败分类），不再零记录
         recordModelFailureTelemetry(telemetry, { phase: 'conversation', error })
+      }
+
+      // 客户端中途断开：不落兜底回复、不做记忆提炼，让同一 requestId 的重试重新生成回复。
+      if (signal?.aborted) {
+        const abortError = new Error('conversation aborted by client')
+        abortError.name = 'AbortError'
+        throw abortError
       }
 
       if (looksLikeWriteIntent(message) && !hasSuccessfulWriteToolResult(toolExecution.results)) {
