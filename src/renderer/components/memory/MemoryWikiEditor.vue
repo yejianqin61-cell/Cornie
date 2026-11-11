@@ -11,14 +11,29 @@ const props = defineProps({
 
 const emit = defineEmits(['save', 'cancel'])
 
+const PAGE_TYPE_OPTIONS = [
+  { value: 'topic', label: '主题' },
+  { value: 'event', label: '事件' },
+  { value: 'person', label: '人物' },
+  { value: 'preference', label: '偏好' },
+  { value: 'dislike', label: '不喜欢' },
+  { value: 'need', label: '需求' },
+  { value: 'goal', label: '目标' },
+  { value: 'project', label: '项目' },
+  { value: 'routine', label: '日常' },
+]
+
+const isNew = !props.page.pageId
 const form = ref({
+  pageType: props.page.pageType || 'topic',
   title: props.page.title || '',
   summary: props.page.summary || '',
   body: props.page.body || '',
 })
 
 function submit() {
-  emit('save', { ...form.value })
+  const { pageType, ...rest } = form.value
+  emit('save', isNew ? { pageType, ...rest } : rest)
 }
 </script>
 
@@ -31,6 +46,14 @@ function submit() {
           <X :size="16" />
         </Button>
       </div>
+      <label v-if="isNew" class="mw-editor-field">
+        <span>类型</span>
+        <select v-model="form.pageType" class="mw-editor-input" data-testid="memory-page-type" :disabled="saving">
+          <option v-for="option in PAGE_TYPE_OPTIONS" :key="option.value" :value="option.value">
+            {{ option.label }}
+          </option>
+        </select>
+      </label>
       <label class="mw-editor-field">
         <span>标题</span>
         <input v-model="form.title" type="text" class="mw-editor-input" :disabled="saving" />

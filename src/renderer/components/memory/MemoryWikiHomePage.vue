@@ -397,11 +397,30 @@ function goBack() {
                 >拒绝</Button
               >
               <Button
-                v-if="governanceSelected.status === 'approved'"
+                v-if="governanceSelected.status === 'pending'"
+                variant="neutral"
+                size="sm"
+                @click="decideGovernance('deferred')"
+                >延期</Button
+              >
+              <Button
+                v-if="governanceSelected.status === 'deferred'"
+                variant="neutral"
+                size="sm"
+                @click="decideGovernance('pending')"
+                >重新待审</Button
+              >
+              <Button
+                v-if="governanceSelected.status === 'approved' && governanceSelected.applicable !== false"
                 variant="neutral"
                 size="sm"
                 @click="applyGovernance"
                 >应用</Button
+              >
+              <span
+                v-if="governanceSelected.status === 'approved' && governanceSelected.applicable === false"
+                class="mw-governance-empty"
+                >已确认，此类请求无需应用</span
               >
             </div>
           </div>

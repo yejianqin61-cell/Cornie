@@ -77,6 +77,23 @@ describe('MemoryWikiRelatedLinks', () => {
   })
 })
 
+describe('MemoryWikiEditor page type', () => {
+  it('submits pageType when creating a new page', async () => {
+    const wrapper = mount(MemoryWikiEditor, { props: { page: {} } })
+    await wrapper.find('[data-testid="memory-page-type"]').setValue('event')
+    await wrapper.find('input[type="text"]').setValue('标题')
+    wrapper.vm.submit()
+    expect(wrapper.emitted('save')[0][0]).toMatchObject({ pageType: 'event', title: '标题' })
+  })
+
+  it('does not offer or send pageType when editing', async () => {
+    const wrapper = mount(MemoryWikiEditor, { props: { page: { pageId: 'p1', pageType: 'event', title: 'T' } } })
+    expect(wrapper.find('[data-testid="memory-page-type"]').exists()).toBe(false)
+    wrapper.vm.submit()
+    expect(wrapper.emitted('save')[0][0]).not.toHaveProperty('pageType')
+  })
+})
+
 describe('MemoryWikiEditor', () => {
   it('renders form fields', () => {
     const wrapper = mount(MemoryWikiEditor, { props: { page: { title: 'Test' } } })

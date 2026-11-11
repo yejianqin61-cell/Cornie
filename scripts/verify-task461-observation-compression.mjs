@@ -39,8 +39,9 @@ async function run() {
     assert(request.requestType === 'observation_compression_candidate', '候选类型应为压缩候选')
 
     // 3) 批准并执行压缩
+    await memoryWiki.updateGovernanceRequestStatus(request.requestId, 'approved')
     const applyResult = await memoryWiki.applyGovernanceUpgradeRequest(request.requestId)
-    assert(applyResult.request.status === 'approved', '压缩应用后状态应 approved')
+    assert(applyResult.request.status === 'applied', '压缩应用后状态应 applied')
     assert(applyResult.summary, '应生成压缩摘要观察')
     assert(applyResult.summary.type === 'summary', '摘要观察类型应为 summary')
     assert(applyResult.archivedIds.length === 3, '应归档 3 条原始观察')

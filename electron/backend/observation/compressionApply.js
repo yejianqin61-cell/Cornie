@@ -25,7 +25,7 @@ export async function applyObservationCompressionRequest(
   if (normalizeString(request.requestType) !== 'observation_compression_candidate') {
     throw new Error(`governance request is not a compression candidate: ${requestId}`)
   }
-  if (!['pending', 'deferred'].includes(normalizeString(request.status))) {
+  if (!['pending', 'deferred', 'approved'].includes(normalizeString(request.status))) {
     throw new Error(`governance request cannot be applied from status: ${request.status}`)
   }
 
@@ -65,7 +65,10 @@ export async function applyObservationCompressionRequest(
   if (normalizeString(request.status) === 'deferred') {
     await governanceStore.updateStatus(requestId, 'pending')
   }
-  const approvedRequest = await governanceStore.updateStatus(requestId, 'approved')
+  const approvedRequest =
+    normalizeString(request.status) === 'approved'
+      ? request
+      : await governanceStore.updateStatus(requestId, 'approved')
 
   const auditStore = await createMemoryWikiAuditStore(baseDir)
   const audit = await auditStore.append({

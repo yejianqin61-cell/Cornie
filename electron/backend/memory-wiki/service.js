@@ -593,6 +593,27 @@ function buildGovernanceRequestFromOrphanItem(item) {
   }
 }
 
+const APPLICABLE_REPAIR_KINDS = new Set(['unlink_topic_page', 'remove_related_page', 'remove_page_source_ref'])
+
+// 有真实应用动作的治理请求；其余类型（身份冲突/复核、其他巡检建议）批准即视为人工已确认。
+function isGovernanceRequestApplicable(request) {
+  const section = normalizeString(request.queueSection)
+  if (
+    section === 'memory_wiki_llm_proposals' ||
+    section === 'observation_archive_candidates' ||
+    section === 'wiki_upgrade_candidates'
+  ) {
+    return true
+  }
+  if (section === 'archive_candidates') return Boolean(request.pageIds?.[0])
+  if (section === 'repair_suggestions') return APPLICABLE_REPAIR_KINDS.has(request.payload?.kind)
+  return false
+}
+
+function decorateGovernanceRequest(request) {
+  return { ...request, applicable: isGovernanceRequestApplicable(request) }
+}
+
 // 460：巡检治理请求去重指纹（requestType + 关联实体 + 问题标题）。
 function buildInspectionDedupeKey(request) {
   const pageIds = Array.isArray(request.pageIds) ? request.pageIds.join('|') : ''
@@ -1319,11 +1340,34 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
 
     async getGovernanceRequest(requestId) {
       if (!requestId) throw new Error('memory governance requestId is required')
-      return governanceStore.get(requestId)
+      const item = await governanceStore.get(requestId)
+      return item ? decorateGovernanceRequest(item) : item
     },
 
     async listGovernanceRequests(filters = {}) {
-      return governanceStore.list(filters)
+      return (await governanceStore.list(filters)).map(decorateGovernanceRequest)
+    },
+
+    async applyRepairSuggestion(suggestion) {
+      const { kind, target = {} } = suggestion
+      if (kind === 'unlink_topic_page') {
+        await topicIndex.unlinkPage(target.normalizedKey, target.pageId)
+        return { topic: target.normalizedKey }
+      }
+      if (kind === 'remove_related_page') {
+        const page = await this.get(target.pageId)
+        if (!page) throw new Error(`memory wiki page not found: ${target.pageId}`)
+        const relatedPageIds = (page.relatedPageIds ?? []).filter((id) => id !== target.relatedPageId)
+        return { page: await this.update({ ...page, pageId: page.pageId, relatedPageIds }) }
+      }
+      if (kind === 'remove_page_source_ref') {
+        const page = await this.get(target.pageId)
+        if (!page) throw new Error(`memory wiki page not found: ${target.pageId}`)
+        const stale = JSON.stringify(target.sourceRef)
+        const sourceRefs = (page.sourceRefs ?? []).filter((item) => JSON.stringify(item) !== stale)
+        return { page: await this.update({ ...page, pageId: page.pageId, sourceRefs }) }
+      }
+      throw new Error(`unsupported repair suggestion: ${kind}`)
     },
 
     async updateGovernanceRequestStatus(requestId, status) {
@@ -1332,16 +1376,33 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
       return governanceStore.updateStatus(requestId, status)
     },
 
+    // 统一约定：所有可应用的治理请求都必须先 approved；应用成功后进入终态 applied，不可重复应用。
     async applyGovernanceUpgradeRequest(requestId) {
       if (!requestId) throw new Error('memory governance requestId is required')
       const request = await governanceStore.get(requestId)
       if (!request) throw new Error(`governance request not found: ${requestId}`)
+      if (!isGovernanceRequestApplicable(request)) {
+        throw new Error(`governance request has no apply action: ${requestId}`)
+      }
+      if (normalizeString(request.status) !== 'approved') {
+        throw new Error(`governance request must be approved before applying: ${requestId} (status: ${request.status})`)
+      }
+      const outcome = await this.executeApprovedGovernanceRequest(request, requestId)
+      const applied = await governanceStore.updateStatus(requestId, 'applied')
+      return { ...outcome, request: applied }
+    },
+
+    async executeApprovedGovernanceRequest(request, requestId) {
+      if (normalizeString(request.queueSection) === 'archive_candidates') {
+        const pageId = normalizeString(request.pageIds?.[0])
+        return { action: 'archive_page', page: await this.archive(pageId) }
+      }
+      if (normalizeString(request.queueSection) === 'repair_suggestions') {
+        return { action: request.payload.kind, ...(await this.applyRepairSuggestion(request.payload)) }
+      }
       if (normalizeString(request.queueSection) === 'memory_wiki_llm_proposals') {
         if (normalizeString(request.requestType) !== 'memory_wiki_llm_proposal') {
           throw new Error(`governance request is not an LLM memory proposal: ${requestId}`)
-        }
-        if (normalizeString(request.status) !== 'approved') {
-          throw new Error(`LLM memory proposal must be approved before applying: ${requestId}`)
         }
 
         const proposal = request.payload?.request
