@@ -39,7 +39,7 @@ Routine：8 个提交（含本简报）；前端测试由 197 例增至 250 例�
 
 ### 2.3 逐页对照路由清单（task-045g）
 
-后端共 92 个接口（含 `/api/health`、`/api/telemetry`、`/api/model/status`）。前端请求函数覆盖其中绝大部分；对照分两类。
+后端共 96 个接口（含 `/api/health`、`/api/telemetry`、`/api/model/status`）。前端请求函数覆盖其中绝大部分；对照分两类。
 
 **接口有前端函数，但没有任何组件使用：**
 
