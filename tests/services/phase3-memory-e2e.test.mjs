@@ -200,6 +200,76 @@ async function testConfirmedPageUpdateGoesThroughGovernance() {
   }
 }
 
+async function testDistillationLoopEndToEnd() {
+  const harness = await createServiceHarness('phase3-distillation-loop')
+  try {
+    await withServer(harness, async (base) => {
+      const headers = { 'Content-Type': 'application/json' }
+      const create = (body) =>
+        json(`${base}/memory-wiki/pages`, { method: 'POST', headers, body: JSON.stringify(body) })
+      const countPages = async () => (await json(`${base}/memory-wiki/pages`)).items.length
+      const distill = (userMessage, requests) =>
+        runMemoryDistillation({
+          store: harness.store,
+          baseDir: harness.baseDir,
+          date: DATE,
+          userMessage,
+          cornieMessage: '好的',
+          messageId: 'loop-message',
+          chatFn: async () => ({
+            content: JSON.stringify({
+              observations: [],
+              identity_updates: [],
+              memory_wiki_requests: requests,
+              reasoning: ''
+            })
+          })
+        })
+
+      // Case 1：聊到已有主题时更新那一页，不新建重复页
+      const coffee = await create({ pageType: 'event', title: '咖啡偏好', summary: '旧摘要' })
+      const before = await countPages()
+      const updated = await distill('最近又开始喝咖啡了', [
+        { action: 'update_page', pageId: coffee.page.pageId, summary: '新摘要' }
+      ])
+      assert(updated.results.wikiRequests[0].action === 'updated', 'expected update of the existing page', updated)
+      assert((await countPages()) === before, 'expected no duplicate page')
+      const afterUpdate = await json(`${base}/memory-wiki/pages/${coffee.page.pageId}`)
+      assert(afterUpdate.page.summary === '新摘要', 'expected updated summary', afterUpdate)
+
+      // Case 2：已确认页内容不变并入队；编造 ID 的归档提议不入队
+      const confirmed = await create({ pageType: 'event', title: '茶偏好', summary: '旧摘要', ownerConfirmed: true })
+      const guarded = await distill('聊聊茶', [
+        { action: 'update_page', pageId: confirmed.page.pageId, summary: '新摘要' },
+        { action: 'archive_page', pageId: 'ghost-page' }
+      ])
+      assert(guarded.results.wikiRequests[0].action === 'deferred_to_governance', 'expected confirmed update queued', guarded)
+      assert(guarded.results.wikiRequests[1].action === 'skipped', 'expected ghost archive skipped', guarded)
+      const stillOld = await json(`${base}/memory-wiki/pages/${confirmed.page.pageId}`)
+      assert(stillOld.page.summary === '旧摘要', 'expected confirmed page unchanged', stillOld)
+      const queue = await json(`${base}/memory-wiki/governance?queueSection=memory_wiki_llm_proposals`)
+      assert(queue.items.length === 1, 'expected exactly one pending proposal', queue)
+
+      // Case 3：批准并应用后页面更新、请求为 applied，再次应用被拒绝
+      const requestId = queue.items[0].requestId
+      await json(`${base}/memory-wiki/governance/${requestId}/status`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ status: 'approved' })
+      })
+      const applied = await json(`${base}/memory-wiki/governance/${requestId}/apply`, { method: 'POST' })
+      assert(applied.result.request.status === 'applied', 'expected applied state', applied)
+      const afterApply = await json(`${base}/memory-wiki/pages/${confirmed.page.pageId}`)
+      assert(afterApply.page.summary === '新摘要', 'expected confirmed page updated after apply', afterApply)
+      const again = await fetch(`${base}/memory-wiki/governance/${requestId}/apply`, { method: 'POST' })
+      assert(again.status >= 400, 'expected repeated apply rejected', again.status)
+    })
+  } finally {
+    await harness.close()
+  }
+}
+
 await testMemoryLifecycleThroughRealHttp()
+await testDistillationLoopEndToEnd()
 await testConfirmedPageUpdateGoesThroughGovernance()
-console.log('tests/services/phase3-memory-e2e.test.mjs: passed 2/2')
+console.log('tests/services/phase3-memory-e2e.test.mjs: passed 3/3')
