@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { Button, Input } from 'neobrutalism-vue'
+import { Button } from 'neobrutalism-vue'
+import AppInput from '../common/AppInput.vue'
 import { Loader2, RefreshCw, Check } from '@lucide/vue'
 import SettingsSection from './SettingsSection.vue'
 import { getModelSettings, saveModelSettings, clearModelSettings } from '../../api/settings.js'
@@ -83,15 +84,15 @@ async function clear() {
     <div v-else class="model-fields">
       <label class="model-field">
         <span>API Key</span>
-        <Input v-model="apiKey" type="password" placeholder="sk-..." :disabled="saving" />
+        <AppInput v-model="apiKey" type="password" placeholder="sk-..." :disabled="saving" />
       </label>
       <label class="model-field">
         <span>Base URL</span>
-        <Input v-model="baseUrl" placeholder="https://api.deepseek.com" :disabled="saving" />
+        <AppInput v-model="baseUrl" placeholder="https://api.deepseek.com" :disabled="saving" />
       </label>
       <label class="model-field">
         <span>模型名称</span>
-        <Input v-model="model" placeholder="deepseek-chat" :disabled="saving" />
+        <AppInput v-model="model" placeholder="deepseek-chat" :disabled="saving" />
       </label>
     </div>
 

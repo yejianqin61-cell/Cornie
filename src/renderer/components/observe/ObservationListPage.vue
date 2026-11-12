@@ -2,7 +2,7 @@
 import { ref, watch } from 'vue'
 import { Eye, Plus, RefreshCw } from '@lucide/vue'
 import { Button } from 'neobrutalism-vue'
-import { Input } from 'neobrutalism-vue'
+import AppInput from '../common/AppInput.vue'
 import PageHeader from '../common/PageHeader.vue'
 import ObservationCard from './ObservationCard.vue'
 import ObservationDetailPage from './ObservationDetailPage.vue'
@@ -153,7 +153,7 @@ async function confirmDelete() {
               {{ t.label }}
             </Button>
           </div>
-          <Input v-model="searchQuery" placeholder="搜索..." class="obs-search" />
+          <AppInput v-model="searchQuery" placeholder="搜索..." class="obs-search" />
           <Button variant="neutral" size="sm" @click="openNew">
             <Plus :size="14" />
             新建

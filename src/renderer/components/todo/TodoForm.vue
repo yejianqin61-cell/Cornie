@@ -1,6 +1,7 @@
 <script setup>
 import { Plus, Loader2 } from '@lucide/vue'
-import { Button, Input } from 'neobrutalism-vue'
+import { Button } from 'neobrutalism-vue'
+import AppInput from '../common/AppInput.vue'
 import { ref, watch } from 'vue'
 
 const props = defineProps({
@@ -32,7 +33,7 @@ function submit() {
 
 <template>
   <div class="todo-form">
-    <Input
+    <AppInput
       v-model="title"
       placeholder="新增待办..."
       class="todo-form-input"

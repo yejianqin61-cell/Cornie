@@ -78,7 +78,7 @@ describe('TodoEmptyState', () => {
 describe('TodoForm', () => {
   it('emits create on submit', async () => {
     const wrapper = mount(TodoForm)
-    await wrapper.findComponent({ name: 'Input' }).setValue('新待办')
+    await wrapper.get('input').setValue('新待办')
     await wrapper.findComponent({ name: 'Button' }).trigger('click')
     expect(wrapper.emitted('create')).toBeTruthy()
     expect(wrapper.emitted('create')[0][0]).toBe('新待办')
@@ -126,14 +126,14 @@ describe('TodoForm category select', () => {
   it('emits the chosen category with the title', async () => {
     const wrapper = mount(TodoForm, { props: { categories } })
     await wrapper.get('[data-testid="todo-category-select"]').setValue('cat_read')
-    await wrapper.findComponent({ name: 'Input' }).setValue('看书')
+    await wrapper.get('input').setValue('看书')
     await wrapper.findComponent({ name: 'Button' }).trigger('click')
     expect(wrapper.emitted('create')[0]).toEqual(['看书', { id: 'cat_read', name: '读书' }])
   })
 
   it('emits no category for the no-category option', async () => {
     const wrapper = mount(TodoForm, { props: { categories } })
-    await wrapper.findComponent({ name: 'Input' }).setValue('看书')
+    await wrapper.get('input').setValue('看书')
     await wrapper.findComponent({ name: 'Button' }).trigger('click')
     expect(wrapper.emitted('create')[0][1]).toBeUndefined()
   })
