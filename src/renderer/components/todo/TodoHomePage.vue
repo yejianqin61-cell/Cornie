@@ -1,12 +1,26 @@
 <script setup>
-import { ref, watch } from 'vue'
-import { ListTodo, RefreshCw } from '@lucide/vue'
+import { computed, ref, watch } from 'vue'
+import { ListTodo, RefreshCw, Tags } from '@lucide/vue'
 import { Button } from 'neobrutalism-vue'
 import PageHeader from '../common/PageHeader.vue'
 import TodoList from './TodoList.vue'
 import TodoForm from './TodoForm.vue'
 import TodoEmptyState from './TodoEmptyState.vue'
-import { listTodos, createTodo, completeTodo, reopenTodo, deleteTodo, updateTodo } from '../../api/todo.js'
+import CategoryManager from '../common/CategoryManager.vue'
+import { planCategoryMove } from '../common/categoryOrder.js'
+import {
+  listTodos,
+  createTodo,
+  completeTodo,
+  reopenTodo,
+  deleteTodo,
+  updateTodo,
+  listTodoCategories,
+  createTodoCategory,
+  updateTodoCategory,
+  restoreTodoCategory,
+  reorderTodoCategory,
+} from '../../api/todo.js'
 
 const todos = ref([])
 const loading = ref(false)
@@ -17,6 +31,63 @@ const formResetKey = ref(0)
 const actionError = ref('')
 const retryAction = ref(null)
 const view = ref('open')
+const categories = ref([])
+const categoriesOpen = ref(false)
+const categoryError = ref('')
+const categoryBusy = ref(false)
+const activeCategories = computed(() => categories.value.filter((item) => item.isActive !== false))
+
+async function loadCategories() {
+  try {
+    const res = await listTodoCategories({ includeInactive: true })
+    categories.value = res.items || []
+  } catch {
+    categories.value = []
+  }
+}
+
+loadCategories()
+
+function openCategories() {
+  categoryError.value = ''
+  categoriesOpen.value = true
+}
+
+async function runCategoryAction(action) {
+  categoryBusy.value = true
+  categoryError.value = ''
+  try {
+    await action()
+    await loadCategories()
+  } catch (e) {
+    categoryError.value = e.message || '类目操作失败'
+  }
+  categoryBusy.value = false
+}
+
+function createCategory({ name }) {
+  return runCategoryAction(() => createTodoCategory({ name }))
+}
+
+function renameCategory({ id, name }) {
+  return runCategoryAction(() => updateTodoCategory(id, { name }))
+}
+
+function deactivateCategory(id) {
+  return runCategoryAction(() => updateTodoCategory(id, { isActive: false }))
+}
+
+function restoreCategory(id) {
+  return runCategoryAction(() => restoreTodoCategory(id))
+}
+
+function moveCategory({ id, direction }) {
+  return runCategoryAction(async () => {
+    for (const change of planCategoryMove(categories.value, id, direction)) {
+      await reorderTodoCategory(change.id, change.sortOrder)
+    }
+  })
+}
 
 const VIEWS = [
   { value: 'open', label: '待完成' },
@@ -49,11 +120,11 @@ function showActionError(error, retry = null) {
   retryAction.value = retry
 }
 
-async function onCreate(title) {
+async function onCreate(title, category) {
   submitting.value = true
   submitError.value = ''
   try {
-    await createTodo({ title })
+    await createTodo({ title, ...(category ? { categoryId: category.id, categoryName: category.name } : {}) })
     formResetKey.value++
     fetchTodos()
   } catch (e) {
@@ -95,8 +166,15 @@ async function onDelete(id) {
 
 <template>
   <div class="todo-home">
-    <PageHeader title="待办" :icon="ListTodo" />
-    <TodoForm :submitting="submitting" :resetKey="formResetKey" @create="onCreate" />
+    <PageHeader title="待办" :icon="ListTodo">
+      <template #actions>
+        <Button variant="neutral" size="sm" @click="openCategories">
+          <Tags :size="14" />
+          类目
+        </Button>
+      </template>
+    </PageHeader>
+    <TodoForm :submitting="submitting" :resetKey="formResetKey" :categories="activeCategories" @create="onCreate" />
     <div v-if="submitError" class="todo-banner todo-banner--error">{{ submitError }}</div>
     <div v-if="actionError" class="todo-banner todo-banner--error">
       <span>{{ actionError }}</span>
@@ -132,6 +210,19 @@ async function onDelete(id) {
       @delete="onDelete"
     />
     <TodoEmptyState v-else />
+    <CategoryManager
+      v-if="categoriesOpen"
+      :categories="categories"
+      :reorderable="true"
+      :error="categoryError"
+      :busy="categoryBusy"
+      @create="createCategory"
+      @rename="renameCategory"
+      @deactivate="deactivateCategory"
+      @restore="restoreCategory"
+      @move="moveCategory"
+      @close="categoriesOpen = false"
+    />
   </div>
 </template>
 

@@ -1,12 +1,25 @@
 <script setup>
-import { ref, watch } from 'vue'
-import { Calendar, RefreshCw } from '@lucide/vue'
+import { computed, ref, watch } from 'vue'
+import { Calendar, RefreshCw, Tags } from '@lucide/vue'
 import { Button } from 'neobrutalism-vue'
 import PageHeader from '../common/PageHeader.vue'
 import ScheduleList from './ScheduleList.vue'
 import ScheduleForm from './ScheduleForm.vue'
 import ScheduleEmptyState from './ScheduleEmptyState.vue'
-import { listSchedules, createSchedule, cancelSchedule, restoreSchedule, deleteSchedule } from '../../api/schedule.js'
+import CategoryManager from '../common/CategoryManager.vue'
+import { planCategoryMove } from '../common/categoryOrder.js'
+import {
+  listSchedules,
+  createSchedule,
+  cancelSchedule,
+  restoreSchedule,
+  deleteSchedule,
+  listScheduleCategories,
+  createScheduleCategory,
+  updateScheduleCategory,
+  restoreScheduleCategory,
+  reorderScheduleCategory,
+} from '../../api/schedule.js'
 
 const schedules = ref([])
 const loading = ref(false)
@@ -17,6 +30,63 @@ const formResetKey = ref(0)
 const actionError = ref('')
 const retryAction = ref(null)
 const view = ref('upcoming')
+const categories = ref([])
+const categoriesOpen = ref(false)
+const categoryError = ref('')
+const categoryBusy = ref(false)
+const activeCategories = computed(() => categories.value.filter((item) => item.isActive !== false))
+
+async function loadCategories() {
+  try {
+    const res = await listScheduleCategories({ includeInactive: true })
+    categories.value = res.items || []
+  } catch {
+    categories.value = []
+  }
+}
+
+loadCategories()
+
+function openCategories() {
+  categoryError.value = ''
+  categoriesOpen.value = true
+}
+
+async function runCategoryAction(action) {
+  categoryBusy.value = true
+  categoryError.value = ''
+  try {
+    await action()
+    await loadCategories()
+  } catch (e) {
+    categoryError.value = e.message || '类目操作失败'
+  }
+  categoryBusy.value = false
+}
+
+function createCategory({ name }) {
+  return runCategoryAction(() => createScheduleCategory({ name }))
+}
+
+function renameCategory({ id, name }) {
+  return runCategoryAction(() => updateScheduleCategory(id, { name }))
+}
+
+function deactivateCategory(id) {
+  return runCategoryAction(() => updateScheduleCategory(id, { isActive: false }))
+}
+
+function restoreCategory(id) {
+  return runCategoryAction(() => restoreScheduleCategory(id))
+}
+
+function moveCategory({ id, direction }) {
+  return runCategoryAction(async () => {
+    for (const change of planCategoryMove(categories.value, id, direction)) {
+      await reorderScheduleCategory(change.id, change.sortOrder)
+    }
+  })
+}
 
 const VIEWS = [
   { value: 'upcoming', label: '即将到来' },
@@ -49,11 +119,11 @@ function showActionError(error, retry = null) {
   retryAction.value = retry
 }
 
-async function onCreate({ title, startAt }) {
+async function onCreate({ title, startAt, categoryId, categoryName }) {
   submitting.value = true
   submitError.value = ''
   try {
-    await createSchedule({ title, startAt })
+    await createSchedule({ title, startAt, ...(categoryId ? { categoryId, categoryName } : {}) })
     formResetKey.value++
     fetchSchedules()
   } catch (e) {
@@ -95,8 +165,15 @@ async function onDelete(id) {
 
 <template>
   <div class="sch-home">
-    <PageHeader title="日程" :icon="Calendar" />
-    <ScheduleForm :submitting="submitting" :resetKey="formResetKey" @create="onCreate" />
+    <PageHeader title="日程" :icon="Calendar">
+      <template #actions>
+        <Button variant="neutral" size="sm" @click="openCategories">
+          <Tags :size="14" />
+          类目
+        </Button>
+      </template>
+    </PageHeader>
+    <ScheduleForm :submitting="submitting" :resetKey="formResetKey" :categories="activeCategories" @create="onCreate" />
     <div v-if="submitError" class="sch-banner sch-banner--error">{{ submitError }}</div>
     <div v-if="actionError" class="sch-banner sch-banner--error">
       <span>{{ actionError }}</span>
@@ -131,6 +208,19 @@ async function onDelete(id) {
       @delete="onDelete"
     />
     <ScheduleEmptyState v-else />
+    <CategoryManager
+      v-if="categoriesOpen"
+      :categories="categories"
+      :reorderable="true"
+      :error="categoryError"
+      :busy="categoryBusy"
+      @create="createCategory"
+      @rename="renameCategory"
+      @deactivate="deactivateCategory"
+      @restore="restoreCategory"
+      @move="moveCategory"
+      @close="categoriesOpen = false"
+    />
   </div>
 </template>
 

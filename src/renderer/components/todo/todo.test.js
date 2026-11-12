@@ -4,7 +4,14 @@ import TodoList from './TodoList.vue'
 import TodoEmptyState from './TodoEmptyState.vue'
 import TodoForm from './TodoForm.vue'
 import TodoHomePage from './TodoHomePage.vue'
-import { completeTodo, listTodos } from '../../api/todo.js'
+import {
+  completeTodo,
+  createTodo,
+  createTodoCategory,
+  listTodoCategories,
+  listTodos,
+  reorderTodoCategory,
+} from '../../api/todo.js'
 
 vi.mock('../../api/todo.js', () => ({
   listTodos: vi.fn(),
@@ -13,6 +20,11 @@ vi.mock('../../api/todo.js', () => ({
   reopenTodo: vi.fn(),
   deleteTodo: vi.fn(),
   updateTodo: vi.fn(),
+  listTodoCategories: vi.fn(),
+  createTodoCategory: vi.fn(),
+  updateTodoCategory: vi.fn(),
+  restoreTodoCategory: vi.fn(),
+  reorderTodoCategory: vi.fn(),
 }))
 
 describe('TodoList', () => {
@@ -81,6 +93,7 @@ describe('TodoForm', () => {
 describe('TodoHomePage write failures', () => {
   beforeEach(() => {
     listTodos.mockResolvedValue({ items: [{ id: '1', title: '买菜', status: 'pending' }] })
+    listTodoCategories.mockResolvedValue({ items: [] })
     completeTodo.mockReset()
   })
 
@@ -95,5 +108,91 @@ describe('TodoHomePage write failures', () => {
     expect(wrapper.text()).toContain('完成失败')
     expect(wrapper.text()).toContain('重试')
     expect(wrapper.text()).toContain('买菜')
+  })
+})
+
+describe('TodoList category tag', () => {
+  it('shows the category name when present', () => {
+    const wrapper = mount(TodoList, {
+      props: { items: [{ id: '1', title: '看书', status: 'pending', categoryName: '读书' }] },
+    })
+    expect(wrapper.text()).toContain('读书')
+  })
+})
+
+describe('TodoForm category select', () => {
+  const categories = [{ id: 'cat_read', name: '读书', isActive: true }]
+
+  it('emits the chosen category with the title', async () => {
+    const wrapper = mount(TodoForm, { props: { categories } })
+    await wrapper.get('[data-testid="todo-category-select"]').setValue('cat_read')
+    await wrapper.findComponent({ name: 'Input' }).setValue('看书')
+    await wrapper.findComponent({ name: 'Button' }).trigger('click')
+    expect(wrapper.emitted('create')[0]).toEqual(['看书', { id: 'cat_read', name: '读书' }])
+  })
+
+  it('emits no category for the no-category option', async () => {
+    const wrapper = mount(TodoForm, { props: { categories } })
+    await wrapper.findComponent({ name: 'Input' }).setValue('看书')
+    await wrapper.findComponent({ name: 'Button' }).trigger('click')
+    expect(wrapper.emitted('create')[0][1]).toBeUndefined()
+  })
+})
+
+describe('TodoHomePage categories', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    listTodos.mockResolvedValue({ items: [] })
+    listTodoCategories.mockResolvedValue({
+      items: [
+        { id: 'cat_a', name: '读书', isActive: true, sortOrder: 1 },
+        { id: 'cat_b', name: '运动', isActive: true, sortOrder: 2 },
+      ],
+    })
+    createTodoCategory.mockResolvedValue({ category: { id: 'cat_c', name: '音乐' } })
+    createTodo.mockResolvedValue({ entry: {} })
+    reorderTodoCategory.mockResolvedValue({ category: {} })
+  })
+
+  it('swaps the order of two categories with two reorder calls', async () => {
+    const wrapper = mount(TodoHomePage)
+    await flushPromises()
+    await wrapper.vm.openCategories()
+
+    await wrapper.vm.moveCategory({ id: 'cat_b', direction: 'up' })
+
+    expect(reorderTodoCategory).toHaveBeenCalledTimes(2)
+    expect(reorderTodoCategory).toHaveBeenCalledWith('cat_b', 1)
+    expect(reorderTodoCategory).toHaveBeenCalledWith('cat_a', 2)
+  })
+
+  it('creates a category and reloads the list including inactive ones', async () => {
+    const wrapper = mount(TodoHomePage)
+    await flushPromises()
+    await wrapper.vm.openCategories()
+    listTodoCategories.mockClear()
+
+    await wrapper.vm.createCategory({ name: '音乐' })
+
+    expect(createTodoCategory).toHaveBeenCalledWith({ name: '音乐' })
+    expect(listTodoCategories).toHaveBeenCalledWith({ includeInactive: true })
+  })
+
+  it('sends the selected category with a new todo', async () => {
+    const wrapper = mount(TodoHomePage)
+    await flushPromises()
+
+    await wrapper.vm.onCreate('看书', { id: 'cat_a', name: '读书' })
+
+    expect(createTodo).toHaveBeenCalledWith({ title: '看书', categoryId: 'cat_a', categoryName: '读书' })
+  })
+
+  it('sends no category fields when none is selected', async () => {
+    const wrapper = mount(TodoHomePage)
+    await flushPromises()
+
+    await wrapper.vm.onCreate('看书')
+
+    expect(createTodo).toHaveBeenCalledWith({ title: '看书' })
   })
 })

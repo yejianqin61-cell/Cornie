@@ -8,7 +8,7 @@ import * as conversationApi from './conversation.js'
 import { createLedgerCategory, listEntries as listLedgerEntries } from './ledger.js'
 import { listObservations } from './observation.js'
 import { listAuditEvents, listPages, setPageOwnerConfirmed } from './memory-wiki.js'
-import { listTodos } from './todo.js'
+import { listTodoCategories, listTodos, reorderTodoCategory } from './todo.js'
 import { listSchedules } from './schedule.js'
 import { getModelSettings } from './settings.js'
 import { getModelStatus } from './model.js'
@@ -203,6 +203,23 @@ describe('api/ledger categories', () => {
     expect(fetch).toHaveBeenCalledWith(
       `${API_BASE}/api/ledger/categories/income`,
       expect.objectContaining({ method: 'POST', body: JSON.stringify({ name: 'x' }) })
+    )
+  })
+})
+
+describe('api/todo categories', () => {
+  it('listTodoCategories should pass includeInactive', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ items: [] }) })
+    await listTodoCategories({ includeInactive: true })
+    expect(fetch.mock.calls[0][0]).toContain('/api/todo-categories?includeInactive=true')
+  })
+
+  it('reorderTodoCategory should POST the sortOrder', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ category: {} }) })
+    await reorderTodoCategory('c1', 2)
+    expect(fetch).toHaveBeenCalledWith(
+      `${API_BASE}/api/todo-categories/c1/reorder`,
+      expect.objectContaining({ method: 'POST', body: JSON.stringify({ sortOrder: 2 }) })
     )
   })
 })

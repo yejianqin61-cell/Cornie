@@ -34,6 +34,7 @@ function formatTime(t) {
           {{ item.title }}
         </span>
         <span class="sch-item-time">{{ formatTime(item.startAt) }}</span>
+        <span v-if="item.categoryName" class="sch-item-category">{{ item.categoryName }}</span>
       </div>
       <div class="sch-item-actions">
         <Button v-if="item.status !== 'cancelled'" variant="neutral" size="icon" @click="$emit('cancel', item.id)">
@@ -51,6 +52,13 @@ function formatTime(t) {
 </template>
 
 <style scoped>
+.sch-item-category {
+  font-size: 0.7rem;
+  padding: 1px 6px;
+  border: 1.5px solid #000;
+  border-radius: 99px;
+}
+
 .sch-list {
   display: flex;
   flex-direction: column;

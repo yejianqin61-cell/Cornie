@@ -32,3 +32,23 @@ export function reopenTodo(id) {
 export function deleteTodo(id) {
   return apiDelete(`/api/todos/${id}`)
 }
+
+export function listTodoCategories({ includeInactive } = {}) {
+  return apiGet(`/api/todo-categories${includeInactive ? '?includeInactive=true' : ''}`)
+}
+
+export function createTodoCategory(body) {
+  return apiPost('/api/todo-categories', body)
+}
+
+export function updateTodoCategory(id, body) {
+  return apiPut(`/api/todo-categories/${id}`, body)
+}
+
+export function restoreTodoCategory(id) {
+  return apiPost(`/api/todo-categories/${id}/restore`)
+}
+
+export function reorderTodoCategory(id, sortOrder) {
+  return apiPost(`/api/todo-categories/${id}/reorder`, { sortOrder })
+}

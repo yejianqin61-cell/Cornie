@@ -124,8 +124,8 @@ export function todoRoutes({ todo }) {
 
   r.get(
     '/todo-categories',
-    asyncHandler(async (_req, res) => {
-      res.json({ items: todo.listCategories() })
+    asyncHandler(async (req, res) => {
+      res.json({ items: todo.listCategories({ includeInactive: req.query.includeInactive === 'true' }) })
     })
   )
 

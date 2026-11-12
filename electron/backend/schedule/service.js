@@ -104,7 +104,8 @@ export function createScheduleService(store) {
     listUpcoming: () => listScheduleEntries(store, { status: 'scheduled', from: new Date().toISOString() }),
     listCancelled: () => listScheduleEntries(store, { status: 'cancelled' }),
     listByRange: ({ from, to }) => listScheduleEntries(store, { from, to }),
-    listCategories: () => listScheduleCategories(store),
+    listCategories: ({ includeInactive = false } = {}) =>
+      listScheduleCategories(store, { activeOnly: !includeInactive }),
     getCategory: (id) => {
       if (!id) throw badRequest('schedule category id is required', undefined, 'category_id_required')
       return getScheduleCategory(store, id)

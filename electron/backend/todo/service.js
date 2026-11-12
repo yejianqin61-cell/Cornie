@@ -88,7 +88,7 @@ export function createTodoService(store) {
     listOpen: () => listTodoEntries(store, { status: 'pending' }),
     listCompleted: () => listTodoEntries(store, { status: 'done' }),
     listByRange: ({ from, to }) => listTodoEntries(store, { from, to }),
-    listCategories: () => listTodoCategories(store),
+    listCategories: ({ includeInactive = false } = {}) => listTodoCategories(store, { activeOnly: !includeInactive }),
     getCategory: (id) => {
       if (!id) throw badRequest('todo category id is required', undefined, 'category_id_required')
       return getTodoCategory(store, id)
