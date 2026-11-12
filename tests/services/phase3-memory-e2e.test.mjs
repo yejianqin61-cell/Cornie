@@ -1,6 +1,7 @@
 import { saveMessage } from '../../electron/db.js'
 import { runMemoryDistillation } from '../../electron/backend/agent/memoryDistillation.js'
 import { buildWikiContext } from '../../electron/backend/agent/wikiContext.js'
+import { whenMemoryDistillationIdle } from '../../electron/backend/agent/orchestrator.js'
 import { clearTools } from '../../electron/backend/tools/registry.js'
 import { createServer } from '../../electron/server.js'
 import { assert, createServiceHarness } from '../shared/service-harness.mjs'
@@ -8,9 +9,9 @@ import { assert, createServiceHarness } from '../shared/service-harness.mjs'
 const DATE = '2026-10-22'
 const USER_MESSAGE_ID = 'phase3-memory-user'
 
-async function withServer(harness, run) {
+async function withServer(harness, run, conversationOptions = {}) {
   clearTools()
-  const app = await createServer({ store: harness.store, baseDir: harness.baseDir })
+  const app = await createServer({ store: harness.store, baseDir: harness.baseDir, conversationOptions })
   const server = app.listen(0, '127.0.0.1')
   await new Promise((resolve) => server.once('listening', resolve))
   try {
@@ -269,7 +270,107 @@ async function testDistillationLoopEndToEnd() {
   }
 }
 
+// 本地 API 请求透传给真实 fetch；其余（DeepSeek）请求由 handler 处理，提炼请求可被闸门挡住。
+function installGatedModelFetch(distillationContent) {
+  const originalFetch = global.fetch
+  let release = () => {}
+  const gate = new Promise((resolve) => {
+    release = resolve
+  })
+  global.fetch = async (url, options = {}) => {
+    if (String(url).startsWith('http://127.0.0.1')) return originalFetch(url, options)
+    const payload = JSON.parse(String(options.body ?? '{}'))
+    const isDistillation = String(payload?.messages?.[0]?.content ?? '').includes('记忆提炼官')
+    const content = isDistillation
+      ? (await gate, distillationContent)
+      : JSON.stringify({ type: 'reply', assistant_reply: '好的主人。' })
+    return {
+      ok: true,
+      status: 200,
+      async json() {
+        return { choices: [{ message: { content } }] }
+      },
+      async text() {
+        return content
+      }
+    }
+  }
+  return {
+    release: () => release(),
+    restore: () => {
+      global.fetch = originalFetch
+    }
+  }
+}
+
+async function testReplyTimingAndConcurrentMemoryWrites() {
+  const harness = await createServiceHarness('phase3-reply-timing')
+  const previousKey = process.env.DEEPSEEK_API_KEY
+  process.env.DEEPSEEK_API_KEY = 'e2e-key'
+  const gated = installGatedModelFetch(
+    JSON.stringify({
+      observations: [],
+      identity_updates: [],
+      memory_wiki_requests: [{ action: 'create_page', pageType: 'event', title: '提炼新页', summary: '来自提炼' }],
+      reasoning: ''
+    })
+  )
+  try {
+    await withServer(
+      harness,
+      async (base) => {
+        // Case 1：提炼被挡住时，流式回复照样完成，随后读历史能看到本轮两条消息
+        const stream = await fetch(`${base}/conversations/stream`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ date: DATE, message: '今天聊了点事' })
+        })
+        const streamText = await stream.text()
+        assert(streamText.includes('"kind":"done"'), 'expected done before distillation finished', streamText)
+        const history = await json(`${base}/chatlogs/${DATE}`)
+        assert(
+          history.messages.some((item) => item.role === 'user') &&
+            history.messages.some((item) => item.role === 'cornie'),
+          'expected both messages visible after done',
+          history
+        )
+
+        // Case 2、3：提炼被挡住期间并发创建 5 页，放开后提炼再建 1 页，共 6 页且标题互不相同
+        await Promise.all(
+          Array.from({ length: 5 }, (_item, i) =>
+            json(`${base}/memory-wiki/pages`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ pageType: 'event', title: `界面页${i}`, summary: 's' })
+            })
+          )
+        )
+        gated.release()
+        await whenMemoryDistillationIdle()
+        const pages = await json(`${base}/memory-wiki/pages`)
+        assert(pages.items.length === 6, 'expected 5 http pages plus 1 distilled page', pages.items.length)
+        assert(new Set(pages.items.map((item) => item.title)).size === 6, 'expected six distinct titles', pages.items)
+        assert(pages.items.some((item) => item.title === '提炼新页'), 'expected the distilled page', pages.items)
+      },
+      {
+        chatFn: async () => ({ content: JSON.stringify({ type: 'reply', assistant_reply: '好的主人。' }) }),
+        chatStreamFn: async (_request, onDelta) => {
+          onDelta('好的')
+          return { content: '好的主人。' }
+        }
+      }
+    )
+  } finally {
+    gated.release()
+    gated.restore()
+    if (previousKey === undefined) delete process.env.DEEPSEEK_API_KEY
+    else process.env.DEEPSEEK_API_KEY = previousKey
+    await harness.close()
+  }
+}
+
 await testMemoryLifecycleThroughRealHttp()
+await testReplyTimingAndConcurrentMemoryWrites()
 await testDistillationLoopEndToEnd()
 await testConfirmedPageUpdateGoesThroughGovernance()
-console.log('tests/services/phase3-memory-e2e.test.mjs: passed 3/3')
+console.log('tests/services/phase3-memory-e2e.test.mjs: passed 4/4')
