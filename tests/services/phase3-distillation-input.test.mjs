@@ -1,3 +1,4 @@
+import fs from 'node:fs'
 import { runMemoryDistillation } from '../../electron/backend/agent/memoryDistillation.js'
 import { createMemoryWikiService } from '../../electron/backend/memory-wiki/index.js'
 import { createObservationService } from '../../electron/backend/observation/service.js'
@@ -184,10 +185,57 @@ async function testUpdateOutsideInputIsRejected() {
   }
 }
 
+async function queueSize(harness) {
+  const memoryWiki = await createMemoryWikiService({ baseDir: harness.baseDir, store: harness.store })
+  return (await memoryWiki.listGovernanceRequests({ queueSection: 'memory_wiki_llm_proposals' })).length
+}
+
+async function testDestructiveProposalValidation() {
+  const harness = await createServiceHarness('phase3-distillation-destructive')
+  try {
+    const memoryWiki = await createMemoryWikiService({ baseDir: harness.baseDir, store: harness.store })
+    const page = await memoryWiki.create({ pageType: 'event', title: '咖啡偏好', summary: '旧摘要' })
+    const other = await memoryWiki.create({ pageType: 'event', title: '茶偏好', summary: '旧摘要' })
+
+    const queued = await distill(harness, envelopeStub([{ action: 'archive_page', pageId: page.pageId }]))
+    assert(queued.results.wikiRequests[0].action === 'deferred_to_governance', 'expected archive queued', queued)
+    assert((await queueSize(harness)) === 1, 'expected one queued proposal')
+    const [request] = await memoryWiki.listGovernanceRequests({ queueSection: 'memory_wiki_llm_proposals' })
+    assert(request.pageIds.includes(page.pageId), 'expected queued request to reference the page', request)
+
+    const cases = [
+      ['missing_required_id', { action: 'archive_page', pageId: '' }],
+      ['page_id_not_in_input', { action: 'delete_page', pageId: 'ghost-page' }],
+      ['version_not_found', { action: 'rollback_page', pageId: page.pageId, versionId: 'ver_missing' }],
+      ['missing_required_id', { action: 'merge_pages', targetPageId: page.pageId, sourcePageId: page.pageId }]
+    ]
+    for (const [reason, proposal] of cases) {
+      const result = await distill(harness, envelopeStub([proposal]))
+      assert(result.results.wikiRequests[0].reason === reason, `expected ${reason} for ${proposal.action}`, result)
+    }
+    assert((await queueSize(harness)) === 1, 'expected rejected proposals not to be queued')
+
+    const mergeOk = await distill(
+      harness,
+      envelopeStub([{ action: 'merge_pages', targetPageId: page.pageId, sourcePageId: other.pageId }])
+    )
+    assert(mergeOk.results.wikiRequests[0].action === 'deferred_to_governance', 'expected valid merge queued', mergeOk)
+
+    // 索引仍列出、文件已缺失的坏页（从未被缓存）：校验应判为 page_not_found
+    const broken = await memoryWiki.create({ pageType: 'event', title: '坏页', summary: '坏' })
+    fs.rmSync(broken.filePath, { force: true })
+    const gone = await distill(harness, envelopeStub([{ action: 'archive_page', pageId: broken.pageId }]))
+    assert(gone.results.wikiRequests[0].reason === 'page_not_found', 'expected page_not_found', gone)
+  } finally {
+    await harness.close()
+  }
+}
+
 await testFullTurnIsUniqueAndWithinBudget()
+await testDestructiveProposalValidation()
 await testUpdateOutsideInputIsRejected()
 await testPromptExposesPageAndObservationIds()
 await testUpdateByListedIdTakesEffect()
 await testEmptyFinalReplyDoesNotCreateConversationItem()
 await testModelFailureKeepsZeroWritePolicy()
-console.log('tests/services/phase3-distillation-input.test.mjs: passed 6/6')
+console.log('tests/services/phase3-distillation-input.test.mjs: passed 7/7')

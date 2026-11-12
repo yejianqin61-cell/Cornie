@@ -425,11 +425,42 @@ async function applyDistilledIdentityUpdates(store, { baseDir, date, messageId, 
   return results
 }
 
+// 破坏性提议入队前校验：必填 ID → 在本轮输入内 → 页面仍存在 → 回滚版本存在。返回跳过原因或 null。
+async function validateDestructiveProposal(memoryWiki, request, allowedPageIds) {
+  const pageIds =
+    request.action === 'merge_pages'
+      ? [request.targetPageId, request.sourcePageId]
+      : [request.pageId]
+  if (pageIds.some((id) => !id)) return 'missing_required_id'
+  if (request.action === 'merge_pages' && request.targetPageId === request.sourcePageId) return 'missing_required_id'
+  if (request.action === 'rollback_page' && !request.versionId) return 'missing_required_id'
+  if (pageIds.some((id) => !allowedPageIds.includes(id))) return 'page_id_not_in_input'
+
+  for (const id of pageIds) {
+    let page = null
+    try {
+      page = await memoryWiki.get(id)
+    } catch {}
+    if (!page) return 'page_not_found'
+  }
+
+  if (request.action === 'rollback_page') {
+    const versions = await memoryWiki.listVersions(request.pageId)
+    if (!versions.some((item) => item.versionId === request.versionId)) return 'version_not_found'
+  }
+  return null
+}
+
 async function applyDistilledWikiRequests(memoryWiki, requests, { date, messageId, allowedPageIds = [] }) {
   const results = []
 
   for (const request of requests) {
     if (DESTRUCTIVE_WIKI_ACTIONS.has(request.action)) {
+      const invalidReason = await validateDestructiveProposal(memoryWiki, request, allowedPageIds)
+      if (invalidReason) {
+        results.push({ action: 'skipped', wikiAction: request.action, reason: invalidReason })
+        continue
+      }
       try {
         await memoryWiki.createGovernanceRequest({
           requestType: 'memory_wiki_llm_proposal',
