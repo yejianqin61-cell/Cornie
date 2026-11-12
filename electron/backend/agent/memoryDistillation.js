@@ -299,10 +299,12 @@ async function buildDistillationInput({ store, baseDir, date, history = [], user
       const fullProfile = primary.pageId ? await memoryWiki.get(primary.pageId) : null
       const title = fullProfile?.title || primary.title
       const summary = fullProfile?.summary || primary.summary || '暂无摘要'
-      memorySummaryLines.push(`- [identity] ${title}: ${summary}`)
+      memorySummaryLines.push(`- [identity] ${title} (id: ${primary.pageId})：${summary}`)
     }
     for (const summary of rest) {
-      memorySummaryLines.push(`- [${summary.pageType}] ${summary.title}: ${summary.summary || '暂无摘要'}`)
+      memorySummaryLines.push(
+        `- [${summary.pageType}] ${summary.title} (id: ${summary.pageId})：${summary.summary || '暂无摘要'}`
+      )
     }
   } catch (error) {
     console.error('[memory distillation] memory summary load failed:', error)

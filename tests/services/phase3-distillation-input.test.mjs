@@ -1,4 +1,6 @@
 import { runMemoryDistillation } from '../../electron/backend/agent/memoryDistillation.js'
+import { createMemoryWikiService } from '../../electron/backend/memory-wiki/index.js'
+import { createObservationService } from '../../electron/backend/observation/service.js'
 import { assert, createServiceHarness } from '../shared/service-harness.mjs'
 
 const DATE = '2026-10-22'
@@ -90,7 +92,57 @@ async function testModelFailureKeepsZeroWritePolicy() {
   }
 }
 
+async function testPromptExposesPageAndObservationIds() {
+  const harness = await createServiceHarness('phase3-distillation-ids')
+  try {
+    const memoryWiki = await createMemoryWikiService({ baseDir: harness.baseDir, store: harness.store })
+    const page = await memoryWiki.create({ pageType: 'event', title: '咖啡偏好', summary: '旧摘要' })
+    const outcome = createObservationService(harness.store).addNoteSmart({
+      date: DATE,
+      type: 'event',
+      title: '今日观察',
+      content: '观察内容',
+      sourceText: '观察内容'
+    })
+    const prompt = await capturePrompt(harness)
+    assert(prompt.includes(`(id: ${page.pageId})`), 'expected page id in distillation prompt', prompt)
+    assert(prompt.includes(`(id: ${outcome.note.id})`), 'expected observation id in distillation prompt', prompt)
+  } finally {
+    await harness.close()
+  }
+}
+
+async function testUpdateByListedIdTakesEffect() {
+  const harness = await createServiceHarness('phase3-distillation-update-listed')
+  try {
+    const memoryWiki = await createMemoryWikiService({ baseDir: harness.baseDir, store: harness.store })
+    const page = await memoryWiki.create({ pageType: 'event', title: '咖啡偏好', summary: '旧摘要' })
+    const result = await runMemoryDistillation({
+      store: harness.store,
+      baseDir: harness.baseDir,
+      date: DATE,
+      userMessage: CURRENT_USER,
+      cornieMessage: FINAL_REPLY,
+      messageId: 'update-listed-message',
+      chatFn: async () => ({
+        content: JSON.stringify({
+          observations: [],
+          identity_updates: [],
+          memory_wiki_requests: [{ action: 'update_page', pageId: page.pageId, summary: '新摘要' }],
+          reasoning: ''
+        })
+      })
+    })
+    assert(result.results.wikiRequests[0].action === 'updated', 'expected update by listed id', result)
+    assert((await memoryWiki.get(page.pageId)).summary === '新摘要', 'expected updated summary')
+  } finally {
+    await harness.close()
+  }
+}
+
 await testFullTurnIsUniqueAndWithinBudget()
+await testPromptExposesPageAndObservationIds()
+await testUpdateByListedIdTakesEffect()
 await testEmptyFinalReplyDoesNotCreateConversationItem()
 await testModelFailureKeepsZeroWritePolicy()
-console.log('tests/services/phase3-distillation-input.test.mjs: passed 3/3')
+console.log('tests/services/phase3-distillation-input.test.mjs: passed 5/5')

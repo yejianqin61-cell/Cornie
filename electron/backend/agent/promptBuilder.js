@@ -196,7 +196,7 @@ export function buildMemoryDistillationPrompt({
 
   const observationBlock = Array.isArray(todayObservations) && todayObservations.length > 0
     ? todayObservations
-        .map((item) => `- [${normalizePromptString(item?.type) || 'misc'}] ${normalizePromptString(item?.title)}：${truncatePromptText(normalizePromptString(item?.content), 120)}`)
+        .map((item) => `- [${normalizePromptString(item?.type) || 'misc'}] (id: ${normalizePromptString(item?.id)}) ${normalizePromptString(item?.title)}：${truncatePromptText(normalizePromptString(item?.content), 120)}`)
         .join('\n')
     : '（今日暂无观察日志）'
 
