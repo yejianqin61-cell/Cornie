@@ -13,3 +13,16 @@
 | `verify-7.1-runner`、`verify-7.2-runner` | 退出码均为 0 |
 
 结论：只有 lint 一层失败，原因是换行（CRLF 检出对 Prettier 的 LF 要求）。
+
+## 2. 换行约定（task-041b）
+
+新增仓库根目录 `.gitattributes`：
+
+```text
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary
+```
+
+核对：`src/renderer/main.js` 为 `text: auto`、`eol: lf`；`public/pic/Avatar.png` 为 `text: unset`（`eol: lf` 对非文本文件不生效）。新增前索引中 990 个文本文件全部为 `i/lf`，新增文件后 `git status` 只列出 `.gitattributes`，已有文件内容无变化。
