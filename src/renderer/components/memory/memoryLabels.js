@@ -61,3 +61,22 @@ export const AUDIT_EVENT_LABELS = {
   memory_distillation: '记忆提炼',
   observation_compression_applied: '观察日志压缩已应用',
 }
+
+export const PAGE_TYPE_LABELS = {
+  identity_profile: '主人画像',
+  identity_preference: '主人偏好',
+  identity_trait: '性格侧写',
+  identity_person: '重要人物',
+  preference: '偏好',
+  dislike: '不喜欢',
+  need: '需求',
+  goal: '目标',
+  project: '项目',
+  person: '人物',
+  topic: '主题',
+  event: '事件',
+  routine: '日常',
+  place: '地点',
+  concept: '概念',
+  other: '其他',
+}

@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { Brain, Plus, RefreshCw, Loader2, Shield, Hash, ScrollText } from '@lucide/vue'
 import { Button } from 'neobrutalism-vue'
 import PageHeader from '../common/PageHeader.vue'
@@ -8,6 +8,7 @@ import MemoryWikiDetail from './MemoryWikiDetail.vue'
 import MemoryWikiCompare from './MemoryWikiCompare.vue'
 import MemoryWikiEditor from './MemoryWikiEditor.vue'
 import MemoryWikiEmptyState from './MemoryWikiEmptyState.vue'
+import ConfirmDialog from '../common/ConfirmDialog.vue'
 import { AUDIT_EVENT_LABELS, REQUEST_TYPE_LABELS, STATUS_LABELS, labelOf, plannedActionLabel } from './memoryLabels.js'
 import {
   listPages,
@@ -29,6 +30,7 @@ import {
   setPageOwnerConfirmed,
   inspectionScan,
   listAuditEvents,
+  mergePages,
 } from '../../api/memory-wiki.js'
 
 const pages = ref([])
@@ -235,6 +237,57 @@ async function applyGovernance() {
   }
 }
 
+const mergeOpen = ref(false)
+const mergeSourceId = ref('')
+const mergeConfirmOpen = ref(false)
+
+const mergeCandidates = computed(() =>
+  allPages.value.filter((page) => (page.pageId || page.id) !== selectedPage.value?.pageId && page.status !== 'archived')
+)
+
+const mergeSource = computed(
+  () => allPages.value.find((page) => (page.pageId || page.id) === mergeSourceId.value) || null
+)
+
+const mergeMessage = computed(() => {
+  const source = mergeSource.value?.title || ''
+  const target = selectedPage.value?.title || ''
+  return `将「${source}」合并进「${target}」，「${source}」会被归档。`
+})
+
+function openMerge() {
+  mergeSourceId.value = ''
+  mergeConfirmOpen.value = false
+  mergeOpen.value = true
+}
+
+function cancelMerge() {
+  mergeOpen.value = false
+  mergeConfirmOpen.value = false
+  mergeSourceId.value = ''
+}
+
+function confirmMerge(sourcePageId) {
+  if (!sourcePageId) return
+  mergeSourceId.value = sourcePageId
+  mergeConfirmOpen.value = true
+}
+
+async function applyMerge() {
+  const targetPageId = selectedPage.value?.pageId
+  const sourcePageId = mergeSourceId.value
+  if (!targetPageId || !sourcePageId) return
+  mergeConfirmOpen.value = false
+  try {
+    await mergePages(targetPageId, sourcePageId)
+    cancelMerge()
+    await refreshSelectedPage()
+  } catch (e) {
+    cancelMerge()
+    error.value = e.message || '合并失败'
+  }
+}
+
 const inspecting = ref(false)
 const inspectionNotice = ref('')
 
@@ -383,6 +436,7 @@ function goBack() {
           @rollback="rollbackSelectedPage"
           @importance="updateSelectedImportance"
           @owner-confirmed="updateSelectedOwnerConfirmed"
+          @merge="openMerge"
         />
         <MemoryWikiEmptyState v-else />
       </div>
@@ -426,6 +480,36 @@ function goBack() {
         </div>
       </div>
     </div>
+
+    <div v-if="mergeOpen && !mergeConfirmOpen" class="mw-governance-overlay" @click.self="cancelMerge">
+      <div class="mw-governance">
+        <div class="mw-governance-header">
+          <h3>选择要并入的页面</h3>
+          <Button variant="neutral" size="icon" @click="cancelMerge">
+            <span>&times;</span>
+          </Button>
+        </div>
+        <div v-if="mergeCandidates.length === 0" class="mw-governance-empty">没有可合并的页面</div>
+        <div v-else class="mw-governance-list">
+          <button
+            v-for="page in mergeCandidates"
+            :key="page.pageId || page.id"
+            class="mw-governance-item"
+            @click="confirmMerge(page.pageId || page.id)"
+          >
+            {{ page.title }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <ConfirmDialog
+      :open="mergeConfirmOpen"
+      title="确认合并"
+      :message="mergeMessage"
+      :on-confirm="applyMerge"
+      :on-cancel="cancelMerge"
+    />
 
     <MemoryWikiCompare v-if="compareOpen" v-bind="compareData" @close="compareOpen = false" />
 

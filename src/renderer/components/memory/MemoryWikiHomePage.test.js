@@ -16,6 +16,7 @@ const api = vi.hoisted(() => ({
   applyGovernanceRequest: vi.fn(),
   setPageOwnerConfirmed: vi.fn(),
   inspectionScan: vi.fn(),
+  mergePages: vi.fn(),
   listAuditEvents: vi.fn(),
 }))
 
@@ -153,6 +154,61 @@ describe('MemoryWikiHomePage', () => {
     await wrapper.vm.applyGovernance()
     expect(api.applyGovernanceRequest).toHaveBeenCalledWith('gov-1')
     expect(wrapper.text()).toContain('archive_page')
+  })
+
+  describe('merging pages', () => {
+    async function mountForMerge() {
+      const wrapper = await mountHome()
+      wrapper.vm.allPages = [
+        { pageId: 'coffee-page', title: '咖啡偏好', status: 'active' },
+        { pageId: 'tea-page', title: '茶偏好', status: 'active' },
+        { pageId: 'old-page', title: '旧页', status: 'archived' },
+      ]
+      wrapper.vm.selectedPage = { pageId: 'coffee-page', title: '咖啡偏好' }
+      return wrapper
+    }
+
+    it('offers only other active pages as merge sources', async () => {
+      const wrapper = await mountForMerge()
+      wrapper.vm.openMerge()
+      expect(wrapper.vm.mergeCandidates.map((item) => item.pageId)).toEqual(['tea-page'])
+    })
+
+    it('asks for confirmation naming the page that will be archived', async () => {
+      const wrapper = await mountForMerge()
+      wrapper.vm.openMerge()
+      await wrapper.vm.confirmMerge('tea-page')
+      await wrapper.vm.$nextTick()
+      expect(wrapper.text()).toContain('将「茶偏好」合并进「咖啡偏好」，「茶偏好」会被归档。')
+      expect(api.mergePages).not.toHaveBeenCalled()
+    })
+
+    it('merges into the selected page, reloads the list and keeps the target selected', async () => {
+      api.mergePages.mockResolvedValue({ result: {} })
+      const wrapper = await mountForMerge()
+      wrapper.vm.openMerge()
+      await wrapper.vm.confirmMerge('tea-page')
+      api.listPages.mockClear()
+
+      await wrapper.vm.applyMerge()
+
+      expect(api.mergePages).toHaveBeenCalledTimes(1)
+      expect(api.mergePages).toHaveBeenCalledWith('coffee-page', 'tea-page')
+      expect(api.listPages).toHaveBeenCalled()
+      expect(api.getPage).toHaveBeenCalledWith('coffee-page')
+    })
+
+    it('shows the merge error in the page banner', async () => {
+      api.mergePages.mockRejectedValue(new Error('合并失败'))
+      const wrapper = await mountForMerge()
+      wrapper.vm.openMerge()
+      await wrapper.vm.confirmMerge('tea-page')
+
+      await wrapper.vm.applyMerge()
+      await wrapper.vm.$nextTick()
+
+      expect(wrapper.text()).toContain('合并失败')
+    })
   })
 
   describe('inspection and audit', () => {

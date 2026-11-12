@@ -1,4 +1,7 @@
 <script setup>
+import { computed } from 'vue'
+import { PAGE_TYPE_LABELS } from './memoryLabels.js'
+
 const props = defineProps({
   items: { type: Array, default: () => [] },
   activePageId: { type: String, default: '' },
@@ -16,15 +19,13 @@ function groupByType(items) {
   return groups
 }
 
-const grouped = groupByType(props.items)
-
-const TYPE_LABELS = { person: '人物', place: '地点', event: '事件', concept: '概念', other: '其他' }
+const grouped = computed(() => groupByType(props.items))
 </script>
 
 <template>
   <div class="mw-tree">
     <div v-for="(pages, type) in grouped" :key="type" class="mw-tree-group">
-      <div class="mw-tree-group-header">{{ TYPE_LABELS[type] || type }}</div>
+      <div class="mw-tree-group-header">{{ PAGE_TYPE_LABELS[type] || type }}</div>
       <div
         v-for="page in pages"
         :key="page.pageId || page.id"
