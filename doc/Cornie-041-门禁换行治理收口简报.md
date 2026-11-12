@@ -26,3 +26,7 @@
 ```
 
 核对：`src/renderer/main.js` 为 `text: auto`、`eol: lf`；`public/pic/Avatar.png` 为 `text: unset`（`eol: lf` 对非文本文件不生效）。新增前索引中 990 个文本文件全部为 `i/lf`，新增文件后 `git status` 只列出 `.gitattributes`，已有文件内容无变化。
+
+## 3. 重规范化（task-041c）
+
+`git add --renormalize .` 后 `git status --short` 为空，重规范化没有任何内容改动。随后执行 `git rm -r --cached -q . && git reset --hard HEAD` 刷新工作区：工作区文本文件 991 个全部为 `w/lf`，不再出现 `w/crlf`；`file src/renderer/main.js` 不含 CRLF；刷新后 `git status --short` 为空。
