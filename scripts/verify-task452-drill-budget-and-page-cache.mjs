@@ -3,7 +3,7 @@ import path from 'node:path'
 
 import { createServiceHarness, assert } from '../tests/shared/service-harness.mjs'
 import { createMemoryWikiService } from '../electron/backend/memory-wiki/index.js'
-import { createConversationOrchestrator } from '../electron/backend/agent/orchestrator.js'
+import { createConversationOrchestrator, whenMemoryDistillationIdle } from '../electron/backend/agent/orchestrator.js'
 import { registerTool } from '../electron/backend/tools/registry.js'
 import { executeToolCalls } from '../electron/backend/tools/gateway.js'
 import { registerMemoryWikiTools } from '../electron/backend/memory-wiki/tools.js'
@@ -94,6 +94,7 @@ async function run() {
       try {
         const orchestrator = createConversationOrchestrator(drillEnv.store, { baseDir: drillEnv.baseDir })
         const result = await orchestrator.runTurn({ date: '2026-08-21', message: '翻一下记忆' })
+        await whenMemoryDistillationIdle()
         assert(
           (result.toolExecution?.results ?? []).length <= 4,
           '记忆钻取轮次应受 MAX_DRILL_ROUNDS=4 约束',

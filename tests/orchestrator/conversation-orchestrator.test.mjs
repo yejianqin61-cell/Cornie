@@ -1,3 +1,7 @@
+import { createConversationOrchestrator, whenMemoryDistillationIdle } from '../../electron/backend/agent/orchestrator.js'
+import { getMessagesByDate } from '../../electron/db.js'
+import { createMemoryWikiAuditStore } from '../../electron/backend/memory-wiki/index.js'
+import { createObservationService } from '../../electron/backend/observation/service.js'
 import { createLedgerService } from '../../electron/backend/ledger/service.js'
 import { createTodoService } from '../../electron/backend/todo/service.js'
 import {
@@ -271,6 +275,92 @@ async function testInvalidJsonRepairRetryPath() {
   }
 }
 
+const REPLY_ENVELOPE = JSON.stringify({ type: 'reply', assistant_reply: '好的主人。' })
+
+function isDistillationRequest(payload) {
+  return String(payload?.messages?.[0]?.content ?? '').includes('记忆提炼官')
+}
+
+function createGatedFetch(distillationContent) {
+  let release = () => {}
+  const gate = new Promise((resolve) => {
+    release = resolve
+  })
+  return {
+    release: () => release(),
+    fetch: buildMockFetch(async (payload) => {
+      if (!isDistillationRequest(payload)) return REPLY_ENVELOPE
+      await gate
+      if (distillationContent instanceof Error) throw distillationContent
+      return distillationContent
+    })
+  }
+}
+
+function createIsolatedOrchestrator(harness) {
+  return createConversationOrchestrator(harness.store, { baseDir: harness.baseDir })
+}
+
+async function testReplyDoesNotWaitForDistillation() {
+  const harness = await createOrchestratorHarness('orchestrator-background-distillation')
+  try {
+    const observation = JSON.stringify({
+      observations: [{ action: 'create', type: 'event', title: '后台观察', content: '提炼在回复之后完成。' }],
+      identity_updates: [],
+      memory_wiki_requests: [],
+      reasoning: ''
+    })
+    const gated = createGatedFetch(observation)
+    const orchestrator = createIsolatedOrchestrator(harness)
+    await withMockedFetch(gated.fetch, async () => {
+      const outcome = await Promise.race([
+        orchestrator.runTurn({ date: '2026-06-27', message: '今天做了点事' }),
+        new Promise((resolve) => setTimeout(() => resolve('timeout'), 2000))
+      ])
+      assert(outcome !== 'timeout', 'expected runTurn to return while distillation is still blocked')
+      const messages = getMessagesByDate(harness.store, '2026-06-27')
+      assert(
+        messages.some((item) => item.role === 'user') && messages.some((item) => item.role === 'cornie'),
+        'expected both messages saved before distillation finished',
+        messages
+      )
+      assert(
+        createObservationService(harness.store).listByDate('2026-06-27').length === 0,
+        'expected no observation before the gate opens'
+      )
+
+      gated.release()
+      await whenMemoryDistillationIdle()
+      const observations = createObservationService(harness.store).listByDate('2026-06-27')
+      assert(observations.some((item) => item.title === '后台观察'), 'expected the background observation', observations)
+    })
+  } finally {
+    await harness.close()
+  }
+}
+
+async function testDistillationFailureDoesNotAffectReply() {
+  const harness = await createOrchestratorHarness('orchestrator-background-distillation-failure')
+  try {
+    const gated = createGatedFetch(new Error('distillation network down'))
+    const orchestrator = createIsolatedOrchestrator(harness)
+    await withMockedFetch(gated.fetch, async () => {
+      const result = await orchestrator.runTurn({ date: '2026-06-27', message: '你好' })
+      assert(result.cornieMessage.content === '好的主人。', 'expected the reply to be unaffected', result)
+      gated.release()
+      await whenMemoryDistillationIdle()
+      const events = await (await createMemoryWikiAuditStore(harness.baseDir)).list({ limit: 10 })
+      assert(
+        events.some((item) => item.eventType === 'memory_distillation' && item.details?.source === 'unavailable'),
+        'expected an unavailable distillation audit event',
+        events
+      )
+    })
+  } finally {
+    await harness.close()
+  }
+}
+
 const tests = [
   ['direct reply path', testDirectReplyPath],
   ['ask_back path', testAskBackPath],
@@ -278,7 +368,9 @@ const tests = [
   ['tool execution followup path', testToolExecutionFollowupPath],
   ['read only lookup round path', testReadOnlyLookupRoundPath],
   ['dirty json parse path', testDirtyJsonRepairPath],
-  ['invalid json repair retry path', testInvalidJsonRepairRetryPath]
+  ['invalid json repair retry path', testInvalidJsonRepairRetryPath],
+  ['reply does not wait for distillation', testReplyDoesNotWaitForDistillation],
+  ['distillation failure does not affect reply', testDistillationFailureDoesNotAffectReply]
 ]
 
 let passed = 0

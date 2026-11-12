@@ -1,5 +1,5 @@
 import { createServiceHarness, assert } from '../tests/shared/service-harness.mjs'
-import { createConversationOrchestrator } from '../electron/backend/agent/orchestrator.js'
+import { createConversationOrchestrator, whenMemoryDistillationIdle } from '../electron/backend/agent/orchestrator.js'
 import { chatStream } from '../electron/backend/model/deepseek/client.js'
 import { saveMessage } from '../electron/db.js'
 
@@ -97,6 +97,7 @@ async function run() {
         streamFinalReply: true,
         onFinalDelta: (delta) => deltas.push(delta)
       })
+      await whenMemoryDistillationIdle()
       assert(deltas.join('') === '好呀！', '说话段应逐块流式下发', deltas)
       assert(String(result.cornieMessage?.content ?? '') === '好呀！', '落库内容应为流式重说结果', result.cornieMessage?.content)
     } finally {

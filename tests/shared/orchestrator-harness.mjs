@@ -1,4 +1,7 @@
-import { createConversationOrchestrator } from '../../electron/backend/agent/orchestrator.js'
+import {
+  createConversationOrchestrator,
+  whenMemoryDistillationIdle
+} from '../../electron/backend/agent/orchestrator.js'
 import { createServiceHarness, assert } from './service-harness.mjs'
 
 export async function createOrchestratorHarness(caseName) {
@@ -10,7 +13,7 @@ export async function createOrchestratorHarness(caseName) {
 
   return {
     ...harness,
-    orchestrator: createConversationOrchestrator(harness.store)
+    orchestrator: createConversationOrchestrator(harness.store, { baseDir: harness.baseDir })
   }
 }
 
@@ -18,7 +21,9 @@ export async function withMockedFetch(handler, run) {
   const originalFetch = global.fetch
   global.fetch = handler
   try {
-    return await run()
+    const result = await run()
+    await whenMemoryDistillationIdle()
+    return result
   } finally {
     global.fetch = originalFetch
   }

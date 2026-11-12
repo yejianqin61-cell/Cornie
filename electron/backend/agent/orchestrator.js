@@ -31,6 +31,26 @@ import { logCategoryAudit } from '../category/audit.js'
 import { PROMPT_LOADING_POLICY } from './promptLoadingPolicy.js'
 
 const MAX_HISTORY_MESSAGES = PROMPT_LOADING_POLICY.liveConversationHistoryLimit
+
+// 记忆提炼在回复落库之后于后台执行；这里记录进行中的提炼，供测试与关闭流程等待。
+const pendingDistillations = new Set()
+
+export async function whenMemoryDistillationIdle() {
+  while (pendingDistillations.size > 0) {
+    await Promise.allSettled([...pendingDistillations])
+  }
+}
+
+function startMemoryDistillation(params) {
+  const task = runMemoryDistillation(params)
+    .catch((error) => {
+      console.error('Memory distillation error:', error)
+    })
+    .finally(() => {
+      pendingDistillations.delete(task)
+    })
+  pendingDistillations.add(task)
+}
 const MAX_TOOL_ROUNDS = 2
 
 // 452：记忆钻取轮次预算（memory_wiki.* / memory_index.* 只读钻取，可多于普通工具轮）。
@@ -167,7 +187,6 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd(),
             policyDecision: { decision: 'allow' },
             pendingConfirmation: null,
             interimReplies: [],
-            memoryDistillation: null,
             telemetry: null,
             replayed: true
           }
@@ -407,28 +426,22 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd(),
 
       // 记忆提炼轮次（443）：是否计入记忆、记什么内容由 LLM 决定。
       // LLM 不可用时本轮零写入记忆（V1.1 决策，正则已弃用）。
-      // R-01：记忆提炼先于 cornie 消息落库——提炼只依赖 finalReply 文本与 userMessage.id（内存值），
-      // 不依赖本轮 cornie 的 DB 行；先提炼后落库使 DB 可见与 SSE done 几乎同刻，消灭前端轮询窗口。
-      let memoryDistillation = null
-      try {
-        memoryDistillation = await runMemoryDistillation({
-          store,
-          baseDir,
-          date,
-          userMessage: message,
-          cornieMessage: finalReply,
-          messageId: userMessage.id,
-          history
-        })
-      } catch (error) {
-        console.error('Memory distillation error:', error)
-      }
-
+      // 回复先落库再提炼：SSE done 时回复已可见，提炼在后台执行、不阻塞回复完成。
       const cornieMessage = saveMessage(store, {
         id: randomUUID(),
         date,
         role: 'cornie',
         content: finalReply
+      })
+
+      startMemoryDistillation({
+        store,
+        baseDir,
+        date,
+        userMessage: message,
+        cornieMessage: finalReply,
+        messageId: userMessage.id,
+        history
       })
 
       if (policyDecision.decision === 'confirm' && requestedToolCalls.length > 0) {
@@ -462,7 +475,6 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd(),
         policyDecision,
         pendingConfirmation,
         interimReplies,
-        memoryDistillation,
         telemetry: finalTelemetry
       }
     }

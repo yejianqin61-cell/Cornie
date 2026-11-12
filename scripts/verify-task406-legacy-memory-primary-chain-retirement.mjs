@@ -2,7 +2,7 @@ import { assert, createServiceHarness } from '../tests/shared/service-harness.mj
 import { listTools } from '../electron/backend/tools/registry.js'
 import { evaluateToolCalls } from '../electron/backend/policy/toolPolicy.js'
 import { buildConversationContext } from '../electron/backend/agent/contextBuilder.js'
-import { createConversationOrchestrator } from '../electron/backend/agent/orchestrator.js'
+import { createConversationOrchestrator, whenMemoryDistillationIdle } from '../electron/backend/agent/orchestrator.js'
 import { createMemoryWikiService } from '../electron/backend/memory-wiki/index.js'
 import { saveMessage } from '../electron/db.js'
 
@@ -133,6 +133,7 @@ async function run() {
         date: '2026-06-30',
         message: '我叫叶健钦，你是我的爸爸和创造者。'
       })
+      await whenMemoryDistillationIdle()
     } finally {
       global.fetch = originalFetch
       if (previousApiKey === undefined) {
