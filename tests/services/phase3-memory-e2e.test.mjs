@@ -130,5 +130,76 @@ async function testMemoryLifecycleThroughRealHttp() {
   }
 }
 
+async function testConfirmedPageUpdateGoesThroughGovernance() {
+  const harness = await createServiceHarness('phase3-confirmed-update')
+  try {
+    await withServer(harness, async (base) => {
+      const post = (path, body) =>
+        json(`${base}${path}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        })
+      const distill = (pageId) =>
+        runMemoryDistillation({
+          store: harness.store,
+          baseDir: harness.baseDir,
+          date: DATE,
+          userMessage: '更新一下',
+          cornieMessage: '好的',
+          messageId: 'confirmed-update-message',
+          chatFn: async () => ({
+            content: JSON.stringify({
+              observations: [],
+              identity_updates: [],
+              memory_wiki_requests: [{ action: 'update_page', pageId, summary: '新摘要' }],
+              reasoning: ''
+            })
+          })
+        })
+
+      const confirmed = await post('/memory-wiki/pages', {
+        pageType: 'event',
+        title: '已确认页',
+        summary: '旧摘要',
+        ownerConfirmed: true
+      })
+      const first = await distill(confirmed.page.pageId)
+      assert(first.results.wikiRequests[0].action === 'deferred_to_governance', 'expected confirmed update deferred', first)
+      const unchanged = await json(`${base}/memory-wiki/pages/${confirmed.page.pageId}`)
+      assert(unchanged.page.summary === '旧摘要', 'expected confirmed page unchanged', unchanged)
+
+      const queue = await json(`${base}/memory-wiki/governance?queueSection=memory_wiki_llm_proposals`)
+      assert(queue.items.length === 1, 'expected exactly one queued proposal', queue)
+      assert(queue.items[0].payload.request.summary === '新摘要', 'expected proposed summary retained', queue)
+      assert(queue.items[0].status === 'pending', 'expected pending status', queue)
+
+      const requestId = queue.items[0].requestId
+      await json(`${base}/memory-wiki/governance/${requestId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'approved' })
+      })
+      const applied = await post(`/memory-wiki/governance/${requestId}/apply`)
+      assert(applied.result.request.status === 'applied', 'expected applied terminal state', applied)
+      const updated = await json(`${base}/memory-wiki/pages/${confirmed.page.pageId}`)
+      assert(updated.page.summary === '新摘要', 'expected summary updated after apply', updated)
+      const again = await fetch(`${base}/memory-wiki/governance/${requestId}/apply`, { method: 'POST' })
+      assert(again.status >= 400, 'expected repeated apply rejected', again.status)
+
+      const plain = await post('/memory-wiki/pages', { pageType: 'event', title: '未确认页', summary: '旧摘要' })
+      const second = await distill(plain.page.pageId)
+      assert(second.results.wikiRequests[0].action === 'updated', 'expected unconfirmed page updated directly', second)
+      const direct = await json(`${base}/memory-wiki/pages/${plain.page.pageId}`)
+      assert(direct.page.summary === '新摘要', 'expected direct update', direct)
+      const after = await json(`${base}/memory-wiki/governance?queueSection=memory_wiki_llm_proposals`)
+      assert(after.items.length === 1, 'expected queue unchanged for unconfirmed page', after)
+    })
+  } finally {
+    await harness.close()
+  }
+}
+
 await testMemoryLifecycleThroughRealHttp()
-console.log('tests/services/phase3-memory-e2e.test.mjs: passed 1/1')
+await testConfirmedPageUpdateGoesThroughGovernance()
+console.log('tests/services/phase3-memory-e2e.test.mjs: passed 2/2')

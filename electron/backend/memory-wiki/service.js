@@ -1411,6 +1411,22 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
           throw new Error(`LLM memory proposal is missing its request payload: ${requestId}`)
         }
 
+        if (action === 'update_page') {
+          const existing = await this.get(proposal.pageId)
+          if (!existing) throw new Error(`memory wiki page not found: ${proposal.pageId}`)
+          return {
+            request,
+            action,
+            page: await this.update({
+              ...existing,
+              pageId: existing.pageId,
+              title: proposal.title || existing.title,
+              summary: proposal.summary || existing.summary,
+              body: proposal.body || existing.body,
+              importance: proposal.importance || existing.importance
+            })
+          }
+        }
         if (action === 'archive_page') {
           return { request, action, page: await this.archive(proposal.pageId) }
         }

@@ -560,6 +560,31 @@ async function applyDistilledWikiRequests(memoryWiki, requests, { date, messageI
         results.push({ action: 'skipped', wikiAction: 'update_page', reason: 'page_not_found' })
         continue
       }
+      // 主人已确认的页面不被提炼直接覆盖：改为待审请求，批准并应用后才写入。
+      if (existing.ownerConfirmed === true) {
+        try {
+          await memoryWiki.createGovernanceRequest({
+            requestType: 'memory_wiki_llm_proposal',
+            triggerSource: 'memory_distillation',
+            queueSection: 'memory_wiki_llm_proposals',
+            riskLevel: 'high',
+            pageIds: [pageId],
+            title: request.title || existing.title || 'LLM 提议更新已确认的记忆页',
+            reason: '记忆提炼轮次中 LLM 提议修改主人已确认的长期记忆页，等待人类审核后再执行。',
+            evidence: [request],
+            payload: { action: request.action, request }
+          })
+          results.push({ action: 'deferred_to_governance', wikiAction: 'update_page' })
+        } catch (error) {
+          results.push({
+            action: 'skipped',
+            wikiAction: 'update_page',
+            reason: 'governance_enqueue_failed',
+            error: String(error?.message || error)
+          })
+        }
+        continue
+      }
       try {
         const updated = await memoryWiki.update({
           ...existing,
