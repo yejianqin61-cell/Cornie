@@ -138,8 +138,54 @@ async function testAuditLimit() {
   }
 }
 
+async function testGovernanceUiChainEndToEnd() {
+  const harness = await createServiceHarness('memory-wiki-routes-ui-chain')
+  try {
+    await withServer(harness, async (base) => {
+      const a = (await createPage(base, { pageType: 'event', title: '链路页A', summary: 'a' })).page
+      const b = (await createPage(base, { pageType: 'event', title: '链路页B', summary: 'b' })).page
+
+      // Case 1：确认 A，把 B 并入 A，B 归档，归档总数为 1
+      await putJson(`${base}/memory-wiki/pages/${a.pageId}/owner-confirmed`, { ownerConfirmed: true })
+      await json(`${base}/memory-wiki/pages/merge`, {
+        method: 'POST',
+        headers: JSON_HEADERS,
+        body: JSON.stringify({ targetPageId: a.pageId, sourcePageId: b.pageId })
+      })
+      const afterMerge = await json(`${base}/memory-wiki/pages/${a.pageId}`)
+      assert(afterMerge.page.ownerConfirmed === true, 'expected A to stay confirmed after the merge', afterMerge)
+      assert((await json(`${base}/memory-wiki/pages/${b.pageId}`)).page.status === 'archived', 'expected B archived')
+      const archived = await json(`${base}/memory-wiki/pages?status=archived`)
+      assert(archived.total === 1, 'expected one archived page in the total', archived)
+
+      // Case 2：A 的关联指向不存在的页面，巡检第一次产生建议，第二次去重为 0
+      await putJson(`${base}/memory-wiki/pages/${a.pageId}`, { relatedPageIds: ['ghost-page'] })
+      const scan = () =>
+        json(`${base}/memory-wiki/governance/inspection-scan`, { method: 'POST' })
+      const first = await scan()
+      const second = await scan()
+      assert(first.result.createdCount > 0, 'expected the first scan to add suggestions', first)
+      assert(second.result.createdCount === 0, 'expected the second scan to be deduplicated', second)
+
+      // Case 3：按页面读取审计，只含 A 的事件（创建、确认与合并带来的更新）
+      const audit = await json(`${base}/memory-wiki/audit?pageId=${a.pageId}`)
+      const types = audit.items.map((item) => item.eventType)
+      assert(types.includes('page_created') && types.includes('page_updated'), 'expected create and update events', audit)
+      assert(types.includes('pages_merged'), 'expected the merge event', audit)
+      assert(
+        audit.items.every((item) => item.pageId === a.pageId || item.relatedPageId === a.pageId),
+        'expected only events about page A',
+        audit
+      )
+    })
+  } finally {
+    await harness.close()
+  }
+}
+
 await testOwnerConfirmedRoute()
+await testGovernanceUiChainEndToEnd()
 await testAuditRoute()
 await testAuditLimit()
 await testListReportsRealTotal()
-console.log('tests/services/memory-wiki-routes.test.mjs: passed 4/4')
+console.log('tests/services/memory-wiki-routes.test.mjs: passed 5/5')
