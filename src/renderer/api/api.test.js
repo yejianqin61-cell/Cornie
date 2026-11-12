@@ -5,7 +5,7 @@ import { sendMessage } from './conversation.js'
 import { getChatDay, listChatDays } from './chatlog.js'
 import * as chatlogApi from './chatlog.js'
 import * as conversationApi from './conversation.js'
-import { listEntries as listLedgerEntries } from './ledger.js'
+import { createLedgerCategory, listEntries as listLedgerEntries } from './ledger.js'
 import { listObservations } from './observation.js'
 import { listAuditEvents, listPages, setPageOwnerConfirmed } from './memory-wiki.js'
 import { listTodos } from './todo.js'
@@ -192,6 +192,17 @@ describe('api/memory-wiki', () => {
     expect(fetch).toHaveBeenCalledWith(
       `${API_BASE}/api/memory-wiki/pages/p1/owner-confirmed`,
       expect.objectContaining({ method: 'PUT', body: JSON.stringify({ ownerConfirmed: true }) })
+    )
+  })
+})
+
+describe('api/ledger categories', () => {
+  it('createLedgerCategory should POST to the typed route', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ category: {} }) })
+    await createLedgerCategory('income', { name: 'x' })
+    expect(fetch).toHaveBeenCalledWith(
+      `${API_BASE}/api/ledger/categories/income`,
+      expect.objectContaining({ method: 'POST', body: JSON.stringify({ name: 'x' }) })
     )
   })
 })
