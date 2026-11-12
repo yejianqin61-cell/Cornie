@@ -21,7 +21,8 @@ export function memoryWikiRoutes({ memoryWiki, topicIndex }) {
       if (offset !== undefined) filters.offset = offset
 
       const items = await memoryWiki.listSummaries(filters, options)
-      res.json({ items, total: items.length, limit: filters.limit ?? null, offset: filters.offset ?? null })
+      const total = await memoryWiki.count({ pageType, status })
+      res.json({ items, total, limit: filters.limit ?? null, offset: filters.offset ?? null })
     })
   )
 

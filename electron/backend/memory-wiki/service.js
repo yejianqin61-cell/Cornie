@@ -645,6 +645,18 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
     traceCache.invalidate(pageId)
   }
 
+  // list 与 count 共用的过滤规则（不分页）。
+  async function filterIndexedPages({ pageType, status } = {}) {
+    let items = await storage.listIndexedPages()
+    if (pageType) {
+      items = items.filter((item) => item.pageType === pageType)
+    }
+    if (status) {
+      items = items.filter((item) => item.status === status)
+    }
+    return items
+  }
+
   async function writeAudit(event) {
     return auditStore.append(event)
   }
@@ -1008,14 +1020,12 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
       return compressed
     },
 
+    async count({ pageType, status } = {}) {
+      return (await filterIndexedPages({ pageType, status })).length
+    },
+
     async list({ pageType, status, limit, offset } = {}) {
-      let items = await storage.listIndexedPages()
-      if (pageType) {
-        items = items.filter((item) => item.pageType === pageType)
-      }
-      if (status) {
-        items = items.filter((item) => item.status === status)
-      }
+      let items = await filterIndexedPages({ pageType, status })
 
       // 463：分页（offset/limit 作用于轻索引条目）
       const normalizedOffset = Number.parseInt(String(offset ?? ''), 10)

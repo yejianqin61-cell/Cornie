@@ -59,5 +59,31 @@ async function testOwnerConfirmedRoute() {
   }
 }
 
+async function testListReportsRealTotal() {
+  const harness = await createServiceHarness('memory-wiki-routes-total')
+  try {
+    await withServer(harness, async (base) => {
+      const pages = []
+      for (let i = 0; i < 30; i += 1) {
+        const { page } = await createPage(base, { pageType: 'event', title: `总数页${String(i).padStart(2, '0')}`, summary: 's' })
+        pages.push(page)
+      }
+      for (const page of pages.slice(0, 4)) {
+        await json(`${base}/memory-wiki/pages/${page.pageId}/archive`, { method: 'POST' })
+      }
+
+      const paged = await json(`${base}/memory-wiki/pages?limit=10&offset=10`)
+      assert(paged.items.length === 10 && paged.total === 30, 'expected a page of 10 with total 30', paged)
+      const archived = await json(`${base}/memory-wiki/pages?status=archived&limit=2`)
+      assert(archived.items.length === 2 && archived.total === 4, 'expected 2 items with total 4', archived)
+      const all = await json(`${base}/memory-wiki/pages`)
+      assert(all.total === all.items.length, 'expected total to equal item count without paging', all)
+    })
+  } finally {
+    await harness.close()
+  }
+}
+
 await testOwnerConfirmedRoute()
-console.log('tests/services/memory-wiki-routes.test.mjs: passed 1/1')
+await testListReportsRealTotal()
+console.log('tests/services/memory-wiki-routes.test.mjs: passed 2/2')
