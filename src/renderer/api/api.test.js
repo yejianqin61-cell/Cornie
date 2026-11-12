@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { apiGet, apiPost, apiStream } from './client.js'
 import { listEntries as listDiaryEntries, getEntry } from './diary.js'
 import { sendMessage } from './conversation.js'
-import { getChatDay, listChatDays } from './chatlog.js'
+import { getChatDay, listChatDays, searchChatSnippets } from './chatlog.js'
 import * as chatlogApi from './chatlog.js'
 import * as conversationApi from './conversation.js'
 import { createLedgerCategory, listEntries as listLedgerEntries } from './ledger.js'
@@ -193,6 +193,18 @@ describe('api/memory-wiki', () => {
       `${API_BASE}/api/memory-wiki/pages/p1/owner-confirmed`,
       expect.objectContaining({ method: 'PUT', body: JSON.stringify({ ownerConfirmed: true }) })
     )
+  })
+})
+
+describe('api/chatlog search', () => {
+  it('searchChatSnippets should send only the given parameters', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ items: [] }) })
+    await searchChatSnippets({ keyword: '咖啡', limit: 20 })
+    const url = fetch.mock.calls[0][0]
+    expect(url).toContain('/api/chatlogs/search/snippets')
+    expect(url).toContain('keyword=' + encodeURIComponent('咖啡'))
+    expect(url).toContain('limit=20')
+    expect(url).not.toContain('month=')
   })
 })
 

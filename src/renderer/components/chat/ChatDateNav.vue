@@ -1,5 +1,5 @@
 <script setup>
-import { nextTick, watch } from 'vue'
+import { nextTick, ref, watch } from 'vue'
 import { ChevronLeft, ChevronRight } from '@lucide/vue'
 import AppButton from '../common/AppButton.vue'
 
@@ -14,7 +14,14 @@ const props = defineProps({
   isToday: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['select', 'prev', 'next', 'month', 'today'])
+const emit = defineEmits(['select', 'prev', 'next', 'month', 'today', 'search'])
+
+const keyword = ref('')
+
+function submitSearch() {
+  const value = keyword.value.trim()
+  if (value) emit('search', value)
+}
 
 const chipRefs = new Map()
 
@@ -43,6 +50,17 @@ watch(() => props.selected, scrollSelectedIntoView, { immediate: true })
     >
       <ChevronLeft :size="14" />
     </AppButton>
+    <div class="chat-date-nav-search">
+      <input
+        v-model="keyword"
+        class="chat-date-nav-search-input"
+        type="search"
+        aria-label="搜索聊天记录"
+        placeholder="搜索聊天"
+        @keydown.enter="submitSearch"
+      />
+      <AppButton size="sm" variant="neutral" @click="submitSearch">搜索</AppButton>
+    </div>
     <div class="chat-date-nav-actions">
       <select
         class="chat-date-nav-month"
@@ -100,6 +118,24 @@ watch(() => props.selected, scrollSelectedIntoView, { immediate: true })
   align-items: center;
   gap: 0.25rem;
   flex-shrink: 0;
+}
+
+.chat-date-nav-search {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.chat-date-nav-search-input {
+  border: 2px solid var(--nb-border);
+  border-radius: var(--nb-radius);
+  background: var(--nb-background);
+  color: var(--nb-text);
+  padding: 0.2rem 0.4rem;
+  font: inherit;
+  font-size: 0.75rem;
+  width: 9rem;
 }
 
 .chat-date-nav-month {
