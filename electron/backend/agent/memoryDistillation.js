@@ -285,6 +285,7 @@ async function buildDistillationInput({ store, baseDir, date, history = [], user
     console.error('[memory distillation] today observations load failed:', error)
   }
 
+  const allowedPageIds = []
   let memorySummaryLines = []
   try {
     const memoryWiki = await createMemoryWikiService({ baseDir, store })
@@ -299,9 +300,11 @@ async function buildDistillationInput({ store, baseDir, date, history = [], user
       const fullProfile = primary.pageId ? await memoryWiki.get(primary.pageId) : null
       const title = fullProfile?.title || primary.title
       const summary = fullProfile?.summary || primary.summary || '暂无摘要'
+      allowedPageIds.push(primary.pageId)
       memorySummaryLines.push(`- [identity] ${title} (id: ${primary.pageId})：${summary}`)
     }
     for (const summary of rest) {
+      allowedPageIds.push(summary.pageId)
       memorySummaryLines.push(
         `- [${summary.pageType}] ${summary.title} (id: ${summary.pageId})：${summary.summary || '暂无摘要'}`
       )
@@ -310,12 +313,14 @@ async function buildDistillationInput({ store, baseDir, date, history = [], user
     console.error('[memory distillation] memory summary load failed:', error)
   }
 
-  return { recentMessages, todayObservations, memorySummaryLines }
+  const allowedObservationIds = todayObservations.map((item) => normalizeString(item?.id)).filter(Boolean)
+
+  return { recentMessages, todayObservations, memorySummaryLines, allowedPageIds, allowedObservationIds }
 }
 
 // ---------- 三类提议执行 ----------
 
-async function applyDistilledObservations(observation, proposals, { date, messageId }) {
+async function applyDistilledObservations(observation, proposals, { date, messageId, allowedObservationIds = [] }) {
   const results = []
 
   for (const proposal of proposals) {
@@ -328,6 +333,10 @@ async function applyDistilledObservations(observation, proposals, { date, messag
       const id = proposal.observationId
       if (!id) {
         results.push({ action: 'skipped', reason: 'missing_observation_id' })
+        continue
+      }
+      if (!allowedObservationIds.includes(id)) {
+        results.push({ action: 'skipped', reason: 'observation_id_not_in_input' })
         continue
       }
       const existing = observation.get(id)
@@ -416,7 +425,7 @@ async function applyDistilledIdentityUpdates(store, { baseDir, date, messageId, 
   return results
 }
 
-async function applyDistilledWikiRequests(memoryWiki, requests, { date, messageId }) {
+async function applyDistilledWikiRequests(memoryWiki, requests, { date, messageId, allowedPageIds = [] }) {
   const results = []
 
   for (const request of requests) {
@@ -475,6 +484,10 @@ async function applyDistilledWikiRequests(memoryWiki, requests, { date, messageI
         results.push({ action: 'skipped', wikiAction: 'update_page', reason: 'page_id_required' })
         continue
       }
+      if (!allowedPageIds.includes(pageId)) {
+        results.push({ action: 'skipped', wikiAction: 'update_page', reason: 'page_id_not_in_input' })
+        continue
+      }
       let existing = null
       try {
         existing = await memoryWiki.get(pageId)
@@ -505,11 +518,15 @@ async function applyDistilledWikiRequests(memoryWiki, requests, { date, messageI
   return results
 }
 
-async function executeDistillationEnvelope({ store, baseDir, date, userMessage, messageId, envelope }) {
+async function executeDistillationEnvelope({ store, baseDir, date, userMessage, messageId, envelope, input }) {
   const observation = createObservationService(store)
   const memoryWiki = await createMemoryWikiService({ baseDir, store })
 
-  const observations = await applyDistilledObservations(observation, envelope.observations, { date, messageId })
+  const observations = await applyDistilledObservations(observation, envelope.observations, {
+    date,
+    messageId,
+    allowedObservationIds: input?.allowedObservationIds
+  })
   const identityUpdates = await applyDistilledIdentityUpdates(store, {
     baseDir,
     date,
@@ -517,7 +534,11 @@ async function executeDistillationEnvelope({ store, baseDir, date, userMessage, 
     userMessage,
     proposals: envelope.identity_updates
   })
-  const wikiRequests = await applyDistilledWikiRequests(memoryWiki, envelope.memory_wiki_requests, { date, messageId })
+  const wikiRequests = await applyDistilledWikiRequests(memoryWiki, envelope.memory_wiki_requests, {
+    date,
+    messageId,
+    allowedPageIds: input?.allowedPageIds
+  })
 
   return { observations, identityUpdates, wikiRequests }
 }
@@ -539,8 +560,9 @@ export async function runMemoryDistillation({
 
   let envelope = null
   let llmError = null
+  let input = null
   try {
-    const input = await buildDistillationInput({ store, baseDir, date, history, userMessage, cornieMessage, messageId })
+    input = await buildDistillationInput({ store, baseDir, date, history, userMessage, cornieMessage, messageId })
     const prompt = buildMemoryDistillationPrompt({
       date,
       recentMessages: input.recentMessages,
@@ -567,7 +589,7 @@ export async function runMemoryDistillation({
     return { decisionSource: 'unavailable', reason: fallbackReason, durationMs: Date.now() - startedAt }
   }
 
-  const results = await executeDistillationEnvelope({ store, baseDir, date, userMessage, messageId, envelope })
+  const results = await executeDistillationEnvelope({ store, baseDir, date, userMessage, messageId, envelope, input })
 
   try {
     await auditStore.append({

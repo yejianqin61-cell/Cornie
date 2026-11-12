@@ -1,6 +1,7 @@
 import { runMemoryDistillation } from '../../electron/backend/agent/memoryDistillation.js'
 import { createMemoryWikiService } from '../../electron/backend/memory-wiki/index.js'
 import { createObservationService } from '../../electron/backend/observation/service.js'
+import { createMemoryWikiAuditStore } from '../../electron/backend/memory-wiki/index.js'
 import { assert, createServiceHarness } from '../shared/service-harness.mjs'
 
 const DATE = '2026-10-22'
@@ -140,9 +141,53 @@ async function testUpdateByListedIdTakesEffect() {
   }
 }
 
+function envelopeStub(wikiRequests = [], observations = []) {
+  return async () => ({
+    content: JSON.stringify({ observations, identity_updates: [], memory_wiki_requests: wikiRequests, reasoning: '' })
+  })
+}
+
+async function distill(harness, chatFn) {
+  return runMemoryDistillation({
+    store: harness.store,
+    baseDir: harness.baseDir,
+    date: DATE,
+    userMessage: CURRENT_USER,
+    cornieMessage: FINAL_REPLY,
+    messageId: 'reject-ids-message',
+    chatFn
+  })
+}
+
+async function testUpdateOutsideInputIsRejected() {
+  const harness = await createServiceHarness('phase3-distillation-reject-ids')
+  try {
+    const memoryWiki = await createMemoryWikiService({ baseDir: harness.baseDir, store: harness.store })
+    const before = (await memoryWiki.listSummaries({}, { hydrate: false })).length
+    const ghost = await distill(harness, envelopeStub([{ action: 'update_page', pageId: 'ghost-page', summary: 'x' }]))
+    const wikiResult = ghost.results.wikiRequests[0]
+    assert(wikiResult.action === 'skipped', 'expected unknown page id skipped', ghost)
+    assert(wikiResult.reason === 'page_id_not_in_input', 'expected page_id_not_in_input', ghost)
+    assert((await memoryWiki.listSummaries({}, { hydrate: false })).length === before, 'expected no page created')
+
+    const ghostObs = await distill(
+      harness,
+      envelopeStub([], [{ action: 'update', observationId: 'ghost-obs', title: 't', content: 'c' }])
+    )
+    assert(ghostObs.results.observations[0].reason === 'observation_id_not_in_input', 'expected obs reason', ghostObs)
+
+    const events = await (await createMemoryWikiAuditStore(harness.baseDir)).list({ limit: 10 })
+    const skipped = events.find((item) => item.eventType === 'memory_distillation' && item.details?.skipped?.wikiRequests === 1)
+    assert(skipped, 'expected audit event to count the skipped wiki request', events)
+  } finally {
+    await harness.close()
+  }
+}
+
 await testFullTurnIsUniqueAndWithinBudget()
+await testUpdateOutsideInputIsRejected()
 await testPromptExposesPageAndObservationIds()
 await testUpdateByListedIdTakesEffect()
 await testEmptyFinalReplyDoesNotCreateConversationItem()
 await testModelFailureKeepsZeroWritePolicy()
-console.log('tests/services/phase3-distillation-input.test.mjs: passed 5/5')
+console.log('tests/services/phase3-distillation-input.test.mjs: passed 6/6')
