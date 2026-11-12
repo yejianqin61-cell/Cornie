@@ -1,18 +1,22 @@
 <script setup>
 import { Plus, Loader2 } from '@lucide/vue'
-import { Button, Input } from 'neobrutalism-vue'
-import { ref, watch } from 'vue'
+import { Button } from 'neobrutalism-vue'
+import AppInput from '../common/AppInput.vue'
+import { computed, ref, watch } from 'vue'
 
 const props = defineProps({
   submitting: { type: Boolean, default: false },
   resetKey: { type: Number, default: 0 },
   categories: { type: Array, default: () => [] },
+  initial: { type: Object, default: null },
 })
 
-const emit = defineEmits(['create'])
+const emit = defineEmits(['create', 'update', 'cancel'])
 
-const title = ref('')
-const startAt = ref('')
+const isEdit = computed(() => Boolean(props.initial))
+const title = ref(props.initial?.title || '')
+const startAt = ref(String(props.initial?.startAt || '').slice(0, 16))
+const location = ref(props.initial?.location || '')
 const categoryId = ref('')
 
 watch(
@@ -26,6 +30,10 @@ watch(
 
 function submit() {
   if (!title.value.trim() || !startAt.value) return
+  if (isEdit.value) {
+    emit('update', { title: title.value.trim(), startAt: startAt.value, location: location.value.trim() })
+    return
+  }
   const category = props.categories.find((item) => item.id === categoryId.value)
   emit('create', {
     title: title.value.trim(),
@@ -37,10 +45,11 @@ function submit() {
 
 <template>
   <div class="sch-form">
-    <Input v-model="title" placeholder="日程标题..." class="sch-form-input" :disabled="submitting" />
-    <Input v-model="startAt" type="datetime-local" class="sch-form-date" :disabled="submitting" />
+    <AppInput v-model="title" placeholder="日程标题..." class="sch-form-input" :disabled="submitting" />
+    <AppInput v-model="startAt" type="datetime-local" class="sch-form-date" :disabled="submitting" />
+    <AppInput v-if="isEdit" v-model="location" placeholder="地点..." class="sch-form-input" :disabled="submitting" />
     <select
-      v-if="categories.length > 0"
+      v-if="!isEdit && categories.length > 0"
       v-model="categoryId"
       class="sch-form-category"
       data-testid="schedule-category-select"
@@ -51,8 +60,9 @@ function submit() {
     <Button variant="neutral" size="sm" :disabled="submitting" @click="submit">
       <Loader2 v-if="submitting" :size="14" class="spin" />
       <Plus v-else :size="14" />
-      {{ submitting ? '添加中...' : '添加' }}
+      {{ submitting ? (isEdit ? '保存中...' : '添加中...') : isEdit ? '保存' : '添加' }}
     </Button>
+    <Button v-if="isEdit" variant="neutral" size="sm" :disabled="submitting" @click="emit('cancel')">取消</Button>
   </div>
 </template>
 

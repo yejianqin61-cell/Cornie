@@ -14,6 +14,7 @@ import {
   cancelSchedule,
   restoreSchedule,
   deleteSchedule,
+  updateSchedule,
   listScheduleCategories,
   createScheduleCategory,
   updateScheduleCategory,
@@ -119,6 +120,32 @@ function showActionError(error, retry = null) {
   retryAction.value = retry
 }
 
+const editing = ref(null)
+
+function startEdit(item) {
+  submitError.value = ''
+  editing.value = item
+}
+
+function cancelEdit() {
+  editing.value = null
+  submitError.value = ''
+}
+
+async function onUpdate(body) {
+  if (!editing.value) return
+  submitting.value = true
+  submitError.value = ''
+  try {
+    await updateSchedule(editing.value.id, body)
+    editing.value = null
+    fetchSchedules()
+  } catch (e) {
+    submitError.value = e.message || '保存失败'
+  }
+  submitting.value = false
+}
+
 async function onCreate({ title, startAt, categoryId, categoryName }) {
   submitting.value = true
   submitError.value = ''
@@ -173,7 +200,21 @@ async function onDelete(id) {
         </Button>
       </template>
     </PageHeader>
-    <ScheduleForm :submitting="submitting" :resetKey="formResetKey" :categories="activeCategories" @create="onCreate" />
+    <ScheduleForm
+      v-if="editing"
+      :key="editing.id"
+      :submitting="submitting"
+      :initial="editing"
+      @update="onUpdate"
+      @cancel="cancelEdit"
+    />
+    <ScheduleForm
+      v-else
+      :submitting="submitting"
+      :resetKey="formResetKey"
+      :categories="activeCategories"
+      @create="onCreate"
+    />
     <div v-if="submitError" class="sch-banner sch-banner--error">{{ submitError }}</div>
     <div v-if="actionError" class="sch-banner sch-banner--error">
       <span>{{ actionError }}</span>
@@ -204,6 +245,7 @@ async function onDelete(id) {
       v-else-if="schedules.length > 0"
       :items="schedules"
       @cancel="onCancel"
+      @edit="startEdit"
       @restore="onRestore"
       @delete="onDelete"
     />

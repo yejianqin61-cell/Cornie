@@ -1,5 +1,5 @@
 <script setup>
-import { XCircle, RotateCcw, Trash2 } from '@lucide/vue'
+import { XCircle, RotateCcw, Trash2, Pencil } from '@lucide/vue'
 import { Button } from 'neobrutalism-vue'
 import { SINGAPORE_TIME_ZONE } from '../../../../shared/local-date.js'
 
@@ -7,7 +7,7 @@ const props = defineProps({
   items: { type: Array, default: () => [] },
 })
 
-const emit = defineEmits(['cancel', 'restore', 'delete'])
+const emit = defineEmits(['cancel', 'restore', 'delete', 'edit'])
 
 function formatTime(t) {
   if (!t) return ''
@@ -34,11 +34,21 @@ function formatTime(t) {
           {{ item.title }}
         </span>
         <span class="sch-item-time">{{ formatTime(item.startAt) }}</span>
+        <span v-if="item.location" class="sch-item-location">{{ item.location }}</span>
         <span v-if="item.categoryName" class="sch-item-category">{{ item.categoryName }}</span>
       </div>
       <div class="sch-item-actions">
         <Button v-if="item.status !== 'cancelled'" variant="neutral" size="icon" @click="$emit('cancel', item.id)">
           <XCircle :size="14" />
+        </Button>
+        <Button
+          v-if="item.status !== 'cancelled'"
+          variant="neutral"
+          size="icon"
+          data-testid="schedule-edit"
+          @click="$emit('edit', item)"
+        >
+          <Pencil :size="14" />
         </Button>
         <Button v-if="item.status === 'cancelled'" variant="neutral" size="icon" @click="$emit('restore', item.id)">
           <RotateCcw :size="14" />
@@ -52,6 +62,11 @@ function formatTime(t) {
 </template>
 
 <style scoped>
+.sch-item-location {
+  font-size: 0.75rem;
+  color: var(--nb-text-secondary);
+}
+
 .sch-item-category {
   font-size: 0.7rem;
   padding: 1px 6px;
