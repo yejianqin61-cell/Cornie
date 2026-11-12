@@ -92,6 +92,16 @@ export function memoryWikiRoutes({ memoryWiki, topicIndex }) {
   )
 
   r.get(
+    '/memory-wiki/audit',
+    asyncHandler(async (req, res) => {
+      const requestedLimit = Number.parseInt(String(req.query.limit ?? ''), 10)
+      const limit = Number.isFinite(requestedLimit) && requestedLimit > 0 ? Math.min(requestedLimit, 200) : 50
+      const pageId = req.query.pageId ? requireString(req.query.pageId, 'pageId', { maxLen: 256 }) : undefined
+      res.json({ items: await memoryWiki.listAuditEvents({ limit, pageId }) })
+    })
+  )
+
+  r.get(
     '/memory-wiki/governance',
     asyncHandler(async (req, res) => {
       const status = req.query.status ? requireString(req.query.status, 'status', { maxLen: 64 }) : undefined

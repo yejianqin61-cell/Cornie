@@ -43,7 +43,8 @@ export async function createMemoryWikiAuditStore(baseDir) {
       return payload
     },
 
-    async list({ limit = 50 } = {}) {
+    async list({ limit = 50, pageId } = {}) {
+      const wantedPageId = normalizeString(pageId)
       try {
         const text = await fs.readFile(filePath, 'utf8')
         return text
@@ -51,6 +52,7 @@ export async function createMemoryWikiAuditStore(baseDir) {
           .map((line) => line.trim())
           .filter(Boolean)
           .map((line) => JSON.parse(line))
+          .filter((event) => !wantedPageId || event.pageId === wantedPageId || event.relatedPageId === wantedPageId)
           .slice(-Math.max(1, Math.min(500, Number(limit) || 50)))
           .reverse()
       } catch (error) {

@@ -84,6 +84,62 @@ async function testListReportsRealTotal() {
   }
 }
 
+async function testAuditRoute() {
+  const harness = await createServiceHarness('memory-wiki-routes-audit')
+  try {
+    await withServer(harness, async (base) => {
+      const a = (await createPage(base, { pageType: 'event', title: '审计页A', summary: 's' })).page
+      const b = (await createPage(base, { pageType: 'event', title: '审计页B', summary: 's' })).page
+      const c = (await createPage(base, { pageType: 'event', title: '审计页C', summary: 's' })).page
+      await putJson(`${base}/memory-wiki/pages/${a.pageId}`, { summary: '更新后' })
+
+      const all = await json(`${base}/memory-wiki/audit`)
+      const count = (type) => all.items.filter((item) => item.eventType === type).length
+      assert(count('page_created') === 3 && count('page_updated') === 1, 'expected 3 creates and 1 update', all)
+      assert(all.items[0].createdAt >= all.items.at(-1).createdAt, 'expected newest first', all)
+
+      const onlyA = await json(`${base}/memory-wiki/audit?pageId=${a.pageId}`)
+      assert(onlyA.items.length === 2, 'expected only the two events of page A', onlyA)
+      assert(onlyA.items.every((item) => item.pageId === a.pageId || item.relatedPageId === a.pageId), 'expected A only', onlyA)
+
+      await json(`${base}/memory-wiki/pages/merge`, {
+        method: 'POST',
+        headers: JSON_HEADERS,
+        body: JSON.stringify({ targetPageId: a.pageId, sourcePageId: b.pageId })
+      })
+      const bEvents = await json(`${base}/memory-wiki/audit?pageId=${b.pageId}`)
+      assert(bEvents.items.some((item) => item.eventType === 'pages_merged'), 'expected the merge event via relatedPageId', bEvents)
+
+      const junk = await fetch(`${base}/memory-wiki/audit?limit=abc`)
+      assert(junk.status === 200, 'expected a non-numeric limit to be tolerated', junk.status)
+      assert(c.pageId, 'page C exists')
+    })
+  } finally {
+    await harness.close()
+  }
+}
+
+async function testAuditLimit() {
+  const harness = await createServiceHarness('memory-wiki-routes-audit-limit')
+  try {
+    await withServer(harness, async (base) => {
+      for (let i = 0; i < 60; i += 1) {
+        await createPage(base, { pageType: 'event', title: `限量页${i}`, summary: 's' })
+      }
+      const byDefault = await json(`${base}/memory-wiki/audit`)
+      assert(byDefault.items.length === 50, 'expected the default limit of 50', byDefault.items.length)
+      const five = await json(`${base}/memory-wiki/audit?limit=5`)
+      assert(five.items.length === 5, 'expected limit=5', five.items.length)
+      const junk = await json(`${base}/memory-wiki/audit?limit=abc`)
+      assert(junk.items.length === 50, 'expected junk limit to fall back to 50', junk.items.length)
+    })
+  } finally {
+    await harness.close()
+  }
+}
+
 await testOwnerConfirmedRoute()
+await testAuditRoute()
+await testAuditLimit()
 await testListReportsRealTotal()
-console.log('tests/services/memory-wiki-routes.test.mjs: passed 2/2')
+console.log('tests/services/memory-wiki-routes.test.mjs: passed 4/4')
