@@ -30,3 +30,7 @@
 ## 3. 重规范化（task-041c）
 
 `git add --renormalize .` 后 `git status --short` 为空，重规范化没有任何内容改动。随后执行 `git rm -r --cached -q . && git reset --hard HEAD` 刷新工作区：工作区文本文件 991 个全部为 `w/lf`，不再出现 `w/crlf`；`file src/renderer/main.js` 不含 CRLF；刷新后 `git status --short` 为空。
+
+## 4. Prettier（task-041d）
+
+`.prettierrc.json` 新增 `"endOfLine": "lf"`，与 Prettier 3 的默认值一致，仅让约定在配置中可见。`npm run lint` 退出码 0（Prettier 步骤输出 "All matched files use Prettier code style!"，ESLint 仍为 0 错误 2 警告）；`npm run test:fast` 退出码 0，末行 `[tests:fast] passed`。无需格式化任何源码。
