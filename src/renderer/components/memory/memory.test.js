@@ -128,6 +128,16 @@ describe('MemoryWikiCompare', () => {
 })
 
 describe('MemoryWikiDetail', () => {
+  it('emits ownerConfirmed with the new checkbox value', async () => {
+    const wrapper = mount(MemoryWikiDetail, {
+      props: { page: { pageId: 'p1', title: 'Test', ownerConfirmed: true } },
+    })
+    const box = wrapper.get('[data-testid="memory-owner-confirmed"]')
+    expect(box.element.checked).toBe(true)
+    await box.setValue(false)
+    expect(wrapper.emitted('ownerConfirmed')[0]).toEqual([false])
+  })
+
   it('renders page content', () => {
     const wrapper = mount(MemoryWikiDetail, {
       props: {

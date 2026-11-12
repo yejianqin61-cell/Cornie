@@ -14,6 +14,7 @@ const api = vi.hoisted(() => ({
   getGovernanceRequest: vi.fn(),
   updateGovernanceStatus: vi.fn(),
   applyGovernanceRequest: vi.fn(),
+  setPageOwnerConfirmed: vi.fn(),
 }))
 
 vi.mock('../../api/memory-wiki.js', () => api)
@@ -103,6 +104,18 @@ describe('MemoryWikiHomePage', () => {
     expect(api.updatePage).toHaveBeenCalledWith('coffee-page', { title: '咖啡偏好', summary: '新摘要' })
     expect(api.getPage).toHaveBeenCalledWith('coffee-page')
     expect(wrapper.vm.selectedPage.summary).toBe('新摘要')
+  })
+
+  it('sets the owner confirmation of the selected page and reloads it', async () => {
+    api.setPageOwnerConfirmed.mockResolvedValue({ page: { pageId: 'coffee-page', ownerConfirmed: true } })
+    const wrapper = await mountHome()
+    wrapper.vm.selectedPage = { pageId: 'coffee-page' }
+
+    await wrapper.vm.updateSelectedOwnerConfirmed(true)
+
+    expect(api.setPageOwnerConfirmed).toHaveBeenCalledTimes(1)
+    expect(api.setPageOwnerConfirmed).toHaveBeenCalledWith('coffee-page', true)
+    expect(api.getPage).toHaveBeenCalledWith('coffee-page')
   })
 
   it('shows a comparison explanation when fewer than two versions exist', async () => {

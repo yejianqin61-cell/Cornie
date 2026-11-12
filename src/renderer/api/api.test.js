@@ -7,7 +7,7 @@ import * as chatlogApi from './chatlog.js'
 import * as conversationApi from './conversation.js'
 import { listEntries as listLedgerEntries } from './ledger.js'
 import { listObservations } from './observation.js'
-import { listPages } from './memory-wiki.js'
+import { listPages, setPageOwnerConfirmed } from './memory-wiki.js'
 import { listTodos } from './todo.js'
 import { listSchedules } from './schedule.js'
 import { getModelSettings } from './settings.js'
@@ -175,6 +175,15 @@ describe('api/memory-wiki', () => {
     globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ items: [] }) })
     const result = await listPages()
     expect(result.items).toEqual([])
+  })
+
+  it('setPageOwnerConfirmed should PUT the boolean to the owner-confirmed route', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ page: {} }) })
+    await setPageOwnerConfirmed('p1', true)
+    expect(fetch).toHaveBeenCalledWith(
+      `${API_BASE}/api/memory-wiki/pages/p1/owner-confirmed`,
+      expect.objectContaining({ method: 'PUT', body: JSON.stringify({ ownerConfirmed: true }) })
+    )
   })
 })
 

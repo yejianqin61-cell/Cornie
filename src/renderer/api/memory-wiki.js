@@ -91,6 +91,10 @@ export function updatePageStatus(pageId, status) {
   return apiPut(`/api/memory-wiki/pages/${pageId}/status`, { status })
 }
 
+export function setPageOwnerConfirmed(pageId, ownerConfirmed) {
+  return apiPut(`/api/memory-wiki/pages/${pageId}/owner-confirmed`, { ownerConfirmed })
+}
+
 export function updatePageImportance(pageId, importance) {
   return apiPut(`/api/memory-wiki/pages/${pageId}/importance`, { importance })
 }

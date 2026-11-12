@@ -10,7 +10,7 @@ defineProps({
   versions: { type: Array, default: () => [] },
 })
 
-const emit = defineEmits(['back', 'edit', 'compare', 'archive', 'restore', 'rollback', 'importance'])
+const emit = defineEmits(['back', 'edit', 'compare', 'archive', 'restore', 'rollback', 'importance', 'ownerConfirmed'])
 const selectedRollbackVersion = ref('')
 </script>
 
@@ -58,6 +58,15 @@ const selectedRollbackVersion = ref('')
           <option value="high">high</option>
           <option value="critical">critical</option>
         </select>
+      </label>
+      <label>
+        <input
+          type="checkbox"
+          data-testid="memory-owner-confirmed"
+          :checked="page.ownerConfirmed === true"
+          @change="$emit('ownerConfirmed', $event.target.checked)"
+        />
+        主人已确认
       </label>
       <label v-if="versions.length">
         回滚到版本

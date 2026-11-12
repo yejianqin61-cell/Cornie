@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { asyncHandler } from '../http/middleware.js'
+import { badRequest } from '../http/errors.js'
 import { requireString } from '../validators.js'
 
 export function memoryWikiRoutes({ memoryWiki, topicIndex }) {
@@ -185,6 +186,15 @@ export function memoryWikiRoutes({ memoryWiki, topicIndex }) {
       const pageId = requireString(req.params.pageId, 'pageId', { maxLen: 256 })
       const importance = requireString(req.body?.importance ?? '', 'importance', { maxLen: 64 })
       res.json({ page: await memoryWiki.setImportance(pageId, importance) })
+    })
+  )
+
+  r.put(
+    '/memory-wiki/pages/:pageId/owner-confirmed',
+    asyncHandler(async (req, res) => {
+      const pageId = requireString(req.params.pageId, 'pageId', { maxLen: 256 })
+      if (typeof req.body?.ownerConfirmed !== 'boolean') throw badRequest('invalid ownerConfirmed')
+      res.json({ page: await memoryWiki.setOwnerConfirmed(pageId, req.body.ownerConfirmed) })
     })
   )
 

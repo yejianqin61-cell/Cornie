@@ -25,6 +25,7 @@ import {
   restorePage,
   rollbackPage,
   updatePageImportance,
+  setPageOwnerConfirmed,
 } from '../../api/memory-wiki.js'
 
 const pages = ref([])
@@ -144,6 +145,9 @@ function restoreSelectedPage() {
 }
 function updateSelectedImportance(importance) {
   return runPageAction((pageId) => updatePageImportance(pageId, importance))
+}
+function updateSelectedOwnerConfirmed(value) {
+  return runPageAction((pageId) => setPageOwnerConfirmed(pageId, value === true))
 }
 function rollbackSelectedPage(versionId) {
   if (!versionId) return
@@ -328,6 +332,7 @@ function goBack() {
           @restore="restoreSelectedPage"
           @rollback="rollbackSelectedPage"
           @importance="updateSelectedImportance"
+          @owner-confirmed="updateSelectedOwnerConfirmed"
         />
         <MemoryWikiEmptyState v-else />
       </div>
