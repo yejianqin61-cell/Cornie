@@ -8,6 +8,7 @@ import MemoryWikiDetail from './MemoryWikiDetail.vue'
 import MemoryWikiCompare from './MemoryWikiCompare.vue'
 import MemoryWikiEditor from './MemoryWikiEditor.vue'
 import MemoryWikiEmptyState from './MemoryWikiEmptyState.vue'
+import { REQUEST_TYPE_LABELS, STATUS_LABELS, labelOf, plannedActionLabel } from './memoryLabels.js'
 import {
   listPages,
   getPage,
@@ -373,18 +374,27 @@ function goBack() {
               @click="selectGovernance(item.requestId)"
             >
               <div class="mw-governance-item-head">
-                <span class="mw-governance-item-type">{{ item.requestType }}</span>
-                <span class="mw-governance-item-status">{{ item.status }}</span>
+                <span class="mw-governance-item-type">{{ labelOf(REQUEST_TYPE_LABELS, item.requestType) }}</span>
+                <span class="mw-governance-item-status">{{ labelOf(STATUS_LABELS, item.status) }}</span>
               </div>
-              <div class="mw-governance-item-id">{{ item.requestId }}</div>
+              <div class="mw-governance-item-id">{{ item.title || item.requestId }}</div>
             </button>
           </div>
           <div v-if="governanceSelected" class="mw-governance-detail">
             <div><strong>原因：</strong>{{ governanceSelected.reason || '未提供原因' }}</div>
-            <div><strong>证据：</strong></div>
-            <pre v-if="governanceSelected.evidence?.length">{{
-              JSON.stringify(governanceSelected.evidence, null, 2)
-            }}</pre>
+            <div v-if="governanceSelected.pageIds?.length">
+              <strong>涉及页面：</strong>{{ governanceSelected.pageIds.join('、') }}
+            </div>
+            <div v-if="plannedActionLabel(governanceSelected)">
+              <strong>拟执行：</strong>{{ plannedActionLabel(governanceSelected) }}
+              <template v-if="governanceSelected.payload?.request?.summary">
+                （拟改摘要：{{ governanceSelected.payload.request.summary }}）
+              </template>
+            </div>
+            <details v-if="governanceSelected.evidence?.length">
+              <summary>原始数据</summary>
+              <pre>{{ JSON.stringify(governanceSelected.evidence, null, 2) }}</pre>
+            </details>
             <div v-else class="mw-governance-empty">此请求没有附带证据。</div>
             <div class="mw-governance-actions">
               <Button

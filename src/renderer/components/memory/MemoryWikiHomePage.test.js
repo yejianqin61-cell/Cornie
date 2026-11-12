@@ -152,4 +152,79 @@ describe('MemoryWikiHomePage', () => {
     expect(api.applyGovernanceRequest).toHaveBeenCalledWith('gov-1')
     expect(wrapper.text()).toContain('archive_page')
   })
+
+  describe('governance panel wording', () => {
+    async function openWith(items, selected = null) {
+      api.listGovernance.mockResolvedValue({ items })
+      if (selected) api.getGovernanceRequest.mockResolvedValue({ item: selected })
+      const wrapper = await mountHome()
+      await wrapper.vm.openGovernance()
+      if (selected) await wrapper.vm.selectGovernance(selected.requestId)
+      return wrapper
+    }
+
+    it('shows Chinese type and status labels instead of the raw enums', async () => {
+      const wrapper = await openWith([
+        { requestId: 'gov-1', requestType: 'memory_wiki_llm_proposal', status: 'pending', title: '归档咖啡页' },
+      ])
+      expect(wrapper.text()).toContain('LLM 记忆变更提议')
+      expect(wrapper.text()).toContain('待审')
+      expect(wrapper.text()).toContain('归档咖啡页')
+      expect(wrapper.text()).not.toContain('memory_wiki_llm_proposal')
+    })
+
+    it('summarises the planned action and reason in the detail', async () => {
+      const request = {
+        requestId: 'gov-1',
+        requestType: 'memory_wiki_llm_proposal',
+        status: 'pending',
+        title: '归档咖啡页',
+        reason: '归档过期偏好',
+        pageIds: ['coffee-page'],
+        evidence: [{ action: 'archive_page', pageId: 'coffee-page' }],
+        payload: { request: { action: 'archive_page' } },
+      }
+      const wrapper = await openWith([request], request)
+      const detail = wrapper.get('.mw-governance-detail').text()
+      expect(detail).toContain('归档页面')
+      expect(detail).toContain('归档过期偏好')
+      expect(detail).toContain('coffee-page')
+    })
+
+    it('falls back to the raw value for an unknown request type', async () => {
+      const wrapper = await openWith([
+        { requestId: 'gov-9', requestType: 'brand_new_type', status: 'pending', title: '未知' },
+      ])
+      expect(wrapper.text()).toContain('brand_new_type')
+    })
+
+    it('labels all five statuses', async () => {
+      const statuses = ['pending', 'approved', 'rejected', 'deferred', 'applied']
+      const wrapper = await openWith(
+        statuses.map((status, index) => ({
+          requestId: 'gov-' + index,
+          requestType: 'archive_candidate',
+          status,
+          title: 't' + index,
+        }))
+      )
+      for (const label of ['待审', '已批准', '已拒绝', '已延期', '已应用']) {
+        expect(wrapper.text()).toContain(label)
+      }
+    })
+
+    it('keeps the raw data inside a collapsed details element', async () => {
+      const request = {
+        requestId: 'gov-1',
+        requestType: 'archive_candidate',
+        status: 'pending',
+        title: 't',
+        evidence: [{ action: 'archive_page' }],
+      }
+      const wrapper = await openWith([request], request)
+      const details = wrapper.get('details')
+      expect(details.attributes('open')).toBeUndefined()
+      expect(details.text()).toContain('archive_page')
+    })
+  })
 })
