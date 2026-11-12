@@ -2,7 +2,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { resolveMemoryWikiRoot } from './constants.js'
-import { createSingleWriterQueue } from './writeQueue.js'
+import { getSharedWriterQueue } from './writeQueue.js'
 import { atomicWriteFile } from '../persistence/atomicWrite.js'
 
 const GOVERNANCE_SEGMENTS = ['governance']
@@ -86,7 +86,7 @@ export async function createMemoryWikiGovernanceStore(baseDir) {
   await ensureJsonFile(filePath, [])
 
   // 462：review-queue 写路径单写者串行化。
-  const enqueue = createSingleWriterQueue()
+  const enqueue = getSharedWriterQueue(filePath)
 
   async function readAll() {
     const text = await fs.readFile(filePath, 'utf8')

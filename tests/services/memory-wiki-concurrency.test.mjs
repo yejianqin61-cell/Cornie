@@ -1,3 +1,4 @@
+import { getSharedWriterQueue } from '../../electron/backend/memory-wiki/writeQueue.js'
 import { createMemoryWikiService } from '../../electron/backend/memory-wiki/index.js'
 import { assert, createServiceHarness } from '../shared/service-harness.mjs'
 
@@ -85,8 +86,16 @@ async function testConcurrentVersionSnapshots() {
   }
 }
 
+function testQueueKeyIgnoresCaseOnWindows() {
+  if (process.platform !== 'win32') return
+  const lower = getSharedWriterQueue('C:\Cornie-Case-Test\index.json')
+  const upper = getSharedWriterQueue('c:\CORNIE-CASE-TEST\INDEX.JSON')
+  assert(lower === upper, 'expected paths differing only by case to share one queue')
+}
+
 await testConcurrentPageCreates()
 await testConcurrentGovernanceRequests()
 await testConcurrentTopicLinks()
 await testConcurrentVersionSnapshots()
-console.log('tests/services/memory-wiki-concurrency.test.mjs: passed 4/4')
+testQueueKeyIgnoresCaseOnWindows()
+console.log('tests/services/memory-wiki-concurrency.test.mjs: passed 5/5')
