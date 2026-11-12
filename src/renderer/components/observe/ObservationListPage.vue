@@ -17,6 +17,8 @@ import {
   deleteObservation,
 } from '../../api/observation.js'
 
+const emit = defineEmits(['openMemory'])
+
 const observations = ref([])
 const loading = ref(false)
 const error = ref('')
@@ -179,6 +181,7 @@ async function confirmDelete() {
       :error="detailError"
       @back="goBack"
       @delete="onDelete"
+      @open-memory="emit('openMemory', $event)"
     />
 
     <ObservationForm

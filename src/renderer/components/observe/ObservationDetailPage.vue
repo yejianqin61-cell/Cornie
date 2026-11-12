@@ -9,7 +9,7 @@ defineProps({
   error: { type: String, default: '' },
 })
 
-const emit = defineEmits(['back', 'delete'])
+const emit = defineEmits(['back', 'delete', 'openMemory'])
 
 const TYPE_LABELS = { note: '笔记', dream: '梦境', insight: '洞察', misc: '其他' }
 
@@ -45,7 +45,7 @@ function typeLabel(t) {
       </div>
       <h2 class="obs-detail-title">{{ observation.title || '无标题' }}</h2>
       <div class="obs-detail-body">{{ observation.content || '' }}</div>
-      <ObservationLinkedMemory :links="observation.memoryLinks || []" />
+      <ObservationLinkedMemory :links="observation.memoryLinks || []" @open="emit('openMemory', $event)" />
       <div class="obs-detail-actions">
         <Button variant="neutral" @click="$emit('delete')">
           <Trash2 :size="14" />

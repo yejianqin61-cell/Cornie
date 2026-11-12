@@ -85,7 +85,7 @@ export async function createServer({ store, baseDir = process.cwd(), conversatio
   const settings = createSettingsService(store, { secretStore })
   app.use('/api', settingsRoutes({ settings }))
 
-  app.use('/api', observationRoutes({ store }))
+  app.use('/api', observationRoutes({ store, baseDir }))
 
   let memoryWikiReady = null
   async function getMemoryWikiDeps() {

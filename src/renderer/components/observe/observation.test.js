@@ -36,6 +36,24 @@ describe('ObservationEmptyState', () => {
   })
 })
 
+describe('ObservationLinkedMemory navigation', () => {
+  it('emits open with the page id when a link is clicked', async () => {
+    const wrapper = mount(ObservationLinkedMemory, {
+      props: { links: [{ pageId: 'p1', title: '钟奕菲' }] },
+    })
+    await wrapper.get('.obs-memory-link').trigger('click')
+    expect(wrapper.emitted('open')[0]).toEqual(['p1'])
+  })
+
+  it('forwards the open event from the detail page as openMemory', async () => {
+    const wrapper = mount(ObservationDetailPage, {
+      props: { observation: { id: 'o1', title: 't', content: 'c', memoryLinks: [{ pageId: 'p1', title: '钟奕菲' }] } },
+    })
+    await wrapper.get('.obs-memory-link').trigger('click')
+    expect(wrapper.emitted('openMemory')[0]).toEqual(['p1'])
+  })
+})
+
 describe('ObservationLinkedMemory', () => {
   it('renders nothing when links is empty', () => {
     const wrapper = mount(ObservationLinkedMemory, { props: { links: [] } })

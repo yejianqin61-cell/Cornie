@@ -121,6 +121,25 @@ describe('MemoryWikiHomePage', () => {
     expect(api.getPage).toHaveBeenCalledWith('coffee-page')
   })
 
+  it('opens the page named by focusPageId once the list is loaded', async () => {
+    const wrapper = mount(MemoryWikiHomePage, {
+      props: { focusPageId: 'coffee-page' },
+      global: {
+        stubs: {
+          PageHeader: true,
+          Button: { template: '<button><slot /></button>' },
+          MemoryWikiTree: true,
+          MemoryWikiDetail: true,
+          MemoryWikiEditor: true,
+          MemoryWikiEmptyState: true,
+        },
+      },
+    })
+    await flushPromises()
+
+    expect(api.getPage).toHaveBeenCalledWith('coffee-page')
+  })
+
   it('shows a comparison explanation when fewer than two versions exist', async () => {
     const wrapper = await mountHome()
     wrapper.vm.selectedPage = { pageId: 'coffee-page' }

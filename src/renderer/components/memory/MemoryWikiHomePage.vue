@@ -33,6 +33,10 @@ import {
   mergePages,
 } from '../../api/memory-wiki.js'
 
+const props = defineProps({
+  focusPageId: { type: String, default: '' },
+})
+
 const pages = ref([])
 const allPages = ref([])
 const loading = ref(false)
@@ -56,6 +60,8 @@ const governanceSelected = ref(null)
 const governanceError = ref('')
 const governanceResult = ref(null)
 
+let focusHandled = false
+
 async function fetchPages() {
   loading.value = true
   error.value = ''
@@ -63,6 +69,10 @@ async function fetchPages() {
     const res = await listPages({})
     allPages.value = res.items || []
     applyTopicFilter()
+    if (!focusHandled && props.focusPageId) {
+      focusHandled = true
+      selectPage(props.focusPageId)
+    }
   } catch (e) {
     allPages.value = []
     pages.value = []

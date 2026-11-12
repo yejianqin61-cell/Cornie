@@ -1024,6 +1024,25 @@ export async function createMemoryWikiService({ baseDir, store } = {}) {
       return (await filterIndexedPages({ pageType, status })).length
     },
 
+    // 反查引用某条观察的非归档页面。逐页读文件，页面很多时偏慢；暂不建反向索引。
+    async findPagesReferencingObservation(observationId) {
+      const wanted = normalizeString(observationId)
+      if (!wanted) return []
+      const links = []
+      for (const entry of await filterIndexedPages({})) {
+        if (entry.status === 'archived') continue
+        let page = null
+        try {
+          page = await this.get(entry.pageId)
+        } catch {}
+        const cited = (page?.sourceRefs ?? []).some(
+          (ref) => ref?.kind === 'observation' && normalizeString(ref.observationId) === wanted
+        )
+        if (cited) links.push({ pageId: page.pageId, title: page.title })
+      }
+      return links
+    },
+
     async list({ pageType, status, limit, offset } = {}) {
       let items = await filterIndexedPages({ pageType, status })
 

@@ -2,12 +2,14 @@
 defineProps({
   links: { type: Array, default: () => [] },
 })
+
+const emit = defineEmits(['open'])
 </script>
 
 <template>
   <div v-if="links.length > 0" class="obs-memory">
     <div class="obs-memory-header">关联记忆</div>
-    <div v-for="link in links" :key="link.pageId" class="obs-memory-link">
+    <div v-for="link in links" :key="link.pageId" class="obs-memory-link" @click="emit('open', link.pageId)">
       {{ link.title || link.pageId }}
     </div>
   </div>
