@@ -67,6 +67,15 @@ export function applyGovernanceRequest(requestId) {
   return apiPost(`/api/memory-wiki/governance/${requestId}/apply`)
 }
 
+export function listAuditEvents(params = {}) {
+  const qs = new URLSearchParams()
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== null && v !== '') qs.set(k, String(v))
+  }
+  const s = qs.toString()
+  return apiGet(`/api/memory-wiki/audit${s ? `?${s}` : ''}`)
+}
+
 export function inspectionScan() {
   return apiPost('/api/memory-wiki/governance/inspection-scan')
 }

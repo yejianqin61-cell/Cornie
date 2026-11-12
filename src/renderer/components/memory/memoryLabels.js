@@ -49,3 +49,15 @@ export function plannedActionLabel(request) {
   const kind = request?.payload?.kind
   return kind ? labelOf(REPAIR_KIND_LABELS, kind) : ''
 }
+
+export const AUDIT_EVENT_LABELS = {
+  page_created: '页面创建',
+  page_updated: '页面更新',
+  page_topic_linked: '页面挂接主题',
+  pages_merged: '页面合并',
+  page_deleted: '页面删除',
+  page_compressed: '页面压缩',
+  page_rolled_back: '页面回滚',
+  memory_distillation: '记忆提炼',
+  observation_compression_applied: '观察日志压缩已应用',
+}

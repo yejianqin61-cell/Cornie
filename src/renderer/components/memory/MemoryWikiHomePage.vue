@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import { Brain, Plus, RefreshCw, Loader2, Shield, Hash } from '@lucide/vue'
+import { Brain, Plus, RefreshCw, Loader2, Shield, Hash, ScrollText } from '@lucide/vue'
 import { Button } from 'neobrutalism-vue'
 import PageHeader from '../common/PageHeader.vue'
 import MemoryWikiTree from './MemoryWikiTree.vue'
@@ -8,7 +8,7 @@ import MemoryWikiDetail from './MemoryWikiDetail.vue'
 import MemoryWikiCompare from './MemoryWikiCompare.vue'
 import MemoryWikiEditor from './MemoryWikiEditor.vue'
 import MemoryWikiEmptyState from './MemoryWikiEmptyState.vue'
-import { REQUEST_TYPE_LABELS, STATUS_LABELS, labelOf, plannedActionLabel } from './memoryLabels.js'
+import { AUDIT_EVENT_LABELS, REQUEST_TYPE_LABELS, STATUS_LABELS, labelOf, plannedActionLabel } from './memoryLabels.js'
 import {
   listPages,
   getPage,
@@ -27,6 +27,8 @@ import {
   rollbackPage,
   updatePageImportance,
   setPageOwnerConfirmed,
+  inspectionScan,
+  listAuditEvents,
 } from '../../api/memory-wiki.js'
 
 const pages = ref([])
@@ -233,6 +235,49 @@ async function applyGovernance() {
   }
 }
 
+const inspecting = ref(false)
+const inspectionNotice = ref('')
+
+async function runInspection() {
+  if (inspecting.value) return
+  inspecting.value = true
+  inspectionNotice.value = ''
+  governanceError.value = ''
+  try {
+    const res = await inspectionScan()
+    inspectionNotice.value = `新增 ${res?.result?.createdCount ?? 0} 条建议`
+    await loadGovernance()
+  } catch (e) {
+    governanceError.value = e.message || '巡检失败'
+  }
+  inspecting.value = false
+}
+
+const auditOpen = ref(false)
+const auditItems = ref([])
+const auditLoading = ref(false)
+const auditError = ref('')
+
+async function openAudit() {
+  auditOpen.value = true
+  auditLoading.value = true
+  auditError.value = ''
+  try {
+    const res = await listAuditEvents({ limit: 50 })
+    auditItems.value = res.items || []
+  } catch (e) {
+    auditItems.value = []
+    auditError.value = e.message || '审计日志加载失败'
+  }
+  auditLoading.value = false
+}
+
+function formatAuditTime(value) {
+  return String(value || '')
+    .replace('T', ' ')
+    .slice(0, 19)
+}
+
 function openNew() {
   editorInitial.value = {}
   saveError.value = ''
@@ -286,6 +331,10 @@ function goBack() {
         <Button variant="neutral" size="sm" @click="openGovernance">
           <Shield :size="14" />
           治理
+        </Button>
+        <Button variant="neutral" size="sm" @click="openAudit">
+          <ScrollText :size="14" />
+          审计
         </Button>
         <Button variant="neutral" size="sm" @click="openNew">
           <Plus :size="14" />
@@ -350,16 +399,49 @@ function goBack() {
       @cancel="closeEditor"
     />
 
+    <div v-if="auditOpen" class="mw-governance-overlay" @click.self="auditOpen = false">
+      <div class="mw-governance">
+        <div class="mw-governance-header">
+          <h3>审计日志</h3>
+          <Button variant="neutral" size="icon" @click="auditOpen = false">
+            <span>&times;</span>
+          </Button>
+        </div>
+        <div v-if="auditLoading" class="mw-skeleton">
+          <div class="mw-skeleton-line" v-for="n in 3" :key="n" />
+        </div>
+        <div v-else-if="auditError" class="mw-banner mw-banner--error">
+          <span>{{ auditError }}</span>
+        </div>
+        <div v-else-if="auditItems.length === 0" class="mw-governance-empty">暂无审计记录</div>
+        <div v-else class="mw-governance-list">
+          <div v-for="event in auditItems" :key="event.eventId" class="mw-governance-item">
+            <div class="mw-governance-item-head">
+              <span class="mw-governance-item-type">{{ labelOf(AUDIT_EVENT_LABELS, event.eventType) }}</span>
+              <span class="mw-governance-item-status">{{ formatAuditTime(event.createdAt) }}</span>
+            </div>
+            <div v-if="event.pageId" class="mw-governance-item-id">{{ event.pageId }}</div>
+            <div v-if="event.reason" class="mw-governance-item-id">{{ event.reason }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <MemoryWikiCompare v-if="compareOpen" v-bind="compareData" @close="compareOpen = false" />
 
     <div v-if="governanceOpen" class="mw-governance-overlay" @click.self="governanceOpen = false">
       <div class="mw-governance">
         <div class="mw-governance-header">
           <h3>治理面板</h3>
+          <Button variant="neutral" size="sm" :disabled="inspecting" @click="runInspection">
+            <Loader2 v-if="inspecting" :size="12" />
+            巡检
+          </Button>
           <Button variant="neutral" size="icon" @click="governanceOpen = false">
             <span>&times;</span>
           </Button>
         </div>
+        <div v-if="inspectionNotice" class="mw-governance-empty">{{ inspectionNotice }}</div>
         <div v-if="governanceLoading" class="mw-skeleton">
           <div class="mw-skeleton-line" v-for="n in 3" :key="n" />
         </div>

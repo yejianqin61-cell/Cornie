@@ -15,6 +15,8 @@ const api = vi.hoisted(() => ({
   updateGovernanceStatus: vi.fn(),
   applyGovernanceRequest: vi.fn(),
   setPageOwnerConfirmed: vi.fn(),
+  inspectionScan: vi.fn(),
+  listAuditEvents: vi.fn(),
 }))
 
 vi.mock('../../api/memory-wiki.js', () => api)
@@ -151,6 +153,69 @@ describe('MemoryWikiHomePage', () => {
     await wrapper.vm.applyGovernance()
     expect(api.applyGovernanceRequest).toHaveBeenCalledWith('gov-1')
     expect(wrapper.text()).toContain('archive_page')
+  })
+
+  describe('inspection and audit', () => {
+    it('runs an inspection, reloads the queue and reports how many suggestions were added', async () => {
+      api.inspectionScan.mockResolvedValue({ result: { createdCount: 2 } })
+      const wrapper = await mountHome()
+      await wrapper.vm.openGovernance()
+      api.listGovernance.mockClear()
+
+      await wrapper.vm.runInspection()
+
+      expect(api.inspectionScan).toHaveBeenCalledTimes(1)
+      expect(api.listGovernance).toHaveBeenCalledTimes(1)
+      expect(wrapper.text()).toContain('新增 2 条建议')
+    })
+
+    it('ignores a second inspection while one is running', async () => {
+      let finish
+      api.inspectionScan.mockReturnValue(new Promise((resolve) => (finish = resolve)))
+      const wrapper = await mountHome()
+      await wrapper.vm.openGovernance()
+
+      const first = wrapper.vm.runInspection()
+      await wrapper.vm.runInspection()
+      expect(api.inspectionScan).toHaveBeenCalledTimes(1)
+
+      finish({ result: { createdCount: 0 } })
+      await first
+    })
+
+    it('lists audit events with Chinese type labels', async () => {
+      api.listAuditEvents.mockResolvedValue({
+        items: [
+          { eventId: 'e1', eventType: 'page_updated', pageId: 'coffee-page', createdAt: '2026-11-12T10:00:00.000Z' },
+          {
+            eventId: 'e2',
+            eventType: 'pages_merged',
+            pageId: 'coffee-page',
+            reason: '合并',
+            createdAt: '2026-11-12T09:00:00.000Z',
+          },
+        ],
+      })
+      const wrapper = await mountHome()
+
+      await wrapper.vm.openAudit()
+
+      expect(api.listAuditEvents).toHaveBeenCalledWith({ limit: 50 })
+      expect(wrapper.text()).toContain('页面更新')
+      expect(wrapper.text()).toContain('页面合并')
+      expect(wrapper.text()).not.toContain('page_updated')
+    })
+
+    it('falls back to the raw value for an unknown audit event type', async () => {
+      api.listAuditEvents.mockResolvedValue({
+        items: [{ eventId: 'e9', eventType: 'brand_new_event', createdAt: '2026-11-12T10:00:00.000Z' }],
+      })
+      const wrapper = await mountHome()
+
+      await wrapper.vm.openAudit()
+
+      expect(wrapper.text()).toContain('brand_new_event')
+    })
   })
 
   describe('governance panel wording', () => {
