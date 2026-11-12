@@ -20,7 +20,7 @@ import ChatPanel from './ChatPanel.vue'
 const refresh = vi.fn()
 const ChatHistoryPage = defineComponent({
   name: 'ChatHistoryPage',
-  props: { date: String, transientMessages: Array },
+  props: { date: String, transientMessages: Array, extras: Object },
   emits: ['retry', 'confirmResolved'],
   setup(_, { expose }) {
     expose({ refresh })
@@ -124,6 +124,92 @@ describe('ChatPanel streaming send', () => {
     resolveRefresh()
     await flushPromises()
     expect(wrapper.findComponent(ChatHistoryPage).props('transientMessages')).toEqual([])
+  })
+
+  it('shows associative replies on the transient assistant message', async () => {
+    let finishStream
+    refresh.mockReturnValue(new Promise(() => {}))
+    api.sendMessageStreamed.mockImplementation(
+      (_request, _delta, onDone) =>
+        new Promise((resolve) => {
+          finishStream = () => {
+            onDone({ interimReplies: ['哦对……她是你高中同桌。'], cornieMessage: { id: 'c1' } })
+            resolve()
+          }
+        })
+    )
+    const wrapper = mountPanel()
+    await flushPromises()
+    await wrapper.find('textarea').setValue('还记得她吗')
+    await wrapper.find('.chat-panel-send').trigger('click')
+    await flushPromises()
+
+    finishStream()
+    await flushPromises()
+
+    const transient = wrapper.findComponent(ChatHistoryPage).props('transientMessages')
+    expect(transient[1].interimReplies).toEqual(['哦对……她是你高中同桌。'])
+  })
+
+  it('keeps tool results and associative replies by reply id after the history refresh', async () => {
+    let finishStream
+    refresh.mockResolvedValue(undefined)
+    api.sendMessageStreamed.mockImplementation(
+      (_request, _delta, onDone) =>
+        new Promise((resolve) => {
+          finishStream = () => {
+            onDone({
+              interimReplies: ['联想'],
+              toolExecution: { results: [{ tool_name: 'ledger.create_entry', ok: true, result: { id: 1 } }] },
+              cornieMessage: { id: 'c1' },
+            })
+            resolve()
+          }
+        })
+    )
+    const wrapper = mountPanel()
+    await flushPromises()
+    await wrapper.find('textarea').setValue('记一笔')
+    await wrapper.find('.chat-panel-send').trigger('click')
+    await flushPromises()
+
+    finishStream()
+    await flushPromises()
+
+    const history = wrapper.findComponent(ChatHistoryPage)
+    expect(history.props('transientMessages')).toEqual([])
+    expect(history.props('extras').c1.toolResults).toHaveLength(1)
+    expect(history.props('extras').c1.interimReplies).toEqual(['联想'])
+
+    wrapper.vm.selectedDate = '2026-10-22'
+    await flushPromises()
+    wrapper.vm.selectedDate = '2026-10-23'
+    await flushPromises()
+    expect(history.props('extras').c1.toolResults).toHaveLength(1)
+  })
+
+  it('does not record extras when the result has no reply id', async () => {
+    let finishStream
+    refresh.mockResolvedValue(undefined)
+    api.sendMessageStreamed.mockImplementation(
+      (_request, _delta, onDone) =>
+        new Promise((resolve) => {
+          finishStream = () => {
+            onDone({ toolExecution: { results: [{ tool_name: 'x', ok: true, result: 1 }] } })
+            resolve()
+          }
+        })
+    )
+    const wrapper = mountPanel()
+    await flushPromises()
+    await wrapper.find('textarea').setValue('hi')
+    await wrapper.find('.chat-panel-send').trigger('click')
+    await flushPromises()
+
+    finishStream()
+    await flushPromises()
+
+    expect(Object.keys(wrapper.findComponent(ChatHistoryPage).props('extras'))).toHaveLength(0)
   })
 
   it('cancels the active stream, refreshes history and explains the cancel', async () => {

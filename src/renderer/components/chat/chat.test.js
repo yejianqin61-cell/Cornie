@@ -6,6 +6,17 @@ import ToolResultPanel from './ToolResultPanel.vue'
 import ConfirmCard from './ConfirmCard.vue'
 import ChatDateNav from './ChatDateNav.vue'
 
+describe('MessageRow associative replies', () => {
+  it('shows the associative replies before the reply text', () => {
+    const wrapper = mount(MessageRow, {
+      props: { message: { id: 'c1', role: 'assistant', text: '想起她了', interimReplies: ['哦对……她是你高中同桌。'] } },
+    })
+    const html = wrapper.html()
+    expect(wrapper.find('.msg-row-interim').text()).toContain('哦对……她是你高中同桌。')
+    expect(html.indexOf('msg-row-interim')).toBeLessThan(html.indexOf('想起她了'))
+  })
+})
+
 describe('MessageRow', () => {
   it('renders user message', () => {
     const wrapper = mount(MessageRow, {

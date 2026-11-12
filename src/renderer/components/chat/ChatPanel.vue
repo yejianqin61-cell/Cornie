@@ -14,6 +14,8 @@ const sendError = ref('')
 const notice = ref('')
 const transientMessages = ref([])
 const activeRequest = ref(null)
+// 本次应用会话内按回复消息 ID 保留工具结果与联想话语；不跨应用重启保留。
+const messageExtras = ref({})
 const inputEl = ref(null)
 
 const MAX_MESSAGE_LENGTH = 5000
@@ -133,6 +135,18 @@ async function handleSend(requestId = createRequestId()) {
         if (result?.pendingConfirmation) assistant.confirm = result.pendingConfirmation
         const results = result?.toolExecution?.results
         if (Array.isArray(results) && results.length > 0) assistant.toolResults = results
+        const interim = Array.isArray(result?.interimReplies) ? result.interimReplies.filter(Boolean) : []
+        if (interim.length > 0) assistant.interimReplies = interim
+        const replyId = result?.cornieMessage?.id
+        if (replyId && (assistant.toolResults || assistant.interimReplies)) {
+          messageExtras.value = {
+            ...messageExtras.value,
+            [replyId]: {
+              ...(assistant.toolResults ? { toolResults: assistant.toolResults } : {}),
+              ...(assistant.interimReplies ? { interimReplies: assistant.interimReplies } : {}),
+            },
+          }
+        }
       },
       (error) => {
         streamError = error
@@ -232,6 +246,7 @@ function handleConfirmResolved() {
       ref="historyRef"
       :date="selectedDate"
       :transient-messages="transientMessages"
+      :extras="messageExtras"
       :is-today="selectedDate === todayStr()"
       @confirm-resolved="handleConfirmResolved"
       @retry="handleRetry"

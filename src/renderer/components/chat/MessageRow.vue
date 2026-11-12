@@ -28,6 +28,7 @@ function roleLetter(role) {
       <div class="msg-row-sender">
         {{ message.role === 'user' ? '我' : message.role === 'assistant' ? 'Cornie' : '系统' }}
       </div>
+      <div v-for="(line, index) in message.interimReplies || []" :key="index" class="msg-row-interim">{{ line }}</div>
       <div class="msg-row-text"><MessageBody :text="message.text" /></div>
       <div v-if="message.status === 'failed'" class="msg-row-failed">
         <span>发送失败</span>
@@ -41,6 +42,13 @@ function roleLetter(role) {
 </template>
 
 <style scoped>
+.msg-row-interim {
+  font-size: 0.8rem;
+  font-style: italic;
+  color: var(--nb-text-secondary);
+  margin-bottom: 0.25rem;
+}
+
 .msg-row {
   display: flex;
   gap: 0.6rem;
