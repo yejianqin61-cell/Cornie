@@ -148,12 +148,12 @@ function envelopeStub(wikiRequests = [], observations = []) {
   })
 }
 
-async function distill(harness, chatFn) {
+async function distill(harness, chatFn, userMessage = CURRENT_USER) {
   return runMemoryDistillation({
     store: harness.store,
     baseDir: harness.baseDir,
     date: DATE,
-    userMessage: CURRENT_USER,
+    userMessage,
     cornieMessage: FINAL_REPLY,
     messageId: 'reject-ids-message',
     chatFn
@@ -231,11 +231,77 @@ async function testDestructiveProposalValidation() {
   }
 }
 
+async function captureWith(harness, userMessage) {
+  let prompt = ''
+  const result = await distill(
+    harness,
+    async ({ messages }) => {
+      prompt = String(messages[0]?.content ?? '')
+      return { content: emptyEnvelope() }
+    },
+    userMessage
+  )
+  return { prompt, result }
+}
+
+async function createAlphaPages(memoryWiki, count, overrides = {}, prefix = 'Alpha') {
+  const pages = []
+  for (let i = 1; i <= count; i += 1) {
+    pages.push(await memoryWiki.create({ pageType: 'event', title: `${prefix}${i}`, summary: `s${i}`, ...overrides[i] }))
+  }
+  return pages
+}
+
+async function testRecallPicksRelevantPages() {
+  const harness = await createServiceHarness('phase3-distillation-recall')
+  try {
+    const memoryWiki = await createMemoryWikiService({ baseDir: harness.baseDir, store: harness.store })
+    await createAlphaPages(memoryWiki, 7, {}, '阿页')
+    const coffee = await memoryWiki.create({ pageType: 'event', title: '咖啡偏好', summary: '喜欢拿铁' })
+    const { prompt } = await captureWith(harness, '最近又开始喝咖啡了')
+    assert(prompt.includes(`(id: ${coffee.pageId})`), 'expected the relevant page to be recalled', prompt)
+    assert(prompt.includes('咖啡偏好 (id: ' + coffee.pageId + ')：喜欢拿铁'), 'expected hydrated summary', prompt)
+    const listed = prompt.split(String.fromCharCode(10)).filter((line) => line.startsWith('- [event]')).length
+    assert(listed <= 6, 'expected at most 6 listed pages', listed)
+  } finally {
+    await harness.close()
+  }
+}
+
+async function testRecallFallsBackToImportance() {
+  const harness = await createServiceHarness('phase3-distillation-recall-fallback')
+  try {
+    const memoryWiki = await createMemoryWikiService({ baseDir: harness.baseDir, store: harness.store })
+    const pages = await createAlphaPages(memoryWiki, 8, { 8: { importance: 'critical' } })
+    const { prompt } = await captureWith(harness, 'zzzz')
+    assert(prompt.includes(`(id: ${pages[7].pageId})`), 'expected the most important page when nothing matches', prompt)
+    assert(prompt.split(String.fromCharCode(10)).filter((line) => line.startsWith('- [event]')).length === 6, 'expected 6 listed pages')
+  } finally {
+    await harness.close()
+  }
+}
+
+async function testRecallSurvivesBrokenPage() {
+  const harness = await createServiceHarness('phase3-distillation-recall-broken')
+  try {
+    const memoryWiki = await createMemoryWikiService({ baseDir: harness.baseDir, store: harness.store })
+    const pages = await createAlphaPages(memoryWiki, 5)
+    fs.rmSync(pages[2].filePath, { force: true })
+    const { result } = await captureWith(harness, 'Alpha3 怎么样')
+    assert(result.decisionSource === 'llm', 'expected distillation to survive a broken page', result)
+  } finally {
+    await harness.close()
+  }
+}
+
 await testFullTurnIsUniqueAndWithinBudget()
+await testRecallPicksRelevantPages()
+await testRecallFallsBackToImportance()
+await testRecallSurvivesBrokenPage()
 await testDestructiveProposalValidation()
 await testUpdateOutsideInputIsRejected()
 await testPromptExposesPageAndObservationIds()
 await testUpdateByListedIdTakesEffect()
 await testEmptyFinalReplyDoesNotCreateConversationItem()
 await testModelFailureKeepsZeroWritePolicy()
-console.log('tests/services/phase3-distillation-input.test.mjs: passed 7/7')
+console.log('tests/services/phase3-distillation-input.test.mjs: passed 10/10')

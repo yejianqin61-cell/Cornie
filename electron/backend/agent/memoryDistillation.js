@@ -251,6 +251,34 @@ async function requestDistillationEnvelope(messages, chatFn) {
 
 // ---------- 输入构建 ----------
 
+const IMPORTANCE_RANK = { critical: 4, high: 3, medium: 2, low: 1 }
+
+function toBigrams(text) {
+  const compact = normalizeString(text).toLowerCase().replace(/s+/g, '')
+  const grams = new Set()
+  for (let i = 0; i < compact.length - 1; i += 1) grams.add(compact.slice(i, i + 2))
+  return grams
+}
+
+// 042d：轻索引上的相关性打分——用户消息与页面标题的相邻两字组交集个数；同分按重要性、更新时间。
+function rankPagesForMessage(pages, userMessage) {
+  const messageGrams = toBigrams(userMessage)
+  const scored = pages.map((page) => {
+    let hits = 0
+    for (const gram of toBigrams(page.title)) if (messageGrams.has(gram)) hits += 1
+    return { page, hits }
+  })
+  return scored
+    .sort(
+      (a, b) =>
+        b.hits - a.hits ||
+        (IMPORTANCE_RANK[normalizeString(b.page.importance).toLowerCase()] ?? 0) -
+          (IMPORTANCE_RANK[normalizeString(a.page.importance).toLowerCase()] ?? 0) ||
+        String(b.page.updatedAt ?? '').localeCompare(String(a.page.updatedAt ?? ''))
+    )
+    .map((item) => item.page)
+}
+
 async function buildDistillationInput({ store, baseDir, date, history = [], userMessage, cornieMessage, messageId }) {
   const observation = createObservationService(store)
 
@@ -290,11 +318,12 @@ async function buildDistillationInput({ store, baseDir, date, history = [], user
   try {
     const memoryWiki = await createMemoryWikiService({ baseDir, store })
     // 466：提炼轮输入用轻索引（hydrate:false，不逐页读文件），仅主身份页按需 hydrate 一次。
-    const summaries = await memoryWiki.listSummaries({ status: 'active' }, { hydrate: false })
+    const summaries = await memoryWiki.list({ status: 'active' })
     const primary = summaries.find((item) => item?.pageType === 'identity_profile')
-    const rest = summaries
-      .filter((item) => item?.pageId !== primary?.pageId)
-      .slice(0, DISTILLATION_MEMORY_PAGE_LIMIT)
+    const rest = rankPagesForMessage(
+      summaries.filter((item) => item?.pageId !== primary?.pageId),
+      userMessage
+    ).slice(0, DISTILLATION_MEMORY_PAGE_LIMIT)
 
     if (primary) {
       const fullProfile = primary.pageId ? await memoryWiki.get(primary.pageId) : null
@@ -303,10 +332,14 @@ async function buildDistillationInput({ store, baseDir, date, history = [], user
       allowedPageIds.push(primary.pageId)
       memorySummaryLines.push(`- [identity] ${title} (id: ${primary.pageId})：${summary}`)
     }
-    for (const summary of rest) {
-      allowedPageIds.push(summary.pageId)
+    for (const item of rest) {
+      let full = null
+      try {
+        full = await memoryWiki.get(item.pageId)
+      } catch {}
+      allowedPageIds.push(item.pageId)
       memorySummaryLines.push(
-        `- [${summary.pageType}] ${summary.title} (id: ${summary.pageId})：${summary.summary || '暂无摘要'}`
+        `- [${item.pageType}] ${item.title} (id: ${item.pageId})：${full?.summary || '暂无摘要'}`
       )
     }
   } catch (error) {
