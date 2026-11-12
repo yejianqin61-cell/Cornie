@@ -361,6 +361,48 @@ async function testDistillationFailureDoesNotAffectReply() {
   }
 }
 
+async function countDistillationEvents(harness) {
+  const events = await (await createMemoryWikiAuditStore(harness.baseDir)).list({ limit: 50 })
+  return events.filter((item) => item.eventType === 'memory_distillation').length
+}
+
+async function testFallbackReplyIsNotDistilled() {
+  const harness = await createOrchestratorHarness('orchestrator-fallback-no-distillation')
+  try {
+    const orchestrator = createIsolatedOrchestrator(harness)
+    const result = await withMockedFetch(
+      async () => {
+        throw new TypeError('fetch failed')
+      },
+      () => orchestrator.runTurn({ date: '2026-06-27', message: '你好' })
+    )
+    assert(result.cornieMessage.content.includes('没有把话说明白'), 'expected the fallback reply', result)
+    await whenMemoryDistillationIdle()
+    assert((await countDistillationEvents(harness)) === 0, 'expected no distillation for a fallback reply')
+  } finally {
+    await harness.close()
+  }
+}
+
+async function testNormalReplyIsDistilledOnce() {
+  const harness = await createOrchestratorHarness('orchestrator-normal-distillation')
+  try {
+    const orchestrator = createIsolatedOrchestrator(harness)
+    await withMockedFetch(
+      buildMockFetch(async (payload) =>
+        isDistillationRequest(payload)
+          ? JSON.stringify({ observations: [], identity_updates: [], memory_wiki_requests: [], reasoning: '' })
+          : REPLY_ENVELOPE
+      ),
+      () => orchestrator.runTurn({ date: '2026-06-27', message: '你好' })
+    )
+    await whenMemoryDistillationIdle()
+    assert((await countDistillationEvents(harness)) === 1, 'expected exactly one distillation event')
+  } finally {
+    await harness.close()
+  }
+}
+
 const tests = [
   ['direct reply path', testDirectReplyPath],
   ['ask_back path', testAskBackPath],
@@ -370,7 +412,9 @@ const tests = [
   ['dirty json parse path', testDirtyJsonRepairPath],
   ['invalid json repair retry path', testInvalidJsonRepairRetryPath],
   ['reply does not wait for distillation', testReplyDoesNotWaitForDistillation],
-  ['distillation failure does not affect reply', testDistillationFailureDoesNotAffectReply]
+  ['distillation failure does not affect reply', testDistillationFailureDoesNotAffectReply],
+  ['fallback reply is not distilled', testFallbackReplyIsNotDistilled],
+  ['normal reply is distilled once', testNormalReplyIsDistilledOnce]
 ]
 
 let passed = 0

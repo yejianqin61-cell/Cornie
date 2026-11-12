@@ -209,6 +209,7 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd(),
       captureInitialPromptTelemetry(telemetry, baseMessages)
 
       let finalReply = buildProtocolFallbackReply()
+      let modelFailed = false
       let toolExecution = { used: false, results: [] }
       let policyDecision = { decision: 'allow' }
       let pendingConfirmation = null
@@ -403,6 +404,7 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd(),
         }
       } catch (error) {
         console.error('Conversation orchestrator error:', error)
+        modelFailed = true
         // BE-05：失败路径留痕（超时/断网/协议失败分类），不再零记录
         recordModelFailureTelemetry(telemetry, { phase: 'conversation', error })
       }
@@ -434,15 +436,18 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd(),
         content: finalReply
       })
 
-      startMemoryDistillation({
-        store,
-        baseDir,
-        date,
-        userMessage: message,
-        cornieMessage: finalReply,
-        messageId: userMessage.id,
-        history
-      })
+      // 模型失败产生的兜底回复不是铃湾真正说的话，不送去提炼。
+      if (!modelFailed) {
+        startMemoryDistillation({
+          store,
+          baseDir,
+          date,
+          userMessage: message,
+          cornieMessage: finalReply,
+          messageId: userMessage.id,
+          history
+        })
+      }
 
       if (policyDecision.decision === 'confirm' && requestedToolCalls.length > 0) {
         try {
