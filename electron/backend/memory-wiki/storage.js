@@ -6,7 +6,7 @@ import {
   resolveMemoryWikiRoot
 } from './constants.js'
 import { createPageModel } from './pageModel.js'
-import { createSingleWriterQueue } from './writeQueue.js'
+import { getSharedWriterQueue } from './writeQueue.js'
 import { atomicWriteFile } from '../persistence/atomicWrite.js'
 
 const FRONTMATTER_BOUNDARY = '---'
@@ -303,7 +303,7 @@ export async function createMemoryWikiStorage(baseDir) {
   await ensureJsonFile(pageIndexPath, {})
 
   // 462：page-index 写路径单写者串行化，避免并发 read-modify-write 丢更新。
-  const enqueue = createSingleWriterQueue()
+  const enqueue = getSharedWriterQueue(pageIndexPath)
 
   async function readPageIndex() {
     const text = await fs.readFile(pageIndexPath, 'utf8')

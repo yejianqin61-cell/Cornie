@@ -25,5 +25,19 @@ export function settingsRoutes({ settings }) {
     })
   )
 
+  r.get(
+    '/settings/diary-auto',
+    asyncHandler(async (_req, res) => {
+      res.json({ settings: settings.getDiaryAutoSetting() })
+    })
+  )
+
+  r.put(
+    '/settings/diary-auto',
+    asyncHandler(async (req, res) => {
+      res.json({ settings: settings.setDiaryAutoSetting(req.body?.enabled) })
+    })
+  )
+
   return r
 }

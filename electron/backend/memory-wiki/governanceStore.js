@@ -2,18 +2,20 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { resolveMemoryWikiRoot } from './constants.js'
-import { createSingleWriterQueue } from './writeQueue.js'
+import { getSharedWriterQueue } from './writeQueue.js'
 import { atomicWriteFile } from '../persistence/atomicWrite.js'
 
 const GOVERNANCE_SEGMENTS = ['governance']
 const GOVERNANCE_FILENAME = 'review-queue.json'
 
-const REQUEST_STATUSES = ['pending', 'approved', 'rejected', 'deferred']
+const REQUEST_STATUSES = ['pending', 'approved', 'rejected', 'deferred', 'applied']
 
 // 459：治理状态机显式转移图。其余转移一律拒绝并报错。
+// applied 是终态：批准后的请求被真正执行（或确认无需执行）后进入，防止重复应用。
 const REQUEST_STATUS_TRANSITIONS = Object.freeze({
   pending: ['approved', 'rejected', 'deferred'],
-  deferred: ['pending', 'rejected']
+  deferred: ['pending', 'rejected'],
+  approved: ['applied']
 })
 
 function normalizeString(value) {
@@ -84,7 +86,7 @@ export async function createMemoryWikiGovernanceStore(baseDir) {
   await ensureJsonFile(filePath, [])
 
   // 462：review-queue 写路径单写者串行化。
-  const enqueue = createSingleWriterQueue()
+  const enqueue = getSharedWriterQueue(filePath)
 
   async function readAll() {
     const text = await fs.readFile(filePath, 'utf8')

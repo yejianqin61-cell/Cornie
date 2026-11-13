@@ -63,9 +63,34 @@ async function testUserTextPassedToPrompt() {
   })
 }
 
+async function testStrictModeDoesNotWriteFiller() {
+  await withTmpCwd(async () => {
+    const harness = await createServiceHarness('diary-strict')
+    try {
+      const svc = diaryService(harness.store)
+      const failing = async () => {
+        throw new Error('model down')
+      }
+      let threw = false
+      try {
+        await svc.generateCornie({ date: '2099-01-02' }, { chatFn: failing, strict: true })
+      } catch {
+        threw = true
+      }
+      assert(threw, 'strict generation should rethrow model failures')
+      assert(svc.getEntry('2099-01-02').cornieText === '', 'strict failure must not write filler text')
+      const loose = await svc.generateCornie({ date: '2099-01-03' }, { chatFn: failing })
+      assert(loose.cornieText.length > 0, 'manual generation keeps the friendly fallback')
+    } finally {
+      await harness.close()
+    }
+  })
+}
+
 const tests = [
   ['diary empty entry guard', testEmptyEntryDoesNotThrow],
-  ['diary userText passed to prompt', testUserTextPassedToPrompt]
+  ['diary userText passed to prompt', testUserTextPassedToPrompt],
+  ['diary strict mode writes no filler', testStrictModeDoesNotWriteFiller]
 ]
 
 let passed = 0

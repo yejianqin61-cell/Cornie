@@ -2,6 +2,8 @@
 import { Settings } from '@lucide/vue'
 import PageHeader from '../common/PageHeader.vue'
 import ModelSettings from './ModelSettings.vue'
+import DiarySettings from './DiarySettings.vue'
+import DataSettings from './DataSettings.vue'
 import AboutSection from './AboutSection.vue'
 </script>
 
@@ -10,6 +12,8 @@ import AboutSection from './AboutSection.vue'
     <PageHeader title="设置" :icon="Settings" />
     <div class="settings-content">
       <ModelSettings />
+      <DiarySettings />
+      <DataSettings />
       <AboutSection />
     </div>
   </div>

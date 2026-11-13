@@ -3,6 +3,7 @@ import { createObservationService } from './service.js'
 import { asyncHandler } from '../http/middleware.js'
 import { badRequest } from '../http/errors.js'
 import { requireISODate } from '../validators.js'
+import { createMemoryWikiService } from '../memory-wiki/index.js'
 
 // BE-08：observation 路由统一 asyncHandler 风格，并补齐日期/limit 参数校验（原手写 try/catch+next）。
 
@@ -20,7 +21,7 @@ function parseOptionalLimit(value, fallback) {
   return parsed
 }
 
-export function observationRoutes({ store }) {
+export function observationRoutes({ store, baseDir }) {
   const router = Router()
   const observation = createObservationService(store)
 
@@ -97,10 +98,15 @@ export function observationRoutes({ store }) {
 
   router.get(
     '/observations/:id',
-    asyncHandler((req, res) => {
+    asyncHandler(async (req, res) => {
       const result = observation.get(req.params.id)
       if (!result) return res.status(404).json({ error: '找不到这条观察记录' })
-      res.json({ observation: result })
+      let memoryLinks = []
+      if (baseDir) {
+        const memoryWiki = await createMemoryWikiService({ baseDir, store })
+        memoryLinks = await memoryWiki.findPagesReferencingObservation(result.id)
+      }
+      res.json({ observation: { ...result, memoryLinks } })
     })
   )
 

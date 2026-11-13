@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { getMessagesByDate, saveMessage } from '../../db.js'
+import { getMessageByRequestId, getMessagesByDate, saveMessage } from '../../db.js'
 import { categoryDomainRegistry } from '../category/domainRegistry.js'
 import { buildConversationContext } from './contextBuilder.js'
 import { buildConversationPrompt, buildWriteIntentRecoveryPrompt } from './promptBuilder.js'
@@ -31,6 +31,26 @@ import { logCategoryAudit } from '../category/audit.js'
 import { PROMPT_LOADING_POLICY } from './promptLoadingPolicy.js'
 
 const MAX_HISTORY_MESSAGES = PROMPT_LOADING_POLICY.liveConversationHistoryLimit
+
+// 记忆提炼在回复落库之后于后台执行；这里记录进行中的提炼，供测试与关闭流程等待。
+const pendingDistillations = new Set()
+
+export async function whenMemoryDistillationIdle() {
+  while (pendingDistillations.size > 0) {
+    await Promise.allSettled([...pendingDistillations])
+  }
+}
+
+function startMemoryDistillation(params) {
+  const task = runMemoryDistillation(params)
+    .catch((error) => {
+      console.error('Memory distillation error:', error)
+    })
+    .finally(() => {
+      pendingDistillations.delete(task)
+    })
+  pendingDistillations.add(task)
+}
 const MAX_TOOL_ROUNDS = 2
 
 // 452：记忆钻取轮次预算（memory_wiki.* / memory_index.* 只读钻取，可多于普通工具轮）。
@@ -147,18 +167,40 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd(),
   const confirm = createConfirmService(store)
 
   return {
-    async runTurn({ date, message, streamFinalReply = false, onFinalDelta = null, signal = null }) {
+    async runTurn({ date, message, requestId, streamFinalReply = false, onFinalDelta = null, signal = null }) {
       const telemetry = createTurnTelemetry({
         source: 'conversation',
         date,
         message
       })
-      const userMessage = saveMessage(store, {
-        id: randomUUID(),
-        date,
-        role: 'user',
-        content: message
-      })
+      // 同一 requestId 的重试：用户消息只存一条；已有回复则直接回放，无回复则从该消息继续本轮。
+      const existingUserMessage = getMessageByRequestId(store, requestId)
+      if (existingUserMessage) {
+        const replayed = getMessagesByDate(store, existingUserMessage.date).find(
+          (item) => item.role === 'cornie' && item.createdAt >= existingUserMessage.createdAt
+        )
+        if (replayed) {
+          return {
+            userMessage: existingUserMessage,
+            cornieMessage: replayed,
+            toolExecution: { used: false, results: [] },
+            policyDecision: { decision: 'allow' },
+            pendingConfirmation: null,
+            interimReplies: [],
+            telemetry: null,
+            replayed: true
+          }
+        }
+      }
+      const userMessage =
+        existingUserMessage ??
+        saveMessage(store, {
+          id: randomUUID(),
+          date,
+          role: 'user',
+          content: message,
+          requestId
+        })
 
       const history = getMessagesByDate(store, date)
       const context = await buildConversationContext(store, { date, baseDir })
@@ -167,6 +209,7 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd(),
       captureInitialPromptTelemetry(telemetry, baseMessages)
 
       let finalReply = buildProtocolFallbackReply()
+      let modelFailed = false
       let toolExecution = { used: false, results: [] }
       let policyDecision = { decision: 'allow' }
       let pendingConfirmation = null
@@ -361,8 +404,16 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd(),
         }
       } catch (error) {
         console.error('Conversation orchestrator error:', error)
+        modelFailed = true
         // BE-05：失败路径留痕（超时/断网/协议失败分类），不再零记录
         recordModelFailureTelemetry(telemetry, { phase: 'conversation', error })
+      }
+
+      // 客户端中途断开：不落兜底回复、不做记忆提炼，让同一 requestId 的重试重新生成回复。
+      if (signal?.aborted) {
+        const abortError = new Error('conversation aborted by client')
+        abortError.name = 'AbortError'
+        throw abortError
       }
 
       if (looksLikeWriteIntent(message) && !hasSuccessfulWriteToolResult(toolExecution.results)) {
@@ -377,11 +428,17 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd(),
 
       // 记忆提炼轮次（443）：是否计入记忆、记什么内容由 LLM 决定。
       // LLM 不可用时本轮零写入记忆（V1.1 决策，正则已弃用）。
-      // R-01：记忆提炼先于 cornie 消息落库——提炼只依赖 finalReply 文本与 userMessage.id（内存值），
-      // 不依赖本轮 cornie 的 DB 行；先提炼后落库使 DB 可见与 SSE done 几乎同刻，消灭前端轮询窗口。
-      let memoryDistillation = null
-      try {
-        memoryDistillation = await runMemoryDistillation({
+      // 回复先落库再提炼：SSE done 时回复已可见，提炼在后台执行、不阻塞回复完成。
+      const cornieMessage = saveMessage(store, {
+        id: randomUUID(),
+        date,
+        role: 'cornie',
+        content: finalReply
+      })
+
+      // 模型失败产生的兜底回复不是铃湾真正说的话，不送去提炼。
+      if (!modelFailed) {
+        startMemoryDistillation({
           store,
           baseDir,
           date,
@@ -390,16 +447,7 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd(),
           messageId: userMessage.id,
           history
         })
-      } catch (error) {
-        console.error('Memory distillation error:', error)
       }
-
-      const cornieMessage = saveMessage(store, {
-        id: randomUUID(),
-        date,
-        role: 'cornie',
-        content: finalReply
-      })
 
       if (policyDecision.decision === 'confirm' && requestedToolCalls.length > 0) {
         try {
@@ -432,7 +480,6 @@ export function createConversationOrchestrator(store, { baseDir = process.cwd(),
         policyDecision,
         pendingConfirmation,
         interimReplies,
-        memoryDistillation,
         telemetry: finalTelemetry
       }
     }

@@ -37,8 +37,9 @@ async function createAndApply(memoryWiki, observationService, harness, { userMes
     payload: { action: `upgrade_${expectedType.replace('_upgrade_candidate', '')}_from_observation`, candidate }
   })
 
+  await memoryWiki.updateGovernanceRequestStatus(request.requestId, 'approved')
   const applyResult = await memoryWiki.applyGovernanceUpgradeRequest(request.requestId)
-  assert(applyResult.request.status === 'approved', `${expectedType} 应用后状态应变为 approved`)
+  assert(applyResult.request.status === 'applied', `${expectedType} 应用后状态应变为 applied`)
   assert(applyResult.page.ownerConfirmed === true, `${expectedType} 应用后页面应 owner confirmed`)
   assert(
     Array.isArray(applyResult.page.sourceRefs) &&

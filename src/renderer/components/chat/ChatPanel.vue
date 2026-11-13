@@ -5,8 +5,9 @@ import AppButton from '../common/AppButton.vue'
 import ChatDateNav from './ChatDateNav.vue'
 import ChatHistoryPage from './ChatHistoryPage.vue'
 import { sendMessageStreamed } from '../../api/conversation.js'
-import { listChatDays } from '../../api/chatlog.js'
+import { listChatDays, searchChatSnippets } from '../../api/chatlog.js'
 import { singaporeDate } from '../../../../shared/local-date.js'
+import { domainOfTool, notifyDataChanged } from '../../data-sync.js'
 
 const inputText = ref('')
 const sending = ref(false)
@@ -14,6 +15,36 @@ const sendError = ref('')
 const notice = ref('')
 const transientMessages = ref([])
 const activeRequest = ref(null)
+// 本次应用会话内按回复消息 ID 保留工具结果与联想话语；不跨应用重启保留。
+const messageExtras = ref({})
+
+const searchHits = ref(null)
+const searchError = ref('')
+const searching = ref(false)
+
+async function handleSearch(keyword) {
+  if (!keyword || searching.value) return
+  searching.value = true
+  searchError.value = ''
+  try {
+    const res = await searchChatSnippets({ keyword, limit: 20 })
+    searchHits.value = res.items || []
+  } catch (e) {
+    searchHits.value = null
+    searchError.value = e.message || '搜索失败'
+  }
+  searching.value = false
+}
+
+function openSearchHit(hit) {
+  selectedDate.value = hit.date
+  searchHits.value = null
+}
+
+function closeSearch() {
+  searchHits.value = null
+  searchError.value = ''
+}
 const inputEl = ref(null)
 
 const MAX_MESSAGE_LENGTH = 5000
@@ -132,7 +163,23 @@ async function handleSend(requestId = createRequestId()) {
         if (!assistant) return
         if (result?.pendingConfirmation) assistant.confirm = result.pendingConfirmation
         const results = result?.toolExecution?.results
-        if (Array.isArray(results) && results.length > 0) assistant.toolResults = results
+        if (Array.isArray(results) && results.length > 0) {
+          assistant.toolResults = results
+          const domains = new Set(results.map((r) => domainOfTool(r?.tool_name)))
+          for (const domain of domains) notifyDataChanged({ domain })
+        }
+        const interim = Array.isArray(result?.interimReplies) ? result.interimReplies.filter(Boolean) : []
+        if (interim.length > 0) assistant.interimReplies = interim
+        const replyId = result?.cornieMessage?.id
+        if (replyId && (assistant.toolResults || assistant.interimReplies)) {
+          messageExtras.value = {
+            ...messageExtras.value,
+            [replyId]: {
+              ...(assistant.toolResults ? { toolResults: assistant.toolResults } : {}),
+              ...(assistant.interimReplies ? { interimReplies: assistant.interimReplies } : {}),
+            },
+          }
+        }
       },
       (error) => {
         streamError = error
@@ -227,11 +274,31 @@ function handleConfirmResolved() {
       @next="goNext"
       @month="selectMonth"
       @today="goToday"
+      @search="handleSearch"
     />
+    <div v-if="searchHits || searchError" class="chat-search">
+      <div class="chat-search-head">
+        <span>搜索结果</span>
+        <button class="chat-search-close" type="button" aria-label="关闭搜索结果" @click="closeSearch">&times;</button>
+      </div>
+      <div v-if="searchError" class="chat-search-empty">{{ searchError }}</div>
+      <div v-else-if="searchHits.length === 0" class="chat-search-empty">没有找到相关聊天记录</div>
+      <button
+        v-for="hit in searchHits || []"
+        :key="hit.date + hit.messageId"
+        class="chat-search-hit"
+        type="button"
+        @click="openSearchHit(hit)"
+      >
+        <span class="chat-search-hit-date">{{ hit.date }}</span>
+        <span class="chat-search-hit-preview">{{ hit.matchedPreview || hit.content }}</span>
+      </button>
+    </div>
     <ChatHistoryPage
       ref="historyRef"
       :date="selectedDate"
       :transient-messages="transientMessages"
+      :extras="messageExtras"
       :is-today="selectedDate === todayStr()"
       @confirm-resolved="handleConfirmResolved"
       @retry="handleRetry"
@@ -283,6 +350,54 @@ function handleConfirmResolved() {
 </template>
 
 <style scoped>
+.chat-search {
+  border-bottom: var(--nb-border-width) solid var(--nb-border);
+  background: var(--nb-background);
+  max-height: 14rem;
+  overflow-y: auto;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.chat-search-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.chat-search-close {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.chat-search-empty {
+  font-size: 0.8rem;
+  color: var(--nb-text-secondary);
+}
+
+.chat-search-hit {
+  display: flex;
+  gap: 0.5rem;
+  text-align: left;
+  border: 2px solid var(--nb-border);
+  border-radius: var(--nb-radius);
+  background: var(--nb-background);
+  padding: 0.3rem 0.5rem;
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.8rem;
+}
+
+.chat-search-hit-date {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .chat-panel {
   display: flex;
   flex-direction: column;

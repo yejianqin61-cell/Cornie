@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { asyncHandler } from '../http/middleware.js'
+import { badRequest } from '../http/errors.js'
 import { requireString } from '../validators.js'
 
 export function memoryWikiRoutes({ memoryWiki, topicIndex }) {
@@ -20,7 +21,8 @@ export function memoryWikiRoutes({ memoryWiki, topicIndex }) {
       if (offset !== undefined) filters.offset = offset
 
       const items = await memoryWiki.listSummaries(filters, options)
-      res.json({ items, total: items.length, limit: filters.limit ?? null, offset: filters.offset ?? null })
+      const total = await memoryWiki.count({ pageType, status })
+      res.json({ items, total, limit: filters.limit ?? null, offset: filters.offset ?? null })
     })
   )
 
@@ -86,6 +88,16 @@ export function memoryWikiRoutes({ memoryWiki, topicIndex }) {
     asyncHandler(async (req, res) => {
       const normalizedKey = requireString(req.params.normalizedKey, 'normalizedKey', { maxLen: 256 })
       res.json({ trace: await memoryWiki.getTopicSourceTrace(normalizedKey) })
+    })
+  )
+
+  r.get(
+    '/memory-wiki/audit',
+    asyncHandler(async (req, res) => {
+      const requestedLimit = Number.parseInt(String(req.query.limit ?? ''), 10)
+      const limit = Number.isFinite(requestedLimit) && requestedLimit > 0 ? Math.min(requestedLimit, 200) : 50
+      const pageId = req.query.pageId ? requireString(req.query.pageId, 'pageId', { maxLen: 256 }) : undefined
+      res.json({ items: await memoryWiki.listAuditEvents({ limit, pageId }) })
     })
   )
 
@@ -185,6 +197,15 @@ export function memoryWikiRoutes({ memoryWiki, topicIndex }) {
       const pageId = requireString(req.params.pageId, 'pageId', { maxLen: 256 })
       const importance = requireString(req.body?.importance ?? '', 'importance', { maxLen: 64 })
       res.json({ page: await memoryWiki.setImportance(pageId, importance) })
+    })
+  )
+
+  r.put(
+    '/memory-wiki/pages/:pageId/owner-confirmed',
+    asyncHandler(async (req, res) => {
+      const pageId = requireString(req.params.pageId, 'pageId', { maxLen: 256 })
+      if (typeof req.body?.ownerConfirmed !== 'boolean') throw badRequest('invalid ownerConfirmed')
+      res.json({ page: await memoryWiki.setOwnerConfirmed(pageId, req.body.ownerConfirmed) })
     })
   )
 

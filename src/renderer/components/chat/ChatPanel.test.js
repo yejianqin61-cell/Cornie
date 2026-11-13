@@ -4,11 +4,15 @@ import { flushPromises, mount } from '@vue/test-utils'
 
 const api = vi.hoisted(() => ({
   listChatDays: vi.fn(),
+  searchChatSnippets: vi.fn(),
   sendMessage: vi.fn(),
   sendMessageStreamed: vi.fn(),
 }))
 
-vi.mock('../../api/chatlog.js', () => ({ listChatDays: api.listChatDays }))
+vi.mock('../../api/chatlog.js', () => ({
+  listChatDays: api.listChatDays,
+  searchChatSnippets: api.searchChatSnippets,
+}))
 vi.mock('../../api/conversation.js', () => ({
   sendMessage: api.sendMessage,
   sendMessageStreamed: api.sendMessageStreamed,
@@ -20,7 +24,7 @@ import ChatPanel from './ChatPanel.vue'
 const refresh = vi.fn()
 const ChatHistoryPage = defineComponent({
   name: 'ChatHistoryPage',
-  props: { date: String, transientMessages: Array },
+  props: { date: String, transientMessages: Array, extras: Object },
   emits: ['retry', 'confirmResolved'],
   setup(_, { expose }) {
     expose({ refresh })
@@ -124,6 +128,117 @@ describe('ChatPanel streaming send', () => {
     resolveRefresh()
     await flushPromises()
     expect(wrapper.findComponent(ChatHistoryPage).props('transientMessages')).toEqual([])
+  })
+
+  it('broadcasts data changes for tools used in a reply', async () => {
+    const send = vi.fn()
+    window.cornieDesktop = { broadcastDataChanged: send }
+    refresh.mockResolvedValue()
+    api.sendMessageStreamed.mockImplementation(async (_request, _delta, onDone) => {
+      onDone({
+        toolExecution: {
+          results: [
+            { tool_name: 'ledger.create_entry', ok: true, result: { id: 1 } },
+            { tool_name: 'todo.create_entry', ok: true, result: { id: 2 } },
+          ],
+        },
+      })
+    })
+    const wrapper = mountPanel()
+    await flushPromises()
+    await wrapper.find('textarea').setValue('记一笔')
+    await wrapper.find('.chat-panel-send').trigger('click')
+    await flushPromises()
+    delete window.cornieDesktop
+    expect(send).toHaveBeenCalledTimes(2)
+    expect(send).toHaveBeenCalledWith({ domain: 'ledger' })
+    expect(send).toHaveBeenCalledWith({ domain: 'todo' })
+  })
+
+  it('shows associative replies on the transient assistant message', async () => {
+    let finishStream
+    refresh.mockReturnValue(new Promise(() => {}))
+    api.sendMessageStreamed.mockImplementation(
+      (_request, _delta, onDone) =>
+        new Promise((resolve) => {
+          finishStream = () => {
+            onDone({ interimReplies: ['哦对……她是你高中同桌。'], cornieMessage: { id: 'c1' } })
+            resolve()
+          }
+        })
+    )
+    const wrapper = mountPanel()
+    await flushPromises()
+    await wrapper.find('textarea').setValue('还记得她吗')
+    await wrapper.find('.chat-panel-send').trigger('click')
+    await flushPromises()
+
+    finishStream()
+    await flushPromises()
+
+    const transient = wrapper.findComponent(ChatHistoryPage).props('transientMessages')
+    expect(transient[1].interimReplies).toEqual(['哦对……她是你高中同桌。'])
+  })
+
+  it('keeps tool results and associative replies by reply id after the history refresh', async () => {
+    let finishStream
+    refresh.mockResolvedValue(undefined)
+    api.sendMessageStreamed.mockImplementation(
+      (_request, _delta, onDone) =>
+        new Promise((resolve) => {
+          finishStream = () => {
+            onDone({
+              interimReplies: ['联想'],
+              toolExecution: { results: [{ tool_name: 'ledger.create_entry', ok: true, result: { id: 1 } }] },
+              cornieMessage: { id: 'c1' },
+            })
+            resolve()
+          }
+        })
+    )
+    const wrapper = mountPanel()
+    await flushPromises()
+    await wrapper.find('textarea').setValue('记一笔')
+    await wrapper.find('.chat-panel-send').trigger('click')
+    await flushPromises()
+
+    finishStream()
+    await flushPromises()
+
+    const history = wrapper.findComponent(ChatHistoryPage)
+    expect(history.props('transientMessages')).toEqual([])
+    expect(history.props('extras').c1.toolResults).toHaveLength(1)
+    expect(history.props('extras').c1.interimReplies).toEqual(['联想'])
+
+    wrapper.vm.selectedDate = '2026-10-22'
+    await flushPromises()
+    wrapper.vm.selectedDate = '2026-10-23'
+    await flushPromises()
+    expect(history.props('extras').c1.toolResults).toHaveLength(1)
+  })
+
+  it('does not record extras when the result has no reply id', async () => {
+    let finishStream
+    refresh.mockResolvedValue(undefined)
+    api.sendMessageStreamed.mockImplementation(
+      (_request, _delta, onDone) =>
+        new Promise((resolve) => {
+          finishStream = () => {
+            onDone({ toolExecution: { results: [{ tool_name: 'x', ok: true, result: 1 }] } })
+            resolve()
+          }
+        })
+    )
+    const wrapper = mountPanel()
+    await flushPromises()
+    await wrapper.find('textarea').setValue('hi')
+    await wrapper.find('.chat-panel-send').trigger('click')
+    await flushPromises()
+
+    finishStream()
+    await flushPromises()
+
+    expect(Object.keys(wrapper.findComponent(ChatHistoryPage).props('extras'))).toHaveLength(0)
   })
 
   it('cancels the active stream, refreshes history and explains the cancel', async () => {
@@ -343,5 +458,74 @@ describe('ChatPanel default date', () => {
     arrows = wrapper.findAll('.chat-date-nav > button')
     expect(arrows[0].attributes('disabled')).toBeDefined()
     expect(arrows[1].attributes('disabled')).toBeUndefined()
+  })
+})
+
+describe('ChatPanel keyword search', () => {
+  beforeEach(() => {
+    api.listChatDays.mockReset().mockResolvedValue({
+      entries: [{ date: '2026-10-23' }, { date: '2026-10-20' }, { date: '2026-10-18' }],
+      availableMonths: ['2026-10'],
+    })
+    api.searchChatSnippets.mockReset()
+  })
+
+  it('lists matches with their date and preview', async () => {
+    api.searchChatSnippets.mockResolvedValue({
+      items: [
+        { date: '2026-10-20', messageId: 'm1', matchedPreview: '喜欢拿铁咖啡' },
+        { date: '2026-10-18', messageId: 'm2', matchedPreview: '咖啡豆用完了' },
+      ],
+    })
+    const wrapper = mountPanel()
+    await flushPromises()
+
+    await wrapper.vm.handleSearch('咖啡')
+    await flushPromises()
+
+    expect(api.searchChatSnippets).toHaveBeenCalledWith({ keyword: '咖啡', limit: 20 })
+    expect(wrapper.text()).toContain('2026-10-20')
+    expect(wrapper.text()).toContain('喜欢拿铁咖啡')
+    expect(wrapper.text()).toContain('2026-10-18')
+    expect(wrapper.text()).toContain('咖啡豆用完了')
+  })
+
+  it('jumps to the date of the clicked match and closes the list', async () => {
+    api.searchChatSnippets.mockResolvedValue({
+      items: [{ date: '2026-10-18', messageId: 'm2', matchedPreview: '咖啡豆用完了' }],
+    })
+    const wrapper = mountPanel()
+    await flushPromises()
+    await wrapper.vm.handleSearch('咖啡')
+    await flushPromises()
+
+    await wrapper.get('.chat-search-hit').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.vm.selectedDate).toBe('2026-10-18')
+    expect(wrapper.find('.chat-search-hit').exists()).toBe(false)
+  })
+
+  it('says so when nothing matches', async () => {
+    api.searchChatSnippets.mockResolvedValue({ items: [] })
+    const wrapper = mountPanel()
+    await flushPromises()
+
+    await wrapper.vm.handleSearch('不存在')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('没有找到相关聊天记录')
+  })
+
+  it('shows the error and keeps the composer usable', async () => {
+    api.searchChatSnippets.mockRejectedValue(new Error('搜索失败'))
+    const wrapper = mountPanel()
+    await flushPromises()
+
+    await wrapper.vm.handleSearch('咖啡')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('搜索失败')
+    expect(wrapper.find('textarea').attributes('disabled')).toBeUndefined()
   })
 })

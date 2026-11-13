@@ -65,7 +65,7 @@ export async function createServer({ store, baseDir = process.cwd(), conversatio
     res.json({ records, date: typeof date === 'string' && date ? date : null })
   })
 
-  const diary = diaryService(store)
+  const diary = diaryService(store, { baseDir })
   app.use('/api', diaryRoutes({ diary }))
 
   const chatlog = createChatlogService(store, {
@@ -85,7 +85,7 @@ export async function createServer({ store, baseDir = process.cwd(), conversatio
   const settings = createSettingsService(store, { secretStore })
   app.use('/api', settingsRoutes({ settings }))
 
-  app.use('/api', observationRoutes({ store }))
+  app.use('/api', observationRoutes({ store, baseDir }))
 
   let memoryWikiReady = null
   async function getMemoryWikiDeps() {

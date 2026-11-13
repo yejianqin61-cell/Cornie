@@ -31,6 +31,33 @@ describe('ChatHistoryPage transient visibility', () => {
     expect(wrapper.find('.empty-state').exists()).toBe(false)
   })
 
+  it('attaches extras to the matching reply and leaves other messages alone', async () => {
+    api.getChatDay.mockResolvedValue({
+      messages: [
+        { id: 'u1', role: 'user', content: '记一笔' },
+        { id: 'c1', role: 'assistant', content: '记好了' },
+        { id: 'c2', role: 'assistant', content: '别的回复' },
+      ],
+    })
+    const wrapper = mount(ChatHistoryPage, {
+      props: {
+        date: '2026-10-23',
+        transientMessages: [],
+        extras: {
+          c1: {
+            toolResults: [{ tool_name: 'ledger.create_entry', ok: true, result: { id: 1 } }],
+            interimReplies: ['联想一句'],
+          },
+        },
+      },
+    })
+    await flushPromises()
+
+    expect(wrapper.findAll('.tool-results')).toHaveLength(1)
+    expect(wrapper.text()).toContain('联想一句')
+    expect(wrapper.findAll('.msg-row-interim')).toHaveLength(1)
+  })
+
   it('shows the empty state only when both history and transient are empty', async () => {
     const wrapper = mount(ChatHistoryPage, { props: { date: '2026-10-23', transientMessages: [] } })
     await flushPromises()

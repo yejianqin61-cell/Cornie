@@ -2,7 +2,7 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import { randomUUID } from 'node:crypto'
 import { resolveMemoryWikiRoot } from './constants.js'
-import { createSingleWriterQueue } from './writeQueue.js'
+import { getSharedWriterQueue } from './writeQueue.js'
 
 const VERSIONS_SEGMENTS = ['versions']
 const VERSION_INDEX_FILENAME = 'version-index.json'
@@ -61,7 +61,7 @@ export async function createMemoryWikiVersionStore(baseDir) {
   await ensureJsonFile(versionIndexPath, {})
 
   // 462：version-index 写路径单写者串行化。
-  const enqueue = createSingleWriterQueue()
+  const enqueue = getSharedWriterQueue(versionIndexPath)
 
   async function readVersionIndex() {
     const text = await fs.readFile(versionIndexPath, 'utf8')

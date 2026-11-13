@@ -251,6 +251,34 @@ async function requestDistillationEnvelope(messages, chatFn) {
 
 // ---------- 输入构建 ----------
 
+const IMPORTANCE_RANK = { critical: 4, high: 3, medium: 2, low: 1 }
+
+function toBigrams(text) {
+  const compact = normalizeString(text).toLowerCase().replace(/s+/g, '')
+  const grams = new Set()
+  for (let i = 0; i < compact.length - 1; i += 1) grams.add(compact.slice(i, i + 2))
+  return grams
+}
+
+// 042d：轻索引上的相关性打分——用户消息与页面标题的相邻两字组交集个数；同分按重要性、更新时间。
+function rankPagesForMessage(pages, userMessage) {
+  const messageGrams = toBigrams(userMessage)
+  const scored = pages.map((page) => {
+    let hits = 0
+    for (const gram of toBigrams(page.title)) if (messageGrams.has(gram)) hits += 1
+    return { page, hits }
+  })
+  return scored
+    .sort(
+      (a, b) =>
+        b.hits - a.hits ||
+        (IMPORTANCE_RANK[normalizeString(b.page.importance).toLowerCase()] ?? 0) -
+          (IMPORTANCE_RANK[normalizeString(a.page.importance).toLowerCase()] ?? 0) ||
+        String(b.page.updatedAt ?? '').localeCompare(String(a.page.updatedAt ?? ''))
+    )
+    .map((item) => item.page)
+}
+
 async function buildDistillationInput({ store, baseDir, date, history = [], userMessage, cornieMessage, messageId }) {
   const observation = createObservationService(store)
 
@@ -285,35 +313,47 @@ async function buildDistillationInput({ store, baseDir, date, history = [], user
     console.error('[memory distillation] today observations load failed:', error)
   }
 
+  const allowedPageIds = []
   let memorySummaryLines = []
   try {
     const memoryWiki = await createMemoryWikiService({ baseDir, store })
     // 466：提炼轮输入用轻索引（hydrate:false，不逐页读文件），仅主身份页按需 hydrate 一次。
-    const summaries = await memoryWiki.listSummaries({ status: 'active' }, { hydrate: false })
+    const summaries = await memoryWiki.list({ status: 'active' })
     const primary = summaries.find((item) => item?.pageType === 'identity_profile')
-    const rest = summaries
-      .filter((item) => item?.pageId !== primary?.pageId)
-      .slice(0, DISTILLATION_MEMORY_PAGE_LIMIT)
+    const rest = rankPagesForMessage(
+      summaries.filter((item) => item?.pageId !== primary?.pageId),
+      userMessage
+    ).slice(0, DISTILLATION_MEMORY_PAGE_LIMIT)
 
     if (primary) {
       const fullProfile = primary.pageId ? await memoryWiki.get(primary.pageId) : null
       const title = fullProfile?.title || primary.title
       const summary = fullProfile?.summary || primary.summary || '暂无摘要'
-      memorySummaryLines.push(`- [identity] ${title}: ${summary}`)
+      allowedPageIds.push(primary.pageId)
+      memorySummaryLines.push(`- [identity] ${title} (id: ${primary.pageId})：${summary}`)
     }
-    for (const summary of rest) {
-      memorySummaryLines.push(`- [${summary.pageType}] ${summary.title}: ${summary.summary || '暂无摘要'}`)
+    for (const item of rest) {
+      let full = null
+      try {
+        full = await memoryWiki.get(item.pageId)
+      } catch {}
+      allowedPageIds.push(item.pageId)
+      memorySummaryLines.push(
+        `- [${item.pageType}] ${item.title} (id: ${item.pageId})：${full?.summary || '暂无摘要'}`
+      )
     }
   } catch (error) {
     console.error('[memory distillation] memory summary load failed:', error)
   }
 
-  return { recentMessages, todayObservations, memorySummaryLines }
+  const allowedObservationIds = todayObservations.map((item) => normalizeString(item?.id)).filter(Boolean)
+
+  return { recentMessages, todayObservations, memorySummaryLines, allowedPageIds, allowedObservationIds }
 }
 
 // ---------- 三类提议执行 ----------
 
-async function applyDistilledObservations(observation, proposals, { date, messageId }) {
+async function applyDistilledObservations(observation, proposals, { date, messageId, allowedObservationIds = [] }) {
   const results = []
 
   for (const proposal of proposals) {
@@ -326,6 +366,10 @@ async function applyDistilledObservations(observation, proposals, { date, messag
       const id = proposal.observationId
       if (!id) {
         results.push({ action: 'skipped', reason: 'missing_observation_id' })
+        continue
+      }
+      if (!allowedObservationIds.includes(id)) {
+        results.push({ action: 'skipped', reason: 'observation_id_not_in_input' })
         continue
       }
       const existing = observation.get(id)
@@ -414,11 +458,42 @@ async function applyDistilledIdentityUpdates(store, { baseDir, date, messageId, 
   return results
 }
 
-async function applyDistilledWikiRequests(memoryWiki, requests, { date, messageId }) {
+// 破坏性提议入队前校验：必填 ID → 在本轮输入内 → 页面仍存在 → 回滚版本存在。返回跳过原因或 null。
+async function validateDestructiveProposal(memoryWiki, request, allowedPageIds) {
+  const pageIds =
+    request.action === 'merge_pages'
+      ? [request.targetPageId, request.sourcePageId]
+      : [request.pageId]
+  if (pageIds.some((id) => !id)) return 'missing_required_id'
+  if (request.action === 'merge_pages' && request.targetPageId === request.sourcePageId) return 'missing_required_id'
+  if (request.action === 'rollback_page' && !request.versionId) return 'missing_required_id'
+  if (pageIds.some((id) => !allowedPageIds.includes(id))) return 'page_id_not_in_input'
+
+  for (const id of pageIds) {
+    let page = null
+    try {
+      page = await memoryWiki.get(id)
+    } catch {}
+    if (!page) return 'page_not_found'
+  }
+
+  if (request.action === 'rollback_page') {
+    const versions = await memoryWiki.listVersions(request.pageId)
+    if (!versions.some((item) => item.versionId === request.versionId)) return 'version_not_found'
+  }
+  return null
+}
+
+async function applyDistilledWikiRequests(memoryWiki, requests, { date, messageId, allowedPageIds = [] }) {
   const results = []
 
   for (const request of requests) {
     if (DESTRUCTIVE_WIKI_ACTIONS.has(request.action)) {
+      const invalidReason = await validateDestructiveProposal(memoryWiki, request, allowedPageIds)
+      if (invalidReason) {
+        results.push({ action: 'skipped', wikiAction: request.action, reason: invalidReason })
+        continue
+      }
       try {
         await memoryWiki.createGovernanceRequest({
           requestType: 'memory_wiki_llm_proposal',
@@ -473,12 +548,41 @@ async function applyDistilledWikiRequests(memoryWiki, requests, { date, messageI
         results.push({ action: 'skipped', wikiAction: 'update_page', reason: 'page_id_required' })
         continue
       }
+      if (!allowedPageIds.includes(pageId)) {
+        results.push({ action: 'skipped', wikiAction: 'update_page', reason: 'page_id_not_in_input' })
+        continue
+      }
       let existing = null
       try {
         existing = await memoryWiki.get(pageId)
       } catch {}
       if (!existing) {
         results.push({ action: 'skipped', wikiAction: 'update_page', reason: 'page_not_found' })
+        continue
+      }
+      // 主人已确认的页面不被提炼直接覆盖：改为待审请求，批准并应用后才写入。
+      if (existing.ownerConfirmed === true) {
+        try {
+          await memoryWiki.createGovernanceRequest({
+            requestType: 'memory_wiki_llm_proposal',
+            triggerSource: 'memory_distillation',
+            queueSection: 'memory_wiki_llm_proposals',
+            riskLevel: 'high',
+            pageIds: [pageId],
+            title: request.title || existing.title || 'LLM 提议更新已确认的记忆页',
+            reason: '记忆提炼轮次中 LLM 提议修改主人已确认的长期记忆页，等待人类审核后再执行。',
+            evidence: [request],
+            payload: { action: request.action, request }
+          })
+          results.push({ action: 'deferred_to_governance', wikiAction: 'update_page' })
+        } catch (error) {
+          results.push({
+            action: 'skipped',
+            wikiAction: 'update_page',
+            reason: 'governance_enqueue_failed',
+            error: String(error?.message || error)
+          })
+        }
         continue
       }
       try {
@@ -503,11 +607,15 @@ async function applyDistilledWikiRequests(memoryWiki, requests, { date, messageI
   return results
 }
 
-async function executeDistillationEnvelope({ store, baseDir, date, userMessage, messageId, envelope }) {
+async function executeDistillationEnvelope({ store, baseDir, date, userMessage, messageId, envelope, input }) {
   const observation = createObservationService(store)
   const memoryWiki = await createMemoryWikiService({ baseDir, store })
 
-  const observations = await applyDistilledObservations(observation, envelope.observations, { date, messageId })
+  const observations = await applyDistilledObservations(observation, envelope.observations, {
+    date,
+    messageId,
+    allowedObservationIds: input?.allowedObservationIds
+  })
   const identityUpdates = await applyDistilledIdentityUpdates(store, {
     baseDir,
     date,
@@ -515,7 +623,11 @@ async function executeDistillationEnvelope({ store, baseDir, date, userMessage, 
     userMessage,
     proposals: envelope.identity_updates
   })
-  const wikiRequests = await applyDistilledWikiRequests(memoryWiki, envelope.memory_wiki_requests, { date, messageId })
+  const wikiRequests = await applyDistilledWikiRequests(memoryWiki, envelope.memory_wiki_requests, {
+    date,
+    messageId,
+    allowedPageIds: input?.allowedPageIds
+  })
 
   return { observations, identityUpdates, wikiRequests }
 }
@@ -537,8 +649,9 @@ export async function runMemoryDistillation({
 
   let envelope = null
   let llmError = null
+  let input = null
   try {
-    const input = await buildDistillationInput({ store, baseDir, date, history, userMessage, cornieMessage, messageId })
+    input = await buildDistillationInput({ store, baseDir, date, history, userMessage, cornieMessage, messageId })
     const prompt = buildMemoryDistillationPrompt({
       date,
       recentMessages: input.recentMessages,
@@ -565,7 +678,7 @@ export async function runMemoryDistillation({
     return { decisionSource: 'unavailable', reason: fallbackReason, durationMs: Date.now() - startedAt }
   }
 
-  const results = await executeDistillationEnvelope({ store, baseDir, date, userMessage, messageId, envelope })
+  const results = await executeDistillationEnvelope({ store, baseDir, date, userMessage, messageId, envelope, input })
 
   try {
     await auditStore.append({

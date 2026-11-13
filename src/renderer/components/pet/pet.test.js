@@ -1,5 +1,9 @@
-import { describe, it, expect } from 'vitest'
-import { mount } from '@vue/test-utils'
+import { describe, it, expect, vi, afterEach } from 'vitest'
+import { mount, flushPromises } from '@vue/test-utils'
+import CorneApp from './CorneApp.vue'
+import { listTodos } from '../../api/todo.js'
+
+vi.mock('../../api/todo.js', () => ({ listTodos: vi.fn() }))
 import CornieBubble from './CornieBubble.vue'
 import PetSettings from './PetSettings.vue'
 
@@ -58,5 +62,71 @@ describe('PetSettings', () => {
       props: { scale: 1, alwaysOnTop: true },
     })
     expect(wrapper.find('.pet-settings-toggle-btn.on').exists()).toBe(true)
+  })
+})
+
+describe('CorneApp todo count', () => {
+  afterEach(() => {
+    delete window.cornieDesktop
+    vi.clearAllMocks()
+  })
+
+  function fakeBridge() {
+    const handlers = []
+    window.cornieDesktop = {
+      getAlwaysOnTop: async () => false,
+      onDataChanged: (h) => {
+        handlers.push(h)
+        return () => {}
+      },
+    }
+    return handlers
+  }
+
+  it('shows the open todo count', async () => {
+    fakeBridge()
+    listTodos.mockResolvedValue({ items: [{}, {}, {}] })
+    const wrapper = mount(CorneApp)
+    await flushPromises()
+    expect(wrapper.find('[data-testid="pet-todo-count"]').text()).toBe('3')
+    wrapper.unmount()
+  })
+
+  it('refreshes on todo change and hides at zero', async () => {
+    const handlers = fakeBridge()
+    listTodos.mockResolvedValue({ items: [{}, {}, {}] })
+    const wrapper = mount(CorneApp)
+    await flushPromises()
+    listTodos.mockResolvedValue({ items: [{}, {}, {}, {}] })
+    handlers[0]({ domain: 'todo' })
+    await flushPromises()
+    expect(wrapper.find('[data-testid="pet-todo-count"]').text()).toBe('4')
+    listTodos.mockResolvedValue({ items: [] })
+    handlers[0]({ domain: 'todo' })
+    await flushPromises()
+    expect(wrapper.find('[data-testid="pet-todo-count"]').exists()).toBe(false)
+    wrapper.unmount()
+  })
+})
+
+describe('CorneApp reminder bubble', () => {
+  afterEach(() => {
+    delete window.cornieDesktop
+  })
+
+  it('shows the reminder as a bubble', async () => {
+    let emit
+    window.cornieDesktop = {
+      getAlwaysOnTop: async () => false,
+      onDataChanged: () => () => {},
+      onReminder: (h) => ((emit = h), () => {}),
+    }
+    listTodos.mockResolvedValue({ items: [] })
+    const wrapper = mount(CorneApp)
+    await flushPromises()
+    emit({ title: '日程提醒', body: '周会' })
+    await flushPromises()
+    expect(wrapper.find('.cornie-bubble').text()).toBe('日程提醒：周会')
+    wrapper.unmount()
   })
 })

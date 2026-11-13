@@ -176,7 +176,7 @@ export async function applyObservationWikiUpgradeRequest(
     throw new Error(`governance request is not a wiki upgrade candidate: ${requestId}`)
   }
 
-  if (!['pending', 'deferred'].includes(normalizeString(request.status))) {
+  if (!['pending', 'deferred', 'approved'].includes(normalizeString(request.status))) {
     throw new Error(`governance request cannot be applied from status: ${request.status}`)
   }
 
@@ -212,7 +212,10 @@ export async function applyObservationWikiUpgradeRequest(
   if (normalizeString(request.status) === 'deferred') {
     await governanceStore.updateStatus(requestId, 'pending')
   }
-  const approvedRequest = await governanceStore.updateStatus(requestId, 'approved')
+  const approvedRequest =
+    normalizeString(request.status) === 'approved'
+      ? request
+      : await governanceStore.updateStatus(requestId, 'approved')
   const finalPage = await memoryWiki.get(confirmedPage.pageId)
 
   return {

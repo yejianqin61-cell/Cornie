@@ -84,7 +84,7 @@ async function generateDiaryDraft(prompt, chatFn) {
   return combined
 }
 
-export async function generateCornieDiary(store, { date, memorySummary = '' }, { chatFn = generate } = {}) {
+export async function generateCornieDiary(store, { date, memorySummary = '' }, { chatFn = generate, strict = false } = {}) {
   // BE-06：当天无日记条目时 getEntry 返回 null——兜底为空对象，不抛 TypeError。
   const entry = getEntry(store, date) ?? {}
   const observation = createObservationService(store)
@@ -114,7 +114,10 @@ export async function generateCornieDiary(store, { date, memorySummary = '' }, {
   try {
     const text = await generateDiaryDraft(prompt, chatFn)
     if (text) return text
+    if (strict) throw new Error('model returned an empty diary')
   } catch (error) {
+    // strict（自动生成）：失败必须上抛，不写入占位文本，下次再试。
+    if (strict) throw error
     console.error('DeepSeek diary generation error:', error)
   }
 

@@ -45,6 +45,9 @@ export async function createServiceHarness(caseName, options = {}) {
     store,
     baseDir,
     async close() {
+      // 惰性导入：orchestrator 会加载 telemetryStore，而部分测试需要先设环境变量再加载它。
+      const { whenMemoryDistillationIdle } = await import('../../electron/backend/agent/orchestrator.js')
+      await whenMemoryDistillationIdle()
       try {
         store.close()
       } catch {}

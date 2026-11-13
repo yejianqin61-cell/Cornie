@@ -1,6 +1,6 @@
 <script setup>
-import { ref } from 'vue'
-import { Brain, Plus, RefreshCw, Loader2, Shield, Hash } from '@lucide/vue'
+import { computed, ref } from 'vue'
+import { Brain, Plus, RefreshCw, Loader2, Shield, Hash, ScrollText } from '@lucide/vue'
 import { Button } from 'neobrutalism-vue'
 import PageHeader from '../common/PageHeader.vue'
 import MemoryWikiTree from './MemoryWikiTree.vue'
@@ -8,6 +8,8 @@ import MemoryWikiDetail from './MemoryWikiDetail.vue'
 import MemoryWikiCompare from './MemoryWikiCompare.vue'
 import MemoryWikiEditor from './MemoryWikiEditor.vue'
 import MemoryWikiEmptyState from './MemoryWikiEmptyState.vue'
+import ConfirmDialog from '../common/ConfirmDialog.vue'
+import { AUDIT_EVENT_LABELS, REQUEST_TYPE_LABELS, STATUS_LABELS, labelOf, plannedActionLabel } from './memoryLabels.js'
 import {
   listPages,
   getPage,
@@ -25,7 +27,15 @@ import {
   restorePage,
   rollbackPage,
   updatePageImportance,
+  setPageOwnerConfirmed,
+  inspectionScan,
+  listAuditEvents,
+  mergePages,
 } from '../../api/memory-wiki.js'
+
+const props = defineProps({
+  focusPageId: { type: String, default: '' },
+})
 
 const pages = ref([])
 const allPages = ref([])
@@ -50,6 +60,8 @@ const governanceSelected = ref(null)
 const governanceError = ref('')
 const governanceResult = ref(null)
 
+let focusHandled = false
+
 async function fetchPages() {
   loading.value = true
   error.value = ''
@@ -57,6 +69,10 @@ async function fetchPages() {
     const res = await listPages({})
     allPages.value = res.items || []
     applyTopicFilter()
+    if (!focusHandled && props.focusPageId) {
+      focusHandled = true
+      selectPage(props.focusPageId)
+    }
   } catch (e) {
     allPages.value = []
     pages.value = []
@@ -145,6 +161,9 @@ function restoreSelectedPage() {
 function updateSelectedImportance(importance) {
   return runPageAction((pageId) => updatePageImportance(pageId, importance))
 }
+function updateSelectedOwnerConfirmed(value) {
+  return runPageAction((pageId) => setPageOwnerConfirmed(pageId, value === true))
+}
 function rollbackSelectedPage(versionId) {
   if (!versionId) return
   return runPageAction((pageId) => rollbackPage(pageId, versionId))
@@ -228,6 +247,100 @@ async function applyGovernance() {
   }
 }
 
+const mergeOpen = ref(false)
+const mergeSourceId = ref('')
+const mergeConfirmOpen = ref(false)
+
+const mergeCandidates = computed(() =>
+  allPages.value.filter((page) => (page.pageId || page.id) !== selectedPage.value?.pageId && page.status !== 'archived')
+)
+
+const mergeSource = computed(
+  () => allPages.value.find((page) => (page.pageId || page.id) === mergeSourceId.value) || null
+)
+
+const mergeMessage = computed(() => {
+  const source = mergeSource.value?.title || ''
+  const target = selectedPage.value?.title || ''
+  return `将「${source}」合并进「${target}」，「${source}」会被归档。`
+})
+
+function openMerge() {
+  mergeSourceId.value = ''
+  mergeConfirmOpen.value = false
+  mergeOpen.value = true
+}
+
+function cancelMerge() {
+  mergeOpen.value = false
+  mergeConfirmOpen.value = false
+  mergeSourceId.value = ''
+}
+
+function confirmMerge(sourcePageId) {
+  if (!sourcePageId) return
+  mergeSourceId.value = sourcePageId
+  mergeConfirmOpen.value = true
+}
+
+async function applyMerge() {
+  const targetPageId = selectedPage.value?.pageId
+  const sourcePageId = mergeSourceId.value
+  if (!targetPageId || !sourcePageId) return
+  mergeConfirmOpen.value = false
+  try {
+    await mergePages(targetPageId, sourcePageId)
+    cancelMerge()
+    await refreshSelectedPage()
+  } catch (e) {
+    cancelMerge()
+    error.value = e.message || '合并失败'
+  }
+}
+
+const inspecting = ref(false)
+const inspectionNotice = ref('')
+
+async function runInspection() {
+  if (inspecting.value) return
+  inspecting.value = true
+  inspectionNotice.value = ''
+  governanceError.value = ''
+  try {
+    const res = await inspectionScan()
+    inspectionNotice.value = `新增 ${res?.result?.createdCount ?? 0} 条建议`
+    await loadGovernance()
+  } catch (e) {
+    governanceError.value = e.message || '巡检失败'
+  }
+  inspecting.value = false
+}
+
+const auditOpen = ref(false)
+const auditItems = ref([])
+const auditLoading = ref(false)
+const auditError = ref('')
+
+async function openAudit() {
+  auditOpen.value = true
+  auditLoading.value = true
+  auditError.value = ''
+  try {
+    const res = await listAuditEvents({ limit: 50 })
+    auditItems.value = res.items || []
+  } catch (e) {
+    auditItems.value = []
+    auditError.value = e.message || '审计日志加载失败'
+  }
+  auditLoading.value = false
+}
+
+function formatAuditTime(value) {
+  return String(value || '')
+    .replace('T', ' ')
+    .slice(0, 19)
+}
+
 function openNew() {
   editorInitial.value = {}
   saveError.value = ''
@@ -282,6 +395,10 @@ function goBack() {
           <Shield :size="14" />
           治理
         </Button>
+        <Button variant="neutral" size="sm" @click="openAudit">
+          <ScrollText :size="14" />
+          审计
+        </Button>
         <Button variant="neutral" size="sm" @click="openNew">
           <Plus :size="14" />
           新建
@@ -328,6 +445,8 @@ function goBack() {
           @restore="restoreSelectedPage"
           @rollback="rollbackSelectedPage"
           @importance="updateSelectedImportance"
+          @owner-confirmed="updateSelectedOwnerConfirmed"
+          @merge="openMerge"
         />
         <MemoryWikiEmptyState v-else />
       </div>
@@ -344,16 +463,79 @@ function goBack() {
       @cancel="closeEditor"
     />
 
+    <div v-if="auditOpen" class="mw-governance-overlay" @click.self="auditOpen = false">
+      <div class="mw-governance">
+        <div class="mw-governance-header">
+          <h3>审计日志</h3>
+          <Button variant="neutral" size="icon" @click="auditOpen = false">
+            <span>&times;</span>
+          </Button>
+        </div>
+        <div v-if="auditLoading" class="mw-skeleton">
+          <div class="mw-skeleton-line" v-for="n in 3" :key="n" />
+        </div>
+        <div v-else-if="auditError" class="mw-banner mw-banner--error">
+          <span>{{ auditError }}</span>
+        </div>
+        <div v-else-if="auditItems.length === 0" class="mw-governance-empty">暂无审计记录</div>
+        <div v-else class="mw-governance-list">
+          <div v-for="event in auditItems" :key="event.eventId" class="mw-governance-item">
+            <div class="mw-governance-item-head">
+              <span class="mw-governance-item-type">{{ labelOf(AUDIT_EVENT_LABELS, event.eventType) }}</span>
+              <span class="mw-governance-item-status">{{ formatAuditTime(event.createdAt) }}</span>
+            </div>
+            <div v-if="event.pageId" class="mw-governance-item-id">{{ event.pageId }}</div>
+            <div v-if="event.reason" class="mw-governance-item-id">{{ event.reason }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div v-if="mergeOpen && !mergeConfirmOpen" class="mw-governance-overlay" @click.self="cancelMerge">
+      <div class="mw-governance">
+        <div class="mw-governance-header">
+          <h3>选择要并入的页面</h3>
+          <Button variant="neutral" size="icon" @click="cancelMerge">
+            <span>&times;</span>
+          </Button>
+        </div>
+        <div v-if="mergeCandidates.length === 0" class="mw-governance-empty">没有可合并的页面</div>
+        <div v-else class="mw-governance-list">
+          <button
+            v-for="page in mergeCandidates"
+            :key="page.pageId || page.id"
+            class="mw-governance-item"
+            @click="confirmMerge(page.pageId || page.id)"
+          >
+            {{ page.title }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <ConfirmDialog
+      :open="mergeConfirmOpen"
+      title="确认合并"
+      :message="mergeMessage"
+      :on-confirm="applyMerge"
+      :on-cancel="cancelMerge"
+    />
+
     <MemoryWikiCompare v-if="compareOpen" v-bind="compareData" @close="compareOpen = false" />
 
     <div v-if="governanceOpen" class="mw-governance-overlay" @click.self="governanceOpen = false">
       <div class="mw-governance">
         <div class="mw-governance-header">
           <h3>治理面板</h3>
+          <Button variant="neutral" size="sm" :disabled="inspecting" @click="runInspection">
+            <Loader2 v-if="inspecting" :size="12" />
+            巡检
+          </Button>
           <Button variant="neutral" size="icon" @click="governanceOpen = false">
             <span>&times;</span>
           </Button>
         </div>
+        <div v-if="inspectionNotice" class="mw-governance-empty">{{ inspectionNotice }}</div>
         <div v-if="governanceLoading" class="mw-skeleton">
           <div class="mw-skeleton-line" v-for="n in 3" :key="n" />
         </div>
@@ -368,18 +550,27 @@ function goBack() {
               @click="selectGovernance(item.requestId)"
             >
               <div class="mw-governance-item-head">
-                <span class="mw-governance-item-type">{{ item.requestType }}</span>
-                <span class="mw-governance-item-status">{{ item.status }}</span>
+                <span class="mw-governance-item-type">{{ labelOf(REQUEST_TYPE_LABELS, item.requestType) }}</span>
+                <span class="mw-governance-item-status">{{ labelOf(STATUS_LABELS, item.status) }}</span>
               </div>
-              <div class="mw-governance-item-id">{{ item.requestId }}</div>
+              <div class="mw-governance-item-id">{{ item.title || item.requestId }}</div>
             </button>
           </div>
           <div v-if="governanceSelected" class="mw-governance-detail">
             <div><strong>原因：</strong>{{ governanceSelected.reason || '未提供原因' }}</div>
-            <div><strong>证据：</strong></div>
-            <pre v-if="governanceSelected.evidence?.length">{{
-              JSON.stringify(governanceSelected.evidence, null, 2)
-            }}</pre>
+            <div v-if="governanceSelected.pageIds?.length">
+              <strong>涉及页面：</strong>{{ governanceSelected.pageIds.join('、') }}
+            </div>
+            <div v-if="plannedActionLabel(governanceSelected)">
+              <strong>拟执行：</strong>{{ plannedActionLabel(governanceSelected) }}
+              <template v-if="governanceSelected.payload?.request?.summary">
+                （拟改摘要：{{ governanceSelected.payload.request.summary }}）
+              </template>
+            </div>
+            <details v-if="governanceSelected.evidence?.length">
+              <summary>原始数据</summary>
+              <pre>{{ JSON.stringify(governanceSelected.evidence, null, 2) }}</pre>
+            </details>
             <div v-else class="mw-governance-empty">此请求没有附带证据。</div>
             <div class="mw-governance-actions">
               <Button
@@ -397,11 +588,30 @@ function goBack() {
                 >拒绝</Button
               >
               <Button
-                v-if="governanceSelected.status === 'approved'"
+                v-if="governanceSelected.status === 'pending'"
+                variant="neutral"
+                size="sm"
+                @click="decideGovernance('deferred')"
+                >延期</Button
+              >
+              <Button
+                v-if="governanceSelected.status === 'deferred'"
+                variant="neutral"
+                size="sm"
+                @click="decideGovernance('pending')"
+                >重新待审</Button
+              >
+              <Button
+                v-if="governanceSelected.status === 'approved' && governanceSelected.applicable !== false"
                 variant="neutral"
                 size="sm"
                 @click="applyGovernance"
                 >应用</Button
+              >
+              <span
+                v-if="governanceSelected.status === 'approved' && governanceSelected.applicable === false"
+                class="mw-governance-empty"
+                >已确认，此类请求无需应用</span
               >
             </div>
           </div>

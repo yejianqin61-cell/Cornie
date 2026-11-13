@@ -23,6 +23,18 @@ export function listLedgerCategories({ type } = {}) {
   return apiGet(`/api/ledger/categories${qs}`)
 }
 
+export function createLedgerCategory(type, body) {
+  return apiPost(`/api/ledger/categories/${type}`, body)
+}
+
+export function updateLedgerCategory(id, body) {
+  return apiPut(`/api/ledger/categories/${id}`, body)
+}
+
+export function restoreLedgerCategory(id) {
+  return apiPost(`/api/ledger/categories/${id}/restore`)
+}
+
 export function getEntry(id) {
   return apiGet(`/api/ledger/entries/${id}`)
 }

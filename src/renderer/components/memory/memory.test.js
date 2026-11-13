@@ -9,6 +9,30 @@ import MemoryWikiCompare from './MemoryWikiCompare.vue'
 import MemoryWikiEditor from './MemoryWikiEditor.vue'
 import MemoryWikiEmptyState from './MemoryWikiEmptyState.vue'
 
+describe('MemoryWikiTree updates and labels', () => {
+  it('follows changes to the items prop', async () => {
+    const wrapper = mount(MemoryWikiTree, {
+      props: {
+        items: [
+          { pageId: 'p1', pageType: 'person', title: 'Alice' },
+          { pageId: 'p2', pageType: 'person', title: 'Bob' },
+        ],
+      },
+    })
+    expect(wrapper.findAll('.mw-tree-item')).toHaveLength(2)
+    await wrapper.setProps({ items: [{ pageId: 'p1', pageType: 'person', title: 'Alice' }] })
+    expect(wrapper.findAll('.mw-tree-item')).toHaveLength(1)
+  })
+
+  it('titles groups with the real page type names', () => {
+    const wrapper = mount(MemoryWikiTree, {
+      props: { items: [{ pageId: 'p1', pageType: 'identity_profile', title: 'Me' }] },
+    })
+    expect(wrapper.text()).toContain('主人画像')
+    expect(wrapper.text()).not.toContain('identity_profile')
+  })
+})
+
 describe('MemoryWikiTree', () => {
   const items = [
     { pageId: 'p1', pageType: 'person', title: 'Alice' },
@@ -77,6 +101,23 @@ describe('MemoryWikiRelatedLinks', () => {
   })
 })
 
+describe('MemoryWikiEditor page type', () => {
+  it('submits pageType when creating a new page', async () => {
+    const wrapper = mount(MemoryWikiEditor, { props: { page: {} } })
+    await wrapper.find('[data-testid="memory-page-type"]').setValue('event')
+    await wrapper.find('input[type="text"]').setValue('标题')
+    wrapper.vm.submit()
+    expect(wrapper.emitted('save')[0][0]).toMatchObject({ pageType: 'event', title: '标题' })
+  })
+
+  it('does not offer or send pageType when editing', async () => {
+    const wrapper = mount(MemoryWikiEditor, { props: { page: { pageId: 'p1', pageType: 'event', title: 'T' } } })
+    expect(wrapper.find('[data-testid="memory-page-type"]').exists()).toBe(false)
+    wrapper.vm.submit()
+    expect(wrapper.emitted('save')[0][0]).not.toHaveProperty('pageType')
+  })
+})
+
 describe('MemoryWikiEditor', () => {
   it('renders form fields', () => {
     const wrapper = mount(MemoryWikiEditor, { props: { page: { title: 'Test' } } })
@@ -111,6 +152,24 @@ describe('MemoryWikiCompare', () => {
 })
 
 describe('MemoryWikiDetail', () => {
+  it('emits merge from the merge button', async () => {
+    const wrapper = mount(MemoryWikiDetail, {
+      props: { page: { pageId: 'p1', title: 'Test', status: 'active' } },
+    })
+    await wrapper.get('[data-testid="memory-merge"]').trigger('click')
+    expect(wrapper.emitted('merge')).toBeTruthy()
+  })
+
+  it('emits ownerConfirmed with the new checkbox value', async () => {
+    const wrapper = mount(MemoryWikiDetail, {
+      props: { page: { pageId: 'p1', title: 'Test', ownerConfirmed: true } },
+    })
+    const box = wrapper.get('[data-testid="memory-owner-confirmed"]')
+    expect(box.element.checked).toBe(true)
+    await box.setValue(false)
+    expect(wrapper.emitted('ownerConfirmed')[0]).toEqual([false])
+  })
+
   it('renders page content', () => {
     const wrapper = mount(MemoryWikiDetail, {
       props: {

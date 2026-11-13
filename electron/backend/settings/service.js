@@ -7,6 +7,7 @@ const MODEL_SETTING_KEYS = {
   model: 'settings.model.deepseek.model',
   timeoutMs: 'settings.model.deepseek.timeoutMs'
 }
+const DIARY_AUTO_KEY = 'settings.diary.autoGenerate'
 const SECURE_API_KEY_PREFIX = 'safeStorage:v1:'
 
 const INITIAL_MODEL_ENV = {
@@ -141,6 +142,18 @@ export function applyPersistedModelSettingsToEnv(store, { secretStore } = {}) {
 
 export function createSettingsService(store, { secretStore } = {}) {
   return {
+    getDiaryAutoSetting() {
+      return { enabled: getAppSetting(store, DIARY_AUTO_KEY) === 'true' }
+    },
+
+    setDiaryAutoSetting(enabled) {
+      if (typeof enabled !== 'boolean') {
+        throw badRequest('enabled must be a boolean', undefined, 'invalid_enabled')
+      }
+      setAppSetting(store, DIARY_AUTO_KEY, enabled ? 'true' : 'false')
+      return this.getDiaryAutoSetting()
+    },
+
     getModelSettings() {
       const persisted = readPersistedModelSettings(store, { secretStore })
       return {

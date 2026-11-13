@@ -15,6 +15,7 @@ const props = defineProps({
   date: { type: String, required: true },
   transientMessages: { type: Array, default: () => [] },
   isToday: { type: Boolean, default: false },
+  extras: { type: Object, default: () => ({}) },
 })
 
 defineEmits(['confirmResolved', 'retry'])
@@ -72,6 +73,12 @@ function attachConfirmations(list, confirmations) {
   )
 }
 
+function attachExtras(list) {
+  const entries = props.extras || {}
+  if (Object.keys(entries).length === 0) return list
+  return list.map((message) => (entries[message.id] ? { ...message, ...entries[message.id] } : message))
+}
+
 async function load({ bottom = false } = {}) {
   const token = ++loadToken
   loading.value = true
@@ -89,7 +96,7 @@ async function load({ bottom = false } = {}) {
       pages += 1
     }
     if (token !== loadToken) return
-    const attached = attachConfirmations(collected, await loadConfirmations())
+    const attached = attachExtras(attachConfirmations(collected, await loadConfirmations()))
     if (token !== loadToken) return
     messages.value = attached
   } catch (e) {
@@ -166,7 +173,7 @@ defineExpose({ refresh: (options) => load(options) })
       <MessageRow
         v-for="msg in messages"
         :key="msg.id"
-        v-memo="[msg.id, msg.text, msg.confirm?.status]"
+        v-memo="[msg.id, msg.text, msg.confirm?.status, msg.toolResults?.length, msg.interimReplies?.length]"
         :message="msg"
         @confirm-resolved="$emit('confirmResolved', $event)"
       />

@@ -3,23 +3,37 @@ import { ref, onMounted, onBeforeUnmount } from 'vue'
 import CorniePet from './CorniePet.vue'
 import CornieBubble from './CornieBubble.vue'
 import PetSettings from './PetSettings.vue'
+import { listTodos } from '../../api/todo.js'
+import { onDataChanged } from '../../data-sync.js'
 
 const petScale = ref(1)
 const alwaysOnTop = ref(false)
 const bubbleText = ref('')
 const bubbleVisible = ref(false)
 const settingsVisible = ref(false)
+const todoCount = ref(0)
+
+async function refreshTodoCount() {
+  try {
+    const res = await listTodos({ view: 'open' })
+    todoCount.value = Array.isArray(res?.items) ? res.items.length : 0
+  } catch {}
+}
 
 let bubbleTimer = null
 const TIPS = ['该喝水了', '记得写日记', '今天有什么新鲜事？']
 
-function showBubble(text) {
+function showBubble(text, duration = 4000) {
   bubbleText.value = text
   bubbleVisible.value = true
   clearTimeout(bubbleTimer)
   bubbleTimer = setTimeout(() => {
     bubbleVisible.value = false
-  }, 4000)
+  }, duration)
+}
+
+function onReminder({ title, body } = {}) {
+  showBubble(`${title}：${body}`, 8000)
 }
 
 function randomBubble() {
@@ -34,6 +48,10 @@ onMounted(async () => {
     } catch {}
   }
   randomBubble()
+  refreshTodoCount()
+  const offSync = onDataChanged(['todo'], refreshTodoCount)
+  const offReminder = window.cornieDesktop?.onReminder?.(onReminder)
+  const countTimer = setInterval(refreshTodoCount, 60000)
 
   const interval = setInterval(() => {
     if (!bubbleVisible.value) randomBubble()
@@ -41,6 +59,9 @@ onMounted(async () => {
 
   onBeforeUnmount(() => {
     clearInterval(interval)
+    clearInterval(countTimer)
+    offSync()
+    offReminder?.()
     clearTimeout(bubbleTimer)
   })
 })
@@ -81,6 +102,7 @@ function onOpenMain() {
       @toggle-always-on-top="onToggleAlwaysOnTop"
       @close="settingsVisible = false"
     />
+    <span v-if="todoCount > 0" class="corne-todo-count" data-testid="pet-todo-count">{{ todoCount }}</span>
     <button class="corne-settings-toggle" @click="toggleSettings" title="设置">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="12" cy="12" r="3" />
@@ -98,6 +120,21 @@ function onOpenMain() {
   height: 320px;
   position: relative;
   overflow: hidden;
+}
+.corne-todo-count {
+  position: absolute;
+  top: 4px;
+  right: 32px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 10px;
+  background: #ff6b6b;
+  color: #fff;
+  font-size: 12px;
+  line-height: 20px;
+  text-align: center;
+  z-index: 10;
 }
 .corne-settings-toggle {
   position: absolute;

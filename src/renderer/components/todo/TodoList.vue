@@ -15,6 +15,7 @@ const emit = defineEmits(['complete', 'reopen', 'delete'])
     <div v-for="item in items" :key="item.id" class="todo-item" :class="{ 'todo-item--done': item.status === 'done' }">
       <span class="todo-item-check" :class="{ 'todo-item-check--done': item.status === 'done' }" />
       <span class="todo-item-title">{{ item.title }}</span>
+      <span v-if="item.categoryName" class="todo-item-category">{{ item.categoryName }}</span>
       <div class="todo-item-actions">
         <Button v-if="item.status !== 'done'" variant="neutral" size="icon" @click="$emit('complete', item.id)">
           <Check :size="14" />
@@ -44,6 +45,13 @@ const emit = defineEmits(['complete', 'reopen', 'delete'])
   padding: 0.5rem 0.75rem;
   border-radius: 6px;
   transition: background 0.1s;
+}
+
+.todo-item-category {
+  font-size: 0.7rem;
+  padding: 1px 6px;
+  border: 1.5px solid #000;
+  border-radius: 99px;
 }
 
 .todo-item:hover {

@@ -1,3 +1,5 @@
+import { domainOfPath, notifyDataChanged } from '../data-sync.js'
+
 const BASE = 'http://127.0.0.1:5174'
 
 async function request(path, options = {}) {
@@ -5,9 +7,14 @@ async function request(path, options = {}) {
     headers: { 'Content-Type': 'application/json' },
     ...options,
   })
-  if (res.status === 204) return null
+  const method = options.method || 'GET'
+  if (res.status === 204) {
+    if (method !== 'GET') notifyDataChanged({ domain: domainOfPath(path) })
+    return null
+  }
   const data = await res.json()
   if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`)
+  if (method !== 'GET') notifyDataChanged({ domain: domainOfPath(path) })
   return data
 }
 

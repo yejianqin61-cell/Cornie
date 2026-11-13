@@ -1,6 +1,6 @@
 import { createServiceHarness, assert } from '../tests/shared/service-harness.mjs'
 import { createMemoryWikiService } from '../electron/backend/memory-wiki/index.js'
-import { createConversationOrchestrator } from '../electron/backend/agent/orchestrator.js'
+import { createConversationOrchestrator, whenMemoryDistillationIdle } from '../electron/backend/agent/orchestrator.js'
 import { buildConversationPrompt, buildMemoryDistillationPrompt } from '../electron/backend/agent/promptBuilder.js'
 
 async function run() {
@@ -58,6 +58,7 @@ async function run() {
     try {
       const orchestrator = createConversationOrchestrator(harness.store, { baseDir: harness.baseDir })
       const result = await orchestrator.runTurn({ date: '2026-08-21', message: '还记得钟奕菲吗' })
+      await whenMemoryDistillationIdle()
       assert(
         Array.isArray(result.interimReplies) && result.interimReplies.includes('哦对……她是你高中同桌，你总说她笑起来眼睛弯弯的。'),
         '联想话语应进入 interimReplies',

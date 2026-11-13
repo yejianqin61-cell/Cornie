@@ -1,14 +1,25 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
-import { Receipt, Plus, RefreshCw } from '@lucide/vue'
+import { Receipt, Plus, RefreshCw, Tags } from '@lucide/vue'
 import { Button } from 'neobrutalism-vue'
 import PageHeader from '../common/PageHeader.vue'
 import EmptyState from '../common/EmptyState.vue'
 import ConfirmDialog from '../common/ConfirmDialog.vue'
+import CategoryManager from '../common/CategoryManager.vue'
 import LedgerTransactionList from './LedgerTransactionList.vue'
 import LedgerTransactionForm from './LedgerTransactionForm.vue'
 import LedgerMonthSummary from './LedgerMonthSummary.vue'
-import { listEntries, listLedgerCategories, addExpense, addIncome, updateEntry, deleteEntry } from '../../api/ledger.js'
+import {
+  listEntries,
+  listLedgerCategories,
+  addExpense,
+  addIncome,
+  updateEntry,
+  deleteEntry,
+  createLedgerCategory,
+  updateLedgerCategory,
+  restoreLedgerCategory,
+} from '../../api/ledger.js'
 import { singaporeDate } from '../../../../shared/local-date.js'
 
 const transactions = ref([])
@@ -23,6 +34,15 @@ const filterType = ref('all')
 const filterMonth = ref(singaporeDate().slice(0, 7))
 const saving = ref(false)
 const saveError = ref('')
+const categoriesOpen = ref(false)
+const categoryError = ref('')
+const categoryBusy = ref(false)
+const CATEGORY_TYPES = [
+  { value: 'expense', label: '支出' },
+  { value: 'income', label: '收入' },
+]
+
+const activeCategories = computed(() => categories.value.filter((item) => item.isActive !== false))
 
 const filteredTransactions = computed(() => {
   let list = transactions.value
@@ -62,6 +82,44 @@ async function fetchEntries() {
 }
 
 watch(filterMonth, fetchEntries, { immediate: true })
+
+async function reloadCategories() {
+  const result = await listLedgerCategories()
+  categories.value = result.items || []
+}
+
+function openCategories() {
+  categoryError.value = ''
+  categoriesOpen.value = true
+}
+
+async function runCategoryAction(action) {
+  categoryBusy.value = true
+  categoryError.value = ''
+  try {
+    await action()
+    await reloadCategories()
+  } catch (e) {
+    categoryError.value = e.message || '类目操作失败'
+  }
+  categoryBusy.value = false
+}
+
+function createCategory({ name, type }) {
+  return runCategoryAction(() => createLedgerCategory(type || 'expense', { name }))
+}
+
+function renameCategory({ id, name }) {
+  return runCategoryAction(() => updateLedgerCategory(id, { name }))
+}
+
+function deactivateCategory(id) {
+  return runCategoryAction(() => updateLedgerCategory(id, { isActive: false }))
+}
+
+function restoreCategory(id) {
+  return runCategoryAction(() => restoreLedgerCategory(id))
+}
 
 function openAdd() {
   editTarget.value = null
@@ -130,6 +188,10 @@ async function onDelete() {
   <div class="ledger-home">
     <PageHeader :icon="Receipt" title="收支">
       <template #actions>
+        <Button variant="neutral" size="sm" @click="openCategories">
+          <Tags :size="14" />
+          <span>类目</span>
+        </Button>
         <Button variant="primary" size="sm" @click="openAdd">
           <Plus :size="14" />
           <span>记一笔</span>
@@ -185,11 +247,24 @@ async function onDelete() {
     <LedgerTransactionForm
       v-if="showForm"
       :initialData="editTarget"
-      :categories="categories"
+      :categories="activeCategories"
       :saving="saving"
       :saveError="saveError"
       @save="onSave"
       @cancel="closeForm"
+    />
+
+    <CategoryManager
+      v-if="categoriesOpen"
+      :categories="categories"
+      :types="CATEGORY_TYPES"
+      :error="categoryError"
+      :busy="categoryBusy"
+      @create="createCategory"
+      @rename="renameCategory"
+      @deactivate="deactivateCategory"
+      @restore="restoreCategory"
+      @close="categoriesOpen = false"
     />
 
     <ConfirmDialog

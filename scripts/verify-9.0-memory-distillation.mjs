@@ -191,26 +191,41 @@ async function main() {
     console.log('verify-9.0: 用例5 否定句反例 ok')
   }
 
-  // 用例 6：破坏性 Wiki 请求 → 入治理队列，页面未改
+  // 用例 6：破坏性 Wiki 请求（目标是真实页面）→ 入治理队列，页面未改；编造 ID 的请求 → 跳过不入队
   {
-    const { env, result } = await runCase('destructive', {
-      chatFn: chatFnWith({
-        observations: [],
-        identity_updates: [],
-        memory_wiki_requests: [{ action: 'merge_pages', title: '合并页面', targetPageId: 't', sourcePageId: 's' }],
-        reasoning: '提议合并'
-      })
-    })
+    const env = await createEnv('destructive')
     try {
-      assert(result.results.wikiRequests[0].action === 'deferred_to_governance', '破坏性请求应入治理队列')
       const memoryWiki = await createMemoryWikiService({ baseDir: env.baseDir, store: env.store })
+      const target = await memoryWiki.create({ pageType: 'event', title: '目标页', summary: '目标' })
+      const source = await memoryWiki.create({ pageType: 'event', title: '来源页', summary: '来源' })
+      const run = (request) =>
+        runMemoryDistillation({
+          store: env.store,
+          baseDir: env.baseDir,
+          date: '2026-08-21',
+          userMessage: '提议合并',
+          cornieMessage: '好的',
+          messageId: 'msg-destructive',
+          history: [],
+          chatFn: chatFnWith({ observations: [], identity_updates: [], memory_wiki_requests: [request], reasoning: '提议合并' })
+        })
+
+      const valid = await run({ action: 'merge_pages', targetPageId: target.pageId, sourcePageId: source.pageId })
+      assert(valid.results.wikiRequests[0].action === 'deferred_to_governance', '真实页面的破坏性请求应入治理队列')
       const governance = await memoryWiki.listGovernanceRequests({ queueSection: 'memory_wiki_llm_proposals' })
       assert(governance.some((item) => item.requestType === 'memory_wiki_llm_proposal'), '治理队列应含 llm 提议')
-      assert(!(await memoryWiki.get('t').catch(() => null)), '目标页不应被实际创建')
+      assert((await memoryWiki.get(source.pageId)).status === 'active', '入队后来源页不应被实际归档')
+
+      const fake = await run({ action: 'merge_pages', targetPageId: 't', sourcePageId: 's' })
+      assert(fake.results.wikiRequests[0].action === 'skipped', '编造 ID 的破坏性请求应被跳过')
+      assert(
+        (await memoryWiki.listGovernanceRequests({ queueSection: 'memory_wiki_llm_proposals' })).length === governance.length,
+        '被跳过的请求不应入队'
+      )
     } finally {
       await env.close()
     }
-    console.log('verify-9.0: 用例6 破坏性请求入治理 ok')
+    console.log('verify-9.0: 用例6 破坏性请求校验与入治理 ok')
   }
 
   console.log('verify-9.0-memory-distillation: passed 6/6')

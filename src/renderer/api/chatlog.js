@@ -22,6 +22,14 @@ export async function getChatDay(date, { cursor, limit } = {}) {
   }
 }
 
+export function searchChatSnippets({ keyword, month, limit } = {}) {
+  const params = new URLSearchParams()
+  if (keyword) params.set('keyword', keyword)
+  if (month) params.set('month', month)
+  if (limit !== undefined && limit !== null) params.set('limit', String(limit))
+  return apiGet(`/api/chatlogs/search/snippets?${params.toString()}`)
+}
+
 export function exportChatDay(date) {
   return apiGet(`/api/chatlogs/${date}/export`)
 }

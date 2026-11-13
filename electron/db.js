@@ -295,6 +295,22 @@ function migrate(db) {
       db.run(
         `create index if not exists idx_pending_confirmations_status_created_at on pending_confirmations(status, created_at);`
       )
+    },
+    // v8: 发送请求标识（同一 requestId 只落一条用户消息；旧记录为 null，不受唯一约束影响）
+    (db) => {
+      db.run(`alter table conversations add column request_id text;`)
+      db.run(
+        `create unique index if not exists idx_conversations_request_id on conversations(request_id) where request_id is not null;`
+      )
+    },
+    // v9: 已发送的提醒（键为 schedule:<id>:<startAt> 或 todo:<id>:<dueAt>，同一键只提醒一次）
+    (db) => {
+      db.run(`
+        create table if not exists reminders_sent (
+          key text primary key,
+          sent_at integer not null
+        );
+      `)
     }
   ]
 
@@ -435,32 +451,50 @@ export function listEntries(store, { month } = {}) {
 
 // ─── conversations ────────────────────────────────────────────
 
-export function saveMessage(store, { id, date, role, content }) {
+function mapMessageRow(r) {
+  return {
+    id: String(r.id),
+    date: String(r.date),
+    role: String(r.role),
+    content: String(r.content),
+    createdAt: Number(r.createdAt),
+    ...(r.requestId ? { requestId: String(r.requestId) } : {})
+  }
+}
+
+export function getMessageByRequestId(store, requestId) {
+  if (!requestId) return null
+  const stmt = store.db.prepare(
+    'select id, date, role, content, created_at as createdAt, request_id as requestId from conversations where request_id = $request_id'
+  )
+  stmt.bind({ $request_id: String(requestId) })
+  const row = stmt.step() ? stmt.getAsObject() : null
+  stmt.free()
+  return row ? mapMessageRow(row) : null
+}
+
+export function saveMessage(store, { id, date, role, content, requestId }) {
+  const normalizedRequestId = requestId ? String(requestId) : null
+  if (normalizedRequestId) {
+    const existing = getMessageByRequestId(store, normalizedRequestId)
+    if (existing) return existing
+  }
   const now = Date.now()
   store.db.run(
-    `insert into conversations(id, date, role, content, created_at) values ($id, $date, $role, $content, $created_at)`,
-    { $id: id, $date: date, $role: role, $content: content, $created_at: now }
+    `insert into conversations(id, date, role, content, created_at, request_id) values ($id, $date, $role, $content, $created_at, $request_id)`,
+    { $id: id, $date: date, $role: role, $content: content, $created_at: now, $request_id: normalizedRequestId }
   )
   store.persist()
-  return { id, date, role, content, createdAt: now }
+  return { id, date, role, content, createdAt: now, ...(normalizedRequestId ? { requestId: normalizedRequestId } : {}) }
 }
 
 export function getMessagesByDate(store, date) {
   const stmt = store.db.prepare(
-    'select id, date, role, content, created_at as createdAt from conversations where date = $date order by created_at asc'
+    'select id, date, role, content, created_at as createdAt, request_id as requestId from conversations where date = $date order by created_at asc'
   )
   stmt.bind({ $date: date })
   const rows = []
-  while (stmt.step()) {
-    const r = stmt.getAsObject()
-    rows.push({
-      id: String(r.id),
-      date: String(r.date),
-      role: String(r.role),
-      content: String(r.content),
-      createdAt: Number(r.createdAt)
-    })
-  }
+  while (stmt.step()) rows.push(mapMessageRow(stmt.getAsObject()))
   stmt.free()
   return rows
 }

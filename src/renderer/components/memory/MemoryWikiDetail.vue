@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import { ArrowLeft, GitCompare, Pencil } from '@lucide/vue'
+import { ArrowLeft, GitCompare, Merge, Pencil } from '@lucide/vue'
 import { Button } from 'neobrutalism-vue'
 import MemoryWikiSourceRef from './MemoryWikiSourceRef.vue'
 import MemoryWikiRelatedLinks from './MemoryWikiRelatedLinks.vue'
@@ -10,7 +10,17 @@ defineProps({
   versions: { type: Array, default: () => [] },
 })
 
-const emit = defineEmits(['back', 'edit', 'compare', 'archive', 'restore', 'rollback', 'importance'])
+const emit = defineEmits([
+  'back',
+  'edit',
+  'compare',
+  'archive',
+  'restore',
+  'rollback',
+  'importance',
+  'ownerConfirmed',
+  'merge',
+])
 const selectedRollbackVersion = ref('')
 </script>
 
@@ -28,6 +38,16 @@ const selectedRollbackVersion = ref('')
         <Button variant="neutral" size="sm" @click="$emit('compare')">
           <GitCompare :size="14" />
           历史
+        </Button>
+        <Button
+          v-if="page.status !== 'archived'"
+          variant="neutral"
+          size="sm"
+          data-testid="memory-merge"
+          @click="$emit('merge')"
+        >
+          <Merge :size="14" />
+          合并
         </Button>
         <Button v-if="page.status === 'archived'" variant="neutral" size="sm" @click="$emit('restore')"> 恢复 </Button>
         <Button v-else variant="neutral" size="sm" data-testid="memory-archive" @click="$emit('archive')">
@@ -58,6 +78,15 @@ const selectedRollbackVersion = ref('')
           <option value="high">high</option>
           <option value="critical">critical</option>
         </select>
+      </label>
+      <label>
+        <input
+          type="checkbox"
+          data-testid="memory-owner-confirmed"
+          :checked="page.ownerConfirmed === true"
+          @change="$emit('ownerConfirmed', $event.target.checked)"
+        />
+        主人已确认
       </label>
       <label v-if="versions.length">
         回滚到版本

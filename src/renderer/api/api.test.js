@@ -2,13 +2,13 @@ import { describe, it, expect, vi } from 'vitest'
 import { apiGet, apiPost, apiStream } from './client.js'
 import { listEntries as listDiaryEntries, getEntry } from './diary.js'
 import { sendMessage } from './conversation.js'
-import { getChatDay, listChatDays } from './chatlog.js'
+import { getChatDay, listChatDays, searchChatSnippets } from './chatlog.js'
 import * as chatlogApi from './chatlog.js'
 import * as conversationApi from './conversation.js'
-import { listEntries as listLedgerEntries } from './ledger.js'
+import { createLedgerCategory, listEntries as listLedgerEntries } from './ledger.js'
 import { listObservations } from './observation.js'
-import { listPages } from './memory-wiki.js'
-import { listTodos } from './todo.js'
+import { listAuditEvents, listPages, setPageOwnerConfirmed } from './memory-wiki.js'
+import { listTodoCategories, listTodos, reorderTodoCategory } from './todo.js'
 import { listSchedules } from './schedule.js'
 import { getModelSettings } from './settings.js'
 import { getModelStatus } from './model.js'
@@ -175,6 +175,64 @@ describe('api/memory-wiki', () => {
     globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ items: [] }) })
     const result = await listPages()
     expect(result.items).toEqual([])
+  })
+
+  it('listAuditEvents should GET the audit route with limit and pageId', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ items: [] }) })
+    await listAuditEvents({ limit: 5, pageId: 'p1' })
+    const url = fetch.mock.calls[0][0]
+    expect(url).toContain('/api/memory-wiki/audit')
+    expect(url).toContain('limit=5')
+    expect(url).toContain('pageId=p1')
+  })
+
+  it('setPageOwnerConfirmed should PUT the boolean to the owner-confirmed route', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ page: {} }) })
+    await setPageOwnerConfirmed('p1', true)
+    expect(fetch).toHaveBeenCalledWith(
+      `${API_BASE}/api/memory-wiki/pages/p1/owner-confirmed`,
+      expect.objectContaining({ method: 'PUT', body: JSON.stringify({ ownerConfirmed: true }) })
+    )
+  })
+})
+
+describe('api/chatlog search', () => {
+  it('searchChatSnippets should send only the given parameters', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ items: [] }) })
+    await searchChatSnippets({ keyword: '咖啡', limit: 20 })
+    const url = fetch.mock.calls[0][0]
+    expect(url).toContain('/api/chatlogs/search/snippets')
+    expect(url).toContain('keyword=' + encodeURIComponent('咖啡'))
+    expect(url).toContain('limit=20')
+    expect(url).not.toContain('month=')
+  })
+})
+
+describe('api/ledger categories', () => {
+  it('createLedgerCategory should POST to the typed route', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ category: {} }) })
+    await createLedgerCategory('income', { name: 'x' })
+    expect(fetch).toHaveBeenCalledWith(
+      `${API_BASE}/api/ledger/categories/income`,
+      expect.objectContaining({ method: 'POST', body: JSON.stringify({ name: 'x' }) })
+    )
+  })
+})
+
+describe('api/todo categories', () => {
+  it('listTodoCategories should pass includeInactive', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ items: [] }) })
+    await listTodoCategories({ includeInactive: true })
+    expect(fetch.mock.calls[0][0]).toContain('/api/todo-categories?includeInactive=true')
+  })
+
+  it('reorderTodoCategory should POST the sortOrder', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, json: () => Promise.resolve({ category: {} }) })
+    await reorderTodoCategory('c1', 2)
+    expect(fetch).toHaveBeenCalledWith(
+      `${API_BASE}/api/todo-categories/c1/reorder`,
+      expect.objectContaining({ method: 'POST', body: JSON.stringify({ sortOrder: 2 }) })
+    )
   })
 })
 

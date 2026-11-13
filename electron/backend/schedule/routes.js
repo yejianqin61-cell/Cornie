@@ -131,8 +131,8 @@ export function scheduleRoutes({ schedule }) {
 
   r.get(
     '/schedule-categories',
-    asyncHandler(async (_req, res) => {
-      res.json({ items: schedule.listCategories() })
+    asyncHandler(async (req, res) => {
+      res.json({ items: schedule.listCategories({ includeInactive: req.query.includeInactive === 'true' }) })
     })
   )
 

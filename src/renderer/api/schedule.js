@@ -32,3 +32,23 @@ export function restoreSchedule(id) {
 export function deleteSchedule(id) {
   return apiDelete(`/api/schedules/${id}`)
 }
+
+export function listScheduleCategories({ includeInactive } = {}) {
+  return apiGet(`/api/schedule-categories${includeInactive ? '?includeInactive=true' : ''}`)
+}
+
+export function createScheduleCategory(body) {
+  return apiPost('/api/schedule-categories', body)
+}
+
+export function updateScheduleCategory(id, body) {
+  return apiPut(`/api/schedule-categories/${id}`, body)
+}
+
+export function restoreScheduleCategory(id) {
+  return apiPost(`/api/schedule-categories/${id}/restore`)
+}
+
+export function reorderScheduleCategory(id, sortOrder) {
+  return apiPost(`/api/schedule-categories/${id}/reorder`, { sortOrder })
+}

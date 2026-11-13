@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { resolveMemoryWikiIndexRoot } from './constants.js'
-import { createSingleWriterQueue } from './writeQueue.js'
+import { getSharedWriterQueue } from './writeQueue.js'
 import { atomicWriteFile } from '../persistence/atomicWrite.js'
 
 const KEYWORD_INDEX_FILENAME = 'keyword-index.json'
@@ -130,7 +130,7 @@ export async function createTopicIndexStore(baseDir) {
   await ensureIndexFile(filePath)
 
   // 462：keyword-index 写路径单写者串行化。
-  const enqueue = createSingleWriterQueue()
+  const enqueue = getSharedWriterQueue(filePath)
 
   async function readIndexMap() {
     const text = await fs.readFile(filePath, 'utf8')

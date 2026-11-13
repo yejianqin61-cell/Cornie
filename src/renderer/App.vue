@@ -56,6 +56,14 @@ const sidebarItems = [
 function switchModule(id) {
   activeModule.value = id
   settingsOpen.value = false
+  memoryFocusPageId.value = ''
+}
+
+const memoryFocusPageId = ref('')
+
+function openMemoryPage(pageId) {
+  switchModule('memory')
+  memoryFocusPageId.value = pageId
 }
 
 function openSettings() {
@@ -90,8 +98,12 @@ function openSettings() {
     <SettingsPage v-if="settingsOpen" />
     <ChatPanel v-else-if="activeModule === 'chat'" />
     <DiaryHomePage v-else-if="activeModule === 'diary'" />
-    <MemoryWikiHomePage v-else-if="activeModule === 'memory'" />
-    <ObservationListPage v-else-if="activeModule === 'observe'" />
+    <MemoryWikiHomePage
+      v-else-if="activeModule === 'memory'"
+      :key="memoryFocusPageId"
+      :focus-page-id="memoryFocusPageId"
+    />
+    <ObservationListPage v-else-if="activeModule === 'observe'" @open-memory="openMemoryPage" />
     <LedgerHomePage v-else-if="activeModule === 'ledger'" />
     <TodoHomePage v-else-if="activeModule === 'todo'" />
     <ScheduleHomePage v-else-if="activeModule === 'schedule'" />
