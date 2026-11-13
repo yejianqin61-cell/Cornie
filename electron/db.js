@@ -302,6 +302,15 @@ function migrate(db) {
       db.run(
         `create unique index if not exists idx_conversations_request_id on conversations(request_id) where request_id is not null;`
       )
+    },
+    // v9: 已发送的提醒（键为 schedule:<id>:<startAt> 或 todo:<id>:<dueAt>，同一键只提醒一次）
+    (db) => {
+      db.run(`
+        create table if not exists reminders_sent (
+          key text primary key,
+          sent_at integer not null
+        );
+      `)
     }
   ]
 
