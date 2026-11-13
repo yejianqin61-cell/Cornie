@@ -7,6 +7,7 @@ import ChatHistoryPage from './ChatHistoryPage.vue'
 import { sendMessageStreamed } from '../../api/conversation.js'
 import { listChatDays, searchChatSnippets } from '../../api/chatlog.js'
 import { singaporeDate } from '../../../../shared/local-date.js'
+import { domainOfTool, notifyDataChanged } from '../../data-sync.js'
 
 const inputText = ref('')
 const sending = ref(false)
@@ -162,7 +163,11 @@ async function handleSend(requestId = createRequestId()) {
         if (!assistant) return
         if (result?.pendingConfirmation) assistant.confirm = result.pendingConfirmation
         const results = result?.toolExecution?.results
-        if (Array.isArray(results) && results.length > 0) assistant.toolResults = results
+        if (Array.isArray(results) && results.length > 0) {
+          assistant.toolResults = results
+          const domains = new Set(results.map((r) => domainOfTool(r?.tool_name)))
+          for (const domain of domains) notifyDataChanged({ domain })
+        }
         const interim = Array.isArray(result?.interimReplies) ? result.interimReplies.filter(Boolean) : []
         if (interim.length > 0) assistant.interimReplies = interim
         const replyId = result?.cornieMessage?.id

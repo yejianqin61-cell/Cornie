@@ -130,6 +130,31 @@ describe('ChatPanel streaming send', () => {
     expect(wrapper.findComponent(ChatHistoryPage).props('transientMessages')).toEqual([])
   })
 
+  it('broadcasts data changes for tools used in a reply', async () => {
+    const send = vi.fn()
+    window.cornieDesktop = { broadcastDataChanged: send }
+    refresh.mockResolvedValue()
+    api.sendMessageStreamed.mockImplementation(async (_request, _delta, onDone) => {
+      onDone({
+        toolExecution: {
+          results: [
+            { tool_name: 'ledger.create_entry', ok: true, result: { id: 1 } },
+            { tool_name: 'todo.create_entry', ok: true, result: { id: 2 } },
+          ],
+        },
+      })
+    })
+    const wrapper = mountPanel()
+    await flushPromises()
+    await wrapper.find('textarea').setValue('记一笔')
+    await wrapper.find('.chat-panel-send').trigger('click')
+    await flushPromises()
+    delete window.cornieDesktop
+    expect(send).toHaveBeenCalledTimes(2)
+    expect(send).toHaveBeenCalledWith({ domain: 'ledger' })
+    expect(send).toHaveBeenCalledWith({ domain: 'todo' })
+  })
+
   it('shows associative replies on the transient assistant message', async () => {
     let finishStream
     refresh.mockReturnValue(new Promise(() => {}))
