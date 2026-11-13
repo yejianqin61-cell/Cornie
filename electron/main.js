@@ -5,6 +5,9 @@ import { fileURLToPath } from 'node:url'
 import { openDb } from './db.js'
 import { createServer } from './server.js'
 import { startDesktopReminders } from './backend/reminders/desktop.js'
+import { handleExportRequest } from './backend/export/desktop.js'
+import { resolveMemoryWikiRoot } from './backend/memory-wiki/constants.js'
+import { atomicWriteFile } from './backend/persistence/atomicWrite.js'
 import { diaryService } from './backend/diary/service.js'
 import { runAutoDiary } from './backend/diary/autoGenerate.js'
 import { singaporeDate } from '../shared/local-date.js'
@@ -238,6 +241,15 @@ app.whenReady().then(async () => {
   ipcMain.on('cornie:data-changed', (evt, detail) => {
     broadcastDataChanged(detail, evt.sender)
   })
+
+  ipcMain.handle('cornie:export-data', () =>
+    handleExportRequest({
+      store,
+      memoryRoot: resolveMemoryWikiRoot(resolveMemoryBaseDir()),
+      showSaveDialog: (options) => dialog.showSaveDialog(mainWindow ?? undefined, options),
+      writeFile: atomicWriteFile
+    })
+  )
 
   ipcMain.handle('cornie:get-always-on-top', () => cornieAlwaysOnTop)
   ipcMain.handle('cornie:set-always-on-top', (_evt, value) => {

@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('cornieDesktop', {
   getAlwaysOnTop: () => ipcRenderer.invoke('cornie:get-always-on-top'),
   setAlwaysOnTop: (value) => ipcRenderer.invoke('cornie:set-always-on-top', value),
   broadcastDataChanged: (detail) => ipcRenderer.send('cornie:data-changed', detail),
+  exportData: () => ipcRenderer.invoke('cornie:export-data'),
   onReminder: (handler) => {
     if (typeof handler !== 'function') {
       return () => {}
