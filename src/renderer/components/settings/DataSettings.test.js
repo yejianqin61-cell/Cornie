@@ -7,7 +7,8 @@ afterEach(() => {
 })
 
 function exportButton(wrapper) {
-  return wrapper.findAllComponents({ name: 'Button' }).find((b) => b.text().includes('导出'))
+  const native = wrapper.findAll('button').find((b) => b.text().includes('导出'))
+  return native
 }
 
 describe('DataSettings', () => {

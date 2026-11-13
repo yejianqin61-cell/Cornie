@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import { Button } from 'neobrutalism-vue'
+import AppButton from '../common/AppButton.vue'
 import SettingsSection from './SettingsSection.vue'
 
 const hasBridge = Boolean(window.cornieDesktop?.exportData)
@@ -27,9 +27,9 @@ async function exportData() {
 
 <template>
   <SettingsSection title="数据">
-    <Button :disabled="exporting || !hasBridge" @click="exportData">
+    <AppButton :disabled="exporting || !hasBridge" @click="exportData">
       {{ exporting ? '导出中...' : '导出数据' }}
-    </Button>
+    </AppButton>
     <p v-if="exportedPath" class="data-ok">已导出到 {{ exportedPath }}</p>
     <p v-if="error" class="data-error">{{ error }}</p>
   </SettingsSection>
