@@ -2,7 +2,7 @@ import { getEntry, listEntries, listOnThisDay, setCornieText, upsertUserText } f
 import { generateCornieDiary } from './generator.js'
 import { buildWikiContext } from '../agent/wikiContext.js'
 
-export function diaryService(store) {
+export function diaryService(store, { baseDir = process.cwd() } = {}) {
   const svc = {
     listEntries: ({ month }) => listEntries(store, { month }),
     getEntry: (date) => getEntry(store, date),
@@ -14,7 +14,7 @@ export function diaryService(store) {
       const existing = getEntry(store, date)
       const wikiContext = await buildWikiContext(store, {
         date,
-        baseDir: process.cwd(),
+        baseDir,
         query: existing?.userText ?? ''
       })
       const diary = await generateCornieDiary(store, {

@@ -4,7 +4,8 @@ import DiaryCard from './DiaryCard.vue'
 import OnThisDayCard from './OnThisDayCard.vue'
 import DiaryRegenerateBtn from './DiaryRegenerateBtn.vue'
 import PageHeader from '../common/PageHeader.vue'
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, onBeforeUnmount } from 'vue'
+import { onDataChanged } from '../../data-sync.js'
 import { BookOpen, Clock, RefreshCw } from '@lucide/vue'
 import { Button } from 'neobrutalism-vue'
 import { listEntries, getEntry, upsertEntry, regenerateCornie, getOnThisDay } from '../../api/diary.js'
@@ -67,6 +68,11 @@ async function fetchOnThisDay() {
 }
 
 watch(monthKey, fetchMonth, { immediate: true })
+const offDiarySync = onDataChanged(['diary'], () => {
+  fetchMonth()
+  fetchEntry()
+})
+onBeforeUnmount(offDiarySync)
 watch(
   selectedDate,
   () => {

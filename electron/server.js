@@ -65,7 +65,7 @@ export async function createServer({ store, baseDir = process.cwd(), conversatio
     res.json({ records, date: typeof date === 'string' && date ? date : null })
   })
 
-  const diary = diaryService(store)
+  const diary = diaryService(store, { baseDir })
   app.use('/api', diaryRoutes({ diary }))
 
   const chatlog = createChatlogService(store, {

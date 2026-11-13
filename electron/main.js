@@ -5,6 +5,9 @@ import { fileURLToPath } from 'node:url'
 import { openDb } from './db.js'
 import { createServer } from './server.js'
 import { startDesktopReminders } from './backend/reminders/desktop.js'
+import { diaryService } from './backend/diary/service.js'
+import { runAutoDiary } from './backend/diary/autoGenerate.js'
+import { singaporeDate } from '../shared/local-date.js'
 import { attachToDesktopViaWorkerW } from './win32/desktopLayer.js'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -125,6 +128,7 @@ function createCornieWindow() {
 let serverInstance = null
 let store = null
 let reminders = null
+let diaryTimer = null
 
 // 记忆数据（data/memory-wiki）根目录：开发态用项目根（cwd），打包后固定到 userData，
 // 由启动链解析一次并显式传入 createServer，消除各模块 process.cwd() 分散取值（450）。
@@ -167,6 +171,30 @@ app.whenReady().then(async () => {
       if (cornieWindow && !cornieWindow.isDestroyed()) cornieWindow.webContents.send('cornie:reminder', payload)
     }
   })
+
+  const diary = diaryService(store, { baseDir: resolveMemoryBaseDir() })
+  let diaryRunning = false
+  const runDiary = async () => {
+    if (diaryRunning) return
+    diaryRunning = true
+    try {
+      const result = await runAutoDiary({
+        store,
+        today: singaporeDate(),
+        generate: async ({ date }) => {
+          await diary.generateCornie({ date })
+          broadcastDataChanged({ domain: 'diary' })
+        }
+      })
+      if (result.error) console.error('[diary] auto generate stopped', result.error)
+    } catch (error) {
+      console.error('[diary] auto generate failed', error)
+    } finally {
+      diaryRunning = false
+    }
+  }
+  runDiary()
+  diaryTimer = setInterval(runDiary, 60 * 60 * 1000)
 
   ipcMain.on('cornie:drag-start', (_evt, payload) => {
     if (!cornieWindow || cornieWindow.isDestroyed()) return
@@ -235,6 +263,7 @@ app.on('before-quit', () => {
   try {
     reminders?.stop?.()
   } catch {}
+  clearInterval(diaryTimer)
   try {
     serverInstance?.close?.()
   } catch {}
