@@ -182,7 +182,7 @@ app.whenReady().then(async () => {
         store,
         today: singaporeDate(),
         generate: async ({ date }) => {
-          await diary.generateCornie({ date })
+          await diary.generateCornie({ date }, { strict: true })
           broadcastDataChanged({ domain: 'diary' })
         }
       })
