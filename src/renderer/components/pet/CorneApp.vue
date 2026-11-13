@@ -23,13 +23,17 @@ async function refreshTodoCount() {
 let bubbleTimer = null
 const TIPS = ['该喝水了', '记得写日记', '今天有什么新鲜事？']
 
-function showBubble(text) {
+function showBubble(text, duration = 4000) {
   bubbleText.value = text
   bubbleVisible.value = true
   clearTimeout(bubbleTimer)
   bubbleTimer = setTimeout(() => {
     bubbleVisible.value = false
-  }, 4000)
+  }, duration)
+}
+
+function onReminder({ title, body } = {}) {
+  showBubble(`${title}：${body}`, 8000)
 }
 
 function randomBubble() {
@@ -46,6 +50,7 @@ onMounted(async () => {
   randomBubble()
   refreshTodoCount()
   const offSync = onDataChanged(['todo'], refreshTodoCount)
+  const offReminder = window.cornieDesktop?.onReminder?.(onReminder)
   const countTimer = setInterval(refreshTodoCount, 60000)
 
   const interval = setInterval(() => {
@@ -56,6 +61,7 @@ onMounted(async () => {
     clearInterval(interval)
     clearInterval(countTimer)
     offSync()
+    offReminder?.()
     clearTimeout(bubbleTimer)
   })
 })

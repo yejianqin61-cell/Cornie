@@ -108,3 +108,25 @@ describe('CorneApp todo count', () => {
     wrapper.unmount()
   })
 })
+
+describe('CorneApp reminder bubble', () => {
+  afterEach(() => {
+    delete window.cornieDesktop
+  })
+
+  it('shows the reminder as a bubble', async () => {
+    let emit
+    window.cornieDesktop = {
+      getAlwaysOnTop: async () => false,
+      onDataChanged: () => () => {},
+      onReminder: (h) => ((emit = h), () => {}),
+    }
+    listTodos.mockResolvedValue({ items: [] })
+    const wrapper = mount(CorneApp)
+    await flushPromises()
+    emit({ title: '日程提醒', body: '周会' })
+    await flushPromises()
+    expect(wrapper.find('.cornie-bubble').text()).toBe('日程提醒：周会')
+    wrapper.unmount()
+  })
+})
